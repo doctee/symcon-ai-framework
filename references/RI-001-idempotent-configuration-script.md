@@ -1,34 +1,40 @@
 # RI-001 — Idempotent Configuration Script
 
-**Status:** Draft 1.0  
+**Status:** Draft 2.0  
 **Type:** Reference Implementation  
 **Language:** PHP  
 **Platform:** IP-Symcon
 
 ## Purpose
 
-This reference implementation demonstrates an idempotent IP-Symcon configuration script.
+This reference implementation demonstrates an idempotent IP-Symcon configuration script using SAEF helpers.
 
-It shows how a setup script can safely create or update categories, variables and events without creating duplicates when executed repeatedly.
+It shows how a setup script can safely create or update categories, variables, profiles and cyclic script events without creating duplicates when executed repeatedly.
 
 ## Demonstrated Concepts
 
 This implementation demonstrates:
 
 - stable object identification using Idents,
-- idempotent object creation,
+- idempotent object creation using SAEF helpers,
 - explicit ownership of created objects,
 - separation of configuration and logic,
 - script-owned internal state variables,
-- deterministic event creation,
-- Symcon 6.0+ event action binding for script-executing events.
+- deterministic cyclic script event creation,
+- Symcon 6.0+ event action binding for script-executing events,
+- validation before side effects.
 
 ## Related Framework Artifacts
 
-- RS-001 — Symcon Engineering Standards
-- EK-004 — Internal State Management
-- EK-005 — Idempotent Configuration
-- ADR-0002 — Use Ident over ObjectID where practical
+- `drafts/SYMCON_STANDARDS.md`
+- `knowledge/EK-004-internal-state-management.md`
+- `knowledge/EK-005-idempotent-configuration.md`
+- `helpers/object/EnsureCategory.php`
+- `helpers/object/EnsureVariable.php`
+- `helpers/object/EnsureEvent.php`
+- `helpers/object/EnsureProfile.php`
+- `templates/ConfigurationScript.php`
+- `adr/ADR-0002-use-ident-over-object-id.md`
 
 ## Usage
 
@@ -40,13 +46,12 @@ The script is safe to execute repeatedly. Existing owned objects are reused and 
 
 ```php
 <?php
-
 declare(strict_types=1);
 
 /**
  * RI-001 — Idempotent Configuration Script
  *
- * Reference implementation for SAEF.
+ * SAEF reference implementation.
  *
  * This script creates a small owned object structure below a configured parent:
  *
@@ -57,49 +62,98 @@ declare(strict_types=1);
  *     ├── Error
  *     └── Periodic Update
  *
- * The script is intentionally small, but demonstrates the core engineering
- * pattern used by larger Symcon configuration scripts.
+ * The script demonstrates the preferred SAEF style:
+ * - configuration first,
+ * - validation before side effects,
+ * - idempotent SAEF helpers,
+ * - explicit ownership,
+ * - safe default event activation.
  */
+
+require_once __DIR__ . '/../helpers/object/EnsureCategory.php';
+require_once __DIR__ . '/../helpers/object/EnsureVariable.php';
+require_once __DIR__ . '/../helpers/object/EnsureEvent.php';
+require_once __DIR__ . '/../helpers/object/EnsureProfile.php';
 
 // -----------------------------------------------------------------------------
 // Configuration
 // -----------------------------------------------------------------------------
 
 $config = [
-    // Replace with the parent object under which the demo structure should exist.
-    // For reusable/public artifacts this value must remain explicit configuration.
+    /*
+     * Replace with the parent object below which the demo structure should exist.
+     *
+     * Public framework artifacts must keep this value explicit.
+     * Do not hardcode private installation ObjectIDs inside reusable logic.
+     */
     'parentID' => 0,
 
-    'categoryIdent' => 'SAEF_DEMO',
-    'categoryName'  => 'SAEF Demo',
+    'category' => [
+        'ident' => 'SAEF_DEMO',
+        'name'  => 'SAEF Demo',
+        'position' => null,
+        'icon' => null,
+    ],
+
+    'profiles' => [
+        [
+            'name' => 'SAEF.Demo.State',
+            'type' => 1,
+            'icon' => '',
+            'prefix' => '',
+            'suffix' => '',
+            'minValue' => 0,
+            'maxValue' => 3,
+            'stepSize' => 1,
+            'digits' => null,
+            'associations' => [
+                [0, 'Unknown', '', -1],
+                [1, 'Ready', '', 0x00FF00],
+                [2, 'Running', '', 0xFFFF00],
+                [3, 'Error', '', 0xFF0000],
+            ],
+        ],
+    ],
 
     'variables' => [
         [
             'ident'   => 'STATE',
             'name'    => 'State',
-            'type'    => 1, // Integer
-            'profile' => '',
+            'type'    => 1,
+            'profile' => 'SAEF.Demo.State',
+            'position' => 10,
+            'icon' => null,
         ],
         [
             'ident'   => 'LAST_RUN',
             'name'    => 'Last Run',
-            'type'    => 1, // Integer timestamp
+            'type'    => 1,
             'profile' => '~UnixTimestamp',
+            'position' => 20,
+            'icon' => null,
         ],
         [
             'ident'   => 'ERROR',
             'name'    => 'Error',
-            'type'    => 0, // Boolean
+            'type'    => 0,
             'profile' => '~Switch',
+            'position' => 30,
+            'icon' => null,
         ],
     ],
 
     'event' => [
-        'ident'      => 'PERIODIC_UPDATE',
-        'name'       => 'Periodic Update',
-        'interval'   => 300, // seconds
+        'ident' => 'PERIODIC_UPDATE',
+        'name' => 'Periodic Update',
         'targetScriptID' => $_IPS['SELF'],
-        'active'     => false,
+        'intervalSeconds' => 300,
+        /*
+         * Keep generated events inactive by default.
+         * Users should review configuration before enabling scheduled execution.
+         */
+        'active' => false,
+        'position' => 100,
+        'hidden' => true,
     ],
 ];
 
@@ -107,165 +161,103 @@ $config = [
 // Main
 // -----------------------------------------------------------------------------
 
-validateConfiguration($config);
+try {
+    validateDemoConfiguration($config);
 
-$categoryID = ensureCategory(
-    $config['parentID'],
-    $config['categoryIdent'],
-    $config['categoryName']
-);
+    foreach ($config['profiles'] as $profile) {
+        SAEF_EnsureProfile(
+            $profile['name'],
+            $profile['type'],
+            $profile['icon'],
+            $profile['prefix'],
+            $profile['suffix'],
+            $profile['minValue'],
+            $profile['maxValue'],
+            $profile['stepSize'],
+            $profile['digits'],
+            $profile['associations']
+        );
+    }
 
-foreach ($config['variables'] as $variableConfig) {
-    ensureVariable(
-        $categoryID,
-        $variableConfig['ident'],
-        $variableConfig['name'],
-        $variableConfig['type'],
-        $variableConfig['profile']
+    $categoryID = SAEF_EnsureCategory(
+        $config['parentID'],
+        $config['category']['ident'],
+        $config['category']['name'],
+        $config['category']['position'],
+        $config['category']['icon']
     );
+
+    foreach ($config['variables'] as $variable) {
+        SAEF_EnsureVariable(
+            $categoryID,
+            $variable['ident'],
+            $variable['name'],
+            $variable['type'],
+            $variable['profile'],
+            null,
+            $variable['position'],
+            $variable['icon']
+        );
+    }
+
+    SAEF_EnsureCyclicScriptEvent(
+        $categoryID,
+        $config['event']['ident'],
+        $config['event']['name'],
+        $config['event']['targetScriptID'],
+        $config['event']['intervalSeconds'],
+        $config['event']['active'],
+        $config['event']['position'],
+        $config['event']['hidden']
+    );
+
+    SetValue(IPS_GetObjectIDByIdent('STATE', $categoryID), 1);
+    SetValue(IPS_GetObjectIDByIdent('LAST_RUN', $categoryID), time());
+    SetValue(IPS_GetObjectIDByIdent('ERROR', $categoryID), false);
+
+    IPS_LogMessage('SAEF RI-001', 'Idempotent configuration completed successfully');
+} catch (Throwable $exception) {
+    IPS_LogMessage('SAEF RI-001', 'Configuration failed: ' . $exception->getMessage());
+    throw $exception;
 }
-
-ensureCyclicScriptEvent(
-    $categoryID,
-    $config['event']['ident'],
-    $config['event']['name'],
-    $config['event']['targetScriptID'],
-    $config['event']['interval'],
-    $config['event']['active']
-);
-
-SetValue(IPS_GetObjectIDByIdent('LAST_RUN', $categoryID), time());
-
-IPS_LogMessage('SAEF RI-001', 'Idempotent configuration completed');
 
 // -----------------------------------------------------------------------------
-// Functions
+// Local validation
 // -----------------------------------------------------------------------------
 
-function validateConfiguration(array $config): void
+/**
+ * Performs scenario-specific validation before side effects.
+ *
+ * Generic validation is handled by SAEF helpers.
+ * This function validates the configuration structure of this reference scenario.
+ */
+function validateDemoConfiguration(array $config): void
 {
-    if (!isset($config['parentID']) || !is_int($config['parentID']) || $config['parentID'] <= 0) {
-        throw new InvalidArgumentException('Configuration value parentID must be a valid IP-Symcon object ID.');
+    if (!isset($config['parentID']) || !is_int($config['parentID'])) {
+        throw new InvalidArgumentException('Configuration value parentID must be an integer.');
     }
 
-    if (!IPS_ObjectExists($config['parentID'])) {
-        throw new InvalidArgumentException('Configured parentID does not exist: ' . $config['parentID']);
+    if ($config['parentID'] <= 0 || !IPS_ObjectExists($config['parentID'])) {
+        throw new InvalidArgumentException('Configured parentID does not exist: ' . (string)$config['parentID']);
     }
 
-    if (($config['categoryIdent'] ?? '') === '') {
-        throw new InvalidArgumentException('categoryIdent must not be empty.');
+    if (!isset($config['category'], $config['variables'], $config['event'])) {
+        throw new InvalidArgumentException('Configuration must contain category, variables and event sections.');
     }
 
-    if (($config['categoryName'] ?? '') === '') {
-        throw new InvalidArgumentException('categoryName must not be empty.');
+    if (!is_array($config['variables']) || count($config['variables']) === 0) {
+        throw new InvalidArgumentException('Configuration must contain at least one variable.');
     }
-}
-
-function ensureCategory(int $parentID, string $ident, string $name): int
-{
-    $existingID = @IPS_GetObjectIDByIdent($ident, $parentID);
-
-    if ($existingID !== false) {
-        IPS_SetName($existingID, $name);
-        return $existingID;
-    }
-
-    $categoryID = IPS_CreateCategory();
-    IPS_SetParent($categoryID, $parentID);
-    IPS_SetIdent($categoryID, $ident);
-    IPS_SetName($categoryID, $name);
-
-    return $categoryID;
-}
-
-function ensureVariable(int $parentID, string $ident, string $name, int $type, string $profile = ''): int
-{
-    $existingID = @IPS_GetObjectIDByIdent($ident, $parentID);
-
-    if ($existingID !== false) {
-        $variable = IPS_GetVariable($existingID);
-
-        if ($variable['VariableType'] !== $type) {
-            throw new RuntimeException(sprintf(
-                'Existing variable %s has type %d, expected %d.',
-                $ident,
-                $variable['VariableType'],
-                $type
-            ));
-        }
-
-        IPS_SetName($existingID, $name);
-        applyProfile($existingID, $profile);
-
-        return $existingID;
-    }
-
-    $variableID = IPS_CreateVariable($type);
-    IPS_SetParent($variableID, $parentID);
-    IPS_SetIdent($variableID, $ident);
-    IPS_SetName($variableID, $name);
-    applyProfile($variableID, $profile);
-
-    return $variableID;
-}
-
-function applyProfile(int $variableID, string $profile): void
-{
-    if ($profile === '') {
-        return;
-    }
-
-    if (!IPS_VariableProfileExists($profile)) {
-        throw new RuntimeException('Variable profile does not exist: ' . $profile);
-    }
-
-    IPS_SetVariableCustomProfile($variableID, $profile);
-}
-
-function ensureCyclicScriptEvent(
-    int $parentID,
-    string $ident,
-    string $name,
-    int $targetScriptID,
-    int $intervalSeconds,
-    bool $active
-): int {
-    if (!IPS_ScriptExists($targetScriptID)) {
-        throw new InvalidArgumentException('Target script does not exist: ' . $targetScriptID);
-    }
-
-    if ($intervalSeconds <= 0) {
-        throw new InvalidArgumentException('intervalSeconds must be greater than zero.');
-    }
-
-    $existingID = @IPS_GetObjectIDByIdent($ident, $parentID);
-
-    if ($existingID !== false) {
-        $eventID = $existingID;
-    } else {
-        $eventID = IPS_CreateEvent(1); // Cyclic event
-        IPS_SetParent($eventID, $parentID);
-        IPS_SetIdent($eventID, $ident);
-    }
-
-    IPS_SetName($eventID, $name);
-
-    // Cyclic event: every N seconds.
-    IPS_SetEventCyclic($eventID, 0, 0, 0, 0, 1, $intervalSeconds);
-
-    // Execute the target script.
-    IPS_SetEventScript($eventID, $targetScriptID);
-
-    // Required for script-executing events in IP-Symcon 6.0+.
-    IPS_SetEventAction($eventID, '{7938A5A2-0981-5FE0-BE6C-8AA610D654EB}', []);
-
-    IPS_SetEventActive($eventID, $active);
-
-    return $eventID;
 }
 ```
 
 ## Design Notes
+
+### Helper-First Implementation
+
+The script uses SAEF helpers instead of implementing its own object-creation logic.
+
+This is intentional. Reference implementations should demonstrate how framework users and AI coding agents are expected to compose SAEF helpers.
 
 ### Parent Object
 
@@ -273,15 +265,25 @@ The parent object is explicit configuration. This keeps the reference implementa
 
 ### Idents
 
-All created objects receive stable Idents. This allows the script to find and update its own objects during later executions.
+All created objects receive stable Idents. This allows repeated execution without duplicates.
 
-### Existing Variable Type Mismatch
+### Existing Type Mismatch
 
-If an existing variable with the expected Ident has a different type, the script stops with an error instead of silently replacing it. Replacing the variable would destroy history, links and user configuration.
+SAEF helpers stop with an error if an existing object with the expected Ident has an incompatible type.
+
+This preserves existing history, links and user configuration instead of deleting and recreating objects.
+
+### Profiles
+
+The script demonstrates explicit profile creation through `SAEF_EnsureProfile()`.
+
+Profiles are created or validated before variables use them.
 
 ### Event Creation
 
-The cyclic event is created or updated deterministically. The event action binding is set explicitly so that script execution is fully defined.
+The cyclic event is created or updated deterministically through `SAEF_EnsureCyclicScriptEvent()`.
+
+The event action binding is handled by the helper.
 
 ### Event Active State
 
@@ -293,11 +295,12 @@ This reference implementation is intentionally small.
 
 It does not yet include:
 
-- custom profile creation,
 - cleanup of obsolete objects,
 - migration of renamed objects,
 - dry-run mode,
-- structured diagnostics.
+- structured diagnostics,
+- archive registration,
+- links or media objects.
 
 These topics should be addressed in more advanced reference implementations.
 
@@ -311,4 +314,4 @@ Before adapting this implementation:
 - Review whether the cyclic event should be active.
 - Execute the script twice and verify that no duplicate objects are created.
 - Verify that existing variable values are preserved.
-
+- Verify that the generated event is inactive until intentionally enabled.
