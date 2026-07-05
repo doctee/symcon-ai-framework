@@ -37,6 +37,13 @@ Helper functions use the `SAEF_` prefix to avoid conflicts with existing private
 | `SAEF_ValidateVariableType()` | Validate a Symcon variable type |
 | `SAEF_NormalizeConfigurationForHash()` | Normalize configuration arrays for stable hash creation |
 | `SAEF_CreateConfigurationHash()` | Create a stable SHA-256 hash for configuration arrays |
+| `SAEF_EnsureRegistryVariable()` | Idempotently create or update a string variable for small registry metadata |
+| `SAEF_ReadRegistry()` | Read registry metadata from a JSON string variable |
+| `SAEF_WriteRegistry()` | Write registry metadata to a JSON string variable |
+| `SAEF_UpdateRegistryEntry()` | Update one registry entry and persist the registry |
+| `SAEF_EnsureStatisticsVariables()` | Idempotently create or update statistic variables |
+| `SAEF_IncrementStatistic()` | Increment an integer or float statistic variable |
+| `SAEF_SetStatisticTimestamp()` | Set an integer statistic variable to a Unix timestamp |
 | `SAEF_EnsureCategory()` | Idempotently create or update a category |
 | `SAEF_EnsureVariable()` | Idempotently create or update a variable |
 | `SAEF_EnsureCyclicScriptEvent()` | Idempotently create or update a cyclic script event |
@@ -48,6 +55,8 @@ Helper functions use the `SAEF_` prefix to avoid conflicts with existing private
 | `SAEF_WaitForVariable()` | Wait for a variable change or update with optional value check |
 
 ## Related Artifacts
+
+Registry helpers are intended for small script-owned metadata only. Discovery payloads or large data sets must not be stored in registry variables.
 
 - `drafts/SYMCON_STANDARDS.md`
 - `knowledge/EK-002-retry-mechanisms.md`

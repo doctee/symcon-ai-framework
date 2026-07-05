@@ -15,6 +15,10 @@ This project adheres to Semantic Versioning.
 
 - Configuration hash helper for stable hashes of normalized configuration arrays.
 - Recursive ignored-key handling for volatile configuration values such as timestamps, last run metadata or runtime state.
+- Registry helper for small script-owned JSON metadata stored in a string variable.
+- Defensive registry reads for empty values and explicit failures for invalid JSON.
+- Statistics helper for script-owned counters and timestamp variables.
+- Idempotent statistic variable creation through existing variable helpers.
 
 ## [0.1.0] - 2026-07-06
 
