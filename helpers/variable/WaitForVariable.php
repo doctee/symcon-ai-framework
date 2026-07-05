@@ -74,14 +74,16 @@ if (!defined('SAEF_HELPER_WAIT_FOR_VARIABLE')) {
         $metadataKey = SAEF_GetWaitMetadataKey($mode);
         $info = IPS_GetVariable($variableID);
 
-        if ($lookbackMs > 0 && SAEF_WaitLookbackMatches(
-            $variableID,
-            $info,
-            $metadataKey,
-            $lookbackMs,
-            $expectedValue,
-            $predicate
-        )) {
+        if (
+            $lookbackMs > 0 && SAEF_WaitLookbackMatches(
+                $variableID,
+                $info,
+                $metadataKey,
+                $lookbackMs,
+                $expectedValue,
+                $predicate
+            )
+        ) {
             return true;
         }
 

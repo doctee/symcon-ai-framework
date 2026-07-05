@@ -1,0 +1,29 @@
+{
+    "name": "doctee/symcon-ai-framework",
+    "description": "Reusable engineering framework for IP-Symcon automation projects.",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.2"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.1",
+        "squizlabs/php_codesniffer": "^3.13"
+    },
+    "scripts": {
+        "lint": [
+            "@php tools/lint.php"
+        ],
+        "phpstan": [
+            "phpstan analyse"
+        ],
+        "phpcs": [
+            "phpcs"
+        ],
+        "check": [
+            "@lint",
+            "@phpstan",
+            "@phpcs"
+        ]
+    }
+}

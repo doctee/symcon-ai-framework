@@ -1,0 +1,18 @@
+parameters:
+    level: 5
+
+    paths:
+        - helpers
+        - templates
+        - examples
+
+    bootstrapFiles:
+        - stubs/symcon.php
+
+    excludePaths:
+        - vendor/*
+
+    treatPhpDocTypesAsCertain: true
+
+    ignoreErrors:
+        - identifier: variable.undefined
