@@ -37,6 +37,11 @@ Helper functions use the `SAEF_` prefix to avoid conflicts with existing private
 | `SAEF_EnsureCategory()` | Idempotently create or update a category |
 | `SAEF_EnsureVariable()` | Idempotently create or update a variable |
 | `SAEF_EnsureCyclicScriptEvent()` | Idempotently create or update a cyclic script event |
+| `SAEF_EnsureScript()` | Idempotently create or update a script |
+| `SAEF_EnsureDummy()` | Idempotently create or update a Dummy Module instance |
+| `SAEF_EnsureLink()` | Idempotently create or update a link |
+| `SAEF_EnsureInstance()` | Idempotently create or update an instance by module GUID |
+| `SAEF_EnsureProfile()` | Idempotently create or validate a variable profile |
 | `SAEF_WaitForVariable()` | Wait for a variable change or update with optional value check |
 
 ## Related Artifacts

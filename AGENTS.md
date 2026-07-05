@@ -72,3 +72,17 @@ Examples:
 - `docs(references): add idempotent configuration script`
 - `docs(standards): refine PHP standards`
 - `chore: add repository ignore rules`
+## Helper Usage
+
+Before implementing IP-Symcon object creation, variable waiting, event creation or similar infrastructure logic, search `helpers/` for an existing SAEF helper.
+
+AI agents should prefer existing SAEF helpers over reimplementing common logic.
+
+Do not duplicate helper logic such as:
+
+- idempotent category creation,
+- idempotent variable creation,
+- cyclic script event creation,
+- variable change/update waiting.
+
+If a helper is missing, propose or add a reusable helper instead of embedding one-off infrastructure code in a reference implementation.
