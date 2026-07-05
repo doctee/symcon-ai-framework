@@ -995,11 +995,458 @@ Sensitive data such as credentials, tokens or private network details shall not 
 
 ---
 
-## 10. Planned Sections
+## 10. Configuration Management
 
-The following sections will be developed in subsequent commits:
+### Rule RS-001.27 — Keep Public Configuration Explicit
 
-- Configuration Management
-- Reusability
-- AI Engineering Compatibility
-- References
+#### Purpose
+
+Make reusable artifacts portable across installations.
+
+#### Rule
+
+Reusable SAEF artifacts shall expose installation-specific values as explicit configuration instead of hiding them in implementation logic.
+
+#### Why is this rule important?
+
+IP-Symcon installations differ in object structure, device IDs, module instances and naming. Hidden configuration prevents safe reuse and makes AI-assisted review unreliable.
+
+#### Rationale
+
+Explicit configuration separates local installation knowledge from reusable engineering logic.
+
+#### Recommended Practice
+
+- Place configuration at the top of scripts.
+- Use meaningful configuration names.
+- Validate configuration before executing actions.
+- Keep private values outside public framework files.
+- Use local overlay files or local configuration sections for private installation details.
+
+#### Anti-Patterns
+
+- Scattered ObjectIDs throughout reusable logic.
+- Private hostnames, MQTT topics or tokens in public files.
+- Configuration values that are only described in comments but not validated.
+
+#### Exceptions
+
+One-time local scripts may be less structured but must not be promoted to reusable artifacts without refactoring.
+
+#### Related References
+
+- `adr/ADR-0003-private-overlay.md`
+- `knowledge/EK-005-idempotent-configuration.md`
+
+---
+
+### Rule RS-001.28 — Validate Configuration Before Acting
+
+#### Purpose
+
+Prevent unsafe actions caused by invalid or incomplete configuration.
+
+#### Rule
+
+Scripts that control devices, create objects, modify archives or perform migrations shall validate required configuration before executing side effects.
+
+#### Why is this rule important?
+
+A wrong ObjectID, missing parent object, invalid profile or wrong variable type can cause data loss, duplicate objects or unintended device actions.
+
+#### Rationale
+
+Early validation moves failures to a controlled phase before external state is changed.
+
+#### Recommended Practice
+
+Validate at least:
+
+- required ObjectIDs exist,
+- variables have expected types,
+- profiles exist where required,
+- parent objects are valid,
+- archive instance IDs are valid,
+- configured time ranges are plausible,
+- required actions are available before using `RequestAction()`.
+
+#### Anti-Patterns
+
+- Validating configuration after switching devices.
+- Assuming an ObjectID still points to the expected object.
+- Creating objects below an invalid or unintended parent.
+
+#### Exceptions
+
+Read-only diagnostic scripts may perform partial validation if failure has no side effects.
+
+#### Related References
+
+- `standards/PHP_STANDARDS.md`
+- `references/RI-001-idempotent-configuration-script.md`
+
+---
+
+### Rule RS-001.29 — Separate Public Examples from Private Overlays
+
+#### Purpose
+
+Keep the framework publishable and safe to share.
+
+#### Rule
+
+Public SAEF artifacts shall not contain private installation data. Private data belongs in `private/`, `*.local.*` files or environment-specific configuration that is excluded from version control.
+
+#### Why is this rule important?
+
+Private installation data can reveal security-sensitive details and may remain permanently in Git history once committed.
+
+#### Rationale
+
+A strict public/private split allows SAEF to evolve as a reusable framework without exposing local systems.
+
+#### Recommended Practice
+
+Keep out of public artifacts:
+
+- credentials,
+- tokens,
+- private IP addresses,
+- hostnames,
+- private MQTT topics,
+- personal ObjectIDs,
+- local system descriptions.
+
+#### Anti-Patterns
+
+- Adding real local IDs to public examples.
+- Committing temporary credentials for testing.
+- Planning to “clean up later” after private data has already entered Git history.
+
+#### Exceptions
+
+Anonymized examples may include synthetic IDs or placeholders if clearly marked.
+
+#### Related References
+
+- `adr/ADR-0003-private-overlay.md`
+- `.gitignore`
+- `AGENTS.md`
+
+---
+
+## 11. Reusability
+
+### Rule RS-001.30 — Promote Repeated Patterns Deliberately
+
+#### Purpose
+
+Turn recurring project solutions into reusable framework assets.
+
+#### Rule
+
+Repeated solutions should be evaluated for promotion to engineering knowledge, helpers, templates or reference implementations.
+
+#### Why is this rule important?
+
+Copying similar logic between scripts increases maintenance effort and makes later improvements harder to apply consistently.
+
+#### Rationale
+
+SAEF grows by extracting reusable engineering knowledge from concrete Symcon work.
+
+#### Recommended Practice
+
+After completing a non-trivial automation task, ask whether it produced:
+
+- a reusable helper,
+- a reusable template,
+- a reference implementation,
+- an engineering knowledge article,
+- a new ADR,
+- a standard update.
+
+#### Anti-Patterns
+
+- Copying the same retry, archive or state logic into many scripts.
+- Creating helpers before the pattern is understood.
+- Promoting highly installation-specific code without abstraction.
+
+#### Exceptions
+
+Single-use private automation may remain local if reuse is unlikely.
+
+#### Related References
+
+- `project/ENGINEERING_MODEL.md`
+- `knowledge/README.md`
+
+---
+
+### Rule RS-001.31 — Prefer Stable Interfaces for Helpers
+
+#### Purpose
+
+Make helper functions safe to reuse across projects.
+
+#### Rule
+
+Reusable helpers shall provide stable, explicit interfaces and avoid hidden dependencies on global installation state.
+
+#### Why is this rule important?
+
+A helper that silently depends on global variables, private ObjectIDs or specific object-tree layout is difficult to reuse and unsafe for AI-assisted modification.
+
+#### Rationale
+
+Explicit interfaces make helper behaviour reviewable, testable and portable.
+
+#### Recommended Practice
+
+- Pass required IDs or configuration explicitly.
+- Document input and output.
+- Avoid hidden use of unrelated global variables.
+- Define failure behaviour.
+- Keep side effects obvious.
+
+#### Anti-Patterns
+
+- Helper functions that read private global configuration without parameters.
+- Generic helper names with installation-specific behaviour.
+- Helpers that both calculate and switch devices without clear documentation.
+
+#### Exceptions
+
+Very small local utility functions may be private and installation-specific.
+
+#### Related References
+
+- `standards/PHP_STANDARDS.md`
+- `knowledge/EK-004-internal-state-management.md`
+
+---
+
+### Rule RS-001.32 — Reference Implementations Must Be Complete Enough to Learn From
+
+#### Purpose
+
+Ensure that reference implementations are useful for humans and AI systems.
+
+#### Rule
+
+Reference implementations shall show complete engineering patterns rather than isolated code fragments.
+
+#### Why is this rule important?
+
+Codex and other AI coding agents learn better from complete, coherent examples than from disconnected snippets.
+
+#### Rationale
+
+Complete examples preserve context: configuration, validation, ownership, side effects, error handling and constraints.
+
+#### Recommended Practice
+
+A reference implementation should include:
+
+- scenario,
+- complete code where practical,
+- configuration guidance,
+- design notes,
+- constraints,
+- review checklist,
+- related standards and knowledge articles.
+
+#### Anti-Patterns
+
+- Publishing a short code fragment as a reference implementation.
+- Omitting configuration and validation.
+- Including private installation data.
+
+#### Exceptions
+
+A reference implementation may intentionally focus on one technique if the missing context is documented.
+
+#### Related References
+
+- `references/README.md`
+- `references/RI-001-idempotent-configuration-script.md`
+
+---
+
+## 12. AI Engineering Compatibility
+
+### Rule RS-001.33 — Optimise for Reviewable AI Output
+
+#### Purpose
+
+Make AI-generated or AI-modified Symcon code easier to verify.
+
+#### Rule
+
+SAEF artifacts shall prefer structures that make AI output explicit, deterministic and reviewable.
+
+#### Why is this rule important?
+
+AI coding agents can produce plausible but unsafe changes if ownership, configuration or side effects are unclear.
+
+#### Rationale
+
+Clear structure reduces ambiguity and makes it easier for humans to review AI-generated changes.
+
+#### Recommended Practice
+
+- Use complete files instead of snippets.
+- Keep configuration explicit.
+- Use stable Idents.
+- Document side effects.
+- Use descriptive names.
+- Keep functions small and focused.
+
+#### Anti-Patterns
+
+- Asking AI to modify code with hidden installation assumptions.
+- Relying on comments instead of explicit configuration.
+- Allowing AI to infer private ObjectIDs or object-tree layout.
+
+#### Exceptions
+
+Exploratory local work may be less formal, but must be reviewed before becoming framework content.
+
+#### Related References
+
+- `AGENTS.md`
+- `principles/AI_PRINCIPLES.md`
+- `standards/DOCUMENTATION_STANDARDS.md`
+
+---
+
+### Rule RS-001.34 — Preserve Engineering Context for AI Agents
+
+#### Purpose
+
+Help AI systems make consistent engineering decisions.
+
+#### Rule
+
+Important engineering context shall be stored in repository artifacts rather than only in chat history or private memory.
+
+#### Why is this rule important?
+
+AI agents operating in Codex or similar environments rely primarily on repository content. Knowledge that only exists in conversation history cannot be reliably used.
+
+#### Rationale
+
+Repository-contained knowledge is versioned, reviewable and available to humans and AI agents.
+
+#### Recommended Practice
+
+Store durable context in:
+
+- ADRs,
+- standards,
+- engineering knowledge articles,
+- reference implementations,
+- `AGENTS.md`,
+- README files.
+
+#### Anti-Patterns
+
+- Relying on previous chat context for critical engineering rules.
+- Leaving design decisions undocumented.
+- Encoding important constraints only in local prompts.
+
+#### Exceptions
+
+Private installation details should remain outside public framework content.
+
+#### Related References
+
+- `project/ENGINEERING_MODEL.md`
+- `AGENTS.md`
+
+---
+
+### Rule RS-001.35 — Treat AI as an Assistant, Not an Authority
+
+#### Purpose
+
+Maintain engineering responsibility and operational safety.
+
+#### Rule
+
+AI-generated Symcon code and documentation shall be reviewed against SAEF standards before being accepted.
+
+#### Why is this rule important?
+
+AI can generate convincing output that is incomplete, outdated or unsafe for real automation systems.
+
+#### Rationale
+
+Human engineering review ensures that generated work matches current Symcon behaviour, project standards and operational constraints.
+
+#### Recommended Practice
+
+Review AI output for:
+
+- correct use of Symcon APIs,
+- missing configuration validation,
+- unintended side effects,
+- private data leakage,
+- unsafe device actions,
+- missing error handling,
+- consistency with standards and ADRs.
+
+#### Anti-Patterns
+
+- Running AI-generated device-control code without review.
+- Accepting AI-created ObjectIDs or private configuration.
+- Treating plausible explanations as verified facts.
+
+#### Exceptions
+
+None for reusable SAEF artifacts.
+
+#### Related References
+
+- `principles/AI_PRINCIPLES.md`
+- `AGENTS.md`
+- `standards/TESTING_STANDARDS.md`
+
+---
+
+## 13. References
+
+This Reference Standard is supported by the following SAEF artifacts:
+
+- `project/AI_PROJECT.md`
+- `project/ENGINEERING_MODEL.md`
+- `ARCHITECTURE.md`
+- `AGENTS.md`
+- `principles/ENGINEERING_PRINCIPLES.md`
+- `principles/AI_PRINCIPLES.md`
+- `adr/ADR-0001-use-requestaction.md`
+- `adr/ADR-0002-use-ident-over-object-id.md`
+- `adr/ADR-0003-private-overlay.md`
+- `standards/DOCUMENTATION_STANDARDS.md`
+- `standards/PHP_STANDARDS.md`
+- `standards/TESTING_STANDARDS.md`
+- `knowledge/EK-001-state-machines.md`
+- `knowledge/EK-002-retry-mechanisms.md`
+- `knowledge/EK-003-archive-processing.md`
+- `knowledge/EK-004-internal-state-management.md`
+- `knowledge/EK-005-idempotent-configuration.md`
+- `references/RI-001-idempotent-configuration-script.md`
+
+It is also aligned with current official IP-Symcon documentation for variable actions, event actions, event creation and Archive Control behaviour.
+
+## 14. Release Notes
+
+This draft is complete enough for internal SAEF use and Codex-assisted development.
+
+Before moving this document from `drafts/SYMCON_STANDARDS.md` to `standards/SYMCON_STANDARDS.md`, perform a final consistency review:
+
+- align all rules to the final Reference Standard rule format,
+- verify all references,
+- check terminology against the glossary,
+- ensure no private installation details are present,
+- verify current Symcon API references.
