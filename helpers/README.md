@@ -2,7 +2,7 @@
 
 This directory contains reusable PHP helper functions for professional IP-Symcon development within SAEF.
 
-Helpers are intended to be small, explicit and reviewable building blocks. They should support the standards, engineering knowledge and reference implementations in this repository.
+Helpers are intended to be small, explicit and reviewable building blocks. They support the standards, engineering knowledge and reference implementations in this repository.
 
 ## Design Principles
 
@@ -19,13 +19,22 @@ SAEF helpers should:
 
 Helper functions use the `SAEF_` prefix to avoid conflicts with existing private helper libraries or community functions.
 
-## Initial Scope
+## Structure
 
-The first helper set focuses on idempotent object creation:
+| Path | Purpose |
+| --- | --- |
+| `common/` | Shared validation and utility helpers |
+| `object/` | Idempotent object-tree helpers |
 
-- `SAEF_EnsureVariable()`
+## Current Helpers
 
-Additional helpers will follow for categories, events, scripts, retry handling and variable waiting.
+| Helper | Purpose |
+| --- | --- |
+| `SAEF_ValidateParentObject()` | Validate that an object exists and can be used as parent |
+| `SAEF_ValidateIdent()` | Validate a stable IP-Symcon Ident |
+| `SAEF_ValidateVariableType()` | Validate a Symcon variable type |
+| `SAEF_EnsureCategory()` | Idempotently create or update a category |
+| `SAEF_EnsureVariable()` | Idempotently create or update a variable |
 
 ## Related Artifacts
 
