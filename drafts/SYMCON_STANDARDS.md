@@ -604,13 +604,401 @@ Migration scripts may modify existing events if this is their documented purpose
 
 ---
 
-## 7. Planned Sections
+## 7. Data and Archive Management
+
+### Rule RS-001.18 — Bound Archive Reads
+
+#### Purpose
+
+Prevent archive operations from exhausting memory or blocking automation.
+
+#### Rule
+
+Archive reads shall be bounded by time range, count or both.
+
+#### Why is this rule important?
+
+Archive data may grow for years. Reading large ranges without limits can make scripts slow, memory-intensive or unreliable.
+
+#### Rationale
+
+Bounded archive access keeps data processing predictable and reduces the operational risk of maintenance scripts.
+
+#### Recommended Practice
+
+- Limit archive reads to the required time range.
+- Process large data sets in blocks.
+- Prefer explicit start and end timestamps.
+- Avoid reading entire multi-year archives unless this is the explicit maintenance task.
+
+#### Anti-Patterns
+
+- Reading all archived values of a frequently updated variable into memory.
+- Using unbounded archive access inside regularly scheduled automation.
+
+#### Exceptions
+
+One-time diagnostic or migration scripts may process large ranges if they are explicitly designed for that purpose and include progress control.
+
+#### Related References
+
+- Official IP-Symcon documentation: Archive Control
+- `standards/PHP_STANDARDS.md`
+
+---
+
+### Rule RS-001.19 — Preserve Archive Consistency
+
+#### Purpose
+
+Ensure that archive modifications do not leave derived data inconsistent.
+
+#### Rule
+
+Scripts that modify archived values shall consider aggregation and derived archive data.
+
+#### Why is this rule important?
+
+Changing raw archive values without updating or rebuilding affected aggregations can produce inconsistent charts, summaries or downstream calculations.
+
+#### Rationale
+
+Archive data is often used as the historical source of truth. Maintenance scripts must preserve the consistency of raw and aggregated data.
+
+#### Recommended Practice
+
+- Document whether a script modifies raw archive data.
+- Reaggregate affected time ranges when required.
+- Limit corrections to clearly defined periods.
+- Store correction metadata when corrections must be traceable.
+
+#### Anti-Patterns
+
+- Modifying archive values without considering aggregation.
+- Applying silent historical corrections without traceability.
+
+#### Exceptions
+
+Read-only analysis scripts do not need reaggregation.
+
+#### Related References
+
+- Official IP-Symcon documentation: Archive Control
+- `standards/DOCUMENTATION_STANDARDS.md`
+
+---
+
+### Rule RS-001.20 — Treat Historical Corrections as Engineering Operations
+
+#### Purpose
+
+Make archive corrections reproducible and auditable.
+
+#### Rule
+
+Historical archive corrections should be implemented as explicit maintenance operations, not as hidden side effects of normal automation.
+
+#### Why is this rule important?
+
+Historical data corrections may affect energy calculations, consumption statistics, charts and downstream automation decisions.
+
+#### Rationale
+
+Separating correction logic from normal automation reduces the risk of accidental data changes and makes maintenance operations easier to review.
+
+#### Recommended Practice
+
+- Use a dedicated maintenance script.
+- Include a dry-run or debug mode where practical.
+- Log the affected variable, time range and correction amount.
+- Store the timestamp of the last correction if repeated correction is possible.
+
+#### Anti-Patterns
+
+- Correcting historical archive data during normal scheduled automation without visibility.
+- Reapplying the same correction because no correction state is stored.
+
+#### Exceptions
+
+Small calculated helper variables may be corrected directly if they are not used as historical source data.
+
+#### Related References
+
+- `standards/PHP_STANDARDS.md`
+- `standards/DOCUMENTATION_STANDARDS.md`
+
+---
+
+## 8. Error and Recovery Handling
+
+### Rule RS-001.21 — Classify Expected Failures
+
+#### Purpose
+
+Make automation robust against common operational problems.
+
+#### Rule
+
+Expected failures shall be classified and handled explicitly.
+
+#### Why is this rule important?
+
+Symcon systems commonly interact with devices, networks, cloud APIs and external services. These dependencies may fail temporarily without indicating a logic error.
+
+#### Rationale
+
+Classifying expected failures allows automation to distinguish between temporary unavailability, invalid configuration, device errors and programming mistakes.
+
+#### Recommended Practice
+
+Common failure classes include:
+
+- configuration error,
+- device offline,
+- cloud or API unavailable,
+- timeout,
+- invalid response,
+- actuator command failed,
+- archive access failure.
+
+#### Anti-Patterns
+
+- Treating every failure as a generic script error.
+- Suppressing warnings without recording the cause.
+
+#### Exceptions
+
+Very small private scripts may use simpler error handling if failure has no operational consequence.
+
+#### Related References
+
+- `standards/PHP_STANDARDS.md`
+- `knowledge/README.md`
+
+---
+
+### Rule RS-001.22 — Design Recovery Paths
+
+#### Purpose
+
+Allow automation to return to a safe and known state after failure.
+
+#### Rule
+
+Automations that control real devices or depend on external services shall define recovery behaviour for expected failures.
+
+#### Why is this rule important?
+
+A script that detects errors but cannot recover may leave devices, visualisation states or internal variables inconsistent.
+
+#### Rationale
+
+Explicit recovery paths make behaviour predictable after network outages, device restarts, API failures or Symcon restarts.
+
+#### Recommended Practice
+
+- Define safe fallback states.
+- Store failure timestamps when relevant.
+- Retry only when the operation is safe to repeat.
+- Require manual acknowledgement for critical or ambiguous situations.
+- Reset error indicators only after the underlying condition is resolved.
+
+#### Anti-Patterns
+
+- Automatically clearing an error flag without verifying recovery.
+- Retrying actuator commands indefinitely.
+- Continuing normal operation with stale cloud data.
+
+#### Exceptions
+
+Read-only monitoring scripts may only need error reporting instead of active recovery.
+
+#### Related References
+
+- `standards/PHP_STANDARDS.md`
+- `knowledge/README.md`
+
+---
+
+### Rule RS-001.23 — Make Timeouts Explicit
+
+#### Purpose
+
+Avoid automation waiting indefinitely or acting on stale state.
+
+#### Rule
+
+Timeouts shall be explicit whenever automation waits for devices, variables, cloud data or external responses.
+
+#### Why is this rule important?
+
+Waiting without a timeout can block execution. Acting on stale data can produce unsafe or misleading automation behaviour.
+
+#### Rationale
+
+Explicit timeout handling makes scripts predictable under degraded conditions and supports safe recovery logic.
+
+#### Recommended Practice
+
+- Define timeout values in configuration.
+- Use timestamps to detect stale data.
+- Log timeout failures at an appropriate severity.
+- Use shorter timeouts for synchronous interactions and longer windows for cloud availability checks.
+
+#### Anti-Patterns
+
+- Infinite waits.
+- Assuming a variable update happened without checking `VariableUpdated` or equivalent metadata.
+- Treating stale data as current.
+
+#### Exceptions
+
+Purely local calculations without external dependencies do not require timeout handling.
+
+#### Related References
+
+- `standards/PHP_STANDARDS.md`
+- `knowledge/README.md`
+
+---
+
+## 9. Logging and Diagnostics
+
+### Rule RS-001.24 — Log for Diagnosis, Not Noise
+
+#### Purpose
+
+Keep logs useful during real operation.
+
+#### Rule
+
+Default logging shall focus on errors, important warnings and relevant state changes.
+
+#### Why is this rule important?
+
+Excessive logging hides real problems and makes long-term operation harder to diagnose.
+
+#### Rationale
+
+Logs are operational diagnostics. They should explain relevant failures and decisions without flooding the Symcon log during normal operation.
+
+#### Recommended Practice
+
+- Log errors and important warnings by default.
+- Make debug logging configurable.
+- Include enough context to identify the affected object, script or device.
+- Avoid logging every normal event trigger or state check.
+
+#### Anti-Patterns
+
+- Logging every successful scheduled execution.
+- Logging every unchanged state.
+- Using debug logs permanently as operational monitoring.
+
+#### Exceptions
+
+Temporary diagnostics may log more details if they are clearly disabled after analysis.
+
+#### Related References
+
+- `standards/PHP_STANDARDS.md`
+- `standards/DOCUMENTATION_STANDARDS.md`
+
+---
+
+### Rule RS-001.25 — Separate Operational State from Diagnostic Detail
+
+#### Purpose
+
+Make automation status understandable without requiring log inspection.
+
+#### Rule
+
+Reusable automations should expose important operational state through owned variables, while detailed diagnostics remain in logs or diagnostic structures.
+
+#### Why is this rule important?
+
+Operators and visualisations need concise state information. Developers need detailed diagnostic context. Mixing both creates either noisy user interfaces or insufficient diagnostics.
+
+#### Rationale
+
+Separate state and diagnostics improve usability and maintainability.
+
+#### Recommended Practice
+
+- Use a concise status variable for user-facing state.
+- Use an error or alarm variable for automation triggers.
+- Use a message variable for the latest relevant diagnostic text when appropriate.
+- Use structured diagnostic data for complex components.
+
+#### Anti-Patterns
+
+- Encoding all diagnostic detail in one user-facing status string.
+- Requiring users to inspect logs for normal operational status.
+- Exposing internal debug data as permanent user-facing variables.
+
+#### Exceptions
+
+Very small local scripts may only need log output.
+
+#### Related References
+
+- `standards/DOCUMENTATION_STANDARDS.md`
+- `project/ENGINEERING_MODEL.md`
+
+---
+
+### Rule RS-001.26 — Preserve Diagnostic Context
+
+#### Purpose
+
+Make intermittent and historical failures analyzable.
+
+#### Rule
+
+Important failures should preserve enough context to understand what happened after the immediate execution has ended.
+
+#### Why is this rule important?
+
+Many automation failures are intermittent. Without context, later diagnosis becomes guesswork.
+
+#### Rationale
+
+Persisted context helps identify whether a failure was caused by configuration, device state, network availability, cloud response or timing.
+
+#### Recommended Practice
+
+Store or log relevant context such as:
+
+- timestamp,
+- affected object or variable,
+- expected value,
+- actual value,
+- timeout duration,
+- external response summary,
+- retry count.
+
+#### Anti-Patterns
+
+- Logging only “failed” without context.
+- Overwriting the last error before it can be inspected.
+- Hiding repeated failures behind a single generic alarm flag.
+
+#### Exceptions
+
+Sensitive data such as credentials, tokens or private network details shall not be logged.
+
+#### Related References
+
+- `adr/ADR-0003-private-overlay.md`
+- `standards/DOCUMENTATION_STANDARDS.md`
+
+---
+
+## 10. Planned Sections
 
 The following sections will be developed in subsequent commits:
 
-- Data and Archive Management
-- Error and Recovery Handling
-- Logging and Diagnostics
 - Configuration Management
 - Reusability
 - AI Engineering Compatibility
