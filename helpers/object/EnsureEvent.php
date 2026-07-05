@@ -25,7 +25,9 @@ if (!defined('SAEF_HELPER_ENSURE_EVENT')) {
      *
      * Required for automatically created script-executing events in IP-Symcon 6.0+.
      */
-    const SAEF_RUN_AUTOMATION_ACTION_GUID = '{7938A5A2-0981-5FE0-BE6C-8AA610D654EB}';
+    if (!defined('SAEF_RUN_AUTOMATION_ACTION_GUID')) {
+        define('SAEF_RUN_AUTOMATION_ACTION_GUID', '{7938A5A2-0981-5FE0-BE6C-8AA610D654EB}');
+    }
 
     /**
      * Ensures that a cyclic event exists and executes a target script.

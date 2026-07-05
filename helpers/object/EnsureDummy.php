@@ -15,7 +15,9 @@ if (!defined('SAEF_HELPER_ENSURE_DUMMY')) {
     /**
      * IP-Symcon Dummy Module GUID.
      */
-    const SAEF_DUMMY_MODULE_GUID = '{485D0419-BE97-4548-AA9C-C083EB82E61E}';
+    if (!defined('SAEF_DUMMY_MODULE_GUID')) {
+        define('SAEF_DUMMY_MODULE_GUID', '{485D0419-BE97-4548-AA9C-C083EB82E61E}');
+    }
 
     function SAEF_EnsureDummy(
         int $parentID,

@@ -26,14 +26,18 @@ if (!defined('SAEF_HELPER_WAIT_FOR_VARIABLE')) {
      *
      * Uses IPS variable metadata field `VariableChanged`.
      */
-    const SAEF_WAIT_CHANGED = 1;
+    if (!defined('SAEF_WAIT_CHANGED')) {
+        define('SAEF_WAIT_CHANGED', 1);
+    }
 
     /**
      * Wait mode: wait for any variable update, including updates with unchanged value.
      *
      * Uses IPS variable metadata field `VariableUpdated`.
      */
-    const SAEF_WAIT_UPDATED = 2;
+    if (!defined('SAEF_WAIT_UPDATED')) {
+        define('SAEF_WAIT_UPDATED', 2);
+    }
 
     /**
      * Waits for a variable to change or update.
