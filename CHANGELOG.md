@@ -7,6 +7,15 @@ This project adheres to Semantic Versioning.
 
 ---
 
+## [0.2.0] - Unreleased
+
+### Added
+
+#### Diagnostics helper library
+
+- Configuration hash helper for stable hashes of normalized configuration arrays.
+- Recursive ignored-key handling for volatile configuration values such as timestamps, last run metadata or runtime state.
+
 ## [0.1.0] - 2026-07-06
 
 ### Added

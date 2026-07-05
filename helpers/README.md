@@ -24,6 +24,7 @@ Helper functions use the `SAEF_` prefix to avoid conflicts with existing private
 | Path | Purpose |
 | --- | --- |
 | `common/` | Shared validation and utility helpers |
+| `diagnostics/` | Runtime diagnostics, configuration hashes and internal state helpers |
 | `object/` | Idempotent object-tree helpers |
 | `variable/` | Variable wait and action helpers |
 
@@ -34,6 +35,8 @@ Helper functions use the `SAEF_` prefix to avoid conflicts with existing private
 | `SAEF_ValidateParentObject()` | Validate that an object exists and can be used as parent |
 | `SAEF_ValidateIdent()` | Validate a stable IP-Symcon Ident |
 | `SAEF_ValidateVariableType()` | Validate a Symcon variable type |
+| `SAEF_NormalizeConfigurationForHash()` | Normalize configuration arrays for stable hash creation |
+| `SAEF_CreateConfigurationHash()` | Create a stable SHA-256 hash for configuration arrays |
 | `SAEF_EnsureCategory()` | Idempotently create or update a category |
 | `SAEF_EnsureVariable()` | Idempotently create or update a variable |
 | `SAEF_EnsureCyclicScriptEvent()` | Idempotently create or update a cyclic script event |
