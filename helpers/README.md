@@ -25,6 +25,7 @@ Helper functions use the `SAEF_` prefix to avoid conflicts with existing private
 | --- | --- |
 | `common/` | Shared validation and utility helpers |
 | `object/` | Idempotent object-tree helpers |
+| `variable/` | Variable wait and action helpers |
 
 ## Current Helpers
 
@@ -36,10 +37,12 @@ Helper functions use the `SAEF_` prefix to avoid conflicts with existing private
 | `SAEF_EnsureCategory()` | Idempotently create or update a category |
 | `SAEF_EnsureVariable()` | Idempotently create or update a variable |
 | `SAEF_EnsureCyclicScriptEvent()` | Idempotently create or update a cyclic script event |
+| `SAEF_WaitForVariable()` | Wait for a variable change or update with optional value check |
 
 ## Related Artifacts
 
 - `drafts/SYMCON_STANDARDS.md`
+- `knowledge/EK-002-retry-mechanisms.md`
 - `knowledge/EK-004-internal-state-management.md`
 - `knowledge/EK-005-idempotent-configuration.md`
 - `references/RI-001-idempotent-configuration-script.md`
