@@ -229,13 +229,385 @@ None for reusable SAEF artifacts.
 
 ---
 
-## 4. Planned Sections
+## 4. Variable Lifecycle
+
+### Rule RS-001.7 — Distinguish Status, Command and Internal Variables
+
+#### Purpose
+
+Avoid unclear ownership and unsafe value changes.
+
+#### Rule
+
+Automation shall distinguish between status variables, command variables and internally owned state variables.
+
+#### Rationale
+
+In IP-Symcon, some variables represent device or instance state, while others are script-owned internal data. Treating all variables as writable values can bypass actions, create inconsistent state or produce misleading visualisation results.
+
+#### Recommended Practice
+
+- Treat instance-owned variables as status or command interfaces.
+- Treat script-created variables as internal state only when the script owns them.
+- Document whether a variable is read-only, user-controlled, calculated or persistent.
+- Use clear variable names and Idents that reflect the variable role.
+
+#### Exceptions
+
+Legacy scripts may use mixed variable roles. Such scripts should be refactored gradually.
+
+#### Related References
+
+- `standards/PHP_STANDARDS.md`
+- `standards/DOCUMENTATION_STANDARDS.md`
+
+---
+
+### Rule RS-001.8 — Use RequestAction for Controllable Variables
+
+#### Purpose
+
+Preserve the action semantics of device and module variables.
+
+#### Rule
+
+Use `RequestAction()` when changing controllable variables that belong to an instance, module or user-facing action.
+
+Use `SetValue()` only for variables owned by the script itself or for calculated/internal state without action semantics.
+
+#### Rationale
+
+`RequestAction()` executes the same variable action used by visualisations and delegates the change to the owning instance or action script. Directly writing the value bypasses that action layer and may leave the real device, module or visualised state inconsistent.
+
+#### Recommended Practice
+
+- Use `RequestAction()` for device control.
+- Use `RequestAction()` for variables with a defined default action or custom action script.
+- Use `SetValue*()` only for script-owned variables.
+- Use `HasAction()` or equivalent checks where a generic helper must decide whether a variable has action semantics.
+
+#### Exceptions
+
+- Internal calculated variables
+- Script-owned cache or state variables
+- Test doubles or simulations where the variable is intentionally not backed by a device action
+
+#### Related References
+
+- `adr/ADR-0001-use-requestaction.md`
+- Official IP-Symcon documentation: `RequestAction()`
+- Official IP-Symcon documentation: Variables and actions
+
+---
+
+### Rule RS-001.9 — Keep Internal State Explicit
+
+#### Purpose
+
+Make automation state understandable, maintainable and recoverable.
+
+#### Rule
+
+Persistent internal state shall be stored explicitly in clearly owned variables or configuration data.
+
+Hidden state shall be avoided.
+
+#### Rationale
+
+Implicit state makes debugging difficult and increases the risk of inconsistent behaviour after restarts, script edits or migrations.
+
+#### Recommended Practice
+
+- Store persistent timestamps, counters, hashes and status values in clearly named variables.
+- Use Idents for internal variables.
+- Keep internal variables below a known parent object.
+- Document which internal variables are part of the automation state.
+
+#### Exceptions
+
+Temporary runtime values that only exist during one script execution.
+
+#### Related References
+
+- `project/ENGINEERING_MODEL.md`
+- `standards/PHP_STANDARDS.md`
+
+---
+
+### Rule RS-001.10 — Use Profiles Deliberately
+
+#### Purpose
+
+Keep user-facing variables understandable and consistent.
+
+#### Rule
+
+Variable profiles should be assigned intentionally and should match the semantic meaning of the variable.
+
+#### Rationale
+
+Profiles define presentation, allowed values and user expectations. A wrong or missing profile can make a correct automation misleading or hard to use.
+
+#### Recommended Practice
+
+- Use existing standard profiles where they fit.
+- Create custom profiles only when required.
+- Keep custom profile names stable.
+- Document custom profiles used by reusable artifacts.
+
+#### Exceptions
+
+Purely internal variables may omit a profile if no user-facing presentation is required.
+
+#### Related References
+
+- `standards/DOCUMENTATION_STANDARDS.md`
+
+---
+
+## 5. Script Architecture
+
+### Rule RS-001.11 — Separate Configuration from Logic
+
+#### Purpose
+
+Make scripts reusable, reviewable and safe to adapt.
+
+#### Rule
+
+Scripts shall keep installation-specific configuration separate from implementation logic.
+
+#### Rationale
+
+Separating configuration from logic makes scripts easier to review, migrate, reuse and adapt to different installations.
+
+#### Recommended Practice
+
+- Place configuration at the beginning of the script.
+- Use meaningful configuration keys.
+- Validate configuration before executing actions.
+- Avoid hardcoded ObjectIDs inside reusable logic.
+
+#### Exceptions
+
+Small private one-off scripts may inline configuration, but should not become reference implementations without refactoring.
+
+#### Related References
+
+- `standards/PHP_STANDARDS.md`
+- `adr/ADR-0003-private-overlay.md`
+
+---
+
+### Rule RS-001.12 — Prefer Complete Scripts over Snippets
+
+#### Purpose
+
+Improve reproducibility and reduce integration errors.
+
+#### Rule
+
+SAEF examples and reference implementations shall provide complete scripts or complete files whenever practical.
+
+#### Rationale
+
+Isolated snippets often omit configuration, dependencies, side effects and error handling. Complete scripts are easier to review, test and adapt.
+
+#### Recommended Practice
+
+A complete script should include:
+
+- configuration,
+- validation,
+- main execution flow,
+- helper functions,
+- logging and error handling where required.
+
+#### Exceptions
+
+Documentation may use short excerpts to explain a specific concept if the surrounding context is clear.
+
+#### Related References
+
+- `standards/PHP_STANDARDS.md`
+- `standards/DOCUMENTATION_STANDARDS.md`
+
+---
+
+### Rule RS-001.13 — Use State Machines for Complex Behaviour
+
+#### Purpose
+
+Represent complex automation behaviour explicitly.
+
+#### Rule
+
+Use a state machine when behaviour depends on multiple states, transitions, retries, timeouts or recovery paths.
+
+#### Rationale
+
+Complex automation implemented as nested conditions becomes difficult to reason about. A state machine makes transitions visible and reduces accidental behaviour.
+
+#### Recommended Practice
+
+Use a state machine when automation contains:
+
+- several distinct operating states,
+- timeout handling,
+- retry or recovery logic,
+- manual acknowledgement,
+- external cloud or device availability.
+
+#### Exceptions
+
+Simple binary or stateless automation does not require a state machine.
+
+#### Related References
+
+- `knowledge/README.md`
+- `standards/PHP_STANDARDS.md`
+
+---
+
+### Rule RS-001.14 — Make Retries Explicit
+
+#### Purpose
+
+Handle temporary failures without hiding permanent problems.
+
+#### Rule
+
+Retry logic shall be explicit, bounded and observable.
+
+#### Rationale
+
+Unbounded or silent retries can hide real problems, overload devices or make debugging difficult.
+
+#### Recommended Practice
+
+- Define retry count or timeout.
+- Use a delay appropriate to the device or service.
+- Log final failure.
+- Store relevant retry state when the retry spans multiple script executions.
+
+#### Exceptions
+
+Immediate idempotent reads may be retried locally if failure has no side effects.
+
+#### Related References
+
+- `standards/PHP_STANDARDS.md`
+- `knowledge/README.md`
+
+---
+
+## 6. Event Architecture
+
+### Rule RS-001.15 — Create Events Deterministically
+
+#### Purpose
+
+Ensure that automation triggers are reproducible and maintainable.
+
+#### Rule
+
+Automatically created events shall be deterministic, identifiable and safe to recreate.
+
+#### Rationale
+
+Events are part of the automation architecture. Duplicate, unnamed or unmanaged events cause unexpected execution and make troubleshooting difficult.
+
+#### Recommended Practice
+
+- Search for existing events before creating new ones.
+- Use stable names or Idents where available.
+- Keep events below or near the owning script when practical.
+- Document which events a setup script creates.
+
+#### Exceptions
+
+Temporary diagnostic events may be created manually but should not be part of reusable artifacts.
+
+#### Related References
+
+- `standards/DOCUMENTATION_STANDARDS.md`
+- `project/ENGINEERING_MODEL.md`
+
+---
+
+### Rule RS-001.16 — Bind Script Events Explicitly
+
+#### Purpose
+
+Ensure script-executing events work correctly on supported IP-Symcon versions.
+
+#### Rule
+
+When automatically creating events that execute scripts, set the event trigger, script assignment and event action binding explicitly.
+
+For IP-Symcon 6.0 and newer, script-executing events shall include the required event action binding.
+
+#### Rationale
+
+A trigger alone does not fully define how an event executes its action. Explicit action binding makes generated events complete and reproducible.
+
+#### Recommended Practice
+
+For script-executing events, create or update all required parts:
+
+- event object,
+- trigger condition,
+- script assignment,
+- event action binding,
+- activation state.
+
+#### Exceptions
+
+Manually configured user events are outside the scope of reusable setup scripts.
+
+#### Related References
+
+- Official IP-Symcon documentation: `IPS_SetEventAction()`
+- `standards/PHP_STANDARDS.md`
+
+---
+
+### Rule RS-001.17 — Keep Event Ownership Clear
+
+#### Purpose
+
+Avoid accidental removal or modification of user-created automation.
+
+#### Rule
+
+A setup or configuration script shall only modify events it owns.
+
+#### Rationale
+
+Events created manually by users may encode local operational knowledge. Automatically changing them from reusable code risks breaking private installations.
+
+#### Recommended Practice
+
+- Use naming or Idents to identify owned events.
+- Keep owned events close to the owning script.
+- Avoid scanning and modifying unrelated events.
+- Document cleanup behaviour.
+
+#### Exceptions
+
+Migration scripts may modify existing events if this is their documented purpose.
+
+#### Related References
+
+- `adr/ADR-0002-use-ident-over-object-id.md`
+- `standards/DOCUMENTATION_STANDARDS.md`
+
+---
+
+## 7. Planned Sections
 
 The following sections will be developed in subsequent commits:
 
-- Variable Lifecycle
-- Script Architecture
-- Event Architecture
 - Data and Archive Management
 - Error and Recovery Handling
 - Logging and Diagnostics
