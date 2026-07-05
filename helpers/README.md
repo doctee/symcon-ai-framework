@@ -35,6 +35,7 @@ Helper functions use the `SAEF_` prefix to avoid conflicts with existing private
 | `SAEF_ValidateVariableType()` | Validate a Symcon variable type |
 | `SAEF_EnsureCategory()` | Idempotently create or update a category |
 | `SAEF_EnsureVariable()` | Idempotently create or update a variable |
+| `SAEF_EnsureCyclicScriptEvent()` | Idempotently create or update a cyclic script event |
 
 ## Related Artifacts
 
