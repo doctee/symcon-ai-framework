@@ -44,6 +44,10 @@ Helper functions use the `SAEF_` prefix to avoid conflicts with existing private
 | `SAEF_EnsureStatisticsVariables()` | Idempotently create or update statistic variables |
 | `SAEF_IncrementStatistic()` | Increment an integer or float statistic variable |
 | `SAEF_SetStatisticTimestamp()` | Set an integer statistic variable to a Unix timestamp |
+| `SAEF_EnsureErrorRingBufferVariable()` | Idempotently create or update a string variable for bounded error history |
+| `SAEF_ReadErrorRingBuffer()` | Read bounded error history from a JSON string variable |
+| `SAEF_AppendErrorRingBufferEntry()` | Append one error entry and trim the buffer to a fixed capacity |
+| `SAEF_ClearErrorRingBuffer()` | Clear bounded error history |
 | `SAEF_EnsureCategory()` | Idempotently create or update a category |
 | `SAEF_EnsureVariable()` | Idempotently create or update a variable |
 | `SAEF_EnsureCyclicScriptEvent()` | Idempotently create or update a cyclic script event |
@@ -53,10 +57,12 @@ Helper functions use the `SAEF_` prefix to avoid conflicts with existing private
 | `SAEF_EnsureInstance()` | Idempotently create or update an instance by module GUID |
 | `SAEF_EnsureProfile()` | Idempotently create or validate a variable profile |
 | `SAEF_WaitForVariable()` | Wait for a variable change or update with optional value check |
+| `SAEF_RequestVariableAction()` | Execute a controllable variable action through `RequestAction()` |
+| `SAEF_RequestVariableActionAndWait()` | Execute a variable action and wait for bounded state feedback |
 
 ## Related Artifacts
 
-Registry helpers are intended for small script-owned metadata only. Discovery payloads or large data sets must not be stored in registry variables.
+Registry and error ring buffer helpers are intended for small script-owned metadata only. Discovery payloads or large data sets must not be stored in these variables. Error ring buffers additionally enforce a fixed entry capacity.
 
 - `drafts/SYMCON_STANDARDS.md`
 - `knowledge/EK-002-retry-mechanisms.md`

@@ -19,6 +19,13 @@ This project adheres to Semantic Versioning.
 - Defensive registry reads for empty values and explicit failures for invalid JSON.
 - Statistics helper for script-owned counters and timestamp variables.
 - Idempotent statistic variable creation through existing variable helpers.
+- Error ring buffer helper for bounded script-owned error history.
+- Defensive error ring buffer reads for empty values and explicit failures for invalid JSON.
+
+#### Variable action helper
+
+- RequestAction helper for controllable variables with explicit action validation.
+- Optional bounded feedback wait after variable action requests.
 
 ## [0.1.0] - 2026-07-06
 
