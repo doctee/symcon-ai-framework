@@ -6,11 +6,15 @@
 
 ## Purpose
 
-This Engineering Knowledge article explains how archive data should be read, processed and corrected in professional IP-Symcon solutions.
+This Engineering Knowledge article explains how archive data should be read,
+processed and corrected in professional IP-Symcon solutions.
 
-Archive processing is a recurring engineering task in Symcon projects. It is used for energy analysis, counter correction, sensor replacement, diagnostics, long-term statistics and data migration.
+Archive processing is a recurring engineering task in Symcon projects. It is
+used for energy analysis, counter correction, sensor replacement, diagnostics,
+long-term statistics and data migration.
 
-This document focuses on engineering patterns and operational safety, not on replacing the official Archive Control documentation.
+This document focuses on engineering patterns and operational safety, not on
+replacing the official Archive Control documentation.
 
 ---
 
@@ -18,9 +22,13 @@ This document focuses on engineering patterns and operational safety, not on rep
 
 Archive data grows continuously over time.
 
-A variable that is updated frequently can accumulate thousands or millions of raw values. Processing such data without clear limits may lead to slow scripts, excessive memory usage, blocked automation or inconsistent historical data.
+A variable that is updated frequently can accumulate thousands or millions of
+raw values. Processing such data without clear limits may lead to slow scripts,
+excessive memory usage, blocked automation or inconsistent historical data.
 
-Archive processing becomes especially sensitive when scripts modify historical values. Historical corrections can affect charts, aggregations, statistics and downstream calculations.
+Archive processing becomes especially sensitive when scripts modify historical
+values. Historical corrections can affect charts, aggregations, statistics and
+downstream calculations.
 
 ---
 
@@ -37,7 +45,9 @@ Archive processing is relevant when automation needs to:
 - rebuild derived values,
 - verify long-term behaviour.
 
-In IP-Symcon, the Archive Control stores raw logged values and aggregated values. Raw data and aggregated data serve different engineering purposes and should not be treated as interchangeable.
+In IP-Symcon, the Archive Control stores raw logged values and aggregated
+values. Raw data and aggregated data serve different engineering purposes and
+should not be treated as interchangeable.
 
 ---
 
@@ -75,7 +85,8 @@ Use raw values when exact historical records are required.
 
 Use aggregated values when the task operates on periods such as minutes, hours, days, weeks, months or years.
 
-Raw values preserve exact recorded changes. Aggregated values are usually better suited for charts, statistics and period-based consumption analysis.
+Raw values preserve exact recorded changes. Aggregated values are usually
+better suited for charts, statistics and period-based consumption analysis.
 
 ### Time Range
 
@@ -89,7 +100,8 @@ Large raw-data reads should be processed in blocks.
 
 The block size should be chosen so that memory use remains predictable and the script remains responsive.
 
-A practical default for many maintenance scripts is to process approximately 1,000 to 10,000 records per block, depending on the operation.
+A practical default for many maintenance scripts is to process approximately
+1,000 to 10,000 records per block, depending on the operation.
 
 ### Ordering
 
@@ -99,7 +111,8 @@ Scripts that require chronological processing must explicitly reverse or otherwi
 
 ### Updates vs. Changes
 
-The archive logs changed values. Variable updates that do not change the value are not represented as separate raw archive entries.
+The archive logs changed values. Variable updates that do not change the value
+are not represented as separate raw archive entries.
 
 Scripts that depend on update timestamps must not assume that every variable update exists in the archive.
 
@@ -151,7 +164,9 @@ Use explicit time ranges and limits.
 
 ### Ignoring Archive Order
 
-Assuming oldest-to-newest order when the data is returned newest-to-oldest can produce wrong deltas, wrong consumption calculations or incorrect correction distribution.
+Assuming oldest-to-newest order when the data is returned newest-to-oldest can
+produce wrong deltas, wrong consumption calculations or incorrect correction
+distribution.
 
 ### Modifying Raw Values without Reaggregation
 
@@ -222,7 +237,8 @@ Continue a long-running operation from stored progress metadata.
 
 Apply a targeted fix for a known issue.
 
-Not every script needs all modes. However, scripts that modify historical data should at least distinguish between analysis and application.
+Not every script needs all modes. However, scripts that modify historical data
+should at least distinguish between analysis and application.
 
 ---
 
@@ -232,7 +248,8 @@ Not every script needs all modes. However, scripts that modify historical data s
 
 Use explicit start and end timestamps wherever possible.
 
-When using `AC_GetLoggedValues()`, also use the limit parameter intentionally. Remember that there is a hard maximum number of returned records per query.
+When using `AC_GetLoggedValues()`, also use the limit parameter intentionally.
+Remember that there is a hard maximum number of returned records per query.
 
 ### Aggregated Reads
 
@@ -262,7 +279,8 @@ Typical progress state:
 
 ## Relationship to RS-001
 
-RS-001 defines archive-management rules such as bounded reads, archive consistency and historical corrections as engineering operations.
+RS-001 defines archive-management rules such as bounded reads, archive
+consistency and historical corrections as engineering operations.
 
 This article explains the underlying engineering patterns and design decisions.
 
@@ -289,4 +307,3 @@ This article explains the underlying engineering patterns and design decisions.
 - EK-002 — Retry Mechanisms in IP-Symcon
 - EK-004 — Internal State Management
 - EK-005 — Idempotent Configuration
-

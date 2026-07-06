@@ -9,7 +9,9 @@
 
 This reference implementation demonstrates an idempotent IP-Symcon configuration script using SAEF helpers.
 
-It shows how a setup script can safely create or update categories, variables, profiles and cyclic script events without creating duplicates when executed repeatedly.
+It shows how a setup script can safely create or update categories, variables,
+profiles and cyclic script events without creating duplicates when executed
+repeatedly.
 
 ## Demonstrated Concepts
 
@@ -257,11 +259,13 @@ function validateDemoConfiguration(array $config): void
 
 The script uses SAEF helpers instead of implementing its own object-creation logic.
 
-This is intentional. Reference implementations should demonstrate how framework users and AI coding agents are expected to compose SAEF helpers.
+This is intentional. Reference implementations should demonstrate how
+framework users and AI coding agents are expected to compose SAEF helpers.
 
 ### Parent Object
 
-The parent object is explicit configuration. This keeps the reference implementation portable and avoids hidden installation-specific assumptions.
+The parent object is explicit configuration. This keeps the reference
+implementation portable and avoids hidden installation-specific assumptions.
 
 ### Idents
 
@@ -287,7 +291,8 @@ The event action binding is handled by the helper.
 
 ### Event Active State
 
-The created event is inactive by default. This prevents accidental scheduled execution before the user has reviewed and adapted the configuration.
+The created event is inactive by default. This prevents accidental scheduled
+execution before the user has reviewed and adapted the configuration.
 
 ## Known Constraints
 

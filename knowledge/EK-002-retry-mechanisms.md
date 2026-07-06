@@ -8,7 +8,10 @@
 
 This Engineering Knowledge article explains how retry mechanisms should be designed in professional IP-Symcon solutions.
 
-Retries are useful when automation depends on devices, networks, gateways, MQTT brokers, cloud APIs or other external systems that may temporarily fail. A retry mechanism should increase robustness without hiding permanent failures or creating unsafe repeated actions.
+Retries are useful when automation depends on devices, networks, gateways,
+MQTT brokers, cloud APIs or other external systems that may temporarily fail.
+A retry mechanism should increase robustness without hiding permanent failures
+or creating unsafe repeated actions.
 
 ---
 
@@ -24,7 +27,9 @@ Typical examples:
 - a variable has not yet updated,
 - a command was accepted but the expected state change is delayed.
 
-A single failed operation does not always mean that the automation logic is wrong. At the same time, blindly repeating an operation can be unsafe or misleading.
+A single failed operation does not always mean that the automation logic is
+wrong. At the same time, blindly repeating an operation can be unsafe or
+misleading.
 
 ---
 
@@ -68,7 +73,8 @@ Retry Allowed?
         Recovery / Safe State
 ```
 
-The important engineering decision is not only *how often* an operation is retried, but also *whether the operation is safe to retry*.
+The important engineering decision is not only *how often* an operation is
+retried, but also *whether the operation is safe to retry*.
 
 ---
 
@@ -145,7 +151,8 @@ This hides real problems and may block automation.
 
 Retrying every failure in the same way.
 
-Configuration errors, invalid object IDs and programming errors should usually fail immediately instead of being retried.
+Configuration errors, invalid object IDs and programming errors should usually
+fail immediately instead of being retried.
 
 ### Retry without Logging
 
@@ -161,7 +168,8 @@ Examples include repeatedly unlocking, opening, switching or resetting devices w
 
 ### Retry as a Replacement for State Management
 
-If retry behaviour spans several executions, it should not rely on hidden runtime state. Use explicit state variables or a state machine.
+If retry behaviour spans several executions, it should not rely on hidden
+runtime state. Use explicit state variables or a state machine.
 
 ---
 
@@ -205,4 +213,6 @@ Before implementing a retry mechanism, ask:
 
 ## Related Reference Implementations
 
-- RI-002 — Runtime Diagnostics / Internal State, for explicit retry-adjacent diagnostics such as execution counters, error counters and bounded recent error history.
+- RI-002 — Runtime Diagnostics / Internal State, for explicit retry-adjacent
+  diagnostics such as execution counters, error counters and bounded recent
+  error history.

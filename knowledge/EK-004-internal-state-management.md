@@ -8,9 +8,12 @@
 
 This Engineering Knowledge article explains how internal state should be modelled in professional IP-Symcon automations.
 
-Internal state is the information an automation owns itself. It is not the state of a physical device, but the knowledge required for the automation to operate reliably across script executions, restarts and failures.
+Internal state is the information an automation owns itself. It is not the
+state of a physical device, but the knowledge required for the automation to
+operate reliably across script executions, restarts and failures.
 
-This article explains the engineering concepts behind RS-001 rules for explicit state, diagnostics and ownership. It does not define additional mandatory rules.
+This article explains the engineering concepts behind RS-001 rules for explicit
+state, diagnostics and ownership. It does not define additional mandatory rules.
 
 ---
 
@@ -161,7 +164,10 @@ Examples:
 
 Runtime diagnostics are a specialised form of internal state.
 
-Their purpose is to make an automation easier to understand during operation without turning logs, status variables or JSON fields into unbounded data stores. RI-002 demonstrates the current SAEF composition model for runtime diagnostics.
+Their purpose is to make an automation easier to understand during operation
+without turning logs, status variables or JSON fields into unbounded data
+stores. RI-002 demonstrates the current SAEF composition model for runtime
+diagnostics.
 
 ### Configuration Hash
 
@@ -173,7 +179,9 @@ It helps answer:
 - Did the desired configuration change since the previous run?
 - Can a support or review step compare two runs without inspecting every configuration field?
 
-Volatile fields such as timestamps, runtime values or last-run metadata should be ignored before hashing. The hash is diagnostic metadata, not a security control.
+Volatile fields such as timestamps, runtime values or last-run metadata should
+be ignored before hashing. The hash is diagnostic metadata, not a security
+control.
 
 ### Registry Pattern
 
@@ -187,7 +195,9 @@ It is useful for values such as:
 - migration marker,
 - last known phase.
 
-A registry should not become a generic JSON dump. Discovery payloads, device snapshots, large API responses and historical data belong in purpose-built structures or archive processing, not in a registry variable.
+A registry should not become a generic JSON dump. Discovery payloads, device
+snapshots, large API responses and historical data belong in purpose-built
+structures or archive processing, not in a registry variable.
 
 ### Statistics
 
@@ -201,15 +211,21 @@ Typical examples:
 - last run timestamp,
 - last successful run timestamp.
 
-Statistics should usually be separate variables rather than fields inside a large JSON blob. Separate variables make ownership, profile selection and review easier.
+Statistics should usually be separate variables rather than fields inside a
+large JSON blob. Separate variables make ownership, profile selection and
+review easier.
 
 ### Error Ring Buffer
 
 An error ring buffer stores a bounded history of recent diagnostic failures.
 
-It is useful when the latest error alone is not enough to understand intermittent problems. The buffer must remain fixed-size so diagnostics do not grow without limit.
+It is useful when the latest error alone is not enough to understand
+intermittent problems. The buffer must remain fixed-size so diagnostics do not
+grow without limit.
 
-Error ring buffers should contain concise context only. They must not contain credentials, tokens, private network details, full discovery payloads or large external responses.
+Error ring buffers should contain concise context only. They must not contain
+credentials, tokens, private network details, full discovery payloads or large
+external responses.
 
 ---
 

@@ -6,9 +6,13 @@
 
 ## Purpose
 
-This Engineering Knowledge article explains how runtime diagnostics should be modelled in SAEF-based IP-Symcon automations.
+This Engineering Knowledge article explains how runtime diagnostics should be
+modelled in SAEF-based IP-Symcon automations.
 
-Runtime diagnostics are the script-owned metadata, counters and recent error context that help operators and engineers understand an automation after it has run. This article explains concepts behind RS-001 and RI-002. It does not define additional mandatory rules.
+Runtime diagnostics are the script-owned metadata, counters and recent error
+context that help operators and engineers understand an automation after it has
+run. This article explains concepts behind RS-001 and RI-002. It does not
+define additional mandatory rules.
 
 ---
 
@@ -69,7 +73,9 @@ Each diagnostic concern has a separate responsibility.
 
 A configuration hash is a stable fingerprint of desired configuration data.
 
-Use it to record which configuration shape an automation last processed. Ignore volatile keys such as timestamps, runtime values or last-run fields before hashing.
+Use it to record which configuration shape an automation last processed.
+Ignore volatile keys such as timestamps, runtime values or last-run fields
+before hashing.
 
 The hash is diagnostic metadata. It should not be treated as a secret, signature or integrity guarantee.
 
@@ -85,7 +91,9 @@ Good registry entries include:
 - migration marker,
 - current phase.
 
-Avoid using a registry for discovery payloads, large API responses, historical data or arbitrary dumps. If the data is large or unbounded, it is not registry metadata.
+Avoid using a registry for discovery payloads, large API responses, historical
+data or arbitrary dumps. If the data is large or unbounded, it is not registry
+metadata.
 
 ### Statistics
 
@@ -105,7 +113,9 @@ Use separate typed variables where practical. This keeps profiles, ownership and
 
 An error ring buffer is a bounded JSON list of recent errors.
 
-It preserves intermittent failure context without growing forever. Entries should contain concise metadata such as timestamp, message, error type or small context fields.
+It preserves intermittent failure context without growing forever. Entries
+should contain concise metadata such as timestamp, message, error type or small
+context fields.
 
 Do not store credentials, tokens, private network details, discovery payloads or full external responses in the buffer.
 
@@ -126,7 +136,8 @@ Costs:
 - more documentation,
 - decisions about what belongs in diagnostics and what belongs in logs or archives.
 
-Runtime diagnostics are worthwhile when an automation is reused, scheduled, stateful or expected to be maintained over time.
+Runtime diagnostics are worthwhile when an automation is reused, scheduled,
+stateful or expected to be maintained over time.
 
 ---
 
@@ -134,7 +145,8 @@ Runtime diagnostics are worthwhile when an automation is reused, scheduled, stat
 
 ### One Large JSON Dump
 
-Putting all runtime state, diagnostics, cache and discovery data into one string variable makes ownership and evolution unclear.
+Putting all runtime state, diagnostics, cache and discovery data into one string
+variable makes ownership and evolution unclear.
 
 ### Unbounded Error History
 
@@ -146,7 +158,8 @@ Frequently updated counters and timestamps are usually clearer as typed variable
 
 ### Configuration Hash with Runtime Fields
 
-Including timestamps or last-run values in a configuration hash makes the hash change on every run and destroys its diagnostic value.
+Including timestamps or last-run values in a configuration hash makes the hash
+change on every run and destroys its diagnostic value.
 
 ### Private Data in Diagnostics
 
@@ -156,7 +169,8 @@ Diagnostics must not store credentials, tokens, private hostnames, private IP ad
 
 ## Relationship to RS-001
 
-RS-001 defines the engineering expectations for explicit internal state, diagnostics, bounded context and helper-first reuse.
+RS-001 defines the engineering expectations for explicit internal state,
+diagnostics, bounded context and helper-first reuse.
 
 This article explains how those expectations can be applied to runtime diagnostics using existing SAEF helpers.
 

@@ -2,7 +2,9 @@
 
 This directory contains reusable engineering knowledge for SAEF.
 
-Unlike standards, these documents explain concepts, trade-offs, patterns and decision guidance. They support `standards/SYMCON_STANDARDS.md`; they do not define additional mandatory rules.
+Unlike standards, these documents explain concepts, trade-offs, patterns and
+decision guidance. They support `standards/SYMCON_STANDARDS.md`; they do not
+define additional mandatory rules.
 
 ## Current Articles
 
@@ -17,8 +19,10 @@ Unlike standards, these documents explain concepts, trade-offs, patterns and dec
 
 ## Relationship to References
 
-- `references/RI-001-idempotent-configuration-script.md` demonstrates the helper-first idempotent configuration pattern explained by EK-005.
-- `references/RI-002-runtime-diagnostics-internal-state.md` demonstrates the runtime diagnostics composition explained by EK-004 and EK-006.
+- `references/RI-001-idempotent-configuration-script.md` demonstrates the
+  helper-first idempotent configuration pattern explained by EK-005.
+- `references/RI-002-runtime-diagnostics-internal-state.md` demonstrates the
+  runtime diagnostics composition explained by EK-004 and EK-006.
 
 ## Future Topics
 

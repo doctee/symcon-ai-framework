@@ -7,9 +7,12 @@
 
 ## Purpose
 
-This reference implementation demonstrates how the SAEF diagnostics helpers can be composed to model runtime diagnostics and internal automation state.
+This reference implementation demonstrates how the SAEF diagnostics helpers can
+be composed to model runtime diagnostics and internal automation state.
 
-It intentionally does not introduce new helper functions, new public APIs or local object-creation logic. The implementation exists to show how existing diagnostics helpers work together in one complete script.
+It intentionally does not introduce new helper functions, new public APIs or
+local object-creation logic. The implementation exists to show how existing
+diagnostics helpers work together in one complete script.
 
 ## Demonstrated Concepts
 
@@ -17,7 +20,8 @@ This implementation demonstrates:
 
 - stable configuration fingerprints using `SAEF_CreateConfigurationHash()`,
 - small script-owned registry metadata using `SAEF_EnsureRegistryVariable()` and `SAEF_UpdateRegistryEntry()`,
-- explicit runtime statistics using `SAEF_EnsureStatisticsVariables()`, `SAEF_IncrementStatistic()` and `SAEF_SetStatisticTimestamp()`,
+- explicit runtime statistics using `SAEF_EnsureStatisticsVariables()`,
+  `SAEF_IncrementStatistic()` and `SAEF_SetStatisticTimestamp()`,
 - bounded error history using `SAEF_EnsureErrorRingBufferVariable()` and `SAEF_AppendErrorRingBufferEntry()`,
 - explicit ownership of internal state variables,
 - idempotent diagnostic variable creation through existing helpers,
@@ -38,7 +42,9 @@ This implementation demonstrates:
 
 Copy the PHP script into an IP-Symcon script and adjust the configuration section.
 
-The script expects an existing parent object. It creates or updates only the diagnostic variables defined in the configuration. It is safe to execute repeatedly.
+The script expects an existing parent object. It creates or updates only the
+diagnostic variables defined in the configuration. It is safe to execute
+repeatedly.
 
 ## Implementation
 
@@ -253,7 +259,8 @@ function validateRuntimeDiagnosticsConfiguration(array $config): void
 
 ### Composition Only
 
-RI-002 intentionally composes the diagnostics helpers instead of introducing a local abstraction. Each helper keeps its own responsibility:
+RI-002 intentionally composes the diagnostics helpers instead of introducing a
+local abstraction. Each helper keeps its own responsibility:
 
 - `ConfigurationHash` creates stable fingerprints.
 - `Registry` stores small metadata.
@@ -264,7 +271,8 @@ RI-002 intentionally composes the diagnostics helpers instead of introducing a l
 
 The reference implementation does not call `IPS_Create*()` functions directly.
 
-All diagnostic variables are created through existing diagnostics helpers, which in turn delegate variable creation to `SAEF_EnsureVariable()`.
+All diagnostic variables are created through existing diagnostics helpers,
+which in turn delegate variable creation to `SAEF_EnsureVariable()`.
 
 ### Registry Scope
 
@@ -282,7 +290,8 @@ This makes diagnostic history useful without creating an unbounded JSON dump.
 
 All variables belong to the automation that owns the configured parent object.
 
-The reference uses stable Idents and does not rely on private ObjectIDs outside the explicit `parentID` configuration placeholder.
+The reference uses stable Idents and does not rely on private ObjectIDs outside
+the explicit `parentID` configuration placeholder.
 
 ## Known Constraints
 

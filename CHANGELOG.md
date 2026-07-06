@@ -14,7 +14,8 @@ This project adheres to Semantic Versioning.
 #### Diagnostics helper library
 
 - Configuration hash helper for stable hashes of normalized configuration arrays.
-- Recursive ignored-key handling for volatile configuration values such as timestamps, last run metadata or runtime state.
+- Recursive ignored-key handling for volatile configuration values such as
+  timestamps, last run metadata or runtime state.
 - Registry helper for small script-owned JSON metadata stored in a string variable.
 - Defensive registry reads for empty values and explicit failures for invalid JSON.
 - Statistics helper for script-owned counters and timestamp variables.
@@ -25,8 +26,11 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
-- Promoted the Symcon Reference Standard from `drafts/SYMCON_STANDARDS.md` into `standards/SYMCON_STANDARDS.md` as Stable Draft 1.0.
-- Stabilized Knowledge Base guidance for internal state, idempotent configuration and runtime diagnostics.
+- Promoted the Symcon Reference Standard from `drafts/SYMCON_STANDARDS.md` into
+  `standards/SYMCON_STANDARDS.md` as Stable Draft 1.0.
+- Stabilized Knowledge Base guidance for internal state, idempotent
+  configuration and runtime diagnostics.
+- Refreshed Markdown documentation for the v0.2.0 documentation baseline.
 
 ## [0.1.0] - 2026-07-06
 

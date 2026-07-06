@@ -6,9 +6,12 @@
 
 ## Purpose
 
-This Engineering Knowledge article explains when and how state machines should be used in professional IP-Symcon solutions.
+This Engineering Knowledge article explains when and how state machines should
+be used in professional IP-Symcon solutions.
 
-Unlike RS-001, this document does not define mandatory rules. It explains the engineering concepts, trade-offs and design patterns behind state-machine based automation.
+Unlike RS-001, this document does not define mandatory rules. It explains the
+engineering concepts, trade-offs and design patterns behind state-machine based
+automation.
 
 ---
 
@@ -179,4 +182,6 @@ If most answers are "yes", a state machine is usually appropriate.
 
 # Related Reference Implementations
 
-- RI-002 — Runtime Diagnostics / Internal State, for explicit state ownership, statistics and bounded error context that can support state-machine based automations.
+- RI-002 — Runtime Diagnostics / Internal State, for explicit state ownership,
+  statistics and bounded error context that can support state-machine based
+  automations.

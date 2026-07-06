@@ -1,8 +1,11 @@
 # Helper Library
 
-This directory contains reusable PHP helper functions for professional IP-Symcon development within SAEF.
+This directory contains reusable PHP helper functions for professional
+IP-Symcon development within SAEF.
 
-Helpers are intended to be small, explicit and reviewable building blocks. They support the standards, engineering knowledge and reference implementations in this repository.
+Helpers are intended to be small, explicit and reviewable building blocks.
+They support the standards, engineering knowledge and reference implementations
+in this repository.
 
 ## Design Principles
 
@@ -17,7 +20,8 @@ SAEF helpers should:
 
 ## Naming
 
-Helper functions use the `SAEF_` prefix to avoid conflicts with existing private helper libraries or community functions.
+Helper functions use the `SAEF_` prefix to avoid conflicts with existing
+private helper libraries or community functions.
 
 ## Structure
 
@@ -57,15 +61,18 @@ Helper functions use the `SAEF_` prefix to avoid conflicts with existing private
 | `SAEF_EnsureInstance()` | Idempotently create or update an instance by module GUID |
 | `SAEF_EnsureProfile()` | Idempotently create or validate a variable profile |
 | `SAEF_WaitForVariable()` | Wait for a variable change or update with optional value check |
-| `SAEF_RequestVariableAction()` | Execute a controllable variable action through `RequestAction()` |
-| `SAEF_RequestVariableActionAndWait()` | Execute a variable action and wait for bounded state feedback |
 
 ## Related Artifacts
 
-Registry and error ring buffer helpers are intended for small script-owned metadata only. Discovery payloads or large data sets must not be stored in these variables. Error ring buffers additionally enforce a fixed entry capacity.
+Registry and error ring buffer helpers are intended for small script-owned
+metadata only. Discovery payloads or large data sets must not be stored in
+these variables. Error ring buffers additionally enforce a fixed entry
+capacity.
 
-- `drafts/SYMCON_STANDARDS.md`
+- `standards/SYMCON_STANDARDS.md`
 - `knowledge/EK-002-retry-mechanisms.md`
 - `knowledge/EK-004-internal-state-management.md`
 - `knowledge/EK-005-idempotent-configuration.md`
+- `knowledge/EK-006-runtime-diagnostics.md`
 - `references/RI-001-idempotent-configuration-script.md`
+- `references/RI-002-runtime-diagnostics-internal-state.md`
