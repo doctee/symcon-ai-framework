@@ -87,6 +87,17 @@ Do not duplicate helper logic such as:
 
 If a helper is missing, propose or add a reusable helper instead of embedding one-off infrastructure code in a reference implementation.
 
+### Runtime Metadata
+
+When runtime metadata is needed, use the existing diagnostics building blocks first:
+
+- Registry for structured small metadata.
+- Statistics for counters and timestamps.
+- ErrorRingBuffer for bounded error or event history.
+- ConfigurationHash for deterministic configuration fingerprints.
+
+Do not introduce new helpers, public APIs or custom storage patterns for runtime metadata before checking whether these diagnostics helpers can be composed.
+
 ### Reuse Before Extend
 
 Before creating a new public helper, API or reusable abstraction:
