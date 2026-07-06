@@ -322,6 +322,22 @@ Implicit state makes debugging difficult and increases the risk of inconsistent 
 - Keep internal variables below a known parent object.
 - Document which internal variables are part of the automation state.
 
+#### Runtime Diagnostics Rule
+
+Scripts shall not create arbitrary new individual variables for internal runtime
+metadata when an existing diagnostics responsibility applies.
+
+Use the established diagnostics responsibilities first:
+
+- Registry for small structured metadata.
+- Statistics for counters, runtimes and timestamps.
+- ErrorRingBuffer for bounded event and error history.
+- ConfigurationHash for stable configuration fingerprints.
+
+Dedicated individual variables remain allowed when they represent real domain
+state or must intentionally be visible for user interfaces, visualisation or
+trigger logic.
+
 #### Exceptions
 
 Temporary runtime values that only exist during one script execution.
@@ -330,6 +346,8 @@ Temporary runtime values that only exist during one script execution.
 
 - `project/ENGINEERING_MODEL.md`
 - `standards/PHP_STANDARDS.md`
+- `knowledge/EK-004-internal-state-management.md`
+- `references/RI-002-runtime-diagnostics-internal-state.md`
 
 ---
 
