@@ -14,3 +14,10 @@ A reference implementation should include:
 - references to related standards and knowledge articles.
 
 Reference implementations should not contain private installation data.
+
+## Current Reference Implementations
+
+| Reference | Purpose |
+| --- | --- |
+| `RI-001-idempotent-configuration-script.md` | Demonstrates idempotent configuration scripts using object and event helpers |
+| `RI-002-runtime-diagnostics-internal-state.md` | Demonstrates runtime diagnostics and internal state using diagnostics helpers |

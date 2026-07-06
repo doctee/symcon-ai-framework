@@ -21,11 +21,7 @@ This project adheres to Semantic Versioning.
 - Idempotent statistic variable creation through existing variable helpers.
 - Error ring buffer helper for bounded script-owned error history.
 - Defensive error ring buffer reads for empty values and explicit failures for invalid JSON.
-
-#### Variable action helper
-
-- RequestAction helper for controllable variables with explicit action validation.
-- Optional bounded feedback wait after variable action requests.
+- RI-002 reference implementation for composing runtime diagnostics helpers.
 
 ## [0.1.0] - 2026-07-06
 
