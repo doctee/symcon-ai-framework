@@ -11,6 +11,11 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+#### GitHub project workflow
+
+- GitHub issue templates for bug reports, feature requests and engineering
+  proposals.
+
 #### Diagnostics helper library
 
 - Configuration hash helper for stable hashes of normalized configuration arrays.
