@@ -23,6 +23,20 @@ Before making any changes:
 - Do not introduce private installation data.
 - Configuration scripts must remain idempotent.
 
+## Runtime Diagnostics Checklist
+
+When a reference implementation needs runtime metadata, check whether it can be
+modeled with existing diagnostics helpers:
+
+- Registry for small structured metadata.
+- Statistics for counters, timestamps and duration values.
+- ErrorRingBuffer for bounded error or event history.
+- ConfigurationHash for configuration fingerprints.
+
+If dedicated variables are used instead, explain why they represent domain state
+or must intentionally be visible for user interfaces, visualisation or trigger
+logic.
+
 ## Implementation
 
 The implementation should:

@@ -40,6 +40,7 @@ This project adheres to Semantic Versioning.
 - Updated contribution workflow guidance for humans and AI agents.
 - Added operational agent guidance for runtime metadata diagnostics.
 - Added Symcon runtime diagnostics rule for internal runtime metadata.
+- Added runtime diagnostics checklist to the reference implementation prompt.
 
 ## [0.1.0] - 2026-07-06
 
