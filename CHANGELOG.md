@@ -23,6 +23,10 @@ This project adheres to Semantic Versioning.
 - Defensive error ring buffer reads for empty values and explicit failures for invalid JSON.
 - RI-002 reference implementation for composing runtime diagnostics helpers.
 
+### Changed
+
+- Promoted the Symcon Reference Standard from `drafts/SYMCON_STANDARDS.md` into `standards/SYMCON_STANDARDS.md` as Stable Draft 1.0.
+
 ## [0.1.0] - 2026-07-06
 
 ### Added
