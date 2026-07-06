@@ -10,6 +10,8 @@ This Engineering Knowledge article explains how internal state should be modelle
 
 Internal state is the information an automation owns itself. It is not the state of a physical device, but the knowledge required for the automation to operate reliably across script executions, restarts and failures.
 
+This article explains the engineering concepts behind RS-001 rules for explicit state, diagnostics and ownership. It does not define additional mandatory rules.
+
 ---
 
 ## Problem
@@ -155,6 +157,62 @@ Examples:
 
 ---
 
+## Runtime Diagnostics in SAEF v0.2.0
+
+Runtime diagnostics are a specialised form of internal state.
+
+Their purpose is to make an automation easier to understand during operation without turning logs, status variables or JSON fields into unbounded data stores. RI-002 demonstrates the current SAEF composition model for runtime diagnostics.
+
+### Configuration Hash
+
+A configuration hash is a compact fingerprint of the desired configuration.
+
+It helps answer:
+
+- Which configuration version did this automation last apply?
+- Did the desired configuration change since the previous run?
+- Can a support or review step compare two runs without inspecting every configuration field?
+
+Volatile fields such as timestamps, runtime values or last-run metadata should be ignored before hashing. The hash is diagnostic metadata, not a security control.
+
+### Registry Pattern
+
+A registry is a small script-owned metadata map.
+
+It is useful for values such as:
+
+- component version,
+- configuration hash,
+- previous configuration hash,
+- migration marker,
+- last known phase.
+
+A registry should not become a generic JSON dump. Discovery payloads, device snapshots, large API responses and historical data belong in purpose-built structures or archive processing, not in a registry variable.
+
+### Statistics
+
+Statistics are explicit counters and timestamps.
+
+Typical examples:
+
+- execution count,
+- error count,
+- retry count,
+- last run timestamp,
+- last successful run timestamp.
+
+Statistics should usually be separate variables rather than fields inside a large JSON blob. Separate variables make ownership, profile selection and review easier.
+
+### Error Ring Buffer
+
+An error ring buffer stores a bounded history of recent diagnostic failures.
+
+It is useful when the latest error alone is not enough to understand intermittent problems. The buffer must remain fixed-size so diagnostics do not grow without limit.
+
+Error ring buffers should contain concise context only. They must not contain credentials, tokens, private network details, full discovery payloads or large external responses.
+
+---
+
 ## Trade-offs
 
 Benefits:
@@ -220,7 +278,7 @@ Prefer structured variables unless a documented registry is the better engineeri
 
 ## Relationship to RS-001
 
-RS-001 defines the rules for variable lifecycle, ownership and explicit state.
+RS-001 defines the rules for variable lifecycle, ownership, explicit state and diagnostics.
 
 This article explains how internal automation state should be designed.
 
@@ -247,3 +305,11 @@ This article explains how internal automation state should be designed.
 - EK-002 — Retry Mechanisms
 - EK-003 — Archive Processing
 - EK-005 — Idempotent Configuration
+- EK-006 — Runtime Diagnostics
+
+---
+
+## Related Reference Implementations
+
+- RI-001 — Idempotent Configuration Script
+- RI-002 — Runtime Diagnostics / Internal State

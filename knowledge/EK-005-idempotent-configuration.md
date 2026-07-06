@@ -10,6 +10,8 @@ This Engineering Knowledge article explains how configuration scripts should be 
 
 Idempotent configuration is one of the fundamental engineering concepts within SAEF because reusable automation, templates and reference implementations all depend on predictable configuration behaviour.
 
+This article explains the design reasoning behind RS-001 rules for idempotent object creation, explicit configuration and helper-first implementation. It does not define additional mandatory rules.
+
 ---
 
 ## Problem
@@ -73,6 +75,8 @@ Before creating categories, variables, events or profiles:
 - verify ownership,
 - reuse existing objects where appropriate.
 
+Within SAEF reference implementations this lookup and update behaviour should be provided by existing helpers. A reference implementation should compose helpers such as `SAEF_EnsureVariable()` or diagnostics helpers instead of embedding one-off Ensure logic.
+
 ### Separate Configuration from Runtime
 
 Configuration creates structure.
@@ -80,6 +84,8 @@ Configuration creates structure.
 Runtime logic uses that structure.
 
 Avoid mixing both responsibilities.
+
+Runtime diagnostics may be created by configuration, but their values are runtime state. For example, RI-002 creates registry, statistics and error-history variables idempotently, then updates their values during execution.
 
 ### Make Changes Explicit
 
@@ -92,6 +98,8 @@ Silent behavioural changes should be avoided.
 Configuration scripts should support gradual extension.
 
 Adding new variables or events should not require recreating existing objects.
+
+Configuration hashes can help diagnose evolution. They provide a stable fingerprint of the desired configuration and can be stored as small metadata, for example in a registry variable.
 
 ---
 
@@ -163,12 +171,15 @@ Before publishing a configuration script, verify:
 - Are configuration changes documented?
 - Can the script be interrupted and safely executed again?
 - Does the script preserve user data where appropriate?
+- Does object creation use existing SAEF helpers instead of local Ensure logic?
+- Are runtime diagnostics separated from configuration data?
+- If a configuration hash is stored, are volatile keys ignored intentionally?
 
 ---
 
 ## Relationship to RS-001
 
-RS-001 defines idempotent configuration as an engineering requirement.
+RS-001 defines idempotent configuration, helper-first reuse and explicit public configuration as engineering requirements.
 
 This article explains how configuration scripts should be structured to fulfil that requirement.
 
@@ -195,3 +206,11 @@ This article explains how configuration scripts should be structured to fulfil t
 - EK-002 — Retry Mechanisms
 - EK-003 — Archive Processing
 - EK-004 — Internal State Management
+- EK-006 — Runtime Diagnostics
+
+---
+
+## Related Reference Implementations
+
+- RI-001 — Idempotent Configuration Script
+- RI-002 — Runtime Diagnostics / Internal State

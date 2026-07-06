@@ -175,3 +175,8 @@ If most answers are "yes", a state machine is usually appropriate.
 - PHP Standards
 - Engineering Principles
 
+---
+
+# Related Reference Implementations
+
+- RI-002 — Runtime Diagnostics / Internal State, for explicit state ownership, statistics and bounded error context that can support state-machine based automations.

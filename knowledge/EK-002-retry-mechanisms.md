@@ -198,4 +198,11 @@ Before implementing a retry mechanism, ask:
 ## Related Knowledge
 
 - EK-001 — State Machines in IP-Symcon
+- EK-004 — Internal State Management
+- EK-006 — Runtime Diagnostics
 
+---
+
+## Related Reference Implementations
+
+- RI-002 — Runtime Diagnostics / Internal State, for explicit retry-adjacent diagnostics such as execution counters, error counters and bounded recent error history.

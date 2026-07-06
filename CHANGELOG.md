@@ -26,6 +26,7 @@ This project adheres to Semantic Versioning.
 ### Changed
 
 - Promoted the Symcon Reference Standard from `drafts/SYMCON_STANDARDS.md` into `standards/SYMCON_STANDARDS.md` as Stable Draft 1.0.
+- Stabilized Knowledge Base guidance for internal state, idempotent configuration and runtime diagnostics.
 
 ## [0.1.0] - 2026-07-06
 
