@@ -23,3 +23,15 @@ Solutions should be easy to review, extend, migrate, and debug.
 ## 5. Reuse proven patterns
 
 Recurring solutions should become helpers, templates, examples, or documented patterns.
+
+## Reuse Before Extend
+
+SAEF evolves by refining a small set of reusable building blocks rather than continuously introducing new abstractions.
+
+Before adding any new public helper, API, pattern or other reusable component, contributors must first evaluate whether the requirement can be fulfilled by composing or extending existing SAEF functionality.
+
+New public APIs should only be introduced when they encapsulate a recurring engineering pattern that cannot be expressed clearly and maintainably with the existing framework.
+
+Convenience wrappers around one or two existing helper calls are generally not sufficient justification for a new public API.
+
+Every reusable abstraction should demonstrably reduce duplication across multiple reference implementations. If an abstraction is only used by a single implementation, it should normally remain local until a recurring pattern has been established.

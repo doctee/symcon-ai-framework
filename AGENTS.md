@@ -86,3 +86,13 @@ Do not duplicate helper logic such as:
 - variable change/update waiting.
 
 If a helper is missing, propose or add a reusable helper instead of embedding one-off infrastructure code in a reference implementation.
+
+### Reuse Before Extend
+
+Before creating a new public helper, API or reusable abstraction:
+
+1. Search the existing helper library for suitable functionality.
+2. Prefer composing existing helpers over introducing new ones.
+3. Explain why a new public API is necessary.
+4. Introduce new public helpers only for recurring engineering patterns.
+5. Keep implementation-specific convenience functions inside the reference implementation until reuse has been demonstrated.
