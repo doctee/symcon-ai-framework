@@ -15,6 +15,7 @@ This project adheres to Semantic Versioning.
 
 - GitHub issue templates for bug reports, feature requests and engineering
   proposals.
+- GitHub pull request template with SAEF verification checklist.
 
 #### Diagnostics helper library
 
