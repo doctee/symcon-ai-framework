@@ -338,6 +338,14 @@ Dedicated individual variables remain allowed when they represent real domain
 state or must intentionally be visible for user interfaces, visualisation or
 trigger logic.
 
+Runtime diagnostics start after the diagnostics structure has been initialized
+successfully. Setup or Ensure failures before Registry, Statistics or
+ErrorRingBuffer variables exist cannot be captured fully in those diagnostics.
+Those early failures shall remain visible through `IPS_LogMessage()`,
+exceptions or the Symcon log. Once the diagnostics structure exists, runtime
+failures should be modeled through ErrorRingBuffer, Statistics and Registry
+metadata where appropriate.
+
 #### Exceptions
 
 Temporary runtime values that only exist during one script execution.

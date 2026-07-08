@@ -32,6 +32,28 @@ Runtime diagnostics solve this by making the important diagnostic state explicit
 
 ---
 
+## Initialization Boundary
+
+Runtime diagnostics begin after the diagnostics structure has been initialized
+successfully.
+
+Setup or Ensure failures that occur before Registry, Statistics or
+ErrorRingBuffer variables exist cannot be captured fully in those diagnostics.
+Those early failures should remain visible through `IPS_LogMessage()`,
+exceptions or the Symcon log.
+
+After the diagnostics structure exists, runtime failures should be modeled in
+the established diagnostics responsibilities:
+
+- ErrorRingBuffer for bounded error or event history,
+- Statistics for counters, timestamps and duration values,
+- Registry for small structured metadata.
+
+This boundary keeps initialization failures observable without pretending that a
+not-yet-created diagnostics store can record them.
+
+---
+
 ## Engineering Context
 
 Runtime diagnostics are useful when an automation:

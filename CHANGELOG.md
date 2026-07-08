@@ -41,6 +41,7 @@ This project adheres to Semantic Versioning.
 - Added operational agent guidance for runtime metadata diagnostics.
 - Added Symcon runtime diagnostics rule for internal runtime metadata.
 - Added runtime diagnostics checklist to the reference implementation prompt.
+- Documented the initialization boundary for runtime diagnostics.
 
 ## [0.1.0] - 2026-07-06
 
