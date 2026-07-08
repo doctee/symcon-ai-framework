@@ -1,0 +1,17 @@
+{
+  "code": 1,
+  "desc": "Operation successful",
+  "data": {
+    "requestId": "REQUEST_001",
+    "payload": {
+      "devices": [
+        {
+          "id": "DEVICE_001",
+          "name": "Navimow Test Mower",
+          "model": "X450",
+          "firmware": "004C"
+        }
+      ]
+    }
+  }
+}
