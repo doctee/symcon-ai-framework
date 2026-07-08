@@ -11,6 +11,12 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+#### Prompt Library
+
+- Standard optimization workflow for existing Symcon scripts.
+- Control script optimization workflow for actuator and automation scripts.
+- Analysis script optimization workflow for archive, reporting and data scripts.
+
 #### GitHub project workflow
 
 - GitHub issue templates for bug reports, feature requests and engineering
