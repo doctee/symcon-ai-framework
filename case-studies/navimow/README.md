@@ -1,6 +1,6 @@
 # Navimow Native IP-Symcon Module Case Study
 
-**Status:** REST MVP scaffold created  
+**Status:** Loader distribution published; direct Symcon retest pending
 **Scope:** Native IP-Symcon module for Segway Navimow robotic mowers  
 **Implementation state:** First module scaffold exists outside the case study;
 no live production behavior is implemented.
@@ -32,6 +32,9 @@ not a reference implementation and not production code.
 | `12-rest-mvp-scaffold.md` | First REST MVP module scaffold and fixture-based mapper verification. |
 | `13-metadata-and-loader-validation.md` | Static module metadata review and direct Symcon loader smoke-test scope. |
 | `14-symcon-loader-test-report.md` | Loader smoke-test report with local preflight and pending direct Symcon checks. |
+| `15-loader-fix-report.md` | Direct loader finding, dedicated distribution decision and retest gate. |
+| `distribution/` | Canonical installable snapshot for the dedicated private Symcon module repository. |
+| `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
 
 ## Engineering Boundary

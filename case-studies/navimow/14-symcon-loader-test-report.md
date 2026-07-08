@@ -1,7 +1,7 @@
 # 14 Symcon Loader Test Report
 
 **Case study:** Navimow native IP-Symcon module  
-**Status:** Local preflight passed; direct Symcon loader smoke test pending  
+**Status:** Direct loader failed on repository layout; superseded by step 15
 **Date:** 2026-07-08  
 **Build boundary:** This report records loader-readiness and direct Symcon smoke
 test results only. It does not add OAuth, REST polling, MQTT/WSS or mower
@@ -67,7 +67,7 @@ Navimow payload mapper fixture checks passed.
 
 | Item | Status |
 | --- | --- |
-| Private Git module source prepared | pending |
+| Private Git module source prepared | passed |
 | IP-Symcon version captured | pending |
 | Module library loads from private Git source | pending |
 | `Navimow Account` instance can be created | pending |
@@ -78,6 +78,18 @@ Navimow payload mapper fixture checks passed.
 | `Navimow Configurator` instance can be created or opened | pending |
 | `NAVIMOW.*` profiles are created | pending |
 | Symcon log checked | pending |
+
+### Recorded direct result
+
+The Git transport and `library.json` discovery succeeded after publishing the
+scaffold to `main`. The direct loader then rejected the SAEF root directory
+`adr/` because it did not contain `module.json`.
+
+The correction and revised distribution boundary are documented in:
+
+```text
+case-studies/navimow/15-loader-fix-report.md
+```
 
 ## 5. Manual Test Procedure
 
@@ -91,41 +103,34 @@ direct Symcon tests.
 1. Commit and push the current scaffold branch to the private Git remote.
 2. On the Win11 Symcon PC, open the IP-Symcon Console.
 3. Open the module management area.
-4. Add the private Git repository URL as module source:
+4. Add the dedicated private module repository URL as module source:
 
    ```text
-   git@github.com:doctee/symcon-ai-framework.git
+   https://github.com/doctee/symcon-navimow.git
    ```
 
-   If SSH access is not configured on the Win11 PC, use the equivalent private
-   HTTPS URL with a suitable GitHub authentication method.
-5. Select or update to the scaffold branch used for this test:
-
-   ```text
-   feature/navimow-symcon-analysis
-   ```
-
-6. Reload the module list.
-7. Confirm the `Navimow` library appears.
-8. Confirm these modules are listed:
+   The SAEF framework repository itself is not a valid Symcon module source.
+5. Reload the module list.
+6. Confirm the `Navimow` library appears.
+7. Confirm these modules are listed:
    - `Navimow Account`;
    - `Navimow Device`;
    - `Navimow Configurator`.
-9. Create one `Navimow Account` instance.
-10. Open the account form.
-11. Save the account form without credentials.
-12. Confirm these account variables exist:
+8. Create one `Navimow Account` instance.
+9. Open the account form.
+10. Save the account form without credentials.
+11. Confirm these account variables exist:
    - `ConnectionState`;
    - `ReauthRequired`;
    - `TokenExpiresAt`;
    - `LastDiscovery`;
    - `LastRestSuccess`;
    - `RestErrorCount`.
-13. Create one `Navimow Device` instance.
-14. Leave `DeviceId` empty or use the sanitized placeholder `DEVICE_001` only
+12. Create one `Navimow Device` instance.
+13. Leave `DeviceId` empty or use the sanitized placeholder `DEVICE_001` only
     if a value is required by the form.
-15. Save the device form.
-16. Confirm these device variables exist:
+14. Save the device form.
+15. Confirm these device variables exist:
     - `VehicleState`;
     - `Online`;
     - `BatteryLevel`;
@@ -134,14 +139,14 @@ direct Symcon tests.
     - `LastCommandAt`;
     - `LastCommandResult`;
     - `LastCommandError`.
-17. Open or create one `Navimow Configurator` instance.
-18. Confirm its form opens without errors.
-19. Check whether these profiles exist:
+16. Open or create one `Navimow Configurator` instance.
+17. Confirm its form opens without errors.
+18. Check whether these profiles exist:
     - `NAVIMOW.ConnectionState`;
     - `NAVIMOW.VehicleState`;
     - `NAVIMOW.Command`;
     - `NAVIMOW.CommandResult`.
-20. Check the Symcon log for errors related to:
+19. Check the Symcon log for errors related to:
     - module loading;
     - metadata;
     - form JSON;
