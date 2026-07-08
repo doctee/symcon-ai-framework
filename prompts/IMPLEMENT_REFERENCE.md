@@ -53,4 +53,5 @@ Before finishing:
 - run make check;
 - summarize changed files;
 - explain architectural decisions;
+- if the working tree already contains unrelated modifications, explicitly identify them and state whether they were touched;
 - do not create commits.
