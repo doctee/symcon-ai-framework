@@ -1,0 +1,22 @@
+{
+  "code": 1,
+  "desc": "Operation successful",
+  "data": {
+    "payload": {
+      "devices": [
+        {
+          "id": "DEVICE_001",
+          "capacityRemaining": [
+            {
+              "unit": "PERCENTAGE",
+              "rawValue": 81
+            }
+          ],
+          "vehicleState": "isDocked",
+          "descriptiveCapacityRemaining": "HIGH"
+        }
+      ]
+    },
+    "requestId": "REQUEST_001"
+  }
+}

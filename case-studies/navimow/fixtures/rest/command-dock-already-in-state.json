@@ -1,0 +1,21 @@
+{
+  "code": 1,
+  "desc": "Operation successful",
+  "data": {
+    "requestId": "REQUEST_001",
+    "payload": {
+      "commands": [
+        {
+          "devices": [
+            {
+              "id": "DEVICE_001",
+              "cmdNum": null
+            }
+          ],
+          "status": "ERROR",
+          "errorCode": "alreadyInState"
+        }
+      ]
+    }
+  }
+}
