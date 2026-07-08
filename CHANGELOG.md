@@ -11,6 +11,11 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+#### Template Library
+
+- Template concept documentation for SAEF templates and IP-Symcon module projects.
+- Case study concept documentation for capturing real SAEF engineering experience.
+
 #### Prompt Library
 
 - Standard optimization workflow for existing Symcon scripts.
