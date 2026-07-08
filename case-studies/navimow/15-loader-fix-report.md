@@ -1,7 +1,7 @@
 # 15 Loader Fix Report
 
 **Case study:** Navimow native IP-Symcon module  
-**Status:** Distribution published; direct Symcon retest pending  
+**Status:** Distribution published; direct Symcon retest passed
 **Date:** 2026-07-08  
 **Build boundary:** This step corrects repository distribution and loader
 structure only. It adds no OAuth, REST polling, MQTT/WSS or mower commands.
@@ -185,9 +185,38 @@ git@github.com:doctee/symcon-navimow.git
 
 No OAuth flow, REST call or command may run in this test.
 
-## 9. Decision Gate
+## 9. Direct Retest Result
 
-The loader correction passes only when:
+The dedicated source was installed on the connected IP-Symcon runtime through:
+
+```text
+IPS_InstallModule('https://github.com/doctee/symcon-navimow.git')
+```
+
+The MCP-assisted test then verified:
+
+| Check | Result |
+| --- | --- |
+| Dedicated private repository installs | passed |
+| Account module GUID is registered | passed |
+| Device module GUID is registered | passed |
+| Configurator module GUID is registered | passed |
+| Temporary account instance lifecycle | passed |
+| Temporary device instance lifecycle | passed |
+| Temporary configurator instance lifecycle | passed |
+| Device and configurator connect to account | passed |
+| All three configuration forms return valid JSON | passed |
+| Contracted account variables exist | passed |
+| Contracted device variables exist | passed |
+| Four `NAVIMOW.*` profiles exist | passed |
+| Live Navimow API activity | not performed |
+
+The temporary test instances were deleted after verification. The module
+library and variable profiles remain installed as expected.
+
+## 10. Decision Gate
+
+The loader correction gate is **passed**:
 
 - the dedicated private repository loads;
 - all three modules can be created;
@@ -195,7 +224,7 @@ The loader correction passes only when:
 - profiles and variables are created;
 - no unresolved loader or lifecycle error remains.
 
-After this gate passes, the next SAEF step is:
+The next SAEF step is:
 
 ```text
 case-studies/navimow/16-auth-and-readonly-rest-plan.md

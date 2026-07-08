@@ -1,7 +1,7 @@
 # 14 Symcon Loader Test Report
 
 **Case study:** Navimow native IP-Symcon module  
-**Status:** Direct loader failed on repository layout; superseded by step 15
+**Status:** Initial loader failed; corrected retest passed in step 15
 **Date:** 2026-07-08  
 **Build boundary:** This report records loader-readiness and direct Symcon smoke
 test results only. It does not add OAuth, REST polling, MQTT/WSS or mower
@@ -90,6 +90,9 @@ The correction and revised distribution boundary are documented in:
 ```text
 case-studies/navimow/15-loader-fix-report.md
 ```
+
+The corrected dedicated-repository retest passed. Step 15 is the authoritative
+final result for this loader gate.
 
 ## 5. Manual Test Procedure
 

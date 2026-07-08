@@ -1,6 +1,6 @@
 # Navimow Native IP-Symcon Module Case Study
 
-**Status:** Loader distribution published; direct Symcon retest pending
+**Status:** Loader distribution published; direct Symcon retest passed
 **Scope:** Native IP-Symcon module for Segway Navimow robotic mowers  
 **Implementation state:** First module scaffold exists outside the case study;
 no live production behavior is implemented.
