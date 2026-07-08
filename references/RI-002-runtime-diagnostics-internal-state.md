@@ -286,6 +286,19 @@ The error history is a fixed-capacity ring buffer.
 
 This makes diagnostic history useful without creating an unbounded JSON dump.
 
+### Initialization Boundary
+
+Runtime diagnostics begin only after the diagnostics structure has been created.
+
+In the implementation above, `$errorRingBufferID` starts as `null`. If
+configuration validation or Ensure calls fail before the error ring buffer
+exists, the failure is still logged through `IPS_LogMessage()` and rethrown, but
+it cannot yet be stored in the ring buffer or counted through the diagnostics
+variables.
+
+Once the diagnostics structure exists, runtime failures are captured through the
+ErrorRingBuffer and Statistics helpers where appropriate.
+
 ### Internal State Ownership
 
 All variables belong to the automation that owns the configured parent object.
