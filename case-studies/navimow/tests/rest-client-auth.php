@@ -197,6 +197,49 @@ assertSameValue(
     'API code 4005 should require reauthentication.'
 );
 
+$multiDeviceStatus = PayloadMapper::mapStatus([
+    'data' => [
+        'payload' => [
+            'devices' => [
+                [
+                    'id' => 'DEVICE_OTHER',
+                    'vehicleState' => 'isRunning',
+                    'capacityRemaining' => [
+                        ['unit' => 'PERCENTAGE', 'rawValue' => 92],
+                    ],
+                ],
+                [
+                    'id' => 'DEVICE_TARGET',
+                    'vehicleState' => 'isDocked',
+                    'capacityRemaining' => [
+                        ['unit' => 'PERCENTAGE', 'rawValue' => 81],
+                    ],
+                ],
+            ],
+        ],
+    ],
+], 'DEVICE_TARGET');
+assertSameValue(
+    PayloadMapper::VEHICLE_STATE_DOCKED,
+    $multiDeviceStatus['vehicleState'],
+    'Status mapper should select the requested device.'
+);
+assertSameValue(
+    81,
+    $multiDeviceStatus['batteryLevel'],
+    'Status mapper should use battery data from the requested device.'
+);
+
+PayloadMapper::assertApiSuccess(['code' => 1]);
+assertThrows(
+    static fn () => PayloadMapper::assertApiSuccess([
+        'code' => 5000,
+        'desc' => 'TEST_API_ERROR',
+    ]),
+    UnexpectedValueException::class,
+    'Non-success API codes should fail.'
+);
+
 fwrite(
     STDOUT,
     "Navimow REST client and authentication checks passed.\n"
