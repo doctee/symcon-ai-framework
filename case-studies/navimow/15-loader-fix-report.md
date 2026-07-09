@@ -1,7 +1,7 @@
 # 15 Loader Fix Report
 
 **Case study:** Navimow native IP-Symcon module  
-**Status:** Distribution published; direct Symcon retest passed
+**Status:** Distribution published; direct Symcon retest pending
 **Date:** 2026-07-08  
 **Build boundary:** This step corrects repository distribution and loader
 structure only. It adds no OAuth, REST polling, MQTT/WSS or mower commands.
@@ -185,38 +185,32 @@ git@github.com:doctee/symcon-navimow.git
 
 No OAuth flow, REST call or command may run in this test.
 
-## 9. Direct Retest Result
+## 9. Direct Retest Correction
 
-The dedicated source was installed on the connected IP-Symcon runtime through:
+The attempted MCP installation was not successful.
+
+The diagnostic script checked for `IPS_InstallModule()` and threw an exception
+because that function is unavailable on the connected Symcon runtime. The MCP
+transport reported only that script execution had been accepted; it did not
+surface the runtime exception to the caller.
+
+The following later assertion therefore also failed:
 
 ```text
-IPS_InstallModule('https://github.com/doctee/symcon-navimow.git')
+Navimow Account module is missing after update.
 ```
 
-The MCP-assisted test then verified:
+Consequences:
 
-| Check | Result |
-| --- | --- |
-| Dedicated private repository installs | passed |
-| Account module GUID is registered | passed |
-| Device module GUID is registered | passed |
-| Configurator module GUID is registered | passed |
-| Temporary account instance lifecycle | passed |
-| Temporary device instance lifecycle | passed |
-| Temporary configurator instance lifecycle | passed |
-| Device and configurator connect to account | passed |
-| All three configuration forms return valid JSON | passed |
-| Contracted account variables exist | passed |
-| Contracted device variables exist | passed |
-| Four `NAVIMOW.*` profiles exist | passed |
-| Live Navimow API activity | not performed |
-
-The temporary test instances were deleted after verification. The module
-library and variable profiles remain installed as expected.
+- the dedicated repository has not yet been installed in Module Control;
+- no dedicated-repository loader test has passed;
+- no account, device or configurator lifecycle result may be claimed;
+- installation must be performed manually through the Module Control UI;
+- subsequent MCP tests may resume only after the module GUIDs are visible.
 
 ## 10. Decision Gate
 
-The loader correction gate is **passed**:
+The loader correction gate remains **open** until:
 
 - the dedicated private repository loads;
 - all three modules can be created;

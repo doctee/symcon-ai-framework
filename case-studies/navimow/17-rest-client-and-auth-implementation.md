@@ -1,7 +1,7 @@
 # 17 REST Client and Authentication Implementation
 
 **Case study:** Navimow native IP-Symcon module  
-**Status:** Local implementation and credential-free Symcon test passed  
+**Status:** Local implementation passed; manual Symcon installation pending
 **Date:** 2026-07-09  
 **Build boundary:** This step implements REST transport and account
 authentication. It does not activate discovery, status polling, commands or
@@ -252,35 +252,30 @@ Branch: main
 Commit: eab2e6e5a0f97829e6ad938c54610161f3c2b2ea
 ```
 
-IP-Symcon updated the installed private module source successfully.
+The published commit is ready for manual installation through Module Control.
 
 ## 14. Credential-Free Symcon Result
 
-Stage A passed through the connected Symcon runtime.
+Stage A has not run.
 
-Verified:
+The attempted MCP update failed because `IPS_InstallModule()` is unavailable.
+The following test script then correctly reported that the Navimow Account
+module was missing.
 
-| Check | Result |
-| --- | --- |
-| Dedicated module source updates | passed |
-| Account module remains registered | passed |
-| New account module methods are registered | passed |
-| Temporary account instance creates and applies | passed |
-| Configuration form returns valid JSON | passed |
-| Elements and actions sections exist | passed |
-| Missing private configuration produces `Configuration Error` | passed |
-| `ReauthRequired` is true without credentials | passed |
-| `TokenExpiresAt` remains zero | passed |
-| Live Navimow request | not performed |
+Required recovery:
 
-The temporary account instance was deleted after the test.
+1. install `https://github.com/doctee/symcon-navimow.git` manually in Module
+   Control;
+2. confirm the library and all three modules are visible;
+3. rerun the credential-free lifecycle and form assertions through MCP;
+4. only then proceed to the supervised private OAuth test.
 
 ## 15. Exit Decision
 
 WP16.1, WP16.2 and the implementation portion of WP16.3 are complete locally.
 
-The credential-free part of WP16.3 is accepted. Full WP16.3 acceptance still
-requires the supervised private OAuth exchange and refresh test.
+WP16.3 is not accepted until the manual module installation, credential-free
+Symcon test and supervised private OAuth exchange all pass.
 
 After that gate, the next SAEF artifact should be:
 
