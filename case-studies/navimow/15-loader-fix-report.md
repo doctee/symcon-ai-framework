@@ -76,7 +76,7 @@ must not be used directly as a Symcon module source.
 - `symcon-ai-framework` remains the engineering source and case-study record.
 - `case-studies/navimow/distribution/` is the canonical installable
   distribution snapshot.
-- a separate private GitHub repository named `symcon-navimow` publishes only
+- a separate public GitHub repository named `symcon-navimow` publishes only
   the contents of that distribution directory.
 - IP-Symcon loads the dedicated repository through HTTPS.
 
@@ -152,7 +152,7 @@ PHP lint and fixture mapper tests remain separate verification steps.
 
 ## 7. Correct Symcon Source
 
-The dedicated private repository was published with:
+The dedicated repository was published with:
 
 ```text
 Repository: doctee/symcon-navimow
@@ -165,6 +165,17 @@ The only supported Module Control source for this test is:
 ```text
 https://github.com/doctee/symcon-navimow.git
 ```
+
+The repository was initially private. Module Control rejected the HTTPS source
+with:
+
+```text
+remote authentication required but no callback set
+```
+
+Because the distribution contains only reviewed, sanitized module files and no
+private installation data, repository visibility was changed to public on
+2026-07-09. Credentials and private captures remain outside the distribution.
 
 Do not use:
 
@@ -212,7 +223,7 @@ Consequences:
 
 The loader correction gate remains **open** until:
 
-- the dedicated private repository loads;
+- the dedicated public repository loads;
 - all three modules can be created;
 - forms open without errors;
 - profiles and variables are created;

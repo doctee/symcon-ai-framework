@@ -69,7 +69,7 @@ Navimow payload mapper fixture checks passed.
 | --- | --- |
 | Private Git module source prepared | passed |
 | IP-Symcon version captured | pending |
-| Module library loads from private Git source | pending |
+| Module library loads from dedicated Git source | pending |
 | `Navimow Account` instance can be created | pending |
 | `Navimow Account` form opens and saves without credentials | pending |
 | Account variables are created | pending |
@@ -100,13 +100,13 @@ Run this test in a non-critical IP-Symcon environment.
 
 The Symcon runtime is on a separate Win11 PC. It cannot load the Mac-local path
 `/Users/carsten/IT/Projekte/symcon-ai-framework` directly. Therefore this case
-study uses a private Git repository as the standard module transfer path for
-direct Symcon tests.
+study uses a dedicated public Git repository as the standard module transfer
+path for direct Symcon tests.
 
-1. Commit and push the current scaffold branch to the private Git remote.
+1. Commit and push the current scaffold branch to the distribution remote.
 2. On the Win11 Symcon PC, open the IP-Symcon Console.
 3. Open the module management area.
-4. Add the dedicated private module repository URL as module source:
+4. Add the dedicated public module repository URL as module source:
 
    ```text
    https://github.com/doctee/symcon-navimow.git
@@ -193,17 +193,18 @@ Do not include:
 
 ## 7. Transfer Decision for Future Symcon Tests
 
-**Decision:** Direct Symcon tests for this case study use the private Git
-repository as the standard transfer path from Mac development workspace to the
-Win11 IP-Symcon host.
+**Decision:** Direct Symcon tests for this case study use the dedicated public
+module repository as the standard transfer path from Mac development workspace
+to the Win11 IP-Symcon host.
 
 **Rationale:** The IP-Symcon runtime cannot access the Mac-local repository
-path directly. A private Git source matches normal module loading workflows,
-keeps updates reproducible and avoids fragile SMB or manual ZIP transfer steps.
+path directly. The dedicated repository contains only sanitized distribution
+files, matches normal module loading workflows, keeps updates reproducible and
+avoids fragile SMB or manual ZIP transfer steps.
 
 **Consequence:** Before each direct Symcon test, the relevant scaffold branch
 must be committed and pushed. The Win11 Symcon host should update the module
-from that private Git source.
+from that dedicated Git source.
 
 ## 8. Expected Findings to Watch
 

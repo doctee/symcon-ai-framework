@@ -1,6 +1,6 @@
 # Navimow Native IP-Symcon Module Case Study
 
-**Status:** Loader distribution published; manual Symcon installation pending
+**Status:** Public loader distribution published; manual Symcon installation pending
 **Scope:** Native IP-Symcon module for Segway Navimow robotic mowers  
 **Implementation state:** First module scaffold exists outside the case study;
 no live production behavior is implemented.
@@ -35,7 +35,7 @@ not a reference implementation and not production code.
 | `15-loader-fix-report.md` | Direct loader finding, dedicated distribution decision and retest gate. |
 | `16-auth-and-readonly-rest-plan.md` | OAuth, token refresh, discovery and read-only REST implementation plan. |
 | `17-rest-client-and-auth-implementation.md` | Tested REST transport and account authentication implementation boundary. |
-| `distribution/` | Canonical installable snapshot for the dedicated private Symcon module repository. |
+| `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
 

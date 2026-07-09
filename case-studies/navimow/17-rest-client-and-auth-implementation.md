@@ -212,7 +212,8 @@ Residual boundary:
 
 - password controls and module attributes are not asserted to be encrypted;
 - Symcon backups and administrative access remain security-sensitive;
-- public client-secret distribution is unresolved and blocks public release.
+- client-secret distribution is unresolved and blocks a supported module
+  release even though the sanitized source repository is publicly readable.
 
 ## 12. Direct Symcon Test Gate
 
