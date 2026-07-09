@@ -1,18 +1,18 @@
 # Navimow Native IP-Symcon Module Case Study
 
-**Status:** Public distribution installed; credential-free Symcon test passed
+**Status:** Dock-first command implemented; supervised command test passed
 **Scope:** Native IP-Symcon module for Segway Navimow robotic mowers  
-**Implementation state:** First module scaffold exists outside the case study;
-no live production behavior is implemented.
+**Implementation state:** The canonical case-study distribution implements
+OAuth, discovery, read-only status and a Dock-only command path.
 
 ## Purpose
 
-This case study documents the first SAEF-guided analysis for a native
+This case study documents the first SAEF-guided development of a native
 IP-Symcon module that integrates Segway Navimow robotic mowers.
 
-The case study is intentionally limited to engineering analysis, architecture
-decisions, risks and follow-up questions. It is not a reusable module template,
-not a reference implementation and not production code.
+It records analysis, architecture decisions, fixtures, implementation gates,
+test evidence, risks and follow-up questions. It is not a reusable module
+template or a general SAEF reference implementation.
 
 ## Case Study Files
 
@@ -38,6 +38,9 @@ not a reference implementation and not production code.
 | `18-auth-symcon-test-report.md` | Official schema, direct Symcon OAuth, persistence and token-refresh test report. |
 | `19-discovery-and-readonly-status-implementation.md` | Account discovery, dynamic configurator and read-only device status implementation. |
 | `20-discovery-and-status-symcon-test-report.md` | Live discovery, configurator, device status and polling verification report. |
+| `21-command-implementation-readiness.md` | Conditional Go decision and safety gates for a Dock-first command implementation. |
+| `22-dock-command-implementation.md` | Dock-only command transport, diagnostics, verification and local test evidence. |
+| `23-dock-command-symcon-test-report.md` | Supervised live Dock command and delayed status-verification report. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

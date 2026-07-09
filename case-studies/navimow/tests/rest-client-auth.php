@@ -3,11 +3,13 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../distribution/libs/Navimow/ApiClient.php';
+require_once __DIR__ . '/../distribution/libs/Navimow/CommandContract.php';
 require_once __DIR__ . '/../distribution/libs/Navimow/OAuthHelper.php';
 require_once __DIR__ . '/../distribution/libs/Navimow/PayloadMapper.php';
 
 use Navimow\ApiClient;
 use Navimow\ApiException;
+use Navimow\CommandContract;
 use Navimow\OAuthHelper;
 use Navimow\PayloadMapper;
 
@@ -228,6 +230,127 @@ assertSameValue(
     81,
     $multiDeviceStatus['batteryLevel'],
     'Status mapper should use battery data from the requested device.'
+);
+
+$dockPayload = CommandContract::createPayload(
+    CommandContract::DOCK,
+    'DEVICE_001'
+);
+assertSameValue(
+    '{"commands":[{"devices":[{"id":"DEVICE_001"}],"execution":{"command":"action.devices.commands.Dock","params":{}}}]}',
+    json_encode($dockPayload, JSON_THROW_ON_ERROR),
+    'Dock payload should match the captured command contract.'
+);
+assertThrows(
+    static fn () => CommandContract::createPayload(
+        'Start',
+        'DEVICE_001'
+    ),
+    InvalidArgumentException::class,
+    'Commands other than Dock must remain disabled.'
+);
+assertThrows(
+    static fn () => CommandContract::createPayload(
+        CommandContract::DOCK,
+        ''
+    ),
+    InvalidArgumentException::class,
+    'Dock requires a configured device ID.'
+);
+
+$commandRequests = [];
+$commandClient = new ApiClient(
+    'https://navimow.example.test',
+    static function (array $request) use (&$commandRequests): array {
+        $commandRequests[] = $request;
+
+        return [
+            'status' => 200,
+            'body' => file_get_contents(
+                __DIR__ . '/../fixtures/rest/command-dock-already-in-state.json'
+            ),
+        ];
+    }
+);
+$commandResponse = $commandClient->sendCommands(
+    'ACCESS_PRIVATE_VALUE',
+    $dockPayload
+);
+assertSameValue(
+    '/openapi/smarthome/sendCommands',
+    parse_url($commandRequests[0]['url'], PHP_URL_PATH),
+    'Dock should use the command endpoint.'
+);
+assertSameValue(
+    '{"commands":[{"devices":[{"id":"DEVICE_001"}],"execution":{"command":"action.devices.commands.Dock","params":{}}}]}',
+    $commandRequests[0]['body'],
+    'Dock request body should match the allowlisted envelope.'
+);
+$alreadyInState = PayloadMapper::mapCommandResult(
+    $commandResponse,
+    'DEVICE_001'
+);
+assertSameValue(
+    PayloadMapper::COMMAND_RESULT_ALREADY_IN_STATE,
+    $alreadyInState['result'],
+    'Captured alreadyInState response should be non-fatal.'
+);
+$accepted = PayloadMapper::mapCommandResult(
+    [
+        'code' => 1,
+        'data' => [
+            'payload' => [
+                'commands' => [
+                    [
+                        'devices' => [['id' => 'DEVICE_001']],
+                        'status' => 'SUCCESS',
+                    ],
+                ],
+            ],
+        ],
+    ],
+    'DEVICE_001'
+);
+assertSameValue(
+    PayloadMapper::COMMAND_RESULT_ACCEPTED,
+    $accepted['result'],
+    'Explicit SUCCESS should enter pending status verification.'
+);
+assertThrows(
+    static fn () => PayloadMapper::mapCommandResult(
+        ['code' => 1, 'data' => ['payload' => []]],
+        'DEVICE_001'
+    ),
+    UnexpectedValueException::class,
+    'Missing command results must fail closed.'
+);
+assertThrows(
+    static fn () => PayloadMapper::mapCommandResult(
+        [
+            'code' => 1,
+            'data' => [
+                'payload' => [
+                    'commands' => [
+                        [
+                            'devices' => [['id' => 'DEVICE_001']],
+                            'status' => 'UNKNOWN',
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        'DEVICE_001'
+    ),
+    UnexpectedValueException::class,
+    'Unknown command results must fail closed.'
+);
+assertThrows(
+    static fn () => PayloadMapper::mapCommandResult(
+        $commandResponse,
+        'DEVICE_OTHER'
+    ),
+    UnexpectedValueException::class,
+    'Command response must match the requested device.'
 );
 
 PayloadMapper::assertApiSuccess(['code' => 1]);
