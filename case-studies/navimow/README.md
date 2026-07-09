@@ -33,6 +33,8 @@ not a reference implementation and not production code.
 | `13-metadata-and-loader-validation.md` | Static module metadata review and direct Symcon loader smoke-test scope. |
 | `14-symcon-loader-test-report.md` | Loader smoke-test report with local preflight and pending direct Symcon checks. |
 | `15-loader-fix-report.md` | Direct loader finding, dedicated distribution decision and retest gate. |
+| `16-auth-and-readonly-rest-plan.md` | OAuth, token refresh, discovery and read-only REST implementation plan. |
+| `17-rest-client-and-auth-implementation.md` | Tested REST transport and account authentication implementation boundary. |
 | `distribution/` | Canonical installable snapshot for the dedicated private Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
