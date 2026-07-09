@@ -196,7 +196,72 @@ Navimow payload mapper fixture checks passed.
 
 All distribution and test PHP files pass syntax validation.
 
-## 11. Security Review
+## 11. Official Symcon Module Validator Gate
+
+The official Symcon Module Validator is now a mandatory distribution gate.
+
+It covers:
+
+```text
+library.json
+module.json
+locale.json
+form.json
+```
+
+The validator webpage could not execute its result function on 2026-07-09
+because its own JavaScript dependency was missing:
+
+```text
+ReferenceError: $ is not defined
+```
+
+To avoid treating a broken UI as a successful check, the exact official
+schemas referenced by that page were downloaded from:
+
+```text
+https://www.symcon.de/assets/files/validation/librarySchema.json
+https://www.symcon.de/assets/files/validation/moduleSchema.json
+https://www.symcon.de/assets/files/validation/localeSchema.json
+https://www.symcon.de/assets/files/validation/formSchema.json
+```
+
+They were executed locally with AJV `6.10.2`, matching the validator page.
+
+### Initial findings
+
+| File scope | Finding |
+| --- | --- |
+| `library.json` | URL was empty and `compatibility` was missing |
+| three `module.json` files | required `url` field was missing |
+| three `locale.json` files | passed |
+| three `form.json` files | passed |
+
+Corrections:
+
+- library URL set to the public distribution repository;
+- minimum compatibility set to Symcon `6.2`;
+- module URL added to all three module metadata files.
+
+Final official-schema result:
+
+```text
+PASS library.json
+PASS NavimowAccount/module.json
+PASS NavimowConfigurator/module.json
+PASS NavimowDevice/module.json
+PASS NavimowAccount/locale.json
+PASS NavimowConfigurator/locale.json
+PASS NavimowDevice/locale.json
+PASS NavimowAccount/form.json
+PASS NavimowConfigurator/form.json
+PASS NavimowDevice/form.json
+```
+
+This gate must be repeated after every metadata or form change and before each
+distribution publication.
+
+## 12. Security Review
 
 Confirmed:
 
@@ -215,7 +280,7 @@ Residual boundary:
 - client-secret distribution is unresolved and blocks a supported module
   release even though the sanitized source repository is publicly readable.
 
-## 12. Direct Symcon Test Gate
+## 13. Direct Symcon Test Gate
 
 The next direct test has two stages.
 
@@ -243,7 +308,7 @@ The next direct test has two stages.
 
 Stage B requires the user at the browser login step.
 
-## 13. Published Distribution
+## 14. Published Distribution
 
 The canonical distribution was synchronized to:
 
@@ -255,7 +320,7 @@ Commit: eab2e6e5a0f97829e6ad938c54610161f3c2b2ea
 
 The published commit is ready for manual installation through Module Control.
 
-## 14. Credential-Free Symcon Result
+## 15. Credential-Free Symcon Result
 
 Stage A passed after manual installation of the public distribution.
 
@@ -289,7 +354,7 @@ The read-back result was:
 Navimow SAEF Smoke Test PASS
 ```
 
-## 15. Exit Decision
+## 16. Exit Decision
 
 WP16.1, WP16.2 and the implementation portion of WP16.3 are complete locally.
 
