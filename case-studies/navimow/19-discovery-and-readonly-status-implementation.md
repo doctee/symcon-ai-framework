@@ -1,7 +1,7 @@
 # 19 Discovery and Read-Only Status Implementation
 
 **Case study:** Navimow native IP-Symcon module  
-**Status:** Distribution published; direct Symcon and live read test pending  
+**Status:** Direct Symcon and live read-only gate passed
 **Date:** 2026-07-09  
 **Build boundary:** This step implements account discovery, configurator
 population and read-only device status. It does not implement mower commands,
@@ -306,17 +306,22 @@ This step is complete locally when:
 - no command path is active;
 - the canonical distribution is synchronized to the public repository.
 
-The live read-only gate remains pending until the updated module is installed
-and verified against the authenticated account.
+The live read-only gate passed against the authenticated account.
 
-## 17. Recommendation and Next Step
-
-Publish and update the module, then execute the supervised live read-only test.
-
-Recommended next SAEF artifact after that test:
+The authoritative result is recorded in:
 
 ```text
 case-studies/navimow/20-discovery-and-status-symcon-test-report.md
+```
+
+## 17. Recommendation and Next Step
+
+The supervised live read-only test passed.
+
+Recommended next SAEF artifact:
+
+```text
+case-studies/navimow/21-command-implementation-readiness.md
 ```
 
 Commands remain blocked until that report passes.

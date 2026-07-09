@@ -37,6 +37,7 @@ not a reference implementation and not production code.
 | `17-rest-client-and-auth-implementation.md` | Tested REST transport and account authentication implementation boundary. |
 | `18-auth-symcon-test-report.md` | Official schema, direct Symcon OAuth, persistence and token-refresh test report. |
 | `19-discovery-and-readonly-status-implementation.md` | Account discovery, dynamic configurator and read-only device status implementation. |
+| `20-discovery-and-status-symcon-test-report.md` | Live discovery, configurator, device status and polling verification report. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
