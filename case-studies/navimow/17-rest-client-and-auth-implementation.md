@@ -1,7 +1,7 @@
 # 17 REST Client and Authentication Implementation
 
 **Case study:** Navimow native IP-Symcon module  
-**Status:** Local and credential-free Symcon tests passed
+**Status:** Authentication implementation and direct Symcon gate passed
 **Date:** 2026-07-09  
 **Build boundary:** This step implements REST transport and account
 authentication. It does not activate discovery, status polling, commands or
@@ -358,8 +358,14 @@ Navimow SAEF Smoke Test PASS
 
 WP16.1, WP16.2 and the implementation portion of WP16.3 are complete locally.
 
-The credential-free portion of WP16.3 is accepted. Full WP16.3 acceptance
-still requires the supervised private OAuth exchange and refresh test.
+WP16.3 is accepted. The supervised private OAuth exchange, `ApplyChanges()`
+persistence check and one explicit token refresh passed.
+
+The authoritative direct test result is recorded in:
+
+```text
+case-studies/navimow/18-auth-symcon-test-report.md
+```
 
 After that gate, the next SAEF artifact should be:
 
