@@ -1,7 +1,7 @@
 # 15 Loader Fix Report
 
 **Case study:** Navimow native IP-Symcon module  
-**Status:** Distribution published; direct Symcon retest pending
+**Status:** Distribution installed; direct Symcon retest passed
 **Date:** 2026-07-08  
 **Build boundary:** This step corrects repository distribution and loader
 structure only. It adds no OAuth, REST polling, MQTT/WSS or mower commands.
@@ -219,9 +219,33 @@ Consequences:
 - installation must be performed manually through the Module Control UI;
 - subsequent MCP tests may resume only after the module GUIDs are visible.
 
+The repository was subsequently changed to public, installed manually through
+Module Control and retested with an explicit PASS/FAIL result channel.
+
+Verified:
+
+| Check | Result |
+| --- | --- |
+| Dedicated public repository installs | passed |
+| Account module GUID is registered | passed |
+| Device module GUID is registered | passed |
+| Configurator module GUID is registered | passed |
+| Temporary account instance lifecycle | passed |
+| Temporary device instance lifecycle | passed |
+| Temporary configurator instance lifecycle | passed |
+| Device and configurator connect to account | passed |
+| All three configuration forms return valid JSON | passed |
+| Contracted account variables exist | passed |
+| Contracted device variables exist | passed |
+| Live Navimow API activity | not performed |
+
+The test script wrote `Navimow SAEF Smoke Test PASS` to its own object name.
+That object was read back through MCP before cleanup. Temporary instances and
+the test script were then deleted.
+
 ## 10. Decision Gate
 
-The loader correction gate remains **open** until:
+The loader correction gate is **passed**:
 
 - the dedicated public repository loads;
 - all three modules can be created;

@@ -1,7 +1,7 @@
 # 17 REST Client and Authentication Implementation
 
 **Case study:** Navimow native IP-Symcon module  
-**Status:** Local implementation passed; manual Symcon installation pending
+**Status:** Local and credential-free Symcon tests passed
 **Date:** 2026-07-09  
 **Build boundary:** This step implements REST transport and account
 authentication. It does not activate discovery, status polling, commands or
@@ -257,26 +257,44 @@ The published commit is ready for manual installation through Module Control.
 
 ## 14. Credential-Free Symcon Result
 
-Stage A has not run.
+Stage A passed after manual installation of the public distribution.
 
-The attempted MCP update failed because `IPS_InstallModule()` is unavailable.
-The following test script then correctly reported that the Navimow Account
-module was missing.
+The test used an explicit result channel instead of relying on the MCP
+script-execution acknowledgement:
 
-Required recovery:
+1. create a temporary Symcon script;
+2. run all assertions inside `try/catch/finally`;
+3. write `PASS` or the sanitized failure reason to the test script name;
+4. read the script object back through MCP;
+5. delete all temporary instances and the test script.
 
-1. install `https://github.com/doctee/symcon-navimow.git` manually in Module
-   Control;
-2. confirm the library and all three modules are visible;
-3. rerun the credential-free lifecycle and form assertions through MCP;
-4. only then proceed to the supervised private OAuth test.
+Verified:
+
+| Check | Result |
+| --- | --- |
+| Account, device and configurator module GUIDs | passed |
+| Four public account authentication methods | passed |
+| All three temporary instance lifecycles | passed |
+| Device and configurator parent connections | passed |
+| All three configuration forms parse | passed |
+| Account and device variable contracts | passed |
+| Missing credentials produce `Configuration Error` | passed |
+| `ReauthRequired` is true without credentials | passed |
+| `TokenExpiresAt` remains zero | passed |
+| Live Navimow request | not performed |
+
+The read-back result was:
+
+```text
+Navimow SAEF Smoke Test PASS
+```
 
 ## 15. Exit Decision
 
 WP16.1, WP16.2 and the implementation portion of WP16.3 are complete locally.
 
-WP16.3 is not accepted until the manual module installation, credential-free
-Symcon test and supervised private OAuth exchange all pass.
+The credential-free portion of WP16.3 is accepted. Full WP16.3 acceptance
+still requires the supervised private OAuth exchange and refresh test.
 
 After that gate, the next SAEF artifact should be:
 
