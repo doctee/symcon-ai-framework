@@ -98,10 +98,9 @@ final result for this loader gate.
 
 Run this test in a non-critical IP-Symcon environment.
 
-The Symcon runtime is on a separate Win11 PC. It cannot load the Mac-local path
-`/Users/carsten/IT/Projekte/symcon-ai-framework` directly. Therefore this case
-study uses a dedicated public Git repository as the standard module transfer
-path for direct Symcon tests.
+The Symcon runtime is on a separate Win11 PC. It cannot load the local SAEF
+workspace path directly. Therefore this case study uses a dedicated public Git
+repository as the standard module transfer path for direct Symcon tests.
 
 1. Commit and push the current scaffold branch to the distribution remote.
 2. On the Win11 Symcon PC, open the IP-Symcon Console.

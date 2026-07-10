@@ -1,6 +1,6 @@
 # Navimow Native IP-Symcon Module Case Study
 
-**Status:** Dock-first command implemented; supervised command test passed
+**Status:** Private-pilot snapshot published, verified and consolidated in SAEF mainline
 **Scope:** Native IP-Symcon module for Segway Navimow robotic mowers  
 **Implementation state:** The canonical case-study distribution implements
 OAuth, discovery, read-only status and a Dock-only command path.
@@ -41,6 +41,19 @@ template or a general SAEF reference implementation.
 | `21-command-implementation-readiness.md` | Conditional Go decision and safety gates for a Dock-first command implementation. |
 | `22-dock-command-implementation.md` | Dock-only command transport, diagnostics, verification and local test evidence. |
 | `23-dock-command-symcon-test-report.md` | Supervised live Dock command and delayed status-verification report. |
+| `24-command-transition-evidence-plan.md` | Safety, capture and fixture plan for one real Running-to-Docked transition. |
+| `25-command-transition-capture-procedure.md` | Executable private terminal procedure for one supervised Dock transition capture. |
+| `26-command-transition-capture-report.md` | Successful Dock transition, sanitized SUCCESS fixture and verification-timing finding. |
+| `27-dock-transition-verification-design.md` | Long-running read-only Dock verification state-machine design. |
+| `28-dock-transition-verification-implementation.md` | Timer-driven long-running Dock verification implementation and local checks. |
+| `29-dock-transition-verification-symcon-test-report.md` | Published update and already-docked Symcon retest after long-running verification change. |
+| `30-dock-transition-verification-live-test.md` | Supervised Running-to-Docked Symcon live transition with final Verified result. |
+| `31-rest-mvp-stabilization-and-release-check.md` | REST MVP release boundary, blockers and private-pilot readiness decision. |
+| `32-private-pilot-release-preparation.md` | Private-pilot README, release hygiene and version/tag policy preparation. |
+| `33-release-metadata-and-tag-plan.md` | Pilot version metadata, build/date and tag naming decision. |
+| `34-pilot-readme-publication-and-tag.md` | Private-pilot README module commit and annotated pilot tag preparation. |
+| `35-pilot-publication-verification.md` | Remote branch, annotated pilot tag, published content and metadata verification. |
+| `36-case-study-mainline-consolidation.md` | Consolidated private-pilot evidence, implementation, fixtures and release documentation checkpoint. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

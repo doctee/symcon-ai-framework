@@ -295,26 +295,39 @@ assertSameValue(
     $alreadyInState['result'],
     'Captured alreadyInState response should be non-fatal.'
 );
+$acceptedFixture = json_decode(
+    file_get_contents(
+        __DIR__ . '/../fixtures/rest/command-dock-success.json'
+    ),
+    true,
+    512,
+    JSON_THROW_ON_ERROR
+);
 $accepted = PayloadMapper::mapCommandResult(
-    [
-        'code' => 1,
-        'data' => [
-            'payload' => [
-                'commands' => [
-                    [
-                        'devices' => [['id' => 'DEVICE_001']],
-                        'status' => 'SUCCESS',
-                    ],
-                ],
-            ],
-        ],
-    ],
+    $acceptedFixture,
     'DEVICE_001'
 );
 assertSameValue(
     PayloadMapper::COMMAND_RESULT_ACCEPTED,
     $accepted['result'],
-    'Explicit SUCCESS should enter pending status verification.'
+    'Captured SUCCESS should enter pending status verification.'
+);
+$dockingFixture = json_decode(
+    file_get_contents(
+        __DIR__ . '/../fixtures/rest/vehicle-status-docking.json'
+    ),
+    true,
+    512,
+    JSON_THROW_ON_ERROR
+);
+$docking = PayloadMapper::mapStatus(
+    $dockingFixture,
+    'DEVICE_001'
+);
+assertSameValue(
+    PayloadMapper::VEHICLE_STATE_DOCKING,
+    $docking['vehicleState'],
+    'Captured isDocking status should map to Docking.'
 );
 assertThrows(
     static fn () => PayloadMapper::mapCommandResult(
@@ -361,6 +374,39 @@ assertThrows(
     ]),
     UnexpectedValueException::class,
     'Non-success API codes should fail.'
+);
+
+$deviceModuleSource = file_get_contents(
+    __DIR__ . '/../distribution/NavimowDevice/module.php'
+);
+if ($deviceModuleSource === false) {
+    throw new RuntimeException('Device module source should be readable.');
+}
+
+assertContainsValue(
+    'private const COMMAND_VERIFICATION_TIMEOUT_SECONDS = 900;',
+    $deviceModuleSource,
+    'Dock verification should use the documented 15 minute timeout.'
+);
+assertContainsValue(
+    'private const COMMAND_VERIFICATION_POLL_MILLISECONDS = 60000;',
+    $deviceModuleSource,
+    'Dock verification should use bounded read-only polling.'
+);
+assertSameValue(
+    1,
+    substr_count($deviceModuleSource, "'Function' => 'SendCommand'"),
+    'Device module must not contain a command retry path.'
+);
+assertContainsValue(
+    '$vehicleState === self::VEHICLE_STATE_DOCKING',
+    $deviceModuleSource,
+    'Docking should be treated as progress, not as a failed command.'
+);
+assertContainsValue(
+    'self::COMMAND_STATE_RETURNING',
+    $deviceModuleSource,
+    'Dock verification should persist the returning state.'
 );
 
 fwrite(

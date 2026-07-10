@@ -33,8 +33,9 @@ fixtures/
   rest/
     auth-list-success.json
     vehicle-status-docked.json
+    vehicle-status-docking.json
     vehicle-status-mowing.json
-    command-start-success.json
+    command-dock-success.json
     command-dock-already-in-state.json
     auth-expired-token.json
     api-temporary-failure.json
@@ -56,7 +57,8 @@ the first parser and contract validation work:
 | `rest/auth-list-success.json` | Validate discovery response shape and device list structure. |
 | `rest/vehicle-status-docked.json` | Validate safe baseline status mapping. |
 | `rest/vehicle-status-mowing.json` | Validate active state mapping if available. |
-| `rest/command-start-success.json` | Validate successful command response shape. |
+| `rest/vehicle-status-docking.json` | Validate the observed return-to-dock transition state. |
+| `rest/command-dock-success.json` | Validate the real successful Dock command response shape. |
 | `rest/command-dock-already-in-state.json` | Validate non-error `alreadyInState` handling. |
 | `rest/auth-expired-token.json` | Validate auth failure and reauth behavior. |
 | `rest/auth-invalid-token.json` | Validate invalid-token API error shape. |
@@ -102,6 +104,7 @@ Use these placeholders consistently:
 | Additional device ID | `DEVICE_002` |
 | Account ID | `ACCOUNT_001` |
 | Request ID | `REQUEST_001` |
+| Command number | `COMMAND_001` |
 | Serial number | `SERIAL_001` |
 | Private mower name | `Navimow Test Mower` |
 | Username or email | `USER_001` |
