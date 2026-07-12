@@ -1,6 +1,6 @@
 # Navimow Native IP-Symcon Module Case Study
 
-**Status:** Private-pilot snapshot published, verified and consolidated in SAEF mainline
+**Status:** Recovery-hardened second private pilot consolidated in SAEF mainline
 **Scope:** Native IP-Symcon module for Segway Navimow robotic mowers  
 **Implementation state:** The canonical case-study distribution implements
 OAuth, discovery, read-only status and a Dock-only command path.
@@ -54,6 +54,20 @@ template or a general SAEF reference implementation.
 | `34-pilot-readme-publication-and-tag.md` | Private-pilot README module commit and annotated pilot tag preparation. |
 | `35-pilot-publication-verification.md` | Remote branch, annotated pilot tag, published content and metadata verification. |
 | `36-case-study-mainline-consolidation.md` | Consolidated private-pilot evidence, implementation, fixtures and release documentation checkpoint. |
+| `37-private-pilot-observation-plan.md` | Bounded deterministic and supervised pilot plan for timeout, restart, cloud, token and duplicate-command evidence. |
+| `38-pilot-observation-harness-design.md` | Non-actuating CLI harness, fake time, scripted transport and restart-reconstruction design. |
+| `39-pilot-observation-harness-implementation.md` | Deterministic harness implementation with timeout, read-cadence and token-recovery findings. |
+| `40-pilot-recovery-hardening-design.md` | Deadline, WaitingRead cadence and bounded token-refresh recovery design. |
+| `41-pilot-recovery-hardening-implementation.md` | Implemented recovery hardening with 16 green deterministic harness cases. |
+| `42-pilot-recovery-hardening-publication.md` | Published and remotely verified recovery hardening commit. |
+| `43-pilot-recovery-hardening-symcon-smoke-test-report.md` | Direct read-only Symcon update, auth, status and command-invariance verification. |
+| `44-pilot-restart-observation-live-test.md` | Supervised transition attempt safely completed before restart; normal path passed, restart evidence pending. |
+| `45-pilot-restart-observation-live-retest.md` | Successful supervised restart during Docking with automatic final verification. |
+| `46-private-pilot-observation-status-review.md` | Consolidated `OBS-01` through `OBS-05` evidence and remaining release gate. |
+| `47-passive-token-refresh-observation.md` | Passive scheduled token refresh and continued polling verification. |
+| `48-private-pilot-release-review-and-tag-decision.md` | Conditional GO for a documented recovery-hardened second pilot tag. |
+| `49-pilot-readme-refresh-and-second-tag-publication.md` | Published recovery-hardened README and immutable `pilot-0.1.0.2` tag. |
+| `50-second-pilot-case-study-consolidation.md` | Consolidated hardening, observation evidence, harness and second pilot publication checkpoint. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
