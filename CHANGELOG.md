@@ -120,6 +120,8 @@ This project adheres to Semantic Versioning.
 - Integrated Navimow syntax, distribution validation and executable regression
   suites into the aggregate check and extended static analysis to its module
   production code.
+- Added the Composer lock file to make local, CI and release dependency
+  installation reproducible.
 - Clarified the evidence date and historical gate progression of the System
   Functions migration records without treating documentation review as a new
   live-system verification.
