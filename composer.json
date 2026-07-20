@@ -2,7 +2,7 @@
     "name": "doctee/symcon-ai-framework",
     "description": "Reusable engineering framework for IP-Symcon automation projects.",
     "type": "project",
-    "license": "MIT",
+    "license": "PolyForm-Noncommercial-1.0.0",
     "require": {
         "php": ">=8.2"
     },
