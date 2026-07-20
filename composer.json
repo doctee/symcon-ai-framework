@@ -11,18 +11,123 @@
         "squizlabs/php_codesniffer": "^3.13"
     },
     "scripts": {
+        "bundle:build": [
+            "@php tools/build-symcon-bundle.php bundles/symcon/ensure-variable.bundle.json"
+        ],
+        "bundle:check": [
+            "@php tools/build-symcon-bundle.php --check bundles/symcon/ensure-variable.bundle.json"
+        ],
+        "fileset:build": [
+            "@php tools/build-symcon-fileset.php deployments/symcon/mqtt-discovery-exporter.fileset.json"
+        ],
+        "fileset:check": [
+            "@php tools/build-symcon-fileset.php --check deployments/symcon/mqtt-discovery-exporter.fileset.json"
+        ],
+        "control-light:fileset-build": [
+            "@php tools/build-symcon-fileset.php deployments/symcon/control-light.fileset.json"
+        ],
+        "control-light:fileset-check": [
+            "@php tools/build-symcon-fileset.php --check deployments/symcon/control-light.fileset.json"
+        ],
+        "test:bundles": [
+            "@php tests/bundles/ensure-variable-bundle.php"
+        ],
+        "test:filesets": [
+            "@php tests/bundles/mqtt-discovery-exporter-fileset.php"
+        ],
+        "test:control-light-fileset": [
+            "@php tests/bundles/control-light-fileset.php"
+        ],
+        "test:deployment-restart": [
+            "@php tests/deployments/windows-restart-coordinator.php"
+        ],
+        "test:helpers": [
+            "@php tests/helpers/diagnostics.php",
+            "@php tests/helpers/ensure-event.php",
+            "@php tests/helpers/ensure-presentation.php",
+            "@php tests/helpers/public-api.php",
+            "@php tests/helpers/wait-for-variable.php"
+        ],
+        "test:mqtt-exporter-core": [
+            "@php tests/mqtt-discovery-exporter/core.php"
+        ],
+        "test:mqtt-exporter-runtime": [
+            "@php tests/mqtt-discovery-exporter/runtime-diagnostics.php"
+        ],
+        "test:mqtt-exporter-reconcile": [
+            "@php tests/mqtt-discovery-exporter/prepare-reconcile.php"
+        ],
+        "test:mqtt-exporter-execute": [
+            "@php tests/mqtt-discovery-exporter/execute-reconcile.php"
+        ],
+        "test:mqtt-exporter-dispatch": [
+            "@php tests/mqtt-discovery-exporter/dispatch.php"
+        ],
+        "test:mqtt-exporter-cleanup": [
+            "@php tests/mqtt-discovery-exporter/cleanup.php"
+        ],
+        "test:mqtt-exporter-fixtures": [
+            "@php tests/mqtt-discovery-exporter/discovery-fixtures.php"
+        ],
+        "test:control-light-core": [
+            "@php tests/control-light/core.php"
+        ],
+        "test:control-light-runtime": [
+            "@php tests/control-light/runtime.php"
+        ],
+        "test:control-light-topology": [
+            "@php tests/control-light/topology.php"
+        ],
+        "test:control-light-runtime-mirror": [
+            "@php tests/control-light/runtime-mirror.php"
+        ],
+        "test:navimow-rest-auth": [
+            "@php case-studies/navimow/tests/rest-client-auth.php"
+        ],
+        "test:navimow-pilot": [
+            "@php case-studies/navimow/tests/pilot-observation-harness.php"
+        ],
+        "test:navimow-distribution": [
+            "@php case-studies/navimow/tools/validate-distribution.php"
+        ],
         "lint": [
             "@php tools/lint.php"
         ],
         "phpstan": [
-            "phpstan analyse"
+            "phpstan analyse --memory-limit=512M --debug --no-progress"
+        ],
+        "phpstan:bundle": [
+            "phpstan analyse --memory-limit=512M --debug --no-progress -c phpstan-bundle.neon"
         ],
         "phpcs": [
             "phpcs"
         ],
         "check": [
             "@lint",
+            "@bundle:check",
+            "@fileset:check",
+            "@control-light:fileset-check",
+            "@test:bundles",
+            "@test:filesets",
+            "@test:control-light-fileset",
+            "@test:deployment-restart",
+            "@test:helpers",
+            "@test:mqtt-exporter-core",
+            "@test:mqtt-exporter-runtime",
+            "@test:mqtt-exporter-reconcile",
+            "@test:mqtt-exporter-execute",
+            "@test:mqtt-exporter-dispatch",
+            "@test:mqtt-exporter-cleanup",
+            "@test:mqtt-exporter-fixtures",
+            "@test:control-light-core",
+            "@test:control-light-runtime",
+            "@test:control-light-topology",
+            "@test:control-light-runtime-mirror",
+            "@test:navimow-rest-auth",
+            "@test:navimow-pilot",
+            "@test:navimow-distribution",
             "@phpstan",
+            "@phpstan:bundle",
             "@phpcs"
         ]
     }

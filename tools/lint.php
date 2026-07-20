@@ -6,6 +6,19 @@ $directories = [
     'helpers',
     'templates',
     'examples',
+    'stubs',
+    'tools',
+    'tests/bundles',
+    'tests/control-light',
+    'tests/deployments',
+    'tests/helpers',
+    'tests/mqtt-discovery-exporter',
+    'case-studies/mqtt-discovery-exporter/candidate',
+    'case-studies/control-light/candidate',
+    'case-studies/navimow/distribution',
+    'case-studies/navimow/tests',
+    'case-studies/navimow/tools',
+    'dist/symcon',
 ];
 
 $errors = 0;

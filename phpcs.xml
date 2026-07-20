@@ -4,6 +4,8 @@
 
     <rule ref="PSR12">
         <exclude name="PSR1.Files.SideEffects"/>
+        <exclude name="PSR1.Classes.ClassDeclaration.MissingNamespace"/>
+        <exclude name="PSR1.Methods.CamelCapsMethodName.NotCamelCaps"/>
         <exclude name="PSR12.Files.FileHeader"/>
         <exclude name="Squiz.Commenting.FileComment"/>
         <exclude name="Generic.Files.LineLength"/>
@@ -12,6 +14,20 @@
     <file>helpers</file>
     <file>templates</file>
     <file>examples</file>
+    <file>tools</file>
+    <file>tests/bundles</file>
+    <file>tests/control-light</file>
+    <file>tests/deployments</file>
+    <file>tests/helpers</file>
+    <file>tests/mqtt-discovery-exporter</file>
+    <file>case-studies/control-light/candidate</file>
+    <file>case-studies/mqtt-discovery-exporter/candidate</file>
+    <file>case-studies/navimow/distribution</file>
+    <file>case-studies/navimow/tools</file>
+
+    <rule ref="PSR1.Classes.ClassDeclaration.MultipleClasses">
+        <exclude-pattern>case-studies/navimow/distribution/libs/Navimow/ApiClient.php</exclude-pattern>
+    </rule>
 
     <exclude-pattern>vendor/*</exclude-pattern>
 </ruleset>

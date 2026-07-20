@@ -1,10 +1,22 @@
 parameters:
     level: 5
 
+    parallel:
+        maximumNumberOfProcesses: 1
+
     paths:
         - helpers
         - templates
         - examples
+        - tools
+        - case-studies/control-light/candidate
+        - case-studies/mqtt-discovery-exporter/candidate
+        - case-studies/navimow/distribution
+
+    # Executable test entrypoints define mutually incompatible global Symcon
+    # fakes. They are linted and executed by the Composer test scripts, but must
+    # not share one PHPStan symbol table with production candidates or another
+    # fake family. See standards/TESTING_STANDARDS.md, section 9.
 
     bootstrapFiles:
         - stubs/symcon.php
