@@ -35,14 +35,18 @@ if (!defined('SAEF_HELPER_STATISTICS')) {
      *
      * @param int   $parentID    Parent object ID.
      * @param array $definitions Statistic variable definitions.
+     * @param bool  $updateExistingPresentation Whether names, positions and icons are managed after creation.
      *
      * @return array<string, int> Variable IDs indexed by Ident.
      *
      * @throws InvalidArgumentException On incomplete or invalid definitions.
      * @throws RuntimeException On incompatible existing objects or invalid profiles.
      */
-    function SAEF_EnsureStatisticsVariables(int $parentID, array $definitions): array
-    {
+    function SAEF_EnsureStatisticsVariables(
+        int $parentID,
+        array $definitions,
+        bool $updateExistingPresentation = true
+    ): array {
         $variableIDs = [];
 
         foreach ($definitions as $definition) {
@@ -88,7 +92,8 @@ if (!defined('SAEF_HELPER_STATISTICS')) {
                 $profile,
                 null,
                 $position,
-                $icon
+                $icon,
+                $updateExistingPresentation
             );
         }
 
@@ -106,27 +111,61 @@ if (!defined('SAEF_HELPER_STATISTICS')) {
      *
      * @return int|float Updated statistic value.
      *
-     * @throws InvalidArgumentException If the variable does not exist.
-     * @throws RuntimeException If the variable type is not integer or float.
+     * @throws InvalidArgumentException If the variable or increment is invalid.
+     * @throws RuntimeException If the variable type, stored value or arithmetic result is invalid.
      */
     function SAEF_IncrementStatistic(int $variableID, int|float $increment = 1): int|float
     {
+        if (is_float($increment) && !is_finite($increment)) {
+            throw new InvalidArgumentException('Statistic increment must be finite: ' . $variableID);
+        }
+
         $variableType = SAEF_GetStatisticVariableType($variableID);
 
         if (!in_array($variableType, [1, 2], true)) {
             throw new RuntimeException('Statistic variable must be integer or float: ' . $variableID);
         }
 
-        $currentValue = GetValue($variableID);
+        if ($variableType === 1) {
+            if (!is_int($currentValue = GetValue($variableID))) {
+                throw new RuntimeException('Integer statistic variable must contain an integer: ' . $variableID);
+            }
 
-        if (!is_int($currentValue) && !is_float($currentValue)) {
-            throw new RuntimeException('Statistic variable value must be numeric: ' . $variableID);
+            if (is_float($increment)) {
+                if (floor($increment) !== $increment) {
+                    throw new InvalidArgumentException(
+                        'Integer statistic increment must be a finite whole number: ' . $variableID
+                    );
+                }
+
+                if ($increment < PHP_INT_MIN || $increment >= PHP_INT_MAX) {
+                    throw new InvalidArgumentException('Integer statistic increment is out of range: ' . $variableID);
+                }
+
+                $increment = (int)$increment;
+            }
+
+            if (
+                ($increment > 0 && $currentValue > PHP_INT_MAX - $increment)
+                || ($increment < 0 && $currentValue < PHP_INT_MIN - $increment)
+            ) {
+                throw new RuntimeException('Integer statistic increment would overflow: ' . $variableID);
+            }
+
+            $updatedValue = $currentValue + $increment;
+            SetValue($variableID, $updatedValue);
+
+            return $updatedValue;
         }
 
-        $updatedValue = $currentValue + $increment;
+        $currentValue = GetValue($variableID);
+        if (!is_int($currentValue) && !is_float($currentValue)) {
+            throw new RuntimeException('Float statistic variable must contain a numeric value: ' . $variableID);
+        }
 
-        if ($variableType === 1) {
-            $updatedValue = (int)$updatedValue;
+        $updatedValue = (float)$currentValue + (float)$increment;
+        if (!is_finite($updatedValue)) {
+            throw new RuntimeException('Float statistic increment must produce a finite value: ' . $variableID);
         }
 
         SetValue($variableID, $updatedValue);
@@ -158,6 +197,8 @@ if (!defined('SAEF_HELPER_STATISTICS')) {
 
     /**
      * Returns the Symcon variable type for a statistic variable.
+     *
+     * @internal Compatibility implementation detail; use the public statistics APIs.
      *
      * @param int $variableID Statistic variable ID.
      *

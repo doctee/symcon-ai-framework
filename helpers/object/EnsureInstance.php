@@ -12,6 +12,11 @@ require_once __DIR__ . '/../common/Validation.php';
 if (!defined('SAEF_HELPER_ENSURE_INSTANCE')) {
     define('SAEF_HELPER_ENSURE_INSTANCE', true);
 
+    /**
+     * Ensures that an instance of the expected module exists below a parent.
+     *
+     * @param bool $updateExistingPresentation Whether name, position, icon and visibility are managed after creation.
+     */
     function SAEF_EnsureInstance(
         int $parentID,
         string $ident,
@@ -19,7 +24,8 @@ if (!defined('SAEF_HELPER_ENSURE_INSTANCE')) {
         string $moduleGuid,
         ?int $position = null,
         ?string $icon = null,
-        ?bool $hidden = null
+        ?bool $hidden = null,
+        bool $updateExistingPresentation = true
     ): int {
         SAEF_ValidateParentObject($parentID);
         SAEF_ValidateIdent($ident);
@@ -28,7 +34,8 @@ if (!defined('SAEF_HELPER_ENSURE_INSTANCE')) {
 
         $existingID = @IPS_GetObjectIDByIdent($ident, $parentID);
 
-        if ($existingID === false) {
+        $created = $existingID === false;
+        if ($created) {
             $instanceID = IPS_CreateInstance($moduleGuid);
             IPS_SetParent($instanceID, $parentID);
             IPS_SetIdent($instanceID, $ident);
@@ -56,18 +63,20 @@ if (!defined('SAEF_HELPER_ENSURE_INSTANCE')) {
             }
         }
 
-        IPS_SetName($instanceID, $name);
+        if ($created || $updateExistingPresentation) {
+            IPS_SetName($instanceID, $name);
 
-        if ($position !== null) {
-            IPS_SetPosition($instanceID, $position);
-        }
+            if ($position !== null) {
+                IPS_SetPosition($instanceID, $position);
+            }
 
-        if ($icon !== null) {
-            IPS_SetIcon($instanceID, $icon);
-        }
+            if ($icon !== null) {
+                IPS_SetIcon($instanceID, $icon);
+            }
 
-        if ($hidden !== null) {
-            IPS_SetHidden($instanceID, $hidden);
+            if ($hidden !== null) {
+                IPS_SetHidden($instanceID, $hidden);
+            }
         }
 
         return $instanceID;

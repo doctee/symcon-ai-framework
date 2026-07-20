@@ -35,6 +35,7 @@ if (!defined('SAEF_HELPER_ENSURE_VARIABLE')) {
      * @param int|null    $actionID Optional custom action script ID.
      * @param int|null    $position Optional object position.
      * @param string|null $icon     Optional object icon.
+     * @param bool        $updateExistingPresentation Whether name, position and icon are managed after creation.
      *
      * @return int Variable ID.
      *
@@ -49,7 +50,8 @@ if (!defined('SAEF_HELPER_ENSURE_VARIABLE')) {
         string $profile = '',
         ?int $actionID = null,
         ?int $position = null,
-        ?string $icon = null
+        ?string $icon = null,
+        bool $updateExistingPresentation = true
     ): int {
         SAEF_ValidateParentObject($parentID);
         SAEF_ValidateIdent($ident);
@@ -66,7 +68,8 @@ if (!defined('SAEF_HELPER_ENSURE_VARIABLE')) {
 
         $existingID = @IPS_GetObjectIDByIdent($ident, $parentID);
 
-        if ($existingID === false) {
+        $created = $existingID === false;
+        if ($created) {
             $variableID = IPS_CreateVariable($type);
             IPS_SetParent($variableID, $parentID);
             IPS_SetIdent($variableID, $ident);
@@ -94,14 +97,16 @@ if (!defined('SAEF_HELPER_ENSURE_VARIABLE')) {
             }
         }
 
-        IPS_SetName($variableID, $name);
+        if ($created || $updateExistingPresentation) {
+            IPS_SetName($variableID, $name);
 
-        if ($position !== null) {
-            IPS_SetPosition($variableID, $position);
-        }
+            if ($position !== null) {
+                IPS_SetPosition($variableID, $position);
+            }
 
-        if ($icon !== null) {
-            IPS_SetIcon($variableID, $icon);
+            if ($icon !== null) {
+                IPS_SetIcon($variableID, $icon);
+            }
         }
 
         if ($profile !== '') {

@@ -36,6 +36,7 @@ if (!defined('SAEF_HELPER_ERROR_RING_BUFFER')) {
      * @param string      $name     User-facing variable name.
      * @param int|null    $position Optional object position.
      * @param string|null $icon     Optional object icon.
+     * @param bool        $updateExistingPresentation Whether name, position and icon are managed after creation.
      *
      * @return int Error ring buffer variable ID.
      */
@@ -44,7 +45,8 @@ if (!defined('SAEF_HELPER_ERROR_RING_BUFFER')) {
         string $ident,
         string $name,
         ?int $position = null,
-        ?string $icon = null
+        ?string $icon = null,
+        bool $updateExistingPresentation = true
     ): int {
         return SAEF_EnsureVariable(
             $parentID,
@@ -54,7 +56,8 @@ if (!defined('SAEF_HELPER_ERROR_RING_BUFFER')) {
             '',
             null,
             $position,
-            $icon
+            $icon,
+            $updateExistingPresentation
         );
     }
 
@@ -69,7 +72,7 @@ if (!defined('SAEF_HELPER_ERROR_RING_BUFFER')) {
      * @return array<int, array<string, mixed>> Error entries.
      *
      * @throws InvalidArgumentException If the variable does not exist.
-     * @throws RuntimeException If the variable is incompatible or contains invalid JSON.
+     * @throws RuntimeException If the variable or stored bounded-entry structure is incompatible.
      */
     function SAEF_ReadErrorRingBuffer(int $variableID): array
     {
@@ -105,13 +108,33 @@ if (!defined('SAEF_HELPER_ERROR_RING_BUFFER')) {
             throw new RuntimeException('Error ring buffer JSON must decode to an array: ' . $variableID);
         }
 
+        if (!array_is_list($entries)) {
+            throw new RuntimeException('Error ring buffer JSON must be a list: ' . $variableID);
+        }
+
+        if (count($entries) > SAEF_ERROR_RING_BUFFER_MAX_CAPACITY) {
+            throw new RuntimeException(
+                'Error ring buffer exceeds maximum capacity: ' . $variableID
+            );
+        }
+
         foreach ($entries as $entry) {
             if (!is_array($entry)) {
                 throw new RuntimeException('Error ring buffer entries must be arrays: ' . $variableID);
             }
+
+            if (
+                !isset($entry['timestamp'], $entry['message'], $entry['context'])
+                || !is_int($entry['timestamp'])
+                || !is_string($entry['message'])
+                || $entry['message'] === ''
+                || !is_array($entry['context'])
+            ) {
+                throw new RuntimeException('Error ring buffer entry has an invalid structure: ' . $variableID);
+            }
         }
 
-        return array_values($entries);
+        return $entries;
     }
 
     /**
@@ -180,6 +203,8 @@ if (!defined('SAEF_HELPER_ERROR_RING_BUFFER')) {
     /**
      * Validates that an object is a string variable usable as an error ring buffer.
      *
+     * @internal Compatibility implementation detail; use the public ring buffer APIs.
+     *
      * @param int $variableID Error ring buffer variable ID.
      */
     function SAEF_ValidateErrorRingBufferVariable(int $variableID): void
@@ -197,6 +222,8 @@ if (!defined('SAEF_HELPER_ERROR_RING_BUFFER')) {
 
     /**
      * Validates ring buffer capacity.
+     *
+     * @internal Compatibility implementation detail; use the public ring buffer APIs.
      *
      * @param int $capacity Maximum number of entries.
      */

@@ -19,13 +19,19 @@ if (!defined('SAEF_HELPER_ENSURE_DUMMY')) {
         define('SAEF_DUMMY_MODULE_GUID', '{485D0419-BE97-4548-AA9C-C083EB82E61E}');
     }
 
+    /**
+     * Ensures that a Dummy Module instance exists below a parent.
+     *
+     * @param bool $updateExistingPresentation Whether name, position, icon and visibility are managed after creation.
+     */
     function SAEF_EnsureDummy(
         int $parentID,
         string $ident,
         string $name,
         ?int $position = null,
         ?string $icon = null,
-        ?bool $hidden = null
+        ?bool $hidden = null,
+        bool $updateExistingPresentation = true
     ): int {
         return SAEF_EnsureInstance(
             $parentID,
@@ -34,7 +40,8 @@ if (!defined('SAEF_HELPER_ENSURE_DUMMY')) {
             SAEF_DUMMY_MODULE_GUID,
             $position,
             $icon,
-            $hidden
+            $hidden,
+            $updateExistingPresentation
         );
     }
 }

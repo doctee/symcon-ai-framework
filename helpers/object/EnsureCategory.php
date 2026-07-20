@@ -24,6 +24,7 @@ if (!defined('SAEF_HELPER_ENSURE_CATEGORY')) {
      * @param string      $name     User-facing category name.
      * @param int|null    $position Optional object position.
      * @param string|null $icon     Optional object icon.
+     * @param bool        $updateExistingPresentation Whether name, position and icon are managed after creation.
      *
      * @return int Category ID.
      *
@@ -35,7 +36,8 @@ if (!defined('SAEF_HELPER_ENSURE_CATEGORY')) {
         string $ident,
         string $name,
         ?int $position = null,
-        ?string $icon = null
+        ?string $icon = null,
+        bool $updateExistingPresentation = true
     ): int {
         SAEF_ValidateParentObject($parentID);
         SAEF_ValidateIdent($ident);
@@ -43,7 +45,8 @@ if (!defined('SAEF_HELPER_ENSURE_CATEGORY')) {
 
         $existingID = @IPS_GetObjectIDByIdent($ident, $parentID);
 
-        if ($existingID === false) {
+        $created = $existingID === false;
+        if ($created) {
             $categoryID = IPS_CreateCategory();
             IPS_SetParent($categoryID, $parentID);
             IPS_SetIdent($categoryID, $ident);
@@ -61,14 +64,16 @@ if (!defined('SAEF_HELPER_ENSURE_CATEGORY')) {
             $categoryID = $existingID;
         }
 
-        IPS_SetName($categoryID, $name);
+        if ($created || $updateExistingPresentation) {
+            IPS_SetName($categoryID, $name);
 
-        if ($position !== null) {
-            IPS_SetPosition($categoryID, $position);
-        }
+            if ($position !== null) {
+                IPS_SetPosition($categoryID, $position);
+            }
 
-        if ($icon !== null) {
-            IPS_SetIcon($categoryID, $icon);
+            if ($icon !== null) {
+                IPS_SetIcon($categoryID, $icon);
+            }
         }
 
         return $categoryID;

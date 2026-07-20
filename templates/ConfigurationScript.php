@@ -54,7 +54,10 @@ try {
     $categoryID = SAEF_EnsureCategory(
         $config['parentID'],
         $config['category']['ident'],
-        $config['category']['name']
+        $config['category']['name'],
+        null,
+        null,
+        false
     );
 
     foreach ($config['variables'] as $variable) {
@@ -63,17 +66,24 @@ try {
             $variable['ident'],
             $variable['name'],
             $variable['type'],
-            $variable['profile']
+            $variable['profile'],
+            null,
+            null,
+            null,
+            false
         );
     }
 
     SAEF_EnsureCyclicScriptEvent(
-        $categoryID,
+        $config['event']['targetScriptID'],
         $config['event']['ident'],
         $config['event']['name'],
         $config['event']['targetScriptID'],
         $config['event']['intervalSeconds'],
-        $config['event']['active']
+        $config['event']['active'],
+        null,
+        true,
+        false
     );
 
     SetValue(IPS_GetObjectIDByIdent('LAST_RUN', $categoryID), time());

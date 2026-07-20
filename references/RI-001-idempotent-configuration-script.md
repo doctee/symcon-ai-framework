@@ -28,7 +28,7 @@ This implementation demonstrates:
 
 ## Related Framework Artifacts
 
-- `drafts/SYMCON_STANDARDS.md`
+- `standards/SYMCON_STANDARDS.md`
 - `knowledge/EK-004-internal-state-management.md`
 - `knowledge/EK-005-idempotent-configuration.md`
 - `helpers/object/EnsureCategory.php`
@@ -40,7 +40,10 @@ This implementation demonstrates:
 
 ## Usage
 
-Copy the PHP script into an IP-Symcon script and adjust the configuration section.
+Provide the referenced SAEF helpers through the reviewed deployment model, then
+adapt the configuration section. The relative `require_once` paths represent
+the repository layout and must match the deployed helper layout; they are not
+portable IP-Symcon ObjectIDs.
 
 The script is safe to execute repeatedly. Existing owned objects are reused and updated where appropriate.
 
@@ -57,12 +60,14 @@ declare(strict_types=1);
  *
  * This script creates a small owned object structure below a configured parent:
  *
- * Parent
- * └── SAEF Demo
- *     ├── State
- *     ├── Last Run
- *     ├── Error
- *     └── Periodic Update
+ * Configured Parent
+ * `-- SAEF Demo
+ *     |-- State
+ *     |-- Last Run
+ *     `-- Error
+ *
+ * Owning Script
+ * `-- Periodic Update
  *
  * The script demonstrates the preferred SAEF style:
  * - configuration first,
@@ -186,7 +191,8 @@ try {
         $config['category']['ident'],
         $config['category']['name'],
         $config['category']['position'],
-        $config['category']['icon']
+        $config['category']['icon'],
+        false
     );
 
     foreach ($config['variables'] as $variable) {
@@ -198,19 +204,21 @@ try {
             $variable['profile'],
             null,
             $variable['position'],
-            $variable['icon']
+            $variable['icon'],
+            false
         );
     }
 
     SAEF_EnsureCyclicScriptEvent(
-        $categoryID,
+        $config['event']['targetScriptID'],
         $config['event']['ident'],
         $config['event']['name'],
         $config['event']['targetScriptID'],
         $config['event']['intervalSeconds'],
         $config['event']['active'],
         $config['event']['position'],
-        $config['event']['hidden']
+        $config['event']['hidden'],
+        false
     );
 
     SetValue(IPS_GetObjectIDByIdent('STATE', $categoryID), 1);
@@ -287,7 +295,9 @@ Profiles are created or validated before variables use them.
 
 The cyclic event is created or updated deterministically through `SAEF_EnsureCyclicScriptEvent()`.
 
-The event action binding is handled by the helper.
+The event is owned below its target script. The helper validates that event
+parent and target script are identical, then applies the Run Automation action
+binding required by IP-Symcon 6.0 and newer.
 
 ### Event Active State
 

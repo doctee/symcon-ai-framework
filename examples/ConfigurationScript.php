@@ -126,7 +126,8 @@ try {
         $config['category']['ident'],
         $config['category']['name'],
         $config['category']['position'],
-        $config['category']['icon']
+        $config['category']['icon'],
+        false
     );
 
     $variableIDs = [];
@@ -140,19 +141,21 @@ try {
             $variable['profile'],
             null,
             $variable['position'],
-            $variable['icon']
+            $variable['icon'],
+            false
         );
     }
 
     SAEF_EnsureCyclicScriptEvent(
-        $categoryID,
+        $config['event']['targetScriptID'],
         $config['event']['ident'],
         $config['event']['name'],
         $config['event']['targetScriptID'],
         $config['event']['intervalSeconds'],
         $config['event']['active'],
         $config['event']['position'],
-        $config['event']['hidden']
+        $config['event']['hidden'],
+        false
     );
 
     SetValue($variableIDs['STATE'], 1);

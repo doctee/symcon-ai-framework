@@ -61,6 +61,8 @@ if (!defined('SAEF_HELPER_CONFIGURATION_HASH')) {
     /**
      * Builds a lookup map for ignored configuration keys.
      *
+     * @internal Compatibility implementation detail; use the public hash APIs.
+     *
      * @param array $ignoreKeys Key names to ignore.
      *
      * @return array<string, bool>
@@ -82,6 +84,8 @@ if (!defined('SAEF_HELPER_CONFIGURATION_HASH')) {
 
     /**
      * Normalizes a configuration value recursively.
+     *
+     * @internal Compatibility implementation detail; use the public hash APIs.
      *
      * @param mixed               $value         Configuration value.
      * @param array<string, bool> $ignoredKeyMap Ignored key lookup map.

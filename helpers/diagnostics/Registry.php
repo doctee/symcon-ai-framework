@@ -28,6 +28,7 @@ if (!defined('SAEF_HELPER_REGISTRY')) {
      * @param string      $name     User-facing variable name.
      * @param int|null    $position Optional object position.
      * @param string|null $icon     Optional object icon.
+     * @param bool        $updateExistingPresentation Whether name, position and icon are managed after creation.
      *
      * @return int Registry variable ID.
      */
@@ -36,7 +37,8 @@ if (!defined('SAEF_HELPER_REGISTRY')) {
         string $ident,
         string $name,
         ?int $position = null,
-        ?string $icon = null
+        ?string $icon = null,
+        bool $updateExistingPresentation = true
     ): int {
         return SAEF_EnsureVariable(
             $parentID,
@@ -46,7 +48,8 @@ if (!defined('SAEF_HELPER_REGISTRY')) {
             '',
             null,
             $position,
-            $icon
+            $icon,
+            $updateExistingPresentation
         );
     }
 
@@ -154,6 +157,8 @@ if (!defined('SAEF_HELPER_REGISTRY')) {
 
     /**
      * Validates that an object is a string variable usable as a registry.
+     *
+     * @internal Compatibility implementation detail; use the public registry APIs.
      *
      * @param int $variableID Registry variable ID.
      */

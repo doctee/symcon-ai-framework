@@ -29,7 +29,7 @@ This implementation demonstrates:
 
 ## Related Framework Artifacts
 
-- `drafts/SYMCON_STANDARDS.md`
+- `standards/SYMCON_STANDARDS.md`
 - `knowledge/EK-004-internal-state-management.md`
 - `knowledge/EK-005-idempotent-configuration.md`
 - `helpers/diagnostics/ConfigurationHash.php`
@@ -40,7 +40,10 @@ This implementation demonstrates:
 
 ## Usage
 
-Copy the PHP script into an IP-Symcon script and adjust the configuration section.
+Provide the referenced SAEF helpers through the reviewed deployment model, then
+adapt the configuration section. The relative `require_once` paths represent
+the repository layout and must match the deployed helper layout; they are not
+portable IP-Symcon ObjectIDs.
 
 The script expects an existing parent object. It creates or updates only the
 diagnostic variables defined in the configuration. It is safe to execute
@@ -153,6 +156,7 @@ $config = [
 
 $errorRingBufferID = null;
 $statisticIDs = [];
+$diagnosticsInitialized = false;
 
 try {
     validateRuntimeDiagnosticsConfiguration($config);
@@ -167,12 +171,14 @@ try {
         $config['registry']['ident'],
         $config['registry']['name'],
         $config['registry']['position'],
-        $config['registry']['icon']
+        $config['registry']['icon'],
+        false
     );
 
     $statisticIDs = SAEF_EnsureStatisticsVariables(
         $config['parentID'],
-        $config['statistics']
+        $config['statistics'],
+        false
     );
 
     $errorRingBufferID = SAEF_EnsureErrorRingBufferVariable(
@@ -180,8 +186,10 @@ try {
         $config['errorRingBuffer']['ident'],
         $config['errorRingBuffer']['name'],
         $config['errorRingBuffer']['position'],
-        $config['errorRingBuffer']['icon']
+        $config['errorRingBuffer']['icon'],
+        false
     );
+    $diagnosticsInitialized = true;
 
     $registry = SAEF_ReadRegistry($registryID);
     $previousConfigurationHash = $registry['configurationHash'] ?? null;
@@ -195,23 +203,39 @@ try {
 
     IPS_LogMessage('SAEF RI-002', 'Runtime diagnostics updated successfully');
 } catch (Throwable $exception) {
-    if ($errorRingBufferID !== null) {
-        SAEF_AppendErrorRingBufferEntry(
-            $errorRingBufferID,
-            $exception->getMessage(),
-            $config['errorRingBuffer']['capacity'],
-            [
-                'type' => get_class($exception),
-                'script' => 'RI-002',
-            ]
-        );
-    }
-
-    if (isset($statisticIDs['ERRORS'])) {
-        SAEF_IncrementStatistic($statisticIDs['ERRORS']);
-    }
-
     IPS_LogMessage('SAEF RI-002', 'Runtime diagnostics failed: ' . $exception->getMessage());
+
+    if ($diagnosticsInitialized && $errorRingBufferID !== null) {
+        try {
+            SAEF_AppendErrorRingBufferEntry(
+                $errorRingBufferID,
+                $exception->getMessage(),
+                $config['errorRingBuffer']['capacity'],
+                [
+                    'type' => get_class($exception),
+                    'script' => 'RI-002',
+                ]
+            );
+        } catch (Throwable $diagnosticsException) {
+            IPS_LogMessage(
+                'SAEF RI-002',
+                'Could not update error history: ' . $diagnosticsException->getMessage()
+            );
+        }
+
+    }
+
+    if ($diagnosticsInitialized && isset($statisticIDs['ERRORS'])) {
+        try {
+            SAEF_IncrementStatistic($statisticIDs['ERRORS']);
+        } catch (Throwable $diagnosticsException) {
+            IPS_LogMessage(
+                'SAEF RI-002',
+                'Could not update error statistic: ' . $diagnosticsException->getMessage()
+            );
+        }
+    }
+
     throw $exception;
 }
 
@@ -288,16 +312,18 @@ This makes diagnostic history useful without creating an unbounded JSON dump.
 
 ### Initialization Boundary
 
-Runtime diagnostics begin only after the diagnostics structure has been created.
+Runtime diagnostics begin only after the complete diagnostics structure has
+been created. The implementation records this boundary explicitly through
+`$diagnosticsInitialized` after Registry, Statistics and ErrorRingBuffer have
+all been ensured successfully.
 
-In the implementation above, `$errorRingBufferID` starts as `null`. If
-configuration validation or Ensure calls fail before the error ring buffer
-exists, the failure is still logged through `IPS_LogMessage()` and rethrown, but
-it cannot yet be stored in the ring buffer or counted through the diagnostics
-variables.
+Configuration validation and Ensure failures before that point are logged
+through `IPS_LogMessage()` and rethrown. They are not written into a partially
+initialized diagnostics structure.
 
-Once the diagnostics structure exists, runtime failures are captured through the
-ErrorRingBuffer and Statistics helpers where appropriate.
+Once initialization has completed, runtime failures are captured through the
+ErrorRingBuffer and Statistics helpers. Failures while updating those secondary
+diagnostics are logged separately and never replace the original exception.
 
 ### Internal State Ownership
 
