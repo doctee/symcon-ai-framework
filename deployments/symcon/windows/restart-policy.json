@@ -1,0 +1,11 @@
+{
+    "formatVersion": 1,
+    "serviceName": "IPSServer",
+    "expectedReadyRunlevel": 10103,
+    "pollIntervalMilliseconds": 1000,
+    "rpcTimeoutSeconds": 5,
+    "stopTimeoutSeconds": 180,
+    "startTimeoutSeconds": 180,
+    "readyTimeoutSeconds": 900,
+    "rollbackReadyTimeoutSeconds": 900
+}

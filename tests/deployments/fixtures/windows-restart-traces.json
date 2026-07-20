@@ -1,0 +1,59 @@
+{
+    "preflight_only_passes_without_restart": {
+        "preflightReady": true,
+        "preflightOnly": true,
+        "rollbackConfigured": false,
+        "activation": {"stop": false, "start": false, "ready": false},
+        "rollback": {"restore": false, "stop": false, "start": false, "ready": false},
+        "expected": {"exitCode": 0, "outcome": "preflight_passed"}
+    },
+    "activation_succeeds": {
+        "preflightReady": true,
+        "rollbackConfigured": true,
+        "activation": {"stop": true, "start": true, "ready": true},
+        "rollback": {"restore": true, "stop": true, "start": true, "ready": true},
+        "expected": {"exitCode": 0, "outcome": "activated"}
+    },
+    "slow_activation_is_not_a_failure": {
+        "preflightReady": true,
+        "rollbackConfigured": true,
+        "activation": {"stop": true, "start": true, "ready": true, "readyAfterSeconds": 176},
+        "rollback": {"restore": true, "stop": true, "start": true, "ready": true},
+        "expected": {"exitCode": 0, "outcome": "activated"}
+    },
+    "activation_ready_timeout_rolls_back": {
+        "preflightReady": true,
+        "rollbackConfigured": true,
+        "activation": {"stop": true, "start": true, "ready": false},
+        "rollback": {"restore": true, "stop": true, "start": true, "ready": true},
+        "expected": {"exitCode": 30, "outcome": "rolled_back"}
+    },
+    "activation_stop_timeout_rolls_back": {
+        "preflightReady": true,
+        "rollbackConfigured": true,
+        "activation": {"stop": false, "start": false, "ready": false},
+        "rollback": {"restore": true, "stop": true, "start": true, "ready": true},
+        "expected": {"exitCode": 30, "outcome": "rolled_back"}
+    },
+    "rollback_ready_timeout_requires_manual_recovery": {
+        "preflightReady": true,
+        "rollbackConfigured": true,
+        "activation": {"stop": true, "start": true, "ready": false},
+        "rollback": {"restore": true, "stop": true, "start": true, "ready": false},
+        "expected": {"exitCode": 40, "outcome": "rollback_failed"}
+    },
+    "failure_without_rollback_is_distinct": {
+        "preflightReady": true,
+        "rollbackConfigured": false,
+        "activation": {"stop": true, "start": false, "ready": false},
+        "rollback": {"restore": false, "stop": false, "start": false, "ready": false},
+        "expected": {"exitCode": 20, "outcome": "activation_failed"}
+    },
+    "preflight_failure_does_not_restart": {
+        "preflightReady": false,
+        "rollbackConfigured": true,
+        "activation": {"stop": true, "start": true, "ready": true},
+        "rollback": {"restore": true, "stop": true, "start": true, "ready": true},
+        "expected": {"exitCode": 10, "outcome": "preflight_failed"}
+    }
+}
