@@ -128,8 +128,9 @@ The Diagnostics helper set covers configuration hashes, Registry metadata,
 Statistics and bounded error ring buffers; `RI-002` demonstrates their
 composition.
 
-The release remains untagged until the clean-checkout and CI gates in
-`project/SAEF_V0_2_RELEASE_READINESS.md` are complete.
+The clean-checkout and CI gates in
+`project/SAEF_V0_2_RELEASE_READINESS.md` are complete. The release remains
+untagged until the annotated `v0.2.0` tag starts the publication workflow.
 
 ## Licensing
 
