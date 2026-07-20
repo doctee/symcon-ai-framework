@@ -1,0 +1,18 @@
+{
+    "formatVersion": 1,
+    "name": "saef-ensure-variable",
+    "entries": [
+        "helpers/object/EnsureVariable.php"
+    ],
+    "phpMinimum": "8.2",
+    "output": "dist/symcon/saef-ensure-variable.php",
+    "exports": [
+        "SAEF_EnsureVariable",
+        "SAEF_ValidateIdent",
+        "SAEF_ValidateModuleGuid",
+        "SAEF_ValidateObjectName",
+        "SAEF_ValidateParentObject",
+        "SAEF_ValidateScriptType",
+        "SAEF_ValidateVariableType"
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "formatVersion": 1,
+    "manifest": "bundles/symcon/ensure-variable.bundle.json",
+    "manifestFormatVersion": 1,
+    "name": "saef-ensure-variable",
+    "phpMinimum": "8.2",
+    "orderedSources": [
+        {
+            "path": "helpers/common/Validation.php",
+            "sha256": "c3681fbf1ace68c221238378671b941faea0e6c63753de20bc6919827b17e90e"
+        },
+        {
+            "path": "helpers/object/EnsureVariable.php",
+            "sha256": "92eb6a6ba3282940c4e30b0098f9d0f28a6b216ebd278916f49603adb96bff8e"
+        }
+    ],
+    "sourceInputHash": "6a48dae9a76dc23b7ac3dce498b4dff48085a9a9c9de75411b959c6d7eedd259",
+    "artifact": {
+        "path": "dist/symcon/saef-ensure-variable.php",
+        "sha256": "1e63cd8124fbeb5b07a8347ce359e1c28f7d1f897bda2fc364935adf601a7d25"
+    },
+    "frameworkVersion": "0.2.0-development",
+    "builderVersion": "1.0.0",
+    "license": {
+        "identifier": "PolyForm-Noncommercial-1.0.0",
+        "url": "https://polyformproject.org/licenses/noncommercial/1.0.0/"
+    }
+}

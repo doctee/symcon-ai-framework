@@ -1,0 +1,16 @@
+parameters:
+    level: 5
+
+    parallel:
+        maximumNumberOfProcesses: 1
+
+    paths:
+        - dist/symcon
+
+    bootstrapFiles:
+        - stubs/symcon.php
+
+    excludePaths:
+        - vendor/*
+
+    treatPhpDocTypesAsCertain: true
