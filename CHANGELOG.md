@@ -7,7 +7,7 @@ This project adheres to Semantic Versioning.
 
 ---
 
-## [0.2.0] - Unreleased
+## [0.2.0] - 2026-07-20
 
 ### Added
 

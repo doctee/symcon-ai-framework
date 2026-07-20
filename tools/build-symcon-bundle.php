@@ -11,7 +11,7 @@ declare(strict_types=1);
  */
 
 const SAEF_SYMCON_BUNDLE_BUILDER_VERSION = '1.0.0';
-const SAEF_SYMCON_BUNDLE_FRAMEWORK_VERSION = '0.2.0-development';
+const SAEF_SYMCON_BUNDLE_FRAMEWORK_VERSION = '0.2.0';
 const SAEF_SYMCON_BUNDLE_LICENSE = 'PolyForm-Noncommercial-1.0.0';
 const SAEF_SYMCON_BUNDLE_LICENSE_URL = 'https://polyformproject.org/licenses/noncommercial/1.0.0/';
 

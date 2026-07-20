@@ -107,7 +107,7 @@
         "SAEF_WAIT_CHANGED",
         "SAEF_WAIT_UPDATED"
     ],
-    "frameworkVersion": "0.2.0-development",
+    "frameworkVersion": "0.2.0",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

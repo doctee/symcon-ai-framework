@@ -121,15 +121,15 @@ articles, reusable helpers, templates and reference implementations.
 Standard for SAEF (`Stable Draft 1.0`). The earlier draft remains available in
 `drafts/SYMCON_STANDARDS.md` for comparison.
 
-Version 0.2.0 remains in development and has passed the current offline
-engineering gates. Its scope includes Runtime Diagnostics, deterministic
-bundles and filesets, managed runtime mirrors, migration guidance and the MQTT,
-ControlLight and Navimow case studies. The Diagnostics helper set covers
-configuration hashes, Registry metadata, Statistics and bounded error ring
-buffers; `RI-002` demonstrates their composition.
+Version 0.2.0 has passed the current local engineering gates. Its scope includes
+Runtime Diagnostics, deterministic bundles and filesets, managed runtime
+mirrors, migration guidance and the MQTT, ControlLight and Navimow case studies.
+The Diagnostics helper set covers configuration hashes, Registry metadata,
+Statistics and bounded error ring buffers; `RI-002` demonstrates their
+composition.
 
-The release is not tag-ready until the documented commit, final identity and
-clean-checkout gates in `project/SAEF_V0_2_RELEASE_READINESS.md` are complete.
+The release remains untagged until the clean-checkout and CI gates in
+`project/SAEF_V0_2_RELEASE_READINESS.md` are complete.
 
 ## Licensing
 
