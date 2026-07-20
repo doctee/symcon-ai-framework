@@ -241,13 +241,39 @@ assertSameValue(
     json_encode($dockPayload, JSON_THROW_ON_ERROR),
     'Dock payload should match the captured command contract.'
 );
+$pausePayload = CommandContract::createPayload(
+    CommandContract::PAUSE,
+    'DEVICE_001'
+);
+assertSameValue(
+    '{"commands":[{"devices":[{"id":"DEVICE_001"}],"execution":{"command":"action.devices.commands.PauseUnpause","params":{"on":false}}}]}',
+    json_encode($pausePayload, JSON_THROW_ON_ERROR),
+    'Pause payload should use the captured boolean false contract.'
+);
+$resumePayload = CommandContract::createPayload(
+    CommandContract::RESUME,
+    'DEVICE_001'
+);
+assertSameValue(
+    '{"commands":[{"devices":[{"id":"DEVICE_001"}],"execution":{"command":"action.devices.commands.PauseUnpause","params":{"on":true}}}]}',
+    json_encode($resumePayload, JSON_THROW_ON_ERROR),
+    'Resume payload should use the captured boolean true contract.'
+);
 assertThrows(
     static fn () => CommandContract::createPayload(
         'Start',
         'DEVICE_001'
     ),
     InvalidArgumentException::class,
-    'Commands other than Dock must remain disabled.'
+    'Start must remain disabled.'
+);
+assertThrows(
+    static fn () => CommandContract::createPayload(
+        'Stop',
+        'DEVICE_001'
+    ),
+    InvalidArgumentException::class,
+    'Stop must remain disabled.'
 );
 assertThrows(
     static fn () => CommandContract::createPayload(
@@ -328,6 +354,62 @@ assertSameValue(
     PayloadMapper::VEHICLE_STATE_DOCKING,
     $docking['vehicleState'],
     'Captured isDocking status should map to Docking.'
+);
+$pauseAcceptedFixture = json_decode(
+    file_get_contents(
+        __DIR__ . '/../fixtures/rest/command-pause-success.json'
+    ),
+    true,
+    512,
+    JSON_THROW_ON_ERROR
+);
+$pauseAccepted = PayloadMapper::mapCommandResult(
+    $pauseAcceptedFixture,
+    'DEVICE_001'
+);
+assertSameValue(
+    PayloadMapper::COMMAND_RESULT_ACCEPTED,
+    $pauseAccepted['result'],
+    'Captured Pause SUCCESS should enter pending status verification.'
+);
+$resumeAcceptedFixture = json_decode(
+    file_get_contents(
+        __DIR__ . '/../fixtures/rest/command-resume-success.json'
+    ),
+    true,
+    512,
+    JSON_THROW_ON_ERROR
+);
+$resumeAccepted = PayloadMapper::mapCommandResult(
+    $resumeAcceptedFixture,
+    'DEVICE_001'
+);
+assertSameValue(
+    PayloadMapper::COMMAND_RESULT_ACCEPTED,
+    $resumeAccepted['result'],
+    'Captured Resume SUCCESS should enter pending status verification.'
+);
+$pausedFixture = json_decode(
+    file_get_contents(
+        __DIR__ . '/../fixtures/rest/vehicle-status-paused.json'
+    ),
+    true,
+    512,
+    JSON_THROW_ON_ERROR
+);
+$paused = PayloadMapper::mapStatus(
+    $pausedFixture,
+    'DEVICE_001'
+);
+assertSameValue(
+    PayloadMapper::VEHICLE_STATE_PAUSED,
+    $paused['vehicleState'],
+    'Captured isPaused status should map to Paused.'
+);
+assertSameValue(
+    95,
+    $paused['batteryLevel'],
+    'Captured Paused battery should preserve its percentage value.'
 );
 assertThrows(
     static fn () => PayloadMapper::mapCommandResult(

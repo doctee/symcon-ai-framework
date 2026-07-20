@@ -9,10 +9,14 @@ class NavimowDevice extends IPSModule
     private const DATA_INTERFACE = '{54620029-127D-470D-97C7-44265496FAA0}';
     private const MESSAGE_SCHEMA_VERSION = 1;
     private const VEHICLE_STATE_DOCKED = 2;
+    private const VEHICLE_STATE_RUNNING = 1;
+    private const VEHICLE_STATE_PAUSED = 4;
     private const VEHICLE_STATE_DOCKING = 5;
     private const VEHICLE_STATE_OFFLINE = 11;
     private const MAX_DEBUG_JSON_BYTES = 16384;
     private const COMMAND_DOCK = 6;
+    private const COMMAND_PAUSE = 4;
+    private const COMMAND_RESUME = 5;
     private const COMMAND_RESULT_REQUESTED = 1;
     private const COMMAND_RESULT_ACCEPTED = 2;
     private const COMMAND_RESULT_ALREADY_IN_STATE = 3;
@@ -23,6 +27,8 @@ class NavimowDevice extends IPSModule
     private const COMMAND_VERIFICATION_DELAY_MILLISECONDS = 5000;
     private const COMMAND_VERIFICATION_POLL_MILLISECONDS = 60000;
     private const COMMAND_VERIFICATION_TIMEOUT_SECONDS = 900;
+    private const SHORT_VERIFICATION_TIMEOUT_SECONDS = 60;
+    private const SHORT_VERIFICATION_SCHEDULE_SECONDS = [2, 5, 10, 20, 30, 60];
     private const COMMAND_STATE_IDLE = 0;
     private const COMMAND_STATE_ACCEPTED = 1;
     private const COMMAND_STATE_RETURNING = 2;
@@ -46,6 +52,7 @@ class NavimowDevice extends IPSModule
         $this->RegisterAttributeInteger('CommandStartedAt', 0);
         $this->RegisterAttributeInteger('CommandDeadline', 0);
         $this->RegisterAttributeInteger('CommandVerificationState', self::COMMAND_STATE_IDLE);
+        $this->RegisterAttributeInteger('CommandKind', 0);
 
         $this->RegisterTimer(
             'CommandVerification',
@@ -183,11 +190,89 @@ class NavimowDevice extends IPSModule
             return;
         }
 
+        if ($Ident === 'Pause') {
+            $this->Pause();
+            return;
+        }
+
+        if ($Ident === 'Resume') {
+            $this->Resume();
+            return;
+        }
+
         throw new InvalidArgumentException('Unsupported device action.');
     }
 
     public function Dock(): string
     {
+        return $this->executeCommand(
+            'Dock',
+            self::COMMAND_DOCK,
+            self::COMMAND_VERIFICATION_TIMEOUT_SECONDS
+        );
+    }
+
+    public function Pause(): string
+    {
+        if ($this->ReadAttributeBoolean('CommandActive')) {
+            return 'Another mower command is still being verified.';
+        }
+
+        $deviceId = trim($this->ReadPropertyString('DeviceId'));
+        if ($deviceId === '') {
+            return 'Device ID is not configured.';
+        }
+
+        $readResult = $this->refreshStatusInternal();
+        if ($readResult['success'] !== true) {
+            return 'Pause requires a current successful status read.';
+        }
+
+        if ($this->GetValue('VehicleState') !== self::VEHICLE_STATE_RUNNING) {
+            return 'Pause is only available while the mower is running.';
+        }
+
+        return $this->executeCommand(
+            'Pause',
+            self::COMMAND_PAUSE,
+            self::SHORT_VERIFICATION_TIMEOUT_SECONDS
+        );
+    }
+
+    public function Resume(): string
+    {
+        if ($this->ReadAttributeBoolean('CommandActive')) {
+            return 'Another mower command is still being verified.';
+        }
+
+        $deviceId = trim($this->ReadPropertyString('DeviceId'));
+        if ($deviceId === '') {
+            return 'Device ID is not configured.';
+        }
+
+        $readResult = $this->refreshStatusInternal();
+        if ($readResult['success'] !== true) {
+            return 'Resume requires a current successful status read.';
+        }
+
+        if ($this->GetValue('VehicleState') !== self::VEHICLE_STATE_PAUSED) {
+            return 'Resume is only available while the mower is paused.';
+        }
+
+        return $this->executeCommand(
+            'Resume',
+            self::COMMAND_RESUME,
+            self::SHORT_VERIFICATION_TIMEOUT_SECONDS,
+            false
+        );
+    }
+
+    private function executeCommand(
+        string $command,
+        int $commandValue,
+        int $timeoutSeconds,
+        bool $allowAlreadyInState = true
+    ): string {
         if ($this->ReadAttributeBoolean('CommandActive')) {
             return 'Another mower command is still being verified.';
         }
@@ -207,13 +292,14 @@ class NavimowDevice extends IPSModule
         $this->WriteAttributeInteger('CommandStartedAt', $now);
         $this->WriteAttributeInteger(
             'CommandDeadline',
-            $now + self::COMMAND_VERIFICATION_TIMEOUT_SECONDS
+            $now + $timeoutSeconds
         );
         $this->WriteAttributeInteger(
             'CommandVerificationState',
             self::COMMAND_STATE_ACCEPTED
         );
-        $this->SetValue('LastCommand', self::COMMAND_DOCK);
+        $this->WriteAttributeInteger('CommandKind', $commandValue);
+        $this->SetValue('LastCommand', $commandValue);
         $this->SetValue('LastCommandAt', $now);
         $this->SetValue(
             'LastCommandResult',
@@ -227,7 +313,7 @@ class NavimowDevice extends IPSModule
                 'SchemaVersion' => self::MESSAGE_SCHEMA_VERSION,
                 'Function' => 'SendCommand',
                 'DeviceId' => $deviceId,
-                'Command' => 'Dock',
+                'Command' => $command,
             ], JSON_THROW_ON_ERROR));
 
             $result = json_decode(
@@ -246,7 +332,7 @@ class NavimowDevice extends IPSModule
                 throw new RuntimeException(
                     is_string($result['message'] ?? null)
                         ? $result['message']
-                        : 'Dock command failed.'
+                        : $command . ' command failed.'
                 );
             }
 
@@ -257,6 +343,15 @@ class NavimowDevice extends IPSModule
             ) {
                 throw new UnexpectedValueException(
                     'Account returned an unsupported command result.'
+                );
+            }
+
+            if (
+                $cloudResult === self::COMMAND_RESULT_ALREADY_IN_STATE
+                && !$allowAlreadyInState
+            ) {
+                throw new UnexpectedValueException(
+                    'Resume already-in-state response is unsupported.'
                 );
             }
 
@@ -274,8 +369,8 @@ class NavimowDevice extends IPSModule
             $this->scheduleNextCommandVerification();
 
             return $cloudResult === self::COMMAND_RESULT_ALREADY_IN_STATE
-                ? 'Dock command is already in state.'
-                : 'Dock command was accepted.';
+                ? $command . ' command is already in state.'
+                : $command . ' command was accepted.';
         } catch (Throwable $exception) {
             $this->finishCommand(
                 self::COMMAND_RESULT_FAILED,
@@ -313,8 +408,16 @@ class NavimowDevice extends IPSModule
         $readResult = $this->refreshStatusInternal();
 
         $vehicleState = $this->GetValue('VehicleState');
+        $commandKind = $this->activeCommandKind();
+        if ($commandKind === self::COMMAND_PAUSE) {
+            $expectedState = self::VEHICLE_STATE_PAUSED;
+        } elseif ($commandKind === self::COMMAND_RESUME) {
+            $expectedState = self::VEHICLE_STATE_RUNNING;
+        } else {
+            $expectedState = self::VEHICLE_STATE_DOCKED;
+        }
         $verified = $readResult['success'] === true
-            && $vehicleState === self::VEHICLE_STATE_DOCKED;
+            && $vehicleState === $expectedState;
 
         if ($verified) {
             $result = $cloudResult === self::COMMAND_RESULT_ALREADY_IN_STATE
@@ -337,6 +440,7 @@ class NavimowDevice extends IPSModule
 
         if (
             $readResult['success'] === true
+            && $commandKind === self::COMMAND_DOCK
             && $vehicleState === self::VEHICLE_STATE_DOCKING
         ) {
             $this->WriteAttributeInteger(
@@ -344,6 +448,30 @@ class NavimowDevice extends IPSModule
                 self::COMMAND_STATE_RETURNING
             );
             $this->scheduleNextCommandVerification();
+            return;
+        }
+
+        if (
+            $readResult['success'] === true
+            && $commandKind === self::COMMAND_PAUSE
+            && $vehicleState !== self::VEHICLE_STATE_RUNNING
+        ) {
+            $this->finishCommand(
+                self::COMMAND_RESULT_FAILED,
+                'Paused state was not confirmed; an unexpected mower state was observed.'
+            );
+            return;
+        }
+
+        if (
+            $readResult['success'] === true
+            && $commandKind === self::COMMAND_RESUME
+            && $vehicleState !== self::VEHICLE_STATE_PAUSED
+        ) {
+            $this->finishCommand(
+                self::COMMAND_RESULT_FAILED,
+                'Running state was not confirmed; an unexpected mower state was observed.'
+            );
             return;
         }
 
@@ -440,6 +568,7 @@ class NavimowDevice extends IPSModule
         $this->WriteAttributeInteger('CommandStatusBaseline', 0);
         $this->WriteAttributeInteger('CommandStartedAt', 0);
         $this->WriteAttributeInteger('CommandDeadline', 0);
+        $this->WriteAttributeInteger('CommandKind', 0);
         if ($result === self::COMMAND_RESULT_FAILED) {
             $this->WriteAttributeInteger(
                 'CommandVerificationState',
@@ -462,14 +591,33 @@ class NavimowDevice extends IPSModule
             return;
         }
 
-        $state = $this->ReadAttributeInteger('CommandVerificationState');
-        $normalInterval = in_array(
-            $state,
-            [self::COMMAND_STATE_RETURNING, self::COMMAND_STATE_WAITING_READ],
-            true
-        )
-            ? self::COMMAND_VERIFICATION_POLL_MILLISECONDS
-            : self::COMMAND_VERIFICATION_DELAY_MILLISECONDS;
+        if (
+            in_array(
+                $this->activeCommandKind(),
+                [self::COMMAND_PAUSE, self::COMMAND_RESUME],
+                true
+            )
+        ) {
+            $startedAt = $this->ReadAttributeInteger('CommandStartedAt');
+            $elapsed = max(0, $now - $startedAt);
+            $nextOffset = self::SHORT_VERIFICATION_TIMEOUT_SECONDS;
+            foreach (self::SHORT_VERIFICATION_SCHEDULE_SECONDS as $offset) {
+                if ($offset > $elapsed) {
+                    $nextOffset = $offset;
+                    break;
+                }
+            }
+            $normalInterval = max(1, ($nextOffset - $elapsed) * 1000);
+        } else {
+            $state = $this->ReadAttributeInteger('CommandVerificationState');
+            $normalInterval = in_array(
+                $state,
+                [self::COMMAND_STATE_RETURNING, self::COMMAND_STATE_WAITING_READ],
+                true
+            )
+                ? self::COMMAND_VERIFICATION_POLL_MILLISECONDS
+                : self::COMMAND_VERIFICATION_DELAY_MILLISECONDS;
+        }
         $remainingInterval = max(1, ($deadline - $now) * 1000);
 
         $this->SetTimerInterval(
@@ -484,10 +632,35 @@ class NavimowDevice extends IPSModule
             'CommandVerificationState',
             self::COMMAND_STATE_TIMED_OUT
         );
+        $commandKind = $this->activeCommandKind();
+        if ($commandKind === self::COMMAND_PAUSE) {
+            $message = 'Paused state was not confirmed before the verification timeout.';
+        } elseif ($commandKind === self::COMMAND_RESUME) {
+            $message = 'Running state was not confirmed before the verification timeout.';
+        } else {
+            $message = 'Docked state was not confirmed before the verification timeout.';
+        }
         $this->finishCommand(
             self::COMMAND_RESULT_VERIFICATION_TIMEOUT,
-            'Docked state was not confirmed before the verification timeout.'
+            $message
         );
+    }
+
+    private function activeCommandKind(): int
+    {
+        $commandKind = $this->ReadAttributeInteger('CommandKind');
+        if (
+            in_array(
+                $commandKind,
+                [self::COMMAND_PAUSE, self::COMMAND_RESUME],
+                true
+            )
+        ) {
+            return $commandKind;
+        }
+
+        // Active commands created by an older module build are Dock commands.
+        return self::COMMAND_DOCK;
     }
 
     private function limitMessage(string $message): string

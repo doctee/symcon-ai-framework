@@ -1,9 +1,9 @@
 # Navimow Native IP-Symcon Module Case Study
 
-**Status:** Recovery-hardened second private pilot consolidated in SAEF mainline
+**Status:** Adaptive polling published and installed after `pilot-0.1.0.3`; Stop issue 22 remains in its waiting window
 **Scope:** Native IP-Symcon module for Segway Navimow robotic mowers  
 **Implementation state:** The canonical case-study distribution implements
-OAuth, discovery, read-only status and a Dock-only command path.
+OAuth, discovery, read-only status, Dock, Pause and published bounded Resume.
 
 ## Purpose
 
@@ -68,6 +68,35 @@ template or a general SAEF reference implementation.
 | `48-private-pilot-release-review-and-tag-decision.md` | Conditional GO for a documented recovery-hardened second pilot tag. |
 | `49-pilot-readme-refresh-and-second-tag-publication.md` | Published recovery-hardened README and immutable `pilot-0.1.0.2` tag. |
 | `50-second-pilot-case-study-consolidation.md` | Consolidated hardening, observation evidence, harness and second pilot publication checkpoint. |
+| `51-post-pilot-roadmap-decision.md` | Prioritized public OAuth feasibility before Store, MQTT/WSS or command expansion. |
+| `52-public-oauth-and-release-feasibility-analysis.md` | Classified public OAuth as vendor-blocked while preserving controlled private-pilot use. |
+| `53-navimow-oauth-vendor-clarification-plan.md` | Prepared an evidence-safe vendor inquiry, contact order and response classification without sending it. |
+| `54-navimow-oauth-vendor-inquiry-execution.md` | Published and verified the credential-free vendor clarification as NavimowHA issue 82. |
+| `55-command-integration-sequence-and-safety-plan.md` | Sequenced Pause, Resume, conditional Stop and Start through independent safety gates. |
+| `56-pause-command-evidence-and-readiness-plan.md` | Defined a two-read Running gate and conditional one-shot supervised Pause capture. |
+| `57-pause-command-private-capture-procedure.md` | Implemented and statically validated the private one-shot Pause capture procedure. |
+| `58-pause-command-private-capture-report.md` | Verified one private Running-to-Paused transition and retained the productive implementation gate. |
+| `59-pause-command-fixture-validation-and-implementation-readiness.md` | Promoted minimal Pause fixtures and issued a conditional implementation GO. |
+| `60-pause-command-implementation.md` | Implemented bounded Pause with a fresh Running gate and restart-safe read-only verification. |
+| `61-pause-command-publication-and-symcon-test-plan.md` | Gated publication, variable/archive compatibility checks and one supervised Symcon Pause test. |
+| `62-pause-command-publication.md` | Published and remotely verified the bounded Pause implementation without creating a tag. |
+| `63-pause-command-symcon-test-report.md` | Verified published Pause, variable/archive stability, physical stop and official-app cleanup in Symcon. |
+| `64-pause-integration-review-and-resume-readiness.md` | Closed Pause evidence, deferred a new tag and conditionally opened Resume evidence planning. |
+| `65-resume-command-evidence-and-readiness-plan.md` | Revalidated Resume support and conditionally approved an isolated one-shot capture procedure. |
+| `66-resume-command-private-capture-procedure.md` | Implemented and statically validated the isolated one-shot Resume capture tool. |
+| `67-resume-command-private-capture-report.md` | Verified one private Paused-to-Running Resume transition and official-app cleanup. |
+| `68-resume-command-fixture-validation-and-implementation-readiness.md` | Promoted minimal Resume evidence and issued a conditional implementation GO. |
+| `69-resume-command-implementation.md` | Implemented bounded Resume with fresh Paused eligibility and restart-safe Running verification. |
+| `70-resume-command-publication-and-symcon-test-plan.md` | Gated pre-update identity/archive baseline, publication and one supervised Symcon Resume test. |
+| `71-resume-preupdate-baseline-and-publication.md` | Captured the repeatable private compatibility baseline and published bounded Resume without a tag or Symcon update. |
+| `72-resume-command-symcon-test-report.md` | Verified update compatibility, archive continuity and one supervised Paused-to-Running Resume transition in Symcon. |
+| `73-resume-integration-review-and-stop-readiness.md` | Closed Pause/Resume private-pilot evidence, approved a new tag checkpoint and kept Stop behind non-actuating support research. |
+| `74-command-expanded-pilot-tag-publication.md` | Published documentation-complete command guidance and immutable `pilot-0.1.0.3` without runtime changes. |
+| `75-stop-support-and-semantics-analysis.md` | Confirmed the official Stop request mapping while blocking capture and implementation on unresolved task semantics. |
+| `76-stop-vendor-and-upstream-clarification-plan.md` | Prepared a privacy-safe official SDK inquiry and response gates without external contact or mower actuation. |
+| `77-stop-vendor-and-upstream-inquiry-execution.md` | Published and independently verified official SDK issue 22 while preserving every Stop safety gate. |
+| `78-stop-vendor-response-and-gate-decision.md` | Classified same-day silence as a pending waiting window rather than support, rejection or mature no-response evidence. |
+| `79-adaptive-polling-and-power-hint-implementation.md` | Separates a private station-power wake hint from API-owned state and implements bounded active-state polling. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

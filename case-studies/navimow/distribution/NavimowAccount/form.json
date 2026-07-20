@@ -27,6 +27,12 @@
       "minimum": 60
     },
     {
+      "type": "NumberSpinner",
+      "name": "ActivePollInterval",
+      "caption": "Active Poll Interval (seconds)",
+      "minimum": 60
+    },
+    {
       "type": "CheckBox",
       "name": "DebugPayloads",
       "caption": "Enable debug payload variable"
@@ -60,13 +66,18 @@
     },
     {
       "type": "Button",
+      "caption": "Wake Status Polling",
+      "onClick": "echo NAVAC_WakePolling($id);"
+    },
+    {
+      "type": "Button",
       "caption": "Reset Authentication",
       "confirm": "Clear all stored Navimow tokens?",
       "onClick": "NAVAC_ResetAuthentication($id); echo 'Authentication reset.';"
     },
     {
       "type": "Label",
-      "caption": "Discovery, status polling and Dock command transport are enabled."
+      "caption": "Discovery, status polling, Pause, Resume and Dock command transport are enabled."
     }
   ]
 }

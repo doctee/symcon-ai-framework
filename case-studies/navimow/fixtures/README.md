@@ -60,6 +60,9 @@ the first parser and contract validation work:
 | `rest/vehicle-status-docking.json` | Validate the observed return-to-dock transition state. |
 | `rest/command-dock-success.json` | Validate the real successful Dock command response shape. |
 | `rest/command-dock-already-in-state.json` | Validate non-error `alreadyInState` handling. |
+| `rest/command-pause-success.json` | Validate the accepted Pause command response shape. |
+| `rest/vehicle-status-paused.json` | Validate the terminal state observed after Pause. |
+| `rest/command-resume-success.json` | Validate the accepted Resume command response shape. |
 | `rest/auth-expired-token.json` | Validate auth failure and reauth behavior. |
 | `rest/auth-invalid-token.json` | Validate invalid-token API error shape. |
 | `rest/api-temporary-failure.json` | Validate temporary API/cloud failure handling. |

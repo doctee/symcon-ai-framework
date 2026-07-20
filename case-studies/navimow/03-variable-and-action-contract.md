@@ -300,6 +300,44 @@ Archive settings should be documented and user-adjustable where normal Symcon
 module behavior allows it. The module should not perform archive correction or
 history rewriting in the MVP.
 
+### Archive ownership and update compatibility
+
+Archive logging configured by the user is installation-owned state. Module
+updates must preserve the existing Symcon variable objects for the stable
+public Idents, especially:
+
+- `VehicleState`;
+- `Online`;
+- `BatteryLevel`;
+- `LastStatusUpdate`;
+- `LastCommand`;
+- `LastCommandAt`;
+- `LastCommandResult`;
+- `LastCommandError`.
+
+Re-registering a variable with the same Ident and compatible type is the
+normal idempotent update path. The module must not delete and recreate these
+variables merely to change a display name, position or profile.
+
+Any future Ident rename, variable-type change, split or removal requires a
+documented migration that preserves object identity and archive history where
+technically possible. If identity cannot be preserved, the change is breaking
+and requires an explicit release decision and user migration procedure.
+
+The module must not disable, reset or otherwise overwrite user-configured
+archive logging during `Create()`, `ApplyChanges()` or migration.
+
+### SAEF-Entscheidung AD-NAV-013: Public variable identity is persistent
+
+**Entscheidung:** Treat the Symcon object identity behind every public stable
+Ident as persistent installation state.
+
+**Rationale:** Automations, visualizations and Archive Control logging can
+depend on the existing variable ObjectID and its historical series.
+
+**Consequence:** Future module updates must use idempotent registration and
+explicit migrations instead of destructive variable recreation.
+
 ## 10. MQTT Phase 2 Reserved Contract
 
 These names are reserved but not required for MVP implementation:
@@ -335,6 +373,8 @@ The implementation is contract-complete only when these checks pass:
     committed fixtures.
 11. Archive defaults match section 9.
 12. `alreadyInState` maps to `Already In State`, not a hard error.
+13. Updating the module preserves existing public variable objects and does
+    not alter user-configured archive logging.
 
 ## 12. Payload Fixture Requirements
 
