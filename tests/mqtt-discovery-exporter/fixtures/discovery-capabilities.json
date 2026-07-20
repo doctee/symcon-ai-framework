@@ -1,0 +1,250 @@
+{
+    "switch": {
+        "topic": "homeassistant/switch/fixture_site/symcon_fixture_site_switch_switch/config",
+        "payload": {
+            "name": "Fixture Entity",
+            "unique_id": "c9c46907-8429-50a9-adbc-e59f30eeb526",
+            "default_entity_id": "switch.symcon_fixture_site_switch_switch",
+            "state_topic": "saef/fixture/fixture_site/switch/switch/state",
+            "command_topic": "saef/fixture/fixture_site/switch/switch/set",
+            "qos": 1,
+            "optimistic": false,
+            "device": {
+                "identifiers": [
+                    "ips_fixture_site_fixture_device"
+                ],
+                "name": "Fixture Device",
+                "manufacturer": "Example Manufacturer",
+                "model": "Example Model",
+                "serial_number": "89fb1725-1265-530e-9c11-013afaa969ae",
+                "sw_version": "SAEF MQTT Discovery Exporter fixture-1",
+                "suggested_area": "Fixture Room",
+                "configuration_url": "https://example.invalid/fixture"
+            },
+            "origin": {
+                "name": "SAEF IP-Symcon MQTT Discovery Exporter",
+                "sw_version": "fixture-1"
+            },
+            "payload_on": "ON",
+            "payload_off": "OFF",
+            "icon": "mdi:toggle-switch"
+        },
+        "runtimeTopics": [
+            "saef/fixture/fixture_site/switch/switch/state"
+        ]
+    },
+    "light_onoff": {
+        "topic": "homeassistant/light/fixture_site/symcon_fixture_site_light_light_onoff/config",
+        "payload": {
+            "name": "Fixture Entity",
+            "unique_id": "c9c46907-8429-50a9-adbc-e59f30eeb526",
+            "default_entity_id": "light.symcon_fixture_site_light_light_onoff",
+            "state_topic": "saef/fixture/fixture_site/light/light_onoff/state",
+            "command_topic": "saef/fixture/fixture_site/light/light_onoff/set",
+            "qos": 1,
+            "optimistic": false,
+            "device": {
+                "identifiers": [
+                    "ips_fixture_site_fixture_device"
+                ],
+                "name": "Fixture Device",
+                "manufacturer": "Example Manufacturer",
+                "model": "Example Model",
+                "serial_number": "89fb1725-1265-530e-9c11-013afaa969ae",
+                "sw_version": "SAEF MQTT Discovery Exporter fixture-1",
+                "suggested_area": "Fixture Room",
+                "configuration_url": "https://example.invalid/fixture"
+            },
+            "origin": {
+                "name": "SAEF IP-Symcon MQTT Discovery Exporter",
+                "sw_version": "fixture-1"
+            },
+            "payload_on": "ON",
+            "payload_off": "OFF",
+            "icon": "mdi:lightbulb",
+            "color_mode_state_topic": "saef/fixture/fixture_site/light/light_onoff/color_mode/state"
+        },
+        "runtimeTopics": [
+            "saef/fixture/fixture_site/light/light_onoff/color_mode/state",
+            "saef/fixture/fixture_site/light/light_onoff/state"
+        ]
+    },
+    "light_brightness": {
+        "topic": "homeassistant/light/fixture_site/symcon_fixture_site_light_light_brightness/config",
+        "payload": {
+            "name": "Fixture Entity",
+            "unique_id": "c9c46907-8429-50a9-adbc-e59f30eeb526",
+            "default_entity_id": "light.symcon_fixture_site_light_light_brightness",
+            "state_topic": "saef/fixture/fixture_site/light/light_brightness/state",
+            "command_topic": "saef/fixture/fixture_site/light/light_brightness/set",
+            "qos": 1,
+            "optimistic": false,
+            "device": {
+                "identifiers": [
+                    "ips_fixture_site_fixture_device"
+                ],
+                "name": "Fixture Device",
+                "manufacturer": "Example Manufacturer",
+                "model": "Example Model",
+                "serial_number": "89fb1725-1265-530e-9c11-013afaa969ae",
+                "sw_version": "SAEF MQTT Discovery Exporter fixture-1",
+                "suggested_area": "Fixture Room",
+                "configuration_url": "https://example.invalid/fixture"
+            },
+            "origin": {
+                "name": "SAEF IP-Symcon MQTT Discovery Exporter",
+                "sw_version": "fixture-1"
+            },
+            "payload_on": "ON",
+            "payload_off": "OFF",
+            "icon": "mdi:lightbulb",
+            "color_mode_state_topic": "saef/fixture/fixture_site/light/light_brightness/color_mode/state",
+            "brightness_state_topic": "saef/fixture/fixture_site/light/light_brightness/brightness/state",
+            "brightness_command_topic": "saef/fixture/fixture_site/light/light_brightness/brightness/set",
+            "brightness_scale": 100
+        },
+        "runtimeTopics": [
+            "saef/fixture/fixture_site/light/light_brightness/brightness/state",
+            "saef/fixture/fixture_site/light/light_brightness/color_mode/state",
+            "saef/fixture/fixture_site/light/light_brightness/state"
+        ]
+    },
+    "light_brightness_rgb": {
+        "topic": "homeassistant/light/fixture_site/symcon_fixture_site_light_light_brightness_rgb/config",
+        "payload": {
+            "name": "Fixture Entity",
+            "unique_id": "c9c46907-8429-50a9-adbc-e59f30eeb526",
+            "default_entity_id": "light.symcon_fixture_site_light_light_brightness_rgb",
+            "state_topic": "saef/fixture/fixture_site/light/light_brightness_rgb/state",
+            "command_topic": "saef/fixture/fixture_site/light/light_brightness_rgb/set",
+            "qos": 1,
+            "optimistic": false,
+            "device": {
+                "identifiers": [
+                    "ips_fixture_site_fixture_device"
+                ],
+                "name": "Fixture Device",
+                "manufacturer": "Example Manufacturer",
+                "model": "Example Model",
+                "serial_number": "89fb1725-1265-530e-9c11-013afaa969ae",
+                "sw_version": "SAEF MQTT Discovery Exporter fixture-1",
+                "suggested_area": "Fixture Room",
+                "configuration_url": "https://example.invalid/fixture"
+            },
+            "origin": {
+                "name": "SAEF IP-Symcon MQTT Discovery Exporter",
+                "sw_version": "fixture-1"
+            },
+            "payload_on": "ON",
+            "payload_off": "OFF",
+            "icon": "mdi:lightbulb",
+            "color_mode_state_topic": "saef/fixture/fixture_site/light/light_brightness_rgb/color_mode/state",
+            "brightness_state_topic": "saef/fixture/fixture_site/light/light_brightness_rgb/brightness/state",
+            "brightness_command_topic": "saef/fixture/fixture_site/light/light_brightness_rgb/brightness/set",
+            "brightness_scale": 100,
+            "rgb_state_topic": "saef/fixture/fixture_site/light/light_brightness_rgb/rgb/state",
+            "rgb_command_topic": "saef/fixture/fixture_site/light/light_brightness_rgb/rgb/set"
+        },
+        "runtimeTopics": [
+            "saef/fixture/fixture_site/light/light_brightness_rgb/brightness/state",
+            "saef/fixture/fixture_site/light/light_brightness_rgb/color_mode/state",
+            "saef/fixture/fixture_site/light/light_brightness_rgb/rgb/state",
+            "saef/fixture/fixture_site/light/light_brightness_rgb/state"
+        ]
+    },
+    "light_brightness_color_temperature": {
+        "topic": "homeassistant/light/fixture_site/symcon_fixture_site_light_light_brightness_color_temperature/config",
+        "payload": {
+            "name": "Fixture Entity",
+            "unique_id": "c9c46907-8429-50a9-adbc-e59f30eeb526",
+            "default_entity_id": "light.symcon_fixture_site_light_light_brightness_color_temperature",
+            "state_topic": "saef/fixture/fixture_site/light/light_brightness_color_temperature/state",
+            "command_topic": "saef/fixture/fixture_site/light/light_brightness_color_temperature/set",
+            "qos": 1,
+            "optimistic": false,
+            "device": {
+                "identifiers": [
+                    "ips_fixture_site_fixture_device"
+                ],
+                "name": "Fixture Device",
+                "manufacturer": "Example Manufacturer",
+                "model": "Example Model",
+                "serial_number": "89fb1725-1265-530e-9c11-013afaa969ae",
+                "sw_version": "SAEF MQTT Discovery Exporter fixture-1",
+                "suggested_area": "Fixture Room",
+                "configuration_url": "https://example.invalid/fixture"
+            },
+            "origin": {
+                "name": "SAEF IP-Symcon MQTT Discovery Exporter",
+                "sw_version": "fixture-1"
+            },
+            "payload_on": "ON",
+            "payload_off": "OFF",
+            "icon": "mdi:lightbulb",
+            "color_mode_state_topic": "saef/fixture/fixture_site/light/light_brightness_color_temperature/color_mode/state",
+            "brightness_state_topic": "saef/fixture/fixture_site/light/light_brightness_color_temperature/brightness/state",
+            "brightness_command_topic": "saef/fixture/fixture_site/light/light_brightness_color_temperature/brightness/set",
+            "brightness_scale": 100,
+            "color_temp_state_topic": "saef/fixture/fixture_site/light/light_brightness_color_temperature/color_temp/state",
+            "color_temp_command_topic": "saef/fixture/fixture_site/light/light_brightness_color_temperature/color_temp/set",
+            "color_temp_kelvin": true,
+            "min_kelvin": 2200,
+            "max_kelvin": 6500
+        },
+        "runtimeTopics": [
+            "saef/fixture/fixture_site/light/light_brightness_color_temperature/brightness/state",
+            "saef/fixture/fixture_site/light/light_brightness_color_temperature/color_mode/state",
+            "saef/fixture/fixture_site/light/light_brightness_color_temperature/color_temp/state",
+            "saef/fixture/fixture_site/light/light_brightness_color_temperature/state"
+        ]
+    },
+    "light_brightness_rgb_color_temperature": {
+        "topic": "homeassistant/light/fixture_site/symcon_fixture_site_light_light_brightness_rgb_color_temperature/config",
+        "payload": {
+            "name": "Fixture Entity",
+            "unique_id": "c9c46907-8429-50a9-adbc-e59f30eeb526",
+            "default_entity_id": "light.symcon_fixture_site_light_light_brightness_rgb_color_temperature",
+            "state_topic": "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/state",
+            "command_topic": "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/set",
+            "qos": 1,
+            "optimistic": false,
+            "device": {
+                "identifiers": [
+                    "ips_fixture_site_fixture_device"
+                ],
+                "name": "Fixture Device",
+                "manufacturer": "Example Manufacturer",
+                "model": "Example Model",
+                "serial_number": "89fb1725-1265-530e-9c11-013afaa969ae",
+                "sw_version": "SAEF MQTT Discovery Exporter fixture-1",
+                "suggested_area": "Fixture Room",
+                "configuration_url": "https://example.invalid/fixture"
+            },
+            "origin": {
+                "name": "SAEF IP-Symcon MQTT Discovery Exporter",
+                "sw_version": "fixture-1"
+            },
+            "payload_on": "ON",
+            "payload_off": "OFF",
+            "icon": "mdi:lightbulb",
+            "color_mode_state_topic": "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/color_mode/state",
+            "brightness_state_topic": "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/brightness/state",
+            "brightness_command_topic": "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/brightness/set",
+            "brightness_scale": 100,
+            "rgb_state_topic": "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/rgb/state",
+            "rgb_command_topic": "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/rgb/set",
+            "color_temp_state_topic": "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/color_temp/state",
+            "color_temp_command_topic": "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/color_temp/set",
+            "color_temp_kelvin": true,
+            "min_kelvin": 2200,
+            "max_kelvin": 6500
+        },
+        "runtimeTopics": [
+            "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/brightness/state",
+            "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/color_mode/state",
+            "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/color_temp/state",
+            "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/rgb/state",
+            "saef/fixture/fixture_site/light/light_brightness_rgb_color_temperature/state"
+        ]
+    }
+}
