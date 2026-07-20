@@ -2,14 +2,14 @@
 
 **Assessment date:** 2026-07-20
 **Target:** `v0.2.0`
-**Current decision:** LOCAL RELEASE PASS, CI PENDING
+**Current decision:** LOCAL CLEAN-CHECKOUT PASS, CI PENDING
 
 ## Summary
 
 The v0.2 implementation and documentation baseline passes the repository's
 local engineering gates. The final `0.2.0` identity and changelog date are set,
-but the release must not be tagged until clean-checkout verification and CI
-pass against the immutable release commit.
+and a clean checkout of commit `fa76fc8` passes the complete local gate. The
+release must not be tagged until CI passes against the final revision.
 
 This decision separates implementation quality from publication state. It does
 not invalidate the completed helper, fileset or live-system engineering work.
@@ -38,7 +38,8 @@ regenerated artifacts are isolated in the subsequent release commit.
 | Release version identity | PASS | Builders and generated provenance emit `0.2.0` |
 | Final changelog date | PASS | `[0.2.0]` is dated `2026-07-20` |
 | Reviewable Git history | PASS | Focused Conventional Commits follow the documented cohort dependency order |
-| Clean-checkout CI | PENDING | Must run from the final committed revision |
+| Local clean checkout | PASS | Fresh worktree at `fa76fc8`, lockfile install, `composer validate --strict` and `make check` |
+| GitHub CI | PENDING | Must pass against the final pushed revision |
 
 ## Completed Preparation
 
@@ -50,14 +51,14 @@ regenerated artifacts are isolated in the subsequent release commit.
 4. Completed the helper API, documentation and release-readiness reviews.
 5. Set the final `0.2.0` framework identity and regenerated all distributions.
 6. Assigned the final changelog date and verified release-note extraction.
+7. Added the Composer lock file and passed the complete gate from a fresh
+   checkout of commit `fa76fc8`.
 
 ## Remaining Release Sequence
 
-1. Run `composer validate --strict`, `make check` and generated-artifact drift
-   checks from a clean checkout of the final revision.
-2. Confirm that CI passes for that revision.
-3. Create the annotated `v0.2.0` tag only after every pending gate is closed.
-4. Verify that `.github/workflows/release.yml` extracts the v0.2.0 changelog
+1. Confirm that CI passes for the final pushed revision.
+2. Create the annotated `v0.2.0` tag only after every pending gate is closed.
+3. Verify that `.github/workflows/release.yml` extracts the v0.2.0 changelog
     section and creates the intended GitHub release.
 
 ## Release Notes Priorities
