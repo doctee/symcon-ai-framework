@@ -144,6 +144,23 @@ Use the following priority order:
 3. Explicit configuration value
 4. Hardcoded ObjectID only for local/private scripts
 
+In PHP stored in IP-Symcon script objects, avoid bare five-digit decimal
+literals for values that are not ObjectIDs. Integrity tools may heuristically
+interpret every five-digit number in the valid ObjectID range as an object
+reference. Express timeouts, limits and other non-ID values through a named
+constant or variable and, where it improves clarity, a unit-preserving
+calculation:
+
+```php
+$startupDelayMilliseconds = 10 * 1000;
+IPS_Sleep($startupDelayMilliseconds);
+```
+
+Do not rewrite a domain value into an obscure calculation merely to satisfy a
+tool. If a literal is clearer and cannot reasonably be confused in review,
+configure the integrity tool's documented number or line exclusion with a
+reason. Confirm that the value is not an ObjectID before excluding it.
+
 #### Exceptions
 
 - Migration scripts
@@ -155,6 +172,7 @@ Use the following priority order:
 
 - `adr/ADR-0002-use-ident-over-object-id.md`
 - `standards/SYMCON_STANDARDS.md`
+- [IPSymconIntegrityCheck configuration](https://github.com/demel42/IPSymconIntegrityCheck/blob/main/README.md#5-konfiguration)
 
 ---
 
@@ -181,6 +199,23 @@ Idempotency enables reproducible setup, safe reconfiguration and controlled migr
 - Update properties intentionally.
 - Preserve user data unless a migration explicitly requires changes.
 - Keep automatically created objects identifiable.
+
+For managed objects that are visible in the normal object tree, the initial
+display name, position and icon should normally be creation defaults rather
+than continuously enforced configuration. Users may rename and reorder these
+objects without losing the automation's technical identity. Reconciliation
+shall continue to use the stable Ident, verified parent relationship and
+recorded ownership metadata.
+
+An implementation may continuously manage presentation properties only when
+their exact value is functionally required or when the configuration explicitly
+declares presentation as managed. This exception must be documented. Changing
+an Ident, moving an owned object to another parent or changing its object type
+is not a presentation change and may be rejected as ownership drift.
+
+For compatibility, a reusable helper may retain an older presentation-managing
+default. New templates, references and reusable implementations shall still
+select the presentation policy explicitly instead of relying on that default.
 
 #### Exceptions
 
@@ -216,6 +251,23 @@ Each reusable artifact should document:
 - modified objects,
 - required existing objects,
 - cleanup or migration behaviour, if applicable.
+
+Cleanup shall use the logical object tree returned by IP-Symcon APIs, not the
+physical grouping shown by the management console. I/O, splitter and similar
+instances can be displayed in type-specific console sections even when their
+logical `ParentID` points to an application category.
+
+Destructive cleanup shall proceed leaf-first:
+
+1. Read and validate the current logical children and their ownership.
+2. Delete owned leaf objects or deliberately reparent objects that must remain.
+3. Verify that the logical parent has no remaining children.
+4. Delete the now-empty parent category.
+5. Read back the resulting tree and fail explicitly if it differs from the
+   expected result.
+
+A cleanup routine shall not delete a parent before its children and shall not
+silently remove objects whose ownership has not been established.
 
 #### Exceptions
 
@@ -284,6 +336,16 @@ Use `SetValue()` only for variables owned by the script itself or for calculated
 - Use `RequestAction()` for variables with a defined default action or custom action script.
 - Use `SetValue*()` only for script-owned variables.
 - Use `HasAction()` or equivalent checks where a generic helper must decide whether a variable has action semantics.
+- Treat authoritative feedback as confirmation of the observed result at that
+  point in time, not as proof of exclusive target ownership.
+- Document multi-controller targets explicitly. A script-local or named
+  semaphore serializes only callers that participate in the same lock; it does
+  not exclude device modules, physical controls, MQTT clients or other
+  automations.
+- When an unexpected state follows a confirmed action, compare command deltas
+  with target-feedback deltas before classifying the action handler or wait as
+  defective. For supervised integration tests, capture the actual outbound
+  command payload and returned state when that boundary is ambiguous.
 
 #### Exceptions
 
@@ -568,23 +630,40 @@ Ensure script-executing events work correctly on supported IP-Symcon versions.
 
 #### Rule
 
-When automatically creating events that execute scripts, set the event trigger, script assignment and event action binding explicitly.
+When automatically creating events, configure both the trigger or schedule and
+the executed action explicitly.
 
-For IP-Symcon 6.0 and newer, script-executing events shall include the required event action binding.
+Use exactly one of the following execution contracts:
+
+1. To execute the event's parent automation, place the event below that
+   automation and bind the Run Automation action with `IPS_SetEventAction()`.
+   For IP-Symcon 6.0 and newer, this binding is required explicitly.
+2. To execute PHP source stored directly on the event, use
+   `IPS_SetEventScript()` with PHP code without PHP tags. This selects the
+   Execute PHP Code action and is not a script-ID assignment.
+
+Do not combine both contracts for the same event. Both functions select the
+event action, so a later call would replace the previously selected action.
 
 #### Rationale
 
-A trigger alone does not fully define how an event executes its action. Explicit action binding makes generated events complete and reproducible.
+A trigger alone does not fully define how an event executes its action. Explicit
+selection of one execution contract makes generated events complete and
+reproducible and avoids confusing inline event code with a target script ID.
 
 #### Recommended Practice
 
-For script-executing events, create or update all required parts:
+For events that execute their parent automation, create or update all required
+parts:
 
 - event object,
 - trigger condition,
-- script assignment,
-- event action binding,
+- parent assignment to the target automation,
+- Run Automation action binding,
 - activation state.
+
+For inline PHP events, replace the parent-automation action binding with one
+explicit `IPS_SetEventScript()` call containing the reviewed PHP source.
 
 #### Exceptions
 
@@ -593,6 +672,7 @@ Manually configured user events are outside the scope of reusable setup scripts.
 #### Related References
 
 - Official IP-Symcon documentation: `IPS_SetEventAction()`
+- Official IP-Symcon documentation: `IPS_SetEventScript()`
 - `standards/PHP_STANDARDS.md`
 
 ---
@@ -1234,12 +1314,24 @@ Explicit interfaces make helper behaviour reviewable, testable and portable.
 - Avoid hidden use of unrelated global variables.
 - Define failure behaviour.
 - Keep side effects obvious.
+- For globally loaded guarded helpers, document the owning autoload/fileset,
+  its deterministic identity and every known consumer.
+- Treat guard constants as collision protection, not as version selection. The
+  first loaded definition owns the function for the lifetime of that PHP
+  context.
+- When changing a helper exported by more than one fileset, update the earliest
+  global load owner first, inventory all consuming filesets, start a clean PHP
+  process when required and verify the effective source with Reflection.
+- Do not infer that selecting a later consumer fileset selects its guarded
+  helper implementation.
 
 #### Anti-Patterns
 
 - Helper functions that read private global configuration without parameters.
 - Generic helper names with installation-specific behaviour.
 - Helpers that both calculate and switch devices without clear documentation.
+- Multiple versioned filesets exporting the same global helper while relying on
+  include order or guards to choose the effective version silently.
 
 #### Exceptions
 
@@ -1440,6 +1532,107 @@ None for reusable SAEF artifacts.
 
 ---
 
+### Rule RS-001.36 — Gate and Observe Live-System Changes
+
+#### Purpose
+
+Prevent repository-valid changes from causing unreviewed production effects.
+
+#### Rule
+
+Changes to a live IP-Symcon installation shall use a staged verification gate
+with a private snapshot, deterministic rollback, explicit side-effect analysis
+and bounded operational observation.
+
+#### Rationale
+
+Offline correctness does not prove compatibility with an existing object tree,
+autoload order, archive ownership, links, event configuration or real-device
+state. Live verification must therefore preserve installation invariants rather
+than relying only on a successful script result.
+
+#### Recommended Practice
+
+- Complete repository and offline verification before live deployment.
+- Read authorized live source directly and preserve a private recoverable
+  backup before changing it.
+- Change one independently reviewable caller or contract at a time.
+- Predict device actions and notifications before any manual execution.
+- Prefer the next regular scheduled execution when it provides a safer
+  equivalent observation.
+- Compare source identity, call distribution, object identity, values,
+  metadata, tree structure, archive configuration, links and event progression
+  as applicable.
+- Use direct bounded MCP result channels and evaluate transport errors,
+  execution errors and truncation separately.
+- Create temporary live objects only with explicit authorization, then delete
+  them immediately and verify their absence.
+- Stop the cohort and use the prepared rollback when an invariant fails.
+
+#### Exceptions
+
+Read-only inspections that do not execute target scripts or mutate live state
+do not require a rollback, but still require authorization and private-data
+handling appropriate to their scope.
+
+#### Related References
+
+- `standards/TESTING_STANDARDS.md`
+- `project/SYMCON_MCP_SCRIPT_READBACK.md`
+- `knowledge/EK-005-idempotent-configuration.md`
+- `adr/ADR-0003-private-overlay.md`
+
+---
+
+### Rule RS-001.37 — Keep Managed Runtime Mirrors Non-Authoritative
+
+#### Purpose
+
+Restore Symcon console discoverability for a file-backed shared runtime without
+creating a second executable source of truth.
+
+#### Rule
+
+When a file-backed runtime is projected into a Symcon script object for source
+visibility or reference search, the projection shall be generated,
+non-authoritative and outside every action and autoload path.
+
+#### Rationale
+
+Filesystem sources support deterministic deployment and normal PHP tooling,
+while Symcon script objects support useful console inspection. A managed mirror
+can provide both only when authority, execution and ownership remain explicit.
+
+#### Recommended Practice
+
+- Keep the deployed runtime file as the only executable source of truth.
+- Generate a deterministic private reference index before
+  `__halt_compiler()` and append the authoritative runtime bytes after it.
+- Locate the owned script by stable Ident below an explicit parent.
+- Treat name, position, icon, information text and visibility as creation
+  defaults and preserve later user changes.
+- Pin the authoritative runtime hash, skip identical content, verify direct
+  readback and restore the exact previous content on failure.
+- Keep ObjectIDs in private deployment input and evidence only.
+- Do not bind the mirror to events, actions, wrappers or autoload.
+- Treat undocumented console search functions as optional, feature-detected
+  acceptance probes, never as production dependencies.
+- Keep the first provisioner implementation local until a second independent
+  use case demonstrates a stable public helper contract.
+
+#### Exceptions
+
+Generated Symcon bundles that are themselves the installed executable source
+are deployment artifacts, not runtime mirrors, and follow ADR-0005 instead.
+
+#### Related References
+
+- `adr/ADR-0006-managed-symcon-runtime-mirrors.md`
+- `knowledge/EK-007-managed-runtime-mirrors.md`
+- `case-studies/control-light/31-managed-runtime-mirror-generator.md`
+
+---
+
 ## 13. References
 
 This stable draft standard is supported by the following SAEF artifacts:
@@ -1453,6 +1646,8 @@ This stable draft standard is supported by the following SAEF artifacts:
 - `adr/ADR-0001-use-requestaction.md`
 - `adr/ADR-0002-use-ident-over-object-id.md`
 - `adr/ADR-0003-private-overlay.md`
+- `adr/ADR-0005-generate-symcon-helper-bundles.md`
+- `adr/ADR-0006-managed-symcon-runtime-mirrors.md`
 - `standards/DOCUMENTATION_STANDARDS.md`
 - `standards/PHP_STANDARDS.md`
 - `standards/TESTING_STANDARDS.md`
@@ -1461,8 +1656,11 @@ This stable draft standard is supported by the following SAEF artifacts:
 - `knowledge/EK-003-archive-processing.md`
 - `knowledge/EK-004-internal-state-management.md`
 - `knowledge/EK-005-idempotent-configuration.md`
+- `knowledge/EK-006-runtime-diagnostics.md`
+- `knowledge/EK-007-managed-runtime-mirrors.md`
 - `references/RI-001-idempotent-configuration-script.md`
 - `references/RI-002-runtime-diagnostics-internal-state.md`
+- `project/SYMCON_MCP_SCRIPT_READBACK.md`
 
 It is also aligned with current official IP-Symcon documentation for variable actions, event actions, event creation and Archive Control behaviour.
 
@@ -1471,3 +1669,15 @@ It is also aligned with current official IP-Symcon documentation for variable ac
 This stable draft has been promoted from `drafts/SYMCON_STANDARDS.md` for internal SAEF use and Codex-assisted development. The draft source remains available in `drafts/` for historical comparison.
 
 For v0.2.0, the standard explicitly anchors helper-first implementation, idempotent configuration and runtime diagnostics patterns demonstrated by RI-001 and RI-002. Diagnostics state should remain bounded, script-owned and separated by responsibility: configuration hashes for fingerprints, registry variables for small metadata, statistics variables for counters and timestamps, and error ring buffers for bounded error history.
+
+The ObjectID guidance also distinguishes genuine object references from
+five-digit timeout, limit and domain literals so that Symcon integrity tooling
+does not turn readable non-ID values into unexplained false positives.
+
+Live-system changes now use an explicit staged verification gate with private
+rollback material, side-effect prediction, direct bounded MCP read-back and
+operational observation of installation invariants.
+
+File-backed shared runtimes may now use an optional managed Symcon mirror for
+console discoverability. The runtime file remains authoritative; the generated
+mirror is inert, privately indexed, presentation-preserving and rollback-safe.

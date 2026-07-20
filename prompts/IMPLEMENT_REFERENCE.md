@@ -51,6 +51,11 @@ The implementation should:
 Before finishing:
 
 - run make check;
+- treat repository verification and deployment to a live Symcon installation
+  as separate gates;
+- for separately authorized live verification, follow
+  `project/SYMCON_MCP_SCRIPT_READBACK.md` and
+  `standards/TESTING_STANDARDS.md`;
 - summarize changed files;
 - explain architectural decisions;
 - if the working tree already contains unrelated modifications, explicitly identify them and state whether they were touched;

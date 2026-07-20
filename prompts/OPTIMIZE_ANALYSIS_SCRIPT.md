@@ -25,6 +25,8 @@ Before making changes:
 5. Read `knowledge/EK-006-runtime-diagnostics.md`.
 6. Analyze the complete existing script.
 7. Explain the current data flow and relevant risks.
+8. For authorized live work, read and follow
+   `project/SYMCON_MCP_SCRIPT_READBACK.md`.
 
 ## Goals
 
@@ -60,12 +62,24 @@ Dedicated variables are allowed only when they represent real domain state or in
 
 Explain every new variable.
 
+## Live and Archive Mutation Gate
+
+If the optimization changes a live script, archive configuration or historical
+data, preserve a private recoverable backup, define the affected scope and
+rollback, and separate read-only analysis from application. Use direct bounded
+MCP result channels and evaluate transport errors, PHP execution errors and
+truncation separately. Temporary live objects require explicit authorization
+and verified cleanup.
+
 ## Verification
 
 Before finishing:
 
 - run `make check` where possible;
 - check PHP syntax for changed private scripts where possible;
+- verify archive logging, aggregation and affected ranges after an authorized
+  live mutation;
+- verify cleanup of every explicitly authorized temporary live object;
 - summarize changed files;
 - explain architectural decisions;
 - report unrelated pre-existing working tree changes;

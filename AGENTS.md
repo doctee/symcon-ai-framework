@@ -22,13 +22,16 @@ Before making changes, read these files in order:
 
 For Symcon-specific work, also read:
 
-- `drafts/SYMCON_STANDARDS.md`
+- `standards/SYMCON_STANDARDS.md`
 - `standards/PHP_STANDARDS.md`
 - `knowledge/EK-001-state-machines.md`
 - `knowledge/EK-002-retry-mechanisms.md`
 - `knowledge/EK-003-archive-processing.md`
 - `knowledge/EK-004-internal-state-management.md`
 - `knowledge/EK-005-idempotent-configuration.md`
+
+Read `drafts/SYMCON_STANDARDS.md` only when historical comparison with the
+pre-stabilization draft is relevant.
 
 ## Engineering Rules
 
@@ -62,6 +65,24 @@ Private data belongs in:
 - `*.local.*`
 - `.env*`
 
+## Symcon MCP Usage
+
+Follow `project/SYMCON_MCP_SCRIPT_READBACK.md` when inspecting an authorized live
+IP-Symcon installation.
+
+- Prefer `symcon_get_script_content` for authorized source reads. Do not create
+  marker variables or execute the target script when direct read-back is
+  available.
+- Use `symcon_run_script_text_ex` only for bounded, explicitly authorized probes.
+- Evaluate `transportError` and `executionError` separately. A successful MCP
+  transport does not prove successful PHP execution.
+- Keep `maxOutputBytes` bounded and inspect `truncated`; output truncation is
+  UTF-8-safe but intentionally discards bytes beyond the configured limit.
+- Treat all returned source and installation metadata as transient private
+  context. Do not copy them into public SAEF artifacts.
+- Creating temporary scripts, variables or other live objects requires explicit
+  authorization and verified cleanup.
+
 ## Commit Style
 
 Use Conventional Commits where practical.
@@ -72,6 +93,7 @@ Examples:
 - `docs(references): add idempotent configuration script`
 - `docs(standards): refine PHP standards`
 - `chore: add repository ignore rules`
+
 ## Helper Usage
 
 Before implementing IP-Symcon object creation, variable waiting, event creation or similar infrastructure logic, search `helpers/` for an existing SAEF helper.
@@ -82,7 +104,7 @@ Do not duplicate helper logic such as:
 
 - idempotent category creation,
 - idempotent variable creation,
-- cyclic script event creation,
+- cyclic and variable-triggered script event creation,
 - variable change/update waiting.
 
 If a helper is missing, propose or add a reusable helper instead of embedding one-off infrastructure code in a reference implementation.

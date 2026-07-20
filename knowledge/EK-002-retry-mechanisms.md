@@ -110,6 +110,52 @@ Examples:
 - a device restart may require minutes,
 - a cloud outage may require scheduled retries over a longer period.
 
+### Variable Feedback and Timestamp Resolution
+
+IP-Symcon variable metadata timestamps have second resolution. A feedback value
+can change after a wait begins while `VariableUpdated` or `VariableChanged`
+still equals the captured start timestamp.
+
+A conditioned wait must therefore not rely exclusively on
+`currentTimestamp > startTimestamp`. It should also recognize an observed
+transition of the expected-value condition from false to true. The baseline
+condition must be captured first so that a value which already matched before
+the wait is not mistaken for new feedback.
+
+Polling should keep its API cost explicit:
+
+- timestamp-only waits need no value read;
+- waits with an expected value or predicate need at most one metadata read and
+  one value read per interval.
+
+This does not make same-value updates observable inside one second when no
+higher-resolution signal exists. Callers that only need confirmation of a
+target value should avoid issuing the action when that value already matches.
+
+### External Writers and Confirmation Scope
+
+Authoritative feedback proves that the expected target condition was observed
+within the bounded confirmation interval. It does not reserve the target after
+the wait returns and does not prove that the automation is its only writer.
+
+A semaphore has the same scope limitation: it serializes only executions that
+use the same semaphore. Physical controls, device-module behavior, MQTT or
+fieldbus peers and unrelated automations may still change the target during or
+after the confirmation interval.
+
+When a supervised test observes an unexpected transition:
+
+1. retain the confirmed value and timestamp sequence;
+2. compare the automation's command counter with the number of intended
+   actions;
+3. distinguish the outbound command payload from later device feedback;
+4. stop and restore a safe state before continuing; and
+5. classify a wait defect only when the expected feedback occurred inside the
+   wait contract but was not recognized.
+
+An additional command or a payload from another controller is concurrency
+evidence, not a reason to lengthen the wait automatically.
+
 ### Retry Safety
 
 Only retry operations that are safe to repeat.

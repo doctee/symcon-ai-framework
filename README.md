@@ -61,6 +61,16 @@ Important current artifacts include:
 - `AGENTS.md`
 - `ARCHITECTURE.md`
 - `project/AI_PROJECT.md`
+- `project/SYMCON_MCP_SCRIPT_READBACK.md`
+- `project/SYSTEM_FUNCTIONS_CANDIDATE_INVENTORY.md`
+- `project/SYSTEM_FUNCTIONS_MIGRATION_WAVE_1.md`
+- `project/SYSTEM_FUNCTIONS_PILOT_DEPLOYMENT_PLAN.md`
+- `project/SAEF_SYMCON_BUNDLE_BUILD_DESIGN.md`
+- `project/SAEF_V0_2_PUBLIC_API_AUDIT.md`
+- `project/SAEF_V0_2_CHANGE_INVENTORY.md`
+- `project/SAEF_V0_2_RELEASE_READINESS.md`
+- `adr/ADR-0005-generate-symcon-helper-bundles.md`
+- `bundles/symcon/ensure-variable.bundle.json`
 - `principles/ENGINEERING_PRINCIPLES.md`
 - `principles/AI_PRINCIPLES.md`
 - `standards/SYMCON_STANDARDS.md`
@@ -74,6 +84,8 @@ Important current artifacts include:
 - `knowledge/EK-004-internal-state-management.md`
 - `knowledge/EK-005-idempotent-configuration.md`
 - `knowledge/EK-006-runtime-diagnostics.md`
+- `knowledge/EK-007-managed-runtime-mirrors.md`
+- `adr/ADR-0006-managed-symcon-runtime-mirrors.md`
 - `references/RI-001-idempotent-configuration-script.md`
 - `references/RI-002-runtime-diagnostics-internal-state.md`
 - `prompts/IMPLEMENT_REFERENCE.md`
@@ -109,7 +121,51 @@ articles, reusable helpers, templates and reference implementations.
 Standard for SAEF (`Stable Draft 1.0`). The earlier draft remains available in
 `drafts/SYMCON_STANDARDS.md` for comparison.
 
-Version 0.2.0 development focuses on runtime diagnostics, internal state and
-helper-first reference implementations. The diagnostics helper set currently
-covers configuration hashes, registry metadata, statistics and bounded error
-ring buffers. `RI-002` demonstrates how these helpers are composed.
+Version 0.2.0 remains in development and has passed the current offline
+engineering gates. Its scope includes Runtime Diagnostics, deterministic
+bundles and filesets, managed runtime mirrors, migration guidance and the MQTT,
+ControlLight and Navimow case studies. The Diagnostics helper set covers
+configuration hashes, Registry metadata, Statistics and bounded error ring
+buffers; `RI-002` demonstrates their composition.
+
+The release is not tag-ready until the documented commit, final identity and
+clean-checkout gates in `project/SAEF_V0_2_RELEASE_READINESS.md` are complete.
+
+## Licensing
+
+Unless a file or third-party notice states otherwise, original SAEF repository
+content is available under the
+[PolyForm Noncommercial License 1.0.0](LICENSE).
+
+Free use includes:
+
+- personal study, research, experiments and hobby projects without anticipated
+  commercial application;
+- charitable and other noncommercial organizations;
+- educational institutions;
+- public research organizations;
+- public safety, health and environmental protection organizations;
+- government institutions.
+
+A separate written commercial license is required for:
+
+- any use by a for-profit business, including purely internal use;
+- use by a sole proprietor or freelancer in a professional context;
+- paid consulting, installation, integration, training or support;
+- commercial hosting, distribution, resale or incorporation into a paid
+  product or service.
+
+An otherwise eligible noncommercial or public organization may use SAEF free of
+charge. A commercial contractor working for that organization still requires
+its own commercial license.
+
+See [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) for the commercial licensing
+policy. SAEF is source-available software and is not OSI-approved open source,
+because commercial use is restricted.
+
+Third-party material is not relicensed under SAEF terms. Its original notices
+and licenses continue to apply.
+
+This overview is provided for orientation and does not replace the license
+terms. In case of a conflict, `LICENSE` controls the public license grant. A
+commercial license exists only through a separate written agreement.

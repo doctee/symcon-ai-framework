@@ -1,7 +1,7 @@
 # Symcon AI Engineering Framework – AI Project Charter
 
-Version: 0.1  
-Status: Draft  
+Version: 0.2 development
+Status: Stable Draft
 Scope: Public core, no private installation data
 
 ## 1. Purpose
@@ -54,14 +54,20 @@ Hardcoded object IDs are allowed only when explicitly documented as installation
 
 Public and potentially GitHub-ready content:
 
-- `handbook/`
+- `principles/`
 - `standards/`
 - `adr/`
+- `knowledge/`
 - `templates/`
 - `helpers/`
 - `examples/`
+- `references/`
+- `case-studies/`
+- `prompts/`
+- `bundles/`
+- `deployments/`
+- `dist/`
 - `tests/`
-- `docs/`
 
 ### 3.2 Project Layer
 
@@ -109,7 +115,9 @@ Names are user-facing and may change. Idents are intended as stable technical re
 
 Automatically created events must be deterministic, identifiable, and safe to recreate.
 
-For script-executing events in Symcon 6.0 and newer, event action binding must be set in addition to creating the event trigger and script assignment.
+For script-executing events in Symcon 6.0 and newer, choose exactly one
+execution contract: bind a parent automation through the event action or store
+deliberate inline PHP source as the event script. Do not combine both contracts.
 
 ### 5.3 Variables
 
@@ -177,9 +185,9 @@ A change is considered complete when:
 - examples or tests are added where useful,
 - the change is consistent with existing architecture.
 
-## 9. Initial Roadmap
+## 9. Framework Evolution
 
-### Phase 1 – Foundation
+### Phase 1 – Foundation (established)
 
 - repository structure
 - AI project charter
@@ -187,7 +195,7 @@ A change is considered complete when:
 - first ADRs
 - documentation conventions
 
-### Phase 2 – Knowledge Transfer
+### Phase 2 – Knowledge Transfer (established and evolving)
 
 - reusable helper library
 - Symcon script templates
@@ -195,10 +203,11 @@ A change is considered complete when:
 - known best practices
 - examples from real automation scenarios
 
-### Phase 3 – Engineering Platform
+### Phase 3 – Engineering Platform (in progress)
 
-- mature handbook
-- public/private split
+- stable standards and knowledge base
+- documented public/private split
 - automated checks
 - reusable test patterns
-- optional GitHub publication
+- deterministic helper bundles and deployment tooling
+- release-quality reference implementations and case studies

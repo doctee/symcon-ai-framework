@@ -16,6 +16,7 @@ define additional mandatory rules.
 | `EK-004-internal-state-management.md` | Script-owned internal state, diagnostics and ownership |
 | `EK-005-idempotent-configuration.md` | Repeatable configuration scripts and helper-first setup |
 | `EK-006-runtime-diagnostics.md` | Configuration hashes, registries, statistics and error ring buffers |
+| `EK-007-managed-runtime-mirrors.md` | Non-authoritative Symcon visibility for file-backed shared runtimes |
 
 ## Relationship to References
 
@@ -23,6 +24,9 @@ define additional mandatory rules.
   helper-first idempotent configuration pattern explained by EK-005.
 - `references/RI-002-runtime-diagnostics-internal-state.md` demonstrates the
   runtime diagnostics composition explained by EK-004 and EK-006.
+- `case-studies/control-light/31-managed-runtime-mirror-generator.md`
+  demonstrates the first local implementation of EK-007 without prematurely
+  introducing a public helper.
 
 ## Future Topics
 

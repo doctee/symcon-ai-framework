@@ -94,11 +94,28 @@ Run the full project check before submitting changes:
 make check
 ```
 
-This runs syntax linting, static analysis and coding-style checks configured for
-SAEF.
+This runs syntax linting, generated-artifact drift checks, behavioral tests,
+static analysis and coding-style checks configured for SAEF.
 
 If a change affects Markdown-only documentation, still run `make check` so the
 repository remains in a known-good state.
+
+## Licensing of Contributions
+
+SAEF uses a noncommercial public license and reserves the ability to offer
+separate commercial licenses. External contributions therefore require an
+explicit contributor agreement that permits the project copyright holder to
+use, distribute, sublicense and relicense the contribution under both
+noncommercial and commercial terms.
+
+Until a reviewed contributor agreement process exists, external contributions
+may be discussed and reviewed but must not be merged. Submission of a pull
+request alone must not be treated as an implicit transfer of copyright or
+commercial relicensing permission.
+
+Contributors must identify third-party material and prove that its license is
+compatible with the intended SAEF use. Do not submit code or documentation that
+the contributor is not authorized to license on the required terms.
 
 ## Commit Style
 
