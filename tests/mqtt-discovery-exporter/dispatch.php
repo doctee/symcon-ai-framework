@@ -8,8 +8,11 @@ require_once __DIR__ . '/DiagnosticsFakeSymconRuntime.php';
 require_once __DIR__ . '/../../case-studies/mqtt-discovery-exporter/candidate/MqttDiscoveryExporterRuntime.php';
 
 /** @return array{configuration: array<string, mixed>, ids: array<string, int>} */
-function dispatchFixture(int $serverID, bool $mapBrightnessFeedback = true): array
-{
+function dispatchFixture(
+    int $serverID,
+    bool $mapBrightnessFeedback = true,
+    bool $mapColorTemperatureFeedback = true
+): array {
     $ids = [
         'powerState' => DiagnosticsFakeSymconRuntime::createStateVariable(0, true),
         'powerAction' => DiagnosticsFakeSymconRuntime::createStateVariable(0, false, true),
@@ -22,10 +25,12 @@ function dispatchFixture(int $serverID, bool $mapBrightnessFeedback = true): arr
     ];
     DiagnosticsFakeSymconRuntime::mapActionFeedback($ids['powerAction'], $ids['powerState']);
     DiagnosticsFakeSymconRuntime::mapActionFeedback($ids['rgbAction'], $ids['rgbState']);
-    DiagnosticsFakeSymconRuntime::mapActionFeedback(
-        $ids['colorTemperatureAction'],
-        $ids['colorTemperatureState']
-    );
+    if ($mapColorTemperatureFeedback) {
+        DiagnosticsFakeSymconRuntime::mapActionFeedback(
+            $ids['colorTemperatureAction'],
+            $ids['colorTemperatureState']
+        );
+    }
     if ($mapBrightnessFeedback) {
         DiagnosticsFakeSymconRuntime::mapActionFeedback($ids['brightnessAction'], $ids['brightnessState']);
     }
@@ -108,12 +113,18 @@ function assertDispatchThrows(string $expectedClass, callable $operation, string
 /**
  * @return array{ownerScriptID: int, fixture: array{configuration: array<string, mixed>, ids: array<string, int>}, reconcile: array<string, mixed>}
  */
-function initializedDispatchFixture(bool $mapBrightnessFeedback = true): array
-{
+function initializedDispatchFixture(
+    bool $mapBrightnessFeedback = true,
+    bool $mapColorTemperatureFeedback = true
+): array {
     DiagnosticsFakeSymconRuntime::reset();
     $ownerScriptID = DiagnosticsFakeSymconRuntime::createScript();
     $serverID = DiagnosticsFakeSymconRuntime::createServerInstance();
-    $fixture = dispatchFixture($serverID, $mapBrightnessFeedback);
+    $fixture = dispatchFixture(
+        $serverID,
+        $mapBrightnessFeedback,
+        $mapColorTemperatureFeedback
+    );
     $reconcile = MqttDiscoveryExporterRuntime::executeReconcileWithoutCleanup(
         $ownerScriptID,
         $fixture['configuration']
@@ -163,6 +174,89 @@ $tests['confirms a strict command and republishes only its entity'] = static fun
         1,
         GetValue($setup['reconcile']['diagnostics']['statisticIDs']['COMMANDS']),
         'Command count differs.'
+    );
+};
+
+$tests['accepts brightness feedback within one percentage point'] = static function (): void {
+    $setup = initializedDispatchFixture(false);
+    $registry = $setup['reconcile']['diagnostics']['registry'];
+    $commandVariableID = dispatchCommandVariableID($registry, 'brightness');
+    SetValue($setup['fixture']['ids']['brightnessState'], 54);
+    SetValue($commandVariableID, '55');
+
+    $result = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID
+    );
+
+    assertDispatchSame('confirmed', $result['status'], 'Tolerated brightness status differs.');
+    assertDispatchSame(54, GetValue($setup['fixture']['ids']['brightnessState']), 'Tolerated brightness feedback changed.');
+    assertDispatchSame(
+        1,
+        GetValue($setup['reconcile']['diagnostics']['statisticIDs']['COMMANDS']),
+        'Tolerated brightness command was not counted.'
+    );
+};
+
+$tests['rejects brightness feedback outside one percentage point'] = static function (): void {
+    $setup = initializedDispatchFixture(false);
+    $registry = $setup['reconcile']['diagnostics']['registry'];
+    $commandVariableID = dispatchCommandVariableID($registry, 'brightness');
+    SetValue($setup['fixture']['ids']['brightnessState'], 53);
+    SetValue($commandVariableID, '55');
+
+    $result = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID
+    );
+
+    assertDispatchSame('confirmation_timeout', $result['status'], 'Out-of-range brightness was accepted.');
+    assertDispatchSame(
+        1,
+        GetValue($setup['reconcile']['diagnostics']['statisticIDs']['FAILURES']),
+        'Out-of-range brightness failure was not counted.'
+    );
+};
+
+$tests['accepts color temperature feedback within ten kelvin'] = static function (): void {
+    $setup = initializedDispatchFixture(true, false);
+    $registry = $setup['reconcile']['diagnostics']['registry'];
+    $commandVariableID = dispatchCommandVariableID($registry, 'colorTemperature');
+    SetValue($commandVariableID, '3010');
+
+    $result = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID
+    );
+
+    assertDispatchSame('confirmed', $result['status'], 'Tolerated color-temperature status differs.');
+    assertDispatchSame(
+        1,
+        GetValue($setup['reconcile']['diagnostics']['statisticIDs']['COMMANDS']),
+        'Tolerated color-temperature command was not counted.'
+    );
+};
+
+$tests['rejects color temperature feedback outside ten kelvin'] = static function (): void {
+    $setup = initializedDispatchFixture(true, false);
+    $registry = $setup['reconcile']['diagnostics']['registry'];
+    $commandVariableID = dispatchCommandVariableID($registry, 'colorTemperature');
+    SetValue($commandVariableID, '3011');
+
+    $result = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID
+    );
+
+    assertDispatchSame('confirmation_timeout', $result['status'], 'Out-of-range color temperature was accepted.');
+    assertDispatchSame(
+        1,
+        GetValue($setup['reconcile']['diagnostics']['statisticIDs']['FAILURES']),
+        'Out-of-range color-temperature failure was not counted.'
     );
 };
 
@@ -227,6 +321,32 @@ $tests['returns action_failed when the device action rejects the command'] = sta
     );
 };
 
+$tests['accepts confirmed feedback when the device action returns false'] = static function (): void {
+    $setup = initializedDispatchFixture();
+    $registry = $setup['reconcile']['diagnostics']['registry'];
+    $commandVariableID = dispatchCommandVariableID($registry, 'colorTemperature');
+    SetValue($commandVariableID, '3010');
+    DiagnosticsFakeSymconRuntime::failRequestActionAfterFeedbackAt(1);
+
+    $result = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID
+    );
+
+    assertDispatchSame('confirmed', $result['status'], 'Confirmed false-return action status differs.');
+    assertDispatchSame(
+        1,
+        GetValue($setup['reconcile']['diagnostics']['statisticIDs']['COMMANDS']),
+        'Confirmed false-return action was not counted.'
+    );
+    assertDispatchSame(
+        0,
+        GetValue($setup['reconcile']['diagnostics']['statisticIDs']['FAILURES']),
+        'Confirmed false-return action was counted as failure.'
+    );
+};
+
 $tests['returns publish_failed without committing a partial runtime channel'] = static function (): void {
     $setup = initializedDispatchFixture();
     $registry = $setup['reconcile']['diagnostics']['registry'];
@@ -274,6 +394,25 @@ $tests['publishes and then skips one indexed state entity'] = static function ()
     assertDispatchSame(5, $first['publishedMessages'], 'State publish count differs.');
     assertDispatchSame('skipped', $second['status'], 'Unchanged state was not skipped.');
     assertDispatchSame(5, count(DiagnosticsFakeSymconRuntime::requestActionCalls()), 'State skip caused actions.');
+};
+
+$tests['coalesces a state trigger while command dispatch owns the lock'] = static function (): void {
+    $setup = initializedDispatchFixture();
+    DiagnosticsFakeSymconRuntime::setSemaphoreEnterResult(false);
+
+    $result = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $setup['fixture']['ids']['colorTemperatureState']
+    );
+
+    assertDispatchSame('coalesced', $result['status'], 'Contended state status differs.');
+    assertDispatchSame(0, $result['publishedMessages'], 'Contended state was published.');
+    assertDispatchSame(
+        0,
+        GetValue($setup['reconcile']['diagnostics']['statisticIDs']['FAILURES']),
+        'Contended state was counted as failure.'
+    );
 };
 
 $tests['rejects unknown triggers without full reconciliation'] = static function (): void {

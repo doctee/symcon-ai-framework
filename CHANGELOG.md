@@ -7,6 +7,38 @@ This project adheres to Semantic Versioning.
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- Added a gated v0.2 Symcon rollout plan based on a sanitized read-only live
+  inventory, including shared-helper ownership, inactive staging, rollback,
+  runtime verification and selective legacy migration rules.
+- Recorded the successful backup and inactive staging of the immutable v0.2.0
+  MQTT and ControlLight filesets without selecting runtime code or changing
+  Symcon objects.
+- Recorded the successful external v0.2.0 maintenance preflight, including the
+  corrected equal-length candidate token, verified rollback and explicit
+  confirmation that no activation or restart occurred.
+- Recorded the successful atomic activation of the final v0.2.0 MQTT owner and
+  the independent read-only runtime verification, without MQTT publication or
+  device actions.
+- Recorded the successful Gate F MQTT idempotency verification with repeated
+  preparation and no-op reconcile runs, unchanged topology and no newly
+  published MQTT messages.
+- Recorded the Gate F power-command verification, including the safely isolated
+  local loopback duplication and the successful one-message-to-one-dispatch
+  retest with an independent MQTT producer and state compensation.
+- Recorded the compensated Gate F brightness finding: device feedback differed
+  by one percentage point from the requested value, exposing an overly strict
+  confirmation contract; retained Home Assistant discovery and runtime MQTT
+  state passed independent read-only verification.
+- Corrected MQTT command confirmation for bounded brightness and
+  color-temperature conversion differences, authoritative feedback following a
+  false action result, and coalesced state events during command dispatch;
+  recorded the successful live capability retests and the bounded caveat for
+  rapid superseding Home Assistant commands.
+
 ## [0.2.0] - 2026-07-20
 
 ### Added

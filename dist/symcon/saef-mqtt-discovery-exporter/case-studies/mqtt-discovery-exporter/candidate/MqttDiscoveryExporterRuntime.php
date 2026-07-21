@@ -426,8 +426,41 @@ final class MqttDiscoveryExporterRuntime
         \SAEF_SetStatisticTimestamp($diagnostics['statisticIDs']['LAST_RUN']);
         \SAEF_IncrementStatistic($diagnostics['statisticIDs']['EXECUTIONS']);
 
+        $commandEntry = $diagnostics['registry']['commandIndex'][(string)$triggerVariableID] ?? null;
+        $stateEntries = $diagnostics['registry']['stateIndex'][(string)$triggerVariableID] ?? null;
+        if ($commandEntry !== null && $stateEntries !== null) {
+            throw new RuntimeException('Trigger variable has ambiguous Registry ownership.');
+        }
+        if ($commandEntry !== null && !is_array($commandEntry)) {
+            throw new RuntimeException('Command Registry index entry is invalid.');
+        }
+        if (
+            $stateEntries !== null
+            && (!is_array($stateEntries) || count($stateEntries) !== 1 || !is_array($stateEntries[0]))
+        ) {
+            throw new RuntimeException('State trigger must resolve to exactly one Registry entry.');
+        }
+        if ($commandEntry === null && $stateEntries === null) {
+            throw new RuntimeException('Trigger variable is not registered for dispatch.');
+        }
+
+        $isStateTrigger = $stateEntries !== null;
         $semaphoreName = 'SAEF_MQTT_EXPORTER_DISPATCH_' . $ownerScriptID;
-        if (!\IPS_SemaphoreEnter($semaphoreName, 5000)) {
+        if (!\IPS_SemaphoreEnter($semaphoreName, $isStateTrigger ? 1 : 5000)) {
+            if ($isStateTrigger) {
+                $entityKey = $stateEntries[0]['entityKey'] ?? null;
+                if (!is_string($entityKey)) {
+                    throw new RuntimeException('State Registry entity key is invalid.');
+                }
+
+                return [
+                    'type' => 'state',
+                    'status' => 'coalesced',
+                    'entityKey' => $entityKey,
+                    'publishedMessages' => 0,
+                ];
+            }
+
             $exception = new RuntimeException('MQTT dispatch semaphore timed out.');
             self::recordFailure(
                 $diagnostics['errorRingBufferID'],
@@ -439,17 +472,7 @@ final class MqttDiscoveryExporterRuntime
         }
 
         try {
-            $commandEntry = $diagnostics['registry']['commandIndex'][(string)$triggerVariableID] ?? null;
-            $stateEntries = $diagnostics['registry']['stateIndex'][(string)$triggerVariableID] ?? null;
-
-            if ($commandEntry !== null && $stateEntries !== null) {
-                throw new RuntimeException('Trigger variable has ambiguous Registry ownership.');
-            }
             if ($commandEntry !== null) {
-                if (!is_array($commandEntry)) {
-                    throw new RuntimeException('Command Registry index entry is invalid.');
-                }
-
                 return self::dispatchCommand(
                     $configuration,
                     $diagnostics,
@@ -457,15 +480,7 @@ final class MqttDiscoveryExporterRuntime
                     $commandEntry
                 );
             }
-            if ($stateEntries !== null) {
-                if (!is_array($stateEntries) || count($stateEntries) !== 1 || !is_array($stateEntries[0])) {
-                    throw new RuntimeException('State trigger must resolve to exactly one Registry entry.');
-                }
-
-                return self::dispatchState($configuration, $diagnostics, $stateEntries[0]);
-            }
-
-            throw new RuntimeException('Trigger variable is not registered for dispatch.');
+            return self::dispatchState($configuration, $diagnostics, $stateEntries[0]);
         } catch (Throwable $exception) {
             self::recordFailure(
                 $diagnostics['errorRingBufferID'],
@@ -731,9 +746,10 @@ final class MqttDiscoveryExporterRuntime
         }
 
         try {
-            if (!\RequestAction($capability['actionVariableID'], $command['value'])) {
-                throw new RuntimeException('Configured device action returned false.');
-            }
+            $actionAccepted = \RequestAction(
+                $capability['actionVariableID'],
+                $command['value']
+            );
         } catch (Throwable $exception) {
             return self::commandFailureResult(
                 $diagnostics,
@@ -749,17 +765,27 @@ final class MqttDiscoveryExporterRuntime
             $capability['stateVariableID'],
             $confirmation['timeoutMilliseconds'],
             $confirmation['pollIntervalMilliseconds'],
-            $command['value'],
+            null,
             SAEF_WAIT_UPDATED,
-            min(1000, $confirmation['timeoutMilliseconds'])
+            $confirmation['timeoutMilliseconds'],
+            static fn (mixed $actualValue): bool => self::commandFeedbackMatches(
+                $commandType,
+                $command['value'],
+                $actualValue
+            )
         );
         if (!$confirmed) {
+            $status = $actionAccepted ? 'confirmation_timeout' : 'action_failed';
+            $message = $actionAccepted
+                ? 'Observed state confirmation timed out.'
+                : 'Configured device action returned false without confirmed feedback.';
+
             return self::commandFailureResult(
                 $diagnostics,
                 $entityKey,
                 $commandType,
-                'confirmation_timeout',
-                new RuntimeException('Observed state confirmation timed out.')
+                $status,
+                new RuntimeException($message)
             );
         }
 
@@ -791,6 +817,32 @@ final class MqttDiscoveryExporterRuntime
                 $exception
             );
         }
+    }
+
+    /**
+     * Compares authoritative device feedback with one parsed command value.
+     *
+     * Integer light values may cross bounded conversion boundaries between
+     * integrations. Boolean power and packed RGB values remain exact.
+     */
+    private static function commandFeedbackMatches(
+        string $commandType,
+        bool|int $expectedValue,
+        mixed $actualValue
+    ): bool {
+        return match ($commandType) {
+            'power' => is_bool($actualValue) && $actualValue === $expectedValue,
+            'brightness' => is_int($actualValue)
+                && is_int($expectedValue)
+                && abs($actualValue - $expectedValue) <= 1,
+            'colorTemperature' => is_int($actualValue)
+                && is_int($expectedValue)
+                && abs($actualValue - $expectedValue) <= 10,
+            'rgb' => is_int($actualValue) && $actualValue === $expectedValue,
+            default => throw new RuntimeException(
+                'Unsupported command feedback type: ' . $commandType
+            ),
+        };
     }
 
     /**

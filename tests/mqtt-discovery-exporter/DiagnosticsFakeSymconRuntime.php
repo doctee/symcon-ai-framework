@@ -45,6 +45,10 @@ final class DiagnosticsFakeSymconRuntime
 
     private static ?int $requestActionFailureCall = null;
 
+    private static ?int $requestActionFailureAfterFeedbackCall = null;
+
+    private static bool $semaphoreEnterResult = true;
+
     public static function reset(): void
     {
         self::$nextID = 1000;
@@ -61,6 +65,8 @@ final class DiagnosticsFakeSymconRuntime
         self::$valueWriteCount = 0;
         self::$requestActionCalls = [];
         self::$requestActionFailureCall = null;
+        self::$requestActionFailureAfterFeedbackCall = null;
+        self::$semaphoreEnterResult = true;
     }
 
     public static function createScript(string $name = 'Exporter'): int
@@ -285,6 +291,10 @@ final class DiagnosticsFakeSymconRuntime
             self::setValue(self::$actionFeedbackTargets[$variableID], $value);
         }
 
+        if (self::$requestActionFailureAfterFeedbackCall === $callNumber) {
+            return false;
+        }
+
         return true;
     }
 
@@ -300,6 +310,11 @@ final class DiagnosticsFakeSymconRuntime
         self::$requestActionFailureCall = $callNumber;
     }
 
+    public static function failRequestActionAfterFeedbackAt(?int $callNumber): void
+    {
+        self::$requestActionFailureAfterFeedbackCall = $callNumber;
+    }
+
     /** @return list<array{variableID: int, value: mixed}> */
     public static function requestActionCalls(): array
     {
@@ -310,6 +325,17 @@ final class DiagnosticsFakeSymconRuntime
     {
         self::$requestActionCalls = [];
         self::$requestActionFailureCall = null;
+        self::$requestActionFailureAfterFeedbackCall = null;
+    }
+
+    public static function setSemaphoreEnterResult(bool $result): void
+    {
+        self::$semaphoreEnterResult = $result;
+    }
+
+    public static function semaphoreEnter(string $name, int $milliseconds): bool
+    {
+        return $name !== '' && $milliseconds > 0 && self::$semaphoreEnterResult;
     }
 
     public static function createEvent(int $type): int
@@ -800,7 +826,7 @@ function IPS_Sleep(int $milliseconds): void
 
 function IPS_SemaphoreEnter(string $name, int $milliseconds): bool
 {
-    return $name !== '' && $milliseconds > 0;
+    return DiagnosticsFakeSymconRuntime::semaphoreEnter($name, $milliseconds);
 }
 
 function IPS_SemaphoreLeave(string $name): bool
