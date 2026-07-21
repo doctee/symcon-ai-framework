@@ -7,7 +7,10 @@ param(
     [PSCredential] $Credential,
 
     [Parameter()]
-    [string] $PolicyPath = (Join-Path $PSScriptRoot 'restart-policy.json'),
+    [string] $CredentialPath,
+
+    [Parameter()]
+    [string] $PolicyPath,
 
     [Parameter(Mandatory = $true)]
     [string] $StatusPath,
@@ -33,6 +36,10 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrWhiteSpace($PolicyPath)) {
+    $PolicyPath = Join-Path $PSScriptRoot 'restart-policy.json'
+}
 
 $ExitActivated = 0
 $ExitPreflightFailed = 10
@@ -81,6 +88,53 @@ function Read-RestartPolicy {
     }
 
     return $policy
+}
+
+function Import-MachineCredential {
+    param([Parameter(Mandatory = $true)][string] $Path)
+
+    Add-Type -AssemblyName System.Security -ErrorAction Stop
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw [System.IO.FileNotFoundException]::new('Credential file is missing.')
+    }
+    if ((Get-Item -LiteralPath $Path).Length -gt 131072) {
+        throw [System.InvalidOperationException]::new('Credential file exceeds its byte limit.')
+    }
+    $record = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    if ($record.formatVersion -ne 1 -or $record.protectionScope -ne 'LocalMachine' -or
+        $record.username -isnot [string] -or [string]::IsNullOrWhiteSpace([string] $record.username) -or
+        ([string] $record.username).Length -gt 512 -or $record.protectedPasswordBase64 -isnot [string] -or
+        ([string] $record.protectedPasswordBase64).Length -gt 131072) {
+        throw [System.InvalidOperationException]::new('Credential file contract is invalid.')
+    }
+
+    $entropy = [Text.Encoding]::UTF8.GetBytes('SAEF.DeploymentChannel.RpcCredential.v1')
+    $protectedBytes = $null
+    $passwordBytes = $null
+    $passwordText = $null
+    try {
+        $protectedBytes = [Convert]::FromBase64String([string] $record.protectedPasswordBase64)
+        $passwordBytes = [Security.Cryptography.ProtectedData]::Unprotect(
+            $protectedBytes,
+            $entropy,
+            [Security.Cryptography.DataProtectionScope]::LocalMachine
+        )
+        $passwordText = [Text.Encoding]::UTF8.GetString($passwordBytes)
+        if ([string]::IsNullOrEmpty($passwordText)) {
+            throw [System.InvalidOperationException]::new('Credential password is empty.')
+        }
+        $securePassword = ConvertTo-SecureString -String $passwordText -AsPlainText -Force
+        return [PSCredential]::new([string] $record.username, $securePassword)
+    } finally {
+        if ($null -ne $passwordBytes) {
+            [Array]::Clear($passwordBytes, 0, $passwordBytes.Length)
+        }
+        if ($null -ne $protectedBytes) {
+            [Array]::Clear($protectedBytes, 0, $protectedBytes.Length)
+        }
+        [Array]::Clear($entropy, 0, $entropy.Length)
+        $passwordText = $null
+    }
 }
 
 function Write-RestartStatus {
@@ -379,6 +433,13 @@ $preflightCheck = 'policy'
 
 try {
     $policy = Read-RestartPolicy -Path $PolicyPath
+    $preflightCheck = 'credential_source'
+    if ($null -ne $Credential -and -not [string]::IsNullOrWhiteSpace($CredentialPath)) {
+        throw [System.InvalidOperationException]::new('Credential sources are mutually exclusive.')
+    }
+    if ($null -eq $Credential -and -not [string]::IsNullOrWhiteSpace($CredentialPath)) {
+        $Credential = Import-MachineCredential -Path $CredentialPath
+    }
     $preflightCheck = 'service_name'
     $effectiveServiceName = if ([string]::IsNullOrWhiteSpace($ServiceName)) {
         [string] $policy.serviceName

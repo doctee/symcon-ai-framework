@@ -41,6 +41,9 @@
         "test:deployment-restart": [
             "@php tests/deployments/windows-restart-coordinator.php"
         ],
+        "test:deployment-channel": [
+            "@php tests/deployments/windows-deployment-channel.php"
+        ],
         "test:helpers": [
             "@php tests/helpers/diagnostics.php",
             "@php tests/helpers/ensure-event.php",
@@ -111,6 +114,7 @@
             "@test:filesets",
             "@test:control-light-fileset",
             "@test:deployment-restart",
+            "@test:deployment-channel",
             "@test:helpers",
             "@test:mqtt-exporter-core",
             "@test:mqtt-exporter-runtime",

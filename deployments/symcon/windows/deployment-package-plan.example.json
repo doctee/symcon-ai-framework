@@ -1,0 +1,10 @@
+{
+    "formatVersion": 1,
+    "deploymentId": "saef-example-release",
+    "targetDirectoryName": "saef-example-fileset",
+    "filesetPath": "<private-path-to-reviewed-fileset>",
+    "bootstrapSnapshotPath": "<private-path-to-byte-exact-bootstrap-snapshot>",
+    "oldToken": "<private-current-equal-length-token>",
+    "newToken": "<private-candidate-equal-length-token-containing-saef-example-fileset>",
+    "outputPath": "<private-output-path>.zip"
+}

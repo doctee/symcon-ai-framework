@@ -69,6 +69,7 @@ Important current artifacts include:
 - `project/SAEF_V0_2_PUBLIC_API_AUDIT.md`
 - `project/SAEF_V0_2_CHANGE_INVENTORY.md`
 - `project/SAEF_V0_2_RELEASE_READINESS.md`
+- `project/SAEF_DEPLOYMENT_CHANNEL_SECURITY_GATE.md`
 - `adr/ADR-0005-generate-symcon-helper-bundles.md`
 - `bundles/symcon/ensure-variable.bundle.json`
 - `principles/ENGINEERING_PRINCIPLES.md`
@@ -86,6 +87,9 @@ Important current artifacts include:
 - `knowledge/EK-006-runtime-diagnostics.md`
 - `knowledge/EK-007-managed-runtime-mirrors.md`
 - `adr/ADR-0006-managed-symcon-runtime-mirrors.md`
+- `adr/ADR-0007-use-restricted-windows-deployment-channel.md`
+- `deployments/symcon/windows/Invoke-SaefDeploymentGateway.ps1`
+- `deployments/symcon/windows/saef-deploy`
 - `references/RI-001-idempotent-configuration-script.md`
 - `references/RI-002-runtime-diagnostics-internal-state.md`
 - `prompts/IMPLEMENT_REFERENCE.md`
@@ -131,6 +135,11 @@ composition.
 The clean-checkout and CI gates in
 `project/SAEF_V0_2_RELEASE_READINESS.md` are complete. The release remains
 untagged until the annotated `v0.2.0` tag starts the publication workflow.
+
+Post-v0.2 development includes a restricted Windows deployment channel. It
+uses a hash-pinned OpenSSH forced command on Windows and the same standard SSH
+protocol from macOS or a suitable iPhone/iPad terminal; it does not expose a
+general remote PowerShell session.
 
 ## Licensing
 

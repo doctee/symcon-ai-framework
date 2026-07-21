@@ -1,0 +1,80 @@
+#!/bin/sh
+
+set -eu
+
+usage() {
+    printf '%s\n' 'Usage:' >&2
+    printf '%s\n' '  saef-deploy <ssh-alias> probe' >&2
+    printf '%s\n' '  saef-deploy <ssh-alias> stage <package.zip>' >&2
+    printf '%s\n' '  saef-deploy <ssh-alias> preflight <deployment-id>' >&2
+    printf '%s\n' '  saef-deploy <ssh-alias> activate <deployment-id>' >&2
+    printf '%s\n' '  saef-deploy <ssh-alias> status <deployment-id>' >&2
+    exit 64
+}
+
+[ "$#" -ge 2 ] || usage
+
+target=$1
+operation=$2
+shift 2
+
+case "$target" in
+    *[!A-Za-z0-9_.-]*|'')
+        printf '%s\n' 'SSH target must be a configured alias.' >&2
+        exit 64
+        ;;
+esac
+
+ssh_command() {
+    ssh -T \
+        -o BatchMode=yes \
+        -o ClearAllForwardings=yes \
+        -o ExitOnForwardFailure=yes \
+        -o StrictHostKeyChecking=yes \
+        "$target" "$1"
+}
+
+case "$operation" in
+    probe)
+        [ "$#" -eq 0 ] || usage
+        ssh_command 'probe'
+        ;;
+    stage)
+        [ "$#" -eq 1 ] || usage
+        package=$1
+        [ -f "$package" ] || {
+            printf '%s\n' 'Deployment package is missing.' >&2
+            exit 66
+        }
+        if command -v shasum >/dev/null 2>&1; then
+            package_hash=$(shasum -a 256 "$package" | awk '{print $1}')
+        elif command -v sha256sum >/dev/null 2>&1; then
+            package_hash=$(sha256sum "$package" | awk '{print $1}')
+        else
+            printf '%s\n' 'No SHA-256 command is available.' >&2
+            exit 69
+        fi
+        ssh_command "stage $package_hash" < "$package"
+        ;;
+    preflight|activate|status)
+        [ "$#" -eq 1 ] || usage
+        deployment_id=$1
+        case "$deployment_id" in
+            saef-[a-z0-9]* ) ;;
+            * )
+                printf '%s\n' 'Deployment identifier is invalid.' >&2
+                exit 64
+                ;;
+        esac
+        case "$deployment_id" in
+            *[!a-z0-9.-]* )
+                printf '%s\n' 'Deployment identifier is invalid.' >&2
+                exit 64
+                ;;
+        esac
+        ssh_command "$operation $deployment_id"
+        ;;
+    *)
+        usage
+        ;;
+esac

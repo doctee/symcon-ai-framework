@@ -1,0 +1,20 @@
+{
+    "formatVersion": 1,
+    "scriptsRoot": "<private-absolute-symcon-scripts-root>",
+    "managedFilesetRoot": "<private-absolute-managed-fileset-root>",
+    "stateRoot": "<private-absolute-deployment-state-root>",
+    "activeBootstrapRelativePath": "<private-relative-bootstrap-path>",
+    "restartCoordinatorPath": "<private-absolute-restart-coordinator-path>",
+    "expectedRestartCoordinatorSha256": "<reviewed-lowercase-sha256>",
+    "restartPolicyPath": "<private-absolute-restart-policy-path>",
+    "expectedRestartPolicySha256": "<reviewed-lowercase-sha256>",
+    "credentialPath": "<private-absolute-dpapi-credential-path>",
+    "rpcUri": "http://127.0.0.1:3777/api/",
+    "serviceName": "IPSServer",
+    "maxPackageBytes": 33554432,
+    "maxExpandedBytes": 67108864,
+    "maxFileCount": 256,
+    "maxPreflightAgeSeconds": 900,
+    "maxDeploymentCount": 16,
+    "maxManagedBytes": 536870912
+}

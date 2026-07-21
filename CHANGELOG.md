@@ -38,6 +38,19 @@ This project adheres to Semantic Versioning.
   false action result, and coalesced state events during command dispatch;
   recorded the successful live capability retests and the bounded caveat for
   rapid superseding Home Assistant commands.
+- Added a restricted Windows deployment channel with a hash-pinned OpenSSH
+  forced-command gateway, deterministic bounded deployment packages, fresh
+  preflight requirement, atomic bootstrap selection and coordinated rollback.
+- Added one operating-system-neutral SSH client contract for macOS and suitable
+  iPhone/iPad terminals without requiring PowerShell on Apple devices.
+- Hardened the deployment channel with serialized mutations, persistent staging
+  budgets and machine-scoped DPAPI credentials that remain usable without an
+  interactive Windows profile.
+- Made machine-scoped credential handling explicit for Windows PowerShell 5.1
+  and added sanitized bootstrap failure-step diagnostics plus rollback of all
+  replaced channel artifacts and byte-exact decompression limits.
+- Recorded the successful restricted deployment-channel security gate,
+  including deep readiness, rejection tests and documented residual risks.
 
 ## [0.2.0] - 2026-07-20
 
