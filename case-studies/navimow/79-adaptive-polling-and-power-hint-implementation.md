@@ -1,8 +1,8 @@
 # 79 Adaptive Polling and Power Hint Implementation
 
 **Case study:** Navimow native IP-Symcon module
-**Status:** Implemented, published and installed; passive live transition pending
-**Date:** 2026-07-14
+**Status:** Implemented, published, installed and passively observed
+**Date:** 2026-07-14 through 2026-07-22
 **Scope:** Adaptive REST polling and a private installation-specific wake hint
 
 ## 1. Purpose
@@ -376,8 +376,9 @@ removed from Symcon.
 
 ## 16. Remaining Live Observation
 
-The implementation is operational. The next normal scheduled departure should
-be observed passively to confirm the complete physical path:
+The implementation was operational after installation. The remaining gate was
+to observe a normal scheduled departure passively and confirm this physical
+path:
 
 ```text
 station power low
@@ -392,3 +393,104 @@ station power low
 
 No manual mower command, power-variable write or artificial state transition is
 required for that observation.
+
+## 17. Passive Observation Result
+
+A bounded read-only review on 2026-07-21 found seven complete archived natural
+sequences since installation:
+
+```text
+Running -> Docking -> Docked
+```
+
+The latest sequence correlated with low station power in the departure window
+and high station power in the dock-contact window. The active OnChange hint
+retained its explicit automation action binding, returned its private debounce
+state to Docked at physical contact and changed no Navimow domain variable.
+
+Account and device status remained active. `VehicleState` returned to `Docked`,
+and the account's `PollStatus` timer returned to `300000 ms`. The archived
+`Docking` transition lasted only a little over two minutes and was still
+captured between `Running` and `Docked`.
+
+The historical timer interval while the mower was active cannot be read back
+retrospectively. The `60000 ms` interval is therefore supported by the exact
+installed deterministic scheduling contract, its executable tests and the
+observed active-state sequence, rather than claimed as a contemporaneous timer
+sample. This limitation does not weaken the directly observed power, state and
+final cadence evidence.
+
+The MCP checks reported no transport error, execution error or truncation.
+They created no object, changed no value, executed no mower command and did not
+invoke Wake manually. The passive natural-transition gate is **PASS**.
+
+## 18. Adaptive-Polling Pilot Checkpoint
+
+After the passive gate passed, the canonical and dedicated module READMEs were
+updated with the natural-transition evidence. The dedicated repository delta
+from the directly tested executable commit is exactly:
+
+```text
+M README.md
+```
+
+The runtime tree remains identical to:
+
+```text
+42cbce6e7a966ad419ff9fd53ef26d94d80abe97
+feat: add adaptive status polling
+```
+
+Before publication, the current tree passed:
+
+- REST client and authentication checks;
+- all 33 deterministic pilot harness cases;
+- distribution structure validation;
+- syntax checks for all eight productive PHP files;
+- JSON parsing for all metadata, forms and locales;
+- canonical/publish README byte comparison;
+- staged whitespace validation.
+
+The documentation-only commit was pushed to the dedicated module repository:
+
+```text
+397b4b0199b2caef963ebc542c84dbda9ca5ade8
+docs: record adaptive polling pilot evidence
+```
+
+The following annotated tag was created and pushed:
+
+```text
+pilot-0.1.0.4
+Private pilot 0.1.0.4: adaptive polling
+```
+
+Remote verification returned:
+
+```text
+tag object: c3927714aeb4c69a777026fbac9c0479fc51e06b
+resolved commit: 397b4b0199b2caef963ebc542c84dbda9ca5ade8
+remote main: 397b4b0199b2caef963ebc542c84dbda9ca5ade8
+```
+
+The object and resolved-commit identities of `pilot-0.1.0.1` through
+`pilot-0.1.0.3` remain unchanged. No historical tag was moved or recreated.
+
+The tag is a private-pilot checkpoint, not a public `v*` release, Store
+approval or expansion of the supported command set. A Symcon runtime update is
+not required for this README-only commit; the installed executable commit
+remains the exact live-tested adaptive implementation.
+
+## 19. Decision and Next Gate
+
+**Adaptive polling implementation: PASS.**
+
+**Passive natural-transition observation: PASS.**
+
+**Immutable private-pilot checkpoint: PASS.**
+
+Stop and Start remain disabled. Official SDK issue 22 was still open without a
+comment on 2026-07-22. Under the bounded contact cadence from steps 76 and 78,
+the next external action is one Stop inquiry follow-up no earlier than
+2026-07-26. No Stop capture, API write or implementation is authorized before
+the semantic gate is reopened with new evidence.

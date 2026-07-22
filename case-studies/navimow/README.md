@@ -1,9 +1,10 @@
 # Navimow Native IP-Symcon Module Case Study
 
-**Status:** Adaptive polling published and installed after `pilot-0.1.0.3`; Stop issue 22 remains in its waiting window
+**Status:** Adaptive polling passively verified and published as immutable `pilot-0.1.0.4`; Stop issue 22 remains in its waiting window
 **Scope:** Native IP-Symcon module for Segway Navimow robotic mowers  
 **Implementation state:** The canonical case-study distribution implements
-OAuth, discovery, read-only status, Dock, Pause and published bounded Resume.
+OAuth, discovery, adaptive read-only status polling and bounded Dock, Pause and
+Resume commands.
 
 ## Purpose
 
@@ -96,7 +97,7 @@ template or a general SAEF reference implementation.
 | `76-stop-vendor-and-upstream-clarification-plan.md` | Prepared a privacy-safe official SDK inquiry and response gates without external contact or mower actuation. |
 | `77-stop-vendor-and-upstream-inquiry-execution.md` | Published and independently verified official SDK issue 22 while preserving every Stop safety gate. |
 | `78-stop-vendor-response-and-gate-decision.md` | Classified same-day silence as a pending waiting window rather than support, rejection or mature no-response evidence. |
-| `79-adaptive-polling-and-power-hint-implementation.md` | Separates a private station-power wake hint from API-owned state and implements bounded active-state polling. |
+| `79-adaptive-polling-and-power-hint-implementation.md` | Separates a private station-power wake hint from API-owned state, implements bounded active-state polling, records the passive natural-transition result and publishes immutable `pilot-0.1.0.4`. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
