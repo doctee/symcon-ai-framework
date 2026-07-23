@@ -2,7 +2,7 @@
 
 **Assessment date:** 2026-07-23
 **Target:** `v0.3.0`
-**Current decision:** READY FOR RELEASE COMMIT - NOT TAG-READY
+**Current decision:** TAG-READY - TAG NOT CREATED
 
 ## Summary
 
@@ -14,10 +14,10 @@ Navimow and System Functions evidence.
 
 The current public API is unchanged from v0.2.0. Repository checks pass, the
 generated artifacts are deterministic for framework version `0.3.0`, and the
-consolidated pre-release revision passed GitHub CI. Deployment channel version
-7 has passed its guarded Windows installation, deep probe and bounded rejection
-checks. The release remains intentionally not tag-ready until final clean
-verification and CI on the release preparation revision are complete.
+consolidated pre-release revision and the exact release preparation revision
+passed GitHub CI. Deployment channel version 7 has passed its guarded Windows
+installation, deep probe and bounded rejection checks. All tag-readiness gates
+are complete; the annotated tag and GitHub Release have not yet been created.
 
 ## Scope Reconciliation
 
@@ -55,7 +55,7 @@ release.
 | Dated changelog section | PASS | `[0.3.0] - 2026-07-23` |
 | Release-note extraction | PASS | Release workflow command extracts 108 non-empty v0.3 note lines |
 | Final clean public-tree verification | PASS | Strict Composer validation and full checks pass without `.git`, `private/` or local vendor contents |
-| Release preparation CI | PENDING | Commit, push and require successful GitHub Actions |
+| Release preparation CI | PASS | GitHub Actions CI run 43 passed on revision `870f70e` |
 | Annotated `v0.3.0` tag | PENDING | Create only after every preceding gate passes |
 
 ## Version Inventory
@@ -87,7 +87,7 @@ canonical SAEF source and their deterministic provenance.
 
 ## Remaining Sequence
 
-1. Commit and push the release preparation changes.
+1. Commit and push this final tag-readiness evidence.
 2. Require successful GitHub Actions on that exact revision.
 3. Create the annotated `v0.3.0` tag and verify GitHub release publication.
 

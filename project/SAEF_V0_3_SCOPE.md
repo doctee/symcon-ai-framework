@@ -1,6 +1,6 @@
 # SAEF v0.3 Scope
 
-**Status:** Confirmed release scope; readiness gates open
+**Status:** Confirmed release scope; tag-readiness gates passed
 **Target:** `v0.3.0`
 **Decision date:** 2026-07-21
 **Readiness review:** 2026-07-23
