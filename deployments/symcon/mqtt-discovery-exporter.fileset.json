@@ -1,7 +1,7 @@
 {
     "formatVersion": 1,
     "name": "saef-mqtt-discovery-exporter",
-    "entry": "case-studies/mqtt-discovery-exporter/candidate/MqttDiscoveryExporterRuntime.php",
+    "entry": "case-studies/mqtt-discovery-exporter/candidate/MqttDiscoveryExporterFileset.php",
     "phpMinimum": "8.2",
     "outputDirectory": "dist/symcon/saef-mqtt-discovery-exporter",
     "functionExports": [
@@ -14,6 +14,7 @@
         "SAEF_EnsureErrorRingBufferVariable",
         "SAEF_EnsureInstance",
         "SAEF_EnsureRegistryVariable",
+        "SAEF_EnsureScript",
         "SAEF_EnsureStatisticsVariables",
         "SAEF_EnsureTriggeredScriptEvent",
         "SAEF_EnsureVariable",

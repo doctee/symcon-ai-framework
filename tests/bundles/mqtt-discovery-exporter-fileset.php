@@ -48,7 +48,7 @@ try {
         512,
         JSON_THROW_ON_ERROR
     );
-    assertFilesetSame(12, count($sourceMap['orderedSources'] ?? []), 'Source closure size differs.');
+    assertFilesetSame(14, count($sourceMap['orderedSources'] ?? []), 'Source closure size differs.');
     foreach ($sourceMap['orderedSources'] as $sourceEntry) {
         $sourcePath = $sourceEntry['path'] ?? null;
         if (!is_string($sourcePath)) {
@@ -71,6 +71,7 @@ try {
     require_once __DIR__ . '/../mqtt-discovery-exporter/DiagnosticsFakeSymconRuntime.php';
     require_once $bootstrapPath;
     assertFilesetSame(true, function_exists('SAEF_EnsureCategory'), 'Helper export is unavailable.');
+    assertFilesetSame(true, function_exists('SAEF_EnsureScript'), 'EnsureScript export is unavailable.');
     assertFilesetSame(true, class_exists(MqttDiscoveryExporterCore::class), 'Core class is unavailable.');
     assertFilesetSame(true, class_exists(MqttDiscoveryExporterRuntime::class), 'Runtime class is unavailable.');
 

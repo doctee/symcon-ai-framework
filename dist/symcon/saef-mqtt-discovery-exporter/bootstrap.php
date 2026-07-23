@@ -14,6 +14,7 @@ foreach ([
     'SAEF_EnsureErrorRingBufferVariable',
     'SAEF_EnsureInstance',
     'SAEF_EnsureRegistryVariable',
+    'SAEF_EnsureScript',
     'SAEF_EnsureStatisticsVariables',
     'SAEF_EnsureTriggeredScriptEvent',
     'SAEF_EnsureVariable',
@@ -59,6 +60,7 @@ foreach ([
     'SAEF_HELPER_ENSURE_CATEGORY',
     'SAEF_HELPER_ENSURE_EVENT',
     'SAEF_HELPER_ENSURE_INSTANCE',
+    'SAEF_HELPER_ENSURE_SCRIPT',
     'SAEF_HELPER_ENSURE_VARIABLE',
     'SAEF_HELPER_ERROR_RING_BUFFER',
     'SAEF_HELPER_REGISTRY',
@@ -78,4 +80,4 @@ if ($saefFilesetConflicts !== []) {
 }
 unset($saefFilesetConflicts, $saefFilesetFunction, $saefFilesetClass, $saefFilesetConstant);
 
-require_once __DIR__ . '/case-studies/mqtt-discovery-exporter/candidate/MqttDiscoveryExporterRuntime.php';
+require_once __DIR__ . '/case-studies/mqtt-discovery-exporter/candidate/MqttDiscoveryExporterFileset.php';
