@@ -46,11 +46,67 @@ This project adheres to Semantic Versioning.
 - Hardened the deployment channel with serialized mutations, persistent staging
   budgets and machine-scoped DPAPI credentials that remain usable without an
   interactive Windows profile.
+- Replaced unreliable forced-command standard-input uploads with ordered,
+  bounded command chunks and added bootstrap-time PowerShell source parsing.
 - Made machine-scoped credential handling explicit for Windows PowerShell 5.1
   and added sanitized bootstrap failure-step diagnostics plus rollback of all
   replaced channel artifacts and byte-exact decompression limits.
-- Recorded the successful restricted deployment-channel security gate,
+- Recorded the successful restricted transport-channel security gate,
   including deep readiness, rejection tests and documented residual risks.
+- Recorded the failed first runtime activation and successful byte-exact
+  rollback; added a mandatory runtime-function manifest contract and a
+  hash-pinned Symcon health probe so ready runlevel alone cannot pass future
+  activations.
+- Identified the activation failure as a candidate-token path mismatch and
+  made `.saef-filesets/<targetDirectoryName>/bootstrap.php` an exact package,
+  staging and preflight contract.
+- Added bounded runtime-health substage diagnostics so failed deployment
+  preflights distinguish probe integrity, execution and result-contract checks
+  without exposing source, paths or exception messages.
+- Corrected Windows PowerShell 5.1 runtime-health contract decoding so a JSON
+  function array is normalized to its elements instead of being counted as one
+  nested pipeline object.
+- Recorded the successful non-activating preflight of the corrected immutable
+  runtime candidate, including exact package-hash reconstruction, 74 preserved
+  global functions and the managed source-mirror contract.
+- Recorded the successful corrected runtime activation, post-restart
+  verification of all 74 preserved functions, independent confirmation of 75
+  active functions and creation of the non-executable SAEF source mirror.
+- Prevented the runtime-mirror provenance loop from overwriting its configured
+  presentation name under Windows PowerShell's case-insensitive variable
+  semantics.
+- Added an optional deployment-managed Symcon source mirror for the active SAEF
+  helper closure, with deterministic fileset provenance, `__halt_compiler()`,
+  pinned ownership, no-op reconciliation, readback verification and mirror-only
+  rollback.
+
+### Changed
+
+- Reconciled the v0.2 release-readiness and Symcon rollout documentation with
+  the published `v0.2.0` tag and the subsequent ControlLight, Navimow and
+  System Functions operational status.
+- Recorded the successful scheduled-execution observation after the second
+  System Functions pilot migration without executing or mutating the caller.
+- Classified the final System Functions pilot call for migration after a
+  read-only target-contract and exact candidate-delta check.
+- Completed the final System Functions pilot migration with exact source
+  read-back, unchanged target and event contracts, and successful subsequent
+  scheduled execution without manual caller execution or device action.
+- Closed the Navimow passive natural-transition gate with bounded power, state
+  and final polling-cadence evidence and no mower command.
+- Closed the v0.2 ControlLight rollout scope at seven fully tested v2 wrappers
+  with an explicit retain decision for 22 heterogeneous legacy wrappers.
+- Defined `v0.3.0` as the proposed next release because the post-v0.2 branch
+  combines a new restricted deployment capability with the MQTT correction.
+- Added `SAEF_EnsureScript()` to both deployable filesets so the optional source
+  mirror can reuse existing object-creation logic after any supported fileset
+  activation.
+- Preserved explicit deployment status when the optional runtime-mirror
+  coordinator cannot start: preflight now fails closed, while a successfully
+  restarted runtime is retained as `activated_mirror_degraded`.
+- Documented the recommended Symcon object layout for framework-owned runtime
+  objects and system-wide MQTT owners while retaining device-specific MQTT
+  objects with their domain owners.
 
 ## [0.2.0] - 2026-07-20
 

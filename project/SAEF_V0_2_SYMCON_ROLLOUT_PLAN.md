@@ -23,8 +23,19 @@ producer tests verified power and brightness commands with compensation.
 Home Assistant verified color-temperature dispatch through the private
 per-entity confirmation contract. Rapid superseding UI commands remain a
 bounded operational caveat and are not evidence of an unbounded loop.
-Selection of the staged final ControlLight fileset remains a separate Gate F
+
+ControlLight uses its hash-addressed current fileset for seven independently
+migrated and fully device-tested v2 wrappers. The other 22 wrappers retain
+their reviewed legacy implementation and `pending` brightness semantics; they
+are not authorized for bulk migration by this plan. This is the closed v0.2
+ControlLight scope. The System Functions pilot completed all three direct
+replacements and now has three SAEF calls with no retained legacy pilot call.
+The final migration and its subsequent regular scheduled execution passed
+bounded read-only verification without manual caller execution or a device
 action.
+Navimow is installed at its recorded adaptive-polling revision, and its passive
+natural-departure observation passed without a mower command or artificial
+state transition.
 
 ## Read-only baseline
 
@@ -61,8 +72,8 @@ part of the activation contract.
 
 The live confirmation correction is an unreleased successor fileset generated
 from the working tree. It is not part of the immutable v0.2.0 table above and
-must be released separately, for example as v0.2.1, after its observation and
-release gates pass.
+must be included in a later release after its observation and release gates
+pass.
 
 The minimal bundle is not an alternative owner once the complete MQTT fileset
 owns the same global functions. It remains migration provenance for existing
@@ -216,8 +227,9 @@ The v0.2 Symcon rollout is complete only when:
 - the final MQTT fileset is the proven global owner after a clean restart;
 - every effective shared helper matches its v0.2 source hash;
 - MQTT postflight and repeated configuration are successful;
-- the final ControlLight fileset is staged and each selected consumer has its
-  own completed migration gate;
+- the current ControlLight fileset is selected by all seven chosen consumers,
+  each completed its own migration gate, and the other 22 wrappers have an
+  explicit retain decision;
 - the Navimow installed identity has been classified as current or separately
   updated;
 - the legacy library and remaining callers have an explicit retain, migrate or

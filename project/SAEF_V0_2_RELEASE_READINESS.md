@@ -2,18 +2,21 @@
 
 **Assessment date:** 2026-07-20
 **Target:** `v0.2.0`
-**Current decision:** TAG-READY
+**Publication date:** 2026-07-20
+**Current decision:** RELEASED
 
 ## Summary
 
-The v0.2 implementation and documentation baseline passes the repository's
-local engineering gates. The final `0.2.0` identity and changelog date are set,
-a clean checkout of commit `fa76fc8` passes the complete local gate, and GitHub
-CI passed against final release revision `4c6a930`. The release is ready for its
-annotated tag.
+The v0.2 implementation and documentation baseline passed the repository's
+local engineering gates. The final `0.2.0` identity and changelog date were
+set, a clean checkout of commit `fa76fc8` passed the complete local gate, and
+GitHub CI passed against pre-tag release revision `4c6a930`. The annotated
+`v0.2.0` tag points to release revision `be193aa`; its GitHub publication
+workflow completed successfully.
 
-This decision separates implementation quality from publication state. It does
-not invalidate the completed helper, fileset or live-system engineering work.
+This record separates implementation quality from publication state. The
+completed publication does not invalidate the helper, fileset or live-system
+engineering evidence collected before the tag.
 All ten change-inventory cohorts have received an offline review. Cohorts 1
 through 9 are represented by 13 focused Conventional Commits; this report and
 the changelog form the separate release-metadata commit. The final identity and
@@ -41,6 +44,8 @@ regenerated artifacts are isolated in the subsequent release commit.
 | Reviewable Git history | PASS | Focused Conventional Commits follow the documented cohort dependency order |
 | Local clean checkout | PASS | Fresh worktree at `fa76fc8`, lockfile install, `composer validate --strict` and `make check` |
 | GitHub CI | PASS | Run #36 passed against final release revision `4c6a930` |
+| Annotated release tag | PASS | `v0.2.0` points to release revision `be193aa` |
+| GitHub publication | PASS | The release workflow published `v0.2.0` on 2026-07-20 |
 
 ## Completed Preparation
 
@@ -55,12 +60,14 @@ regenerated artifacts are isolated in the subsequent release commit.
 7. Added the Composer lock file and passed the complete gate from a fresh
    checkout of commit `fa76fc8`.
 8. Pushed final release revision `4c6a930` and confirmed GitHub CI run #36.
+9. Created annotated tag `v0.2.0` at release revision `be193aa`.
+10. Confirmed successful GitHub release publication from that tag.
 
-## Remaining Release Sequence
+## Publication Outcome
 
-1. Create the annotated `v0.2.0` tag.
-2. Verify that `.github/workflows/release.yml` extracts the v0.2.0 changelog
-    section and creates the intended GitHub release.
+The intended release sequence is complete. The published `v0.2.0` artifact is
+immutable; later MQTT confirmation corrections and the restricted Windows
+deployment channel remain post-release work under `[Unreleased]`.
 
 ## Release Notes Priorities
 
@@ -78,6 +85,6 @@ listed report by report.
 
 ## Exit Criteria
 
-All release-readiness gates are closed. The annotated `v0.2.0` tag must point
-to the final revision that also passes CI; a successful release workflow then
-provides the publication evidence.
+All release-readiness and publication gates are closed. The annotated
+`v0.2.0` tag, successful release workflow and published GitHub release provide
+the final publication evidence.

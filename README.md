@@ -69,6 +69,7 @@ Important current artifacts include:
 - `project/SAEF_V0_2_PUBLIC_API_AUDIT.md`
 - `project/SAEF_V0_2_CHANGE_INVENTORY.md`
 - `project/SAEF_V0_2_RELEASE_READINESS.md`
+- `project/SAEF_V0_3_SCOPE.md`
 - `project/SAEF_DEPLOYMENT_CHANNEL_SECURITY_GATE.md`
 - `adr/ADR-0005-generate-symcon-helper-bundles.md`
 - `bundles/symcon/ensure-variable.bundle.json`
@@ -89,6 +90,8 @@ Important current artifacts include:
 - `adr/ADR-0006-managed-symcon-runtime-mirrors.md`
 - `adr/ADR-0007-use-restricted-windows-deployment-channel.md`
 - `deployments/symcon/windows/Invoke-SaefDeploymentGateway.ps1`
+- `deployments/symcon/windows/Invoke-SaefRuntimeMirror.ps1`
+- `deployments/symcon/windows/SaefRuntimeSourceMirror.php`
 - `deployments/symcon/windows/saef-deploy`
 - `references/RI-001-idempotent-configuration-script.md`
 - `references/RI-002-runtime-diagnostics-internal-state.md`
@@ -133,13 +136,16 @@ Statistics and bounded error ring buffers; `RI-002` demonstrates their
 composition.
 
 The clean-checkout and CI gates in
-`project/SAEF_V0_2_RELEASE_READINESS.md` are complete. The release remains
-untagged until the annotated `v0.2.0` tag starts the publication workflow.
+`project/SAEF_V0_2_RELEASE_READINESS.md` are complete. Version `v0.2.0` was
+published on 2026-07-20 from the annotated tag at release revision `be193aa`.
+The current `main` branch contains subsequent unreleased work.
 
 Post-v0.2 development includes a restricted Windows deployment channel. It
 uses a hash-pinned OpenSSH forced command on Windows and the same standard SSH
 protocol from macOS or a suitable iPhone/iPad terminal; it does not expose a
-general remote PowerShell session.
+general remote PowerShell session. Because this is a material new framework
+capability in addition to the MQTT correction, `project/SAEF_V0_3_SCOPE.md`
+classifies `v0.3.0` as the next recommended release target.
 
 ## Licensing
 
