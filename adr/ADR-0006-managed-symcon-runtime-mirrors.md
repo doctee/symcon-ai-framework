@@ -44,10 +44,17 @@ The contract is:
 9. Native or third-party console reference-search functions may be used as
    feature-detected acceptance probes. Undocumented functions are not runtime
    dependencies.
+10. Reconciliation executed through `IPS_RunScriptTextWait` must explicitly
+    load its hash-verified helper closure. That isolated script context must not
+    be assumed to inherit functions loaded through `System.Locals`.
 
-The first implementation remains local to the ControlLight case study. It may
-be promoted to a public SAEF helper only after a second independent use case has
-validated the same contract and the common API has been reviewed.
+Implementations remain local to their ownership boundary. ControlLight mirrors
+one case-study runtime plus a private reference index. The restricted
+deployment channel mirrors the verified helper-source closure of an activated
+fileset and reconciles it automatically after a successful restart. The second
+use case validates the common principles but has a different index and payload
+contract, so no public SAEF mirror helper is introduced without a separate API
+review.
 
 ## Rationale
 
@@ -57,9 +64,9 @@ the small preamble gives Symcon's reference tooling explicit numeric references
 to index. Hash pinning, readback and rollback keep generation and deployment
 auditable.
 
-Keeping the first provisioner local follows Reuse Before Extend. One successful
-pilot establishes feasibility; it does not yet prove a generally stable helper
-interface.
+Keeping both provisioners local follows Reuse Before Extend. Repeated principles
+do not by themselves prove that their differing source-selection and indexing
+contracts should share a generally stable helper interface.
 
 ## Consequences
 
@@ -98,8 +105,9 @@ path.
 
 ### Add a public helper immediately
 
-Rejected until a second independent implementation demonstrates a recurring,
-stable contract.
+Rejected after comparing two independent implementations: their common safety
+rules are stable, but their source-selection and index contracts are not one
+public responsibility.
 
 ## Related
 
@@ -107,4 +115,5 @@ stable contract.
 - `knowledge/EK-007-managed-runtime-mirrors.md`
 - `case-studies/control-light/30-runtime-mirror-reference-search-pilot.md`
 - `case-studies/control-light/31-managed-runtime-mirror-generator.md`
+- `deployments/symcon/windows/README.md`
 - `adr/ADR-0005-generate-symcon-helper-bundles.md`

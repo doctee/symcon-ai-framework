@@ -18,12 +18,14 @@ function assertDeploymentChannel(bool $condition, string $message): void
 /**
  * @return array{exitCode: int, stdout: string, stderr: string}
  */
-function runDeploymentChannelProcess(array $command): array
+function runDeploymentChannelProcess(array $command, ?array $environment = null): array
 {
     $process = proc_open(
         $command,
         [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
-        $pipes
+        $pipes,
+        null,
+        $environment
     );
     if (!is_resource($process)) {
         failDeploymentChannel('Cannot start deployment channel test process.');
@@ -63,6 +65,9 @@ function removeDeploymentChannelTree(string $path): void
 $root = dirname(__DIR__, 2);
 $gatewayPath = $root . '/deployments/symcon/windows/Invoke-SaefDeploymentGateway.ps1';
 $restartPath = $root . '/deployments/symcon/windows/Invoke-SaefSymconRestart.ps1';
+$healthProbePath = $root . '/deployments/symcon/windows/SaefRuntimeHealthProbe.php';
+$mirrorCoordinatorPath = $root . '/deployments/symcon/windows/Invoke-SaefRuntimeMirror.ps1';
+$mirrorReconcilerPath = $root . '/deployments/symcon/windows/SaefRuntimeSourceMirror.php';
 $initializerPath = $root . '/deployments/symcon/windows/Initialize-SaefDeploymentChannel.ps1';
 $clientPath = $root . '/deployments/symcon/windows/saef-deploy';
 $policyExamplePath = $root . '/deployments/symcon/windows/deployment-channel-policy.example.json';
@@ -71,19 +76,29 @@ $checksumPath = $root . '/deployments/symcon/windows/SHA256SUMS';
 
 $gateway = file_get_contents($gatewayPath);
 $restart = file_get_contents($restartPath);
+$healthProbe = file_get_contents($healthProbePath);
+$mirrorCoordinator = file_get_contents($mirrorCoordinatorPath);
+$mirrorReconciler = file_get_contents($mirrorReconcilerPath);
 $initializer = file_get_contents($initializerPath);
 $client = file_get_contents($clientPath);
 $policy = json_decode((string) file_get_contents($policyExamplePath), true, flags: JSON_THROW_ON_ERROR);
 assertDeploymentChannel(is_string($gateway), 'Deployment gateway is unreadable.');
 assertDeploymentChannel(is_string($restart), 'Restart coordinator is unreadable.');
+assertDeploymentChannel(is_string($healthProbe), 'Runtime health probe is unreadable.');
+assertDeploymentChannel(is_string($mirrorCoordinator), 'Runtime mirror coordinator is unreadable.');
+assertDeploymentChannel(is_string($mirrorReconciler), 'Runtime mirror reconciler is unreadable.');
 assertDeploymentChannel(is_string($initializer), 'Deployment channel initializer is unreadable.');
 assertDeploymentChannel(is_string($client), 'Deployment client is unreadable.');
 assertDeploymentChannel(is_array($policy), 'Deployment policy example is invalid.');
+assertDeploymentChannel(
+    str_contains($initializer, 'Assert-PowerShellSourceSyntax')
+        && str_contains($initializer, '[Management.Automation.Language.Parser]::ParseFile'),
+    'Deployment initializer does not parse-check its PowerShell sources.'
+);
 
 $requiredGatewayFragments = [
     "@('probe', 'stage', 'preflight', 'activate', 'status')",
     '[string] $env:SSH_ORIGINAL_COMMAND',
-    '[Console]::OpenStandardInput()',
     'maxPackageBytes',
     'maxExpandedBytes',
     'maxFileCount',
@@ -91,6 +106,17 @@ $requiredGatewayFragments = [
     "@('127.0.0.1', 'localhost', '::1')",
     'expectedRestartCoordinatorSha256',
     'expectedRestartPolicySha256',
+    'expectedRuntimeMirrorCoordinatorSha256',
+    'expectedRuntimeMirrorReconcilerSha256',
+    'Invoke-RuntimeMirrorCoordinator',
+    'runtime-source-mirror.local.json',
+    'mirrorFailureCode',
+    'allowedMirrorFailureCodes',
+    'restartFailedCheck',
+    'runtimeHealthCheck',
+    'allowedRuntimeHealthChecks',
+    "Outcome 'activated_mirror_degraded'",
+    'runtimeActivated = $true',
     'Get-TokenReplacement',
     'Bootstrap tokens must have equal byte length.',
     'Bootstrap must contain exactly one active token.',
@@ -101,12 +127,28 @@ $requiredGatewayFragments = [
     'Runtime readiness probe failed.',
     '-ExpectedActiveSha256 (Get-Sha256 -Path $probeBootstrapPath)',
     'Get-ManagedDeploymentUsage',
+    'Assert-RuntimeHealthContract',
+    'Get-ManagedFilesetBootstrapToken',
+    'Candidate token does not select the managed fileset bootstrap.',
+    'Runtime health function contract is invalid.',
     'Managed deployment count reached policy.',
     'Managed deployment storage would exceed policy.',
     'Read-BoundedStreamBytes',
     'Get-BoundedStreamSha256',
     'Copy-BoundedStream',
+    "'stage_transfer_hash'",
+    "'stage_archive_contract'",
+    "'stage_entry_hashes'",
+    'failureCode = $script:failureCode',
     'Stream exceeded its declared byte length.',
+    'Package byte count is outside policy.',
+    'Start-PackageUpload',
+    'Add-PackageUploadChunk',
+    "-eq 'begin'",
+    "-eq 'chunk'",
+    "-eq 'commit'",
+    '$UploadChunkBytes = 4096',
+    'Another package upload is active.',
     '$manifestFilePaths.ContainsKey($relative)',
     'Deployment requires a fresh successful preflight.',
     "Outcome 'restart_preflight_failed_rolled_back'",
@@ -122,6 +164,10 @@ foreach ($requiredGatewayFragments as $fragment) {
         "Required gateway contract fragment is missing: {$fragment}"
     );
 }
+assertDeploymentChannel(
+    substr_count($gateway, '$mirrorExit = -1') === 2,
+    'Gateway does not contain both bounded runtime-mirror launch failure paths.'
+);
 
 $forbiddenGatewayPatterns = [
     '/\bInvoke-Expression\b/i',
@@ -141,8 +187,63 @@ foreach ($forbiddenGatewayPatterns as $pattern) {
     );
 }
 assertDeploymentChannel(
+    !str_contains($gateway, '[Console]::OpenStandardInput()'),
+    'Gateway still depends on Windows OpenSSH standard-input forwarding.'
+);
+assertDeploymentChannel(
     str_contains($gateway, '$PolicyPath = Join-Path $PSScriptRoot \'deployment-channel.local.json\''),
     'Gateway policy path is not resolved after parameter binding.'
+);
+
+foreach (
+    [
+        "'IPS_RunScriptTextWait'",
+        'Import-MachineCredential',
+        'ExpectedReconcilerSha256',
+        'Assert-MirrorOwnership',
+        '$provenanceName',
+        '$maximumParentChildren = 4096',
+        "-Method 'IPS_GetChildrenIDs'",
+        "failureCode = 'mirror_ownership'",
+        'Existing runtime mirror cannot be adopted without pinned deployment state.',
+        '[Security.Cryptography.DataProtectionScope]::LocalMachine',
+        'RPC URI must use an HTTP loopback endpoint.',
+    ] as $fragment
+) {
+    assertDeploymentChannel(
+        str_contains($mirrorCoordinator, $fragment),
+        "Runtime mirror coordinator fragment is missing: {$fragment}"
+    );
+}
+foreach (['/\bInvoke-Expression\b/i', '/\biex\b/i', '/\bSet-ExecutionPolicy\b/i'] as $pattern) {
+    assertDeploymentChannel(
+        preg_match($pattern, $mirrorCoordinator) !== 1,
+        "Forbidden runtime mirror coordinator pattern found: {$pattern}"
+    );
+}
+assertDeploymentChannel(
+    !str_contains($mirrorCoordinator, '$env:SSH_ORIGINAL_COMMAND'),
+    'Runtime mirror coordinator consumes client command text.'
+);
+assertDeploymentChannel(
+    !str_contains($mirrorCoordinator, "-Method 'IPS_GetObjectIDByIdent'"),
+    'Runtime mirror ownership probe uses warning-prone direct Ident lookup.'
+);
+assertDeploymentChannel(
+    str_contains($mirrorCoordinator, '-Value ([string] $state.mirrorSha256))) {'),
+    'Runtime mirror state validation does not close its PowerShell condition.'
+);
+assertDeploymentChannel(
+    str_contains($mirrorReconciler, '__halt_compiler();'),
+    'Runtime mirror payload is not protected by __halt_compiler().'
+);
+assertDeploymentChannel(
+    str_contains($mirrorReconciler, 'SAEF_EnsureScript'),
+    'Runtime mirror does not reuse SAEF_EnsureScript().'
+);
+assertDeploymentChannel(
+    str_contains($mirrorReconciler, "require_once \$fileset['ensureScriptPath'];"),
+    'Runtime mirror does not load its hash-verified EnsureScript closure in an isolated script context.'
 );
 assertDeploymentChannel(
     !str_contains($gateway, '$PolicyPath = (Join-Path $PSScriptRoot'),
@@ -187,6 +288,9 @@ foreach (
         'Deployment account must be a local administrator.',
         '$deploymentAclIdentity = \'*\' + $deploymentAccount.SID.Value',
         'Assert-SourceChecksums',
+        "'Invoke-SaefRuntimeMirror.ps1'",
+        "'SaefRuntimeSourceMirror.php'",
+        'runtimeMirrorEnabled = $RuntimeMirrorParentID -gt 0',
         'SAEF deployment SSH block is malformed.',
         '$saefBlockRegex.Replace($sshdConfig, \'\', 1)',
         'repairRequired',
@@ -241,7 +345,9 @@ foreach (
         '-o ExitOnForwardFailure=yes',
         '-o StrictHostKeyChecking=yes',
         'ssh -T',
-        'stage $package_hash',
+        'stage begin $package_hash $package_bytes',
+        'stage chunk $package_hash $chunk_index $chunk',
+        'stage commit $package_hash',
     ] as $fragment
 ) {
     assertDeploymentChannel(str_contains($client, $fragment), "Client security fragment is missing: {$fragment}");
@@ -261,6 +367,18 @@ $requiredPolicyKeys = [
     'expectedRestartCoordinatorSha256',
     'restartPolicyPath',
     'expectedRestartPolicySha256',
+    'runtimeMirrorEnabled',
+    'runtimeMirrorCoordinatorPath',
+    'expectedRuntimeMirrorCoordinatorSha256',
+    'runtimeMirrorReconcilerPath',
+    'expectedRuntimeMirrorReconcilerSha256',
+    'runtimeMirrorParentID',
+    'runtimeMirrorIdent',
+    'runtimeMirrorName',
+    'runtimeMirrorPosition',
+    'runtimeHealthProbeEnabled',
+    'runtimeHealthProbeScriptID',
+    'expectedRuntimeHealthProbeSha256',
     'credentialPath',
     'rpcUri',
     'serviceName',
@@ -294,7 +412,10 @@ assertDeploymentChannel(is_array($checksumLines), 'Windows deployment checksums 
 $expectedChecksumFiles = [
     'Initialize-SaefDeploymentChannel.ps1',
     'Invoke-SaefDeploymentGateway.ps1',
+    'Invoke-SaefRuntimeMirror.ps1',
     'Invoke-SaefSymconRestart.ps1',
+    'SaefRuntimeHealthProbe.php',
+    'SaefRuntimeSourceMirror.php',
     'deployment-channel-policy.example.json',
     'deployment-package-plan.example.json',
     'restart-policy.json',
@@ -324,11 +445,66 @@ assertDeploymentChannel(
 $temporaryRoot = sys_get_temp_dir() . '/saef-deployment-channel-' . bin2hex(random_bytes(8));
 $filesetRoot = $temporaryRoot . '/fileset';
 try {
+    $fakeBin = $temporaryRoot . '/bin';
+    mkdir($fakeBin, 0700, true);
+    $sshLogPath = $temporaryRoot . '/ssh-commands.log';
+    $fakeSshPath = $fakeBin . '/ssh';
+    file_put_contents(
+        $fakeSshPath,
+        "#!/bin/sh\nfor last do :; done\nprintf '%s\\n' \"\$last\" >> \"\$SAEF_SSH_LOG\"\n"
+    );
+    chmod($fakeSshPath, 0700);
+    $transportPackagePath = $temporaryRoot . '/transport-package.zip';
+    $transportBytes = str_repeat("SAEF-chunk-transport\0", 500);
+    file_put_contents($transportPackagePath, $transportBytes);
+    $transport = runDeploymentChannelProcess(
+        ['/bin/sh', $clientPath, 'saef-test', 'stage', $transportPackagePath],
+        [
+            'PATH' => $fakeBin . ':' . (string) getenv('PATH'),
+            'SAEF_SSH_LOG' => $sshLogPath,
+        ]
+    );
+    assertDeploymentChannel(
+        $transport['exitCode'] === 0,
+        'Chunked deployment client failed: ' . trim($transport['stderr'])
+    );
+    $transportCommands = file($sshLogPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    assertDeploymentChannel(is_array($transportCommands), 'Cannot read captured deployment commands.');
+    $transportHash = hash('sha256', $transportBytes);
+    $expectedChunkCount = (int) ceil(strlen($transportBytes) / 4096);
+    assertDeploymentChannel(
+        $transportCommands[0] === "stage begin {$transportHash} " . strlen($transportBytes),
+        'Chunked deployment begin command is invalid.'
+    );
+    assertDeploymentChannel(
+        count($transportCommands) === $expectedChunkCount + 2,
+        'Chunked deployment emitted an unexpected command count.'
+    );
+    $reconstructedBytes = '';
+    for ($index = 0; $index < $expectedChunkCount; $index++) {
+        $parts = explode(' ', $transportCommands[$index + 1], 5);
+        assertDeploymentChannel(
+            count($parts) === 5 && $parts[0] === 'stage' && $parts[1] === 'chunk'
+                && $parts[2] === $transportHash && $parts[3] === (string) $index,
+            'Chunked deployment command sequence is invalid.'
+        );
+        $decodedChunk = base64_decode($parts[4], true);
+        assertDeploymentChannel($decodedChunk !== false, 'Chunked deployment contains invalid Base64 data.');
+        $reconstructedBytes .= $decodedChunk;
+    }
+    assertDeploymentChannel($reconstructedBytes === $transportBytes, 'Chunked deployment changed package bytes.');
+    assertDeploymentChannel(
+        $transportCommands[count($transportCommands) - 1] === "stage commit {$transportHash}",
+        'Chunked deployment commit command is invalid.'
+    );
+
     mkdir($filesetRoot . '/helpers', 0700, true);
     file_put_contents($filesetRoot . '/bootstrap.php', "<?php\nrequire_once __DIR__ . '/helpers/Example.php';\n");
     file_put_contents($filesetRoot . '/helpers/Example.php', "<?php\nfunction SAEF_Example(): void {}\n");
     $bootstrapPath = $temporaryRoot . '/System.Locals.ips.php';
-    file_put_contents($bootstrapPath, "<?php\nrequire 'saef-old-fileset/bootstrap.php';\n");
+    $oldToken = '.oldx-filesets/saef-old-fileset/bootstrap.php';
+    $newToken = '.saef-filesets/saef-new-fileset/bootstrap.php';
+    file_put_contents($bootstrapPath, "<?php\nrequire '{$oldToken}';\n");
 
     $packages = [];
     for ($index = 0; $index < 2; $index++) {
@@ -343,8 +519,12 @@ try {
                     'targetDirectoryName' => 'saef-new-fileset',
                     'filesetPath' => $filesetRoot,
                     'bootstrapSnapshotPath' => $bootstrapPath,
-                    'oldToken' => 'saef-old-fileset',
-                    'newToken' => 'saef-new-fileset',
+                    'oldToken' => $oldToken,
+                    'newToken' => $newToken,
+                    'requiredRuntimeFunctions' => [
+                        'ExampleRequiredFunction',
+                        'SAEF_EnsureVariable',
+                    ],
                     'outputPath' => $packagePath,
                 ],
                 JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
@@ -365,6 +545,20 @@ try {
     assertDeploymentChannel(
         file_get_contents($packages[0]) === file_get_contents($packages[1]),
         'Independent deployment package builds are not deterministic.'
+    );
+    $invalidPlanPath = $temporaryRoot . '/invalid-token-plan.local.json';
+    $invalidPackagePath = $temporaryRoot . '/invalid-token.zip';
+    $invalidPlan = json_decode((string) file_get_contents($planPath), true, flags: JSON_THROW_ON_ERROR);
+    $invalidPlan['newToken'] = 'x.saef-filesets/saef-new-fileset/bootstrap.php';
+    $invalidPlan['outputPath'] = $invalidPackagePath;
+    file_put_contents(
+        $invalidPlanPath,
+        json_encode($invalidPlan, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n"
+    );
+    $invalidBuild = runDeploymentChannelProcess([PHP_BINARY, $builderPath, $invalidPlanPath]);
+    assertDeploymentChannel(
+        $invalidBuild['exitCode'] !== 0 && !file_exists($invalidPackagePath),
+        'Builder accepted a candidate token outside the exact managed fileset path contract.'
     );
     $archive = new ZipArchive();
     assertDeploymentChannel($archive->open($packages[0]) === true, 'Cannot open generated deployment package.');
@@ -387,9 +581,16 @@ try {
         assertDeploymentChannel(
             $manifest['bootstrap']['expectedCandidateSha256'] === hash(
                 'sha256',
-                str_replace('saef-old-fileset', 'saef-new-fileset', (string) file_get_contents($bootstrapPath))
+                str_replace($oldToken, $newToken, (string) file_get_contents($bootstrapPath))
             ),
             'Manifest candidate bootstrap hash is invalid.'
+        );
+        assertDeploymentChannel(
+            $manifest['runtimeHealth']['requiredFunctions'] === [
+                'ExampleRequiredFunction',
+                'SAEF_EnsureVariable',
+            ],
+            'Manifest runtime health contract is invalid.'
         );
     } finally {
         $archive->close();

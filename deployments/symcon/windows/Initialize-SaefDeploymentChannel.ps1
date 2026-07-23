@@ -35,6 +35,25 @@ param(
     [string] $ServiceName = 'IPSServer',
 
     [Parameter()]
+    [ValidateRange(0, 2147483647)]
+    [int] $RuntimeMirrorParentID = 0,
+
+    [Parameter()]
+    [ValidatePattern('^[A-Za-z0-9_]{1,128}$')]
+    [string] $RuntimeMirrorIdent = 'SAEF_RUNTIME_SOURCE_MIRROR',
+
+    [Parameter()]
+    [ValidateLength(1, 255)]
+    [string] $RuntimeMirrorName = 'SAEF Runtime Source Mirror',
+
+    [Parameter()]
+    [int] $RuntimeMirrorPosition = 90,
+
+    [Parameter()]
+    [ValidateRange(0, 2147483647)]
+    [int] $RuntimeHealthProbeScriptID = 0,
+
+    [Parameter()]
     [string] $StatusPath
 )
 
@@ -112,7 +131,10 @@ function Assert-SourceChecksums {
     }
     $required = @(
         'Invoke-SaefDeploymentGateway.ps1',
+        'Invoke-SaefRuntimeMirror.ps1',
         'Invoke-SaefSymconRestart.ps1',
+        'SaefRuntimeHealthProbe.php',
+        'SaefRuntimeSourceMirror.php',
         'restart-policy.json'
     )
     $checksums = @{}
@@ -129,6 +151,27 @@ function Assert-SourceChecksums {
         $actual = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
         if ($actual -ne $checksums[$name]) {
             throw [System.InvalidOperationException]::new('Windows deployment artifact hash mismatch.')
+        }
+    }
+}
+
+function Assert-PowerShellSourceSyntax {
+    foreach ($name in @(
+        'Initialize-SaefDeploymentChannel.ps1',
+        'Invoke-SaefDeploymentGateway.ps1',
+        'Invoke-SaefRuntimeMirror.ps1',
+        'Invoke-SaefSymconRestart.ps1'
+    )) {
+        $tokens = $null
+        $parseErrors = $null
+        $path = Join-Path $PSScriptRoot $name
+        [Management.Automation.Language.Parser]::ParseFile(
+            $path,
+            [ref] $tokens,
+            [ref] $parseErrors
+        ) | Out-Null
+        if (@($parseErrors).Count -ne 0) {
+            throw [System.InvalidOperationException]::new("PowerShell source syntax is invalid: $name")
         }
     }
 }
@@ -250,6 +293,8 @@ try {
     $deploymentAclIdentity = '*' + $deploymentAccount.SID.Value
     $failedStep = 'source_checksums'
     Assert-SourceChecksums
+    $failedStep = 'source_syntax'
+    Assert-PowerShellSourceSyntax
 
     if ([string]::IsNullOrWhiteSpace($ManagedFilesetRoot)) {
         $ManagedFilesetRoot = Join-Path $SymconScriptsRoot '.saef-filesets'
@@ -347,7 +392,10 @@ try {
     $gatewayPath = Join-Path $InstallRoot 'Invoke-SaefDeploymentGateway.ps1'
     $runtimeArtifactPaths = @(
         $gatewayPath,
+        (Join-Path $InstallRoot 'Invoke-SaefRuntimeMirror.ps1'),
         (Join-Path $InstallRoot 'Invoke-SaefSymconRestart.ps1'),
+        (Join-Path $InstallRoot 'SaefRuntimeHealthProbe.php'),
+        (Join-Path $InstallRoot 'SaefRuntimeSourceMirror.php'),
         (Join-Path $InstallRoot 'restart-policy.json')
     )
     $failedStep = 'rollback_snapshot'
@@ -367,7 +415,14 @@ try {
     Set-RestrictedAcl -Path $StateRoot -Identity $deploymentAclIdentity -IdentityRights '(OI)(CI)F'
 
     $failedStep = 'runtime_artifacts'
-    foreach ($name in @('Invoke-SaefDeploymentGateway.ps1', 'Invoke-SaefSymconRestart.ps1', 'restart-policy.json')) {
+    foreach ($name in @(
+        'Invoke-SaefDeploymentGateway.ps1',
+        'Invoke-SaefRuntimeMirror.ps1',
+        'Invoke-SaefSymconRestart.ps1',
+        'SaefRuntimeHealthProbe.php',
+        'SaefRuntimeSourceMirror.php',
+        'restart-policy.json'
+    )) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination (Join-Path $InstallRoot $name) -Force
     }
     [IO.File]::WriteAllText($credentialPath, $credentialJson, [Text.UTF8Encoding]::new($false))
@@ -384,6 +439,18 @@ try {
         expectedRestartCoordinatorSha256 = (Get-FileHash -LiteralPath (Join-Path $InstallRoot 'Invoke-SaefSymconRestart.ps1') -Algorithm SHA256).Hash.ToLowerInvariant()
         restartPolicyPath = Join-Path $InstallRoot 'restart-policy.json'
         expectedRestartPolicySha256 = (Get-FileHash -LiteralPath (Join-Path $InstallRoot 'restart-policy.json') -Algorithm SHA256).Hash.ToLowerInvariant()
+        runtimeHealthProbeEnabled = $RuntimeHealthProbeScriptID -gt 0
+        runtimeHealthProbeScriptID = $RuntimeHealthProbeScriptID
+        expectedRuntimeHealthProbeSha256 = (Get-FileHash -LiteralPath (Join-Path $InstallRoot 'SaefRuntimeHealthProbe.php') -Algorithm SHA256).Hash.ToLowerInvariant()
+        runtimeMirrorEnabled = $RuntimeMirrorParentID -gt 0
+        runtimeMirrorCoordinatorPath = Join-Path $InstallRoot 'Invoke-SaefRuntimeMirror.ps1'
+        expectedRuntimeMirrorCoordinatorSha256 = (Get-FileHash -LiteralPath (Join-Path $InstallRoot 'Invoke-SaefRuntimeMirror.ps1') -Algorithm SHA256).Hash.ToLowerInvariant()
+        runtimeMirrorReconcilerPath = Join-Path $InstallRoot 'SaefRuntimeSourceMirror.php'
+        expectedRuntimeMirrorReconcilerSha256 = (Get-FileHash -LiteralPath (Join-Path $InstallRoot 'SaefRuntimeSourceMirror.php') -Algorithm SHA256).Hash.ToLowerInvariant()
+        runtimeMirrorParentID = $RuntimeMirrorParentID
+        runtimeMirrorIdent = $RuntimeMirrorIdent
+        runtimeMirrorName = $RuntimeMirrorName
+        runtimeMirrorPosition = $RuntimeMirrorPosition
         credentialPath = $credentialPath
         rpcUri = $RpcUri.AbsoluteUri
         serviceName = $ServiceName

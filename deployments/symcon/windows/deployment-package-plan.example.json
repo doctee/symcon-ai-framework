@@ -4,7 +4,10 @@
     "targetDirectoryName": "saef-example-fileset",
     "filesetPath": "<private-path-to-reviewed-fileset>",
     "bootstrapSnapshotPath": "<private-path-to-byte-exact-bootstrap-snapshot>",
-    "oldToken": "<private-current-equal-length-token>",
-    "newToken": "<private-candidate-equal-length-token-containing-saef-example-fileset>",
+    "oldToken": "<private-current-equal-length-bootstrap-token>",
+    "newToken": ".saef-filesets/saef-example-fileset/bootstrap.php",
+    "requiredRuntimeFunctions": [
+        "ExampleRequiredFunction"
+    ],
     "outputPath": "<private-output-path>.zip"
 }

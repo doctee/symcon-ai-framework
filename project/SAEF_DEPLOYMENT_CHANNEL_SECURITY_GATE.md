@@ -1,12 +1,14 @@
 # SAEF Deployment Channel Security Gate
 
-**Result:** PASS with documented residual risks
+**Result:** Transport security PASS; corrected runtime activation PASS after
+successful rollback of the first candidate
 
-**Date:** 2026-07-21
+**Date:** 2026-07-22
 
 **Scope:** Restricted Windows OpenSSH deployment channel
 
-**Behavior state:** No fileset staging, activation, Symcon restart or device action
+**Behavior state:** Corrected managed fileset active; runtime function contract
+and source mirror verified
 
 ## Scope
 
@@ -18,7 +20,38 @@ outside this repository.
 
 The gate covered source contracts, bounded package handling, local policy,
 account and filesystem restrictions, positive readiness probes and negative
-transport tests. It did not stage or activate a deployment package.
+transport tests. A later extension staged and activated the first real package
+under explicit authorization and exposed the runtime compatibility gap below.
+
+## First Activation Incident
+
+The bounded chunk transport, staging hashes, deployment preflight, controlled
+restart and ready runlevel all passed. The selected bootstrap nevertheless
+caused normal event scripts to lose installation-required global functions.
+Runlevel `10103` therefore proved process readiness but not functional runtime
+compatibility. The optional source mirror degraded independently because its
+isolated execution context did not inherit `System.Locals` functions.
+
+The root cause was an invalid candidate path contract: the package token
+selected `<targetDirectoryName>/bootstrap.php`, while the gateway had staged
+the immutable fileset below `.saef-filesets/<targetDirectoryName>/bootstrap.php`.
+The resulting failed `require` prevented `System.Locals` initialization and
+therefore removed both legacy System Functions and SAEF helper globals from
+normal script contexts.
+
+The operator stopped further rollout, atomically restored the byte-exact
+rollback bootstrap and used the pinned restart coordinator. The restored
+runtime reached the ready runlevel with a new kernel start time. Bounded
+read-only probes confirmed that the affected legacy functions and expected
+SAEF helper functions were available again. No device or MQTT action was part
+of the incident response.
+
+The repository response adds a mandatory bounded
+`requiredRuntimeFunctions` package contract, a hash-pinned side-effect-free
+Symcon health probe, checks before and after activation and after rollback, and
+automatic rollback when process readiness passes but the function contract
+fails. Builder and gateway now also require the exact managed-fileset bootstrap
+token, so this path mismatch is rejected before staging or activation.
 
 ## Windows Boundary
 
@@ -73,11 +106,25 @@ The freshly installed channel passed these external tests:
 | Wrong client key | Public-key authentication rejection | PASS |
 | Invalid package hash | Sanitized rejection without staging | PASS |
 | Missing deployment status | Sanitized rejection | PASS |
+| Ordered bounded package chunks | Exact reconstruction and package hash | PASS |
+| First real package preflight | Restart and mirror preconditions | PASS |
+| First real package activation | Preserve required runtime functions | **FAIL; rolled back** |
+| Corrected managed-path package preflight | Exact target path, 74-function sentinel and mirror preconditions | PASS |
+| Corrected managed-path package activation | Restart, 74-function sentinel, rollback readiness and source mirror | PASS |
 
 The successful probe validated the server-pinned policy, machine credential,
 active bootstrap identity, IP-Symcon service state, authenticated loopback RPC
 and ready runlevel. Responses contained no private paths, credential content or
 exception messages.
+
+The corrected package was staged under a new immutable identity. Its preflight
+passed after the exact managed-fileset path contract and Windows PowerShell 5.1
+array normalization were enforced. Restart readiness, all 74 preserved global
+functions and mirror ownership were verified without activation or restart.
+The separately authorized activation then reached the ready runlevel, passed
+the same runtime contract after restart and created the non-executable source
+mirror. An independent probe found all 75 expected functions, including the
+new `SAEF_EnsureScript()`, and the exact candidate bootstrap hash.
 
 ## Repository Verification
 
@@ -94,8 +141,10 @@ The repository checks cover:
 - deterministic package construction; and
 - restart coordinator policy and state traces.
 
-`make check`, the dedicated deployment-channel test and the restart-coordinator
-test all passed after the live fixes.
+`make check`, the dedicated deployment-channel test, runtime health probe test
+and restart-coordinator test pass after the repository hardening. The corrected
+live activation passed its non-mutating preflight, post-restart compatibility
+gate and independent verification.
 
 ## Residual Risks
 
@@ -113,16 +162,17 @@ test all passed after the live fixes.
 - Mobile use inherits the key storage, host-key verification and local-file
   security of the selected SSH terminal.
 
-These risks are accepted for channel version 1. A future version should reduce
+These risks are accepted for channel version 5. A future version should reduce
 the Windows service-control privilege or add a separate local activation
 authorization mechanism before expanding network exposure.
 
 ## Gate Decision
 
-The restricted deployment channel security gate is **PASS** for supervised SAEF
-use on the reviewed private network. Package staging, preflight and activation
-remain separate gates. The first real package must not be staged or activated
-without its own reviewed manifest and explicit authorization.
+The restricted transport channel is **PASS** for supervised SAEF use on the
+reviewed private network. The first runtime activation remains recorded as
+**FAIL with successful rollback**; the corrected immutable candidate is
+**PASS** after preflight, explicit authorization, post-restart runtime-health
+verification and source-mirror reconciliation.
 
 ## Related Artifacts
 

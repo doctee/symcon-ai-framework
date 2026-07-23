@@ -38,8 +38,10 @@ try {
     }
     assertSafeDeploymentIdentifier($plan['deploymentId']);
     assertSafeDeploymentIdentifier($plan['targetDirectoryName']);
-    if (!str_contains($plan['newToken'], $plan['targetDirectoryName'])) {
-        throw new RuntimeException('New bootstrap token must identify the target directory.');
+    $requiredRuntimeFunctions = validateRequiredRuntimeFunctions($plan['requiredRuntimeFunctions'] ?? null);
+    $expectedNewToken = '.saef-filesets/' . $plan['targetDirectoryName'] . '/bootstrap.php';
+    if ($plan['newToken'] !== $expectedNewToken) {
+        throw new RuntimeException('New bootstrap token must select the managed fileset bootstrap.');
     }
 
     $filesetPath = realpath(resolvePlanPath($planPath, $plan['filesetPath']));
@@ -83,6 +85,9 @@ try {
             'expectedCandidateSha256' => hash('sha256', $candidateBootstrap),
             'oldToken' => $plan['oldToken'],
             'newToken' => $plan['newToken'],
+        ],
+        'runtimeHealth' => [
+            'requiredFunctions' => $requiredRuntimeFunctions,
         ],
         'files' => array_map(
             static fn (array $file): array => [
@@ -163,6 +168,28 @@ function assertPrintableAsciiToken(string $value): void
     if ($value === '' || preg_match('/^[\x20-\x7E]+$/D', $value) !== 1) {
         throw new RuntimeException('Bootstrap token must be printable ASCII.');
     }
+}
+
+/** @return list<string> */
+function validateRequiredRuntimeFunctions(mixed $functions): array
+{
+    if (!is_array($functions) || $functions === [] || count($functions) > 256) {
+        throw new RuntimeException('Required runtime functions must be a bounded non-empty list.');
+    }
+    $validated = [];
+    foreach ($functions as $function) {
+        if (!is_string($function) || preg_match('/^[A-Za-z_][A-Za-z0-9_]{0,127}$/D', $function) !== 1) {
+            throw new RuntimeException('Required runtime function name is invalid.');
+        }
+        $validated[] = $function;
+    }
+    $sorted = $validated;
+    sort($sorted, SORT_STRING);
+    if ($validated !== $sorted || count($validated) !== count(array_unique($validated))) {
+        throw new RuntimeException('Required runtime functions must be sorted and unique.');
+    }
+
+    return $validated;
 }
 
 /**

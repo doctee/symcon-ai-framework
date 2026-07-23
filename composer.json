@@ -44,6 +44,12 @@
         "test:deployment-channel": [
             "@php tests/deployments/windows-deployment-channel.php"
         ],
+        "test:runtime-source-mirror": [
+            "@php tests/deployments/runtime-source-mirror.php"
+        ],
+        "test:runtime-health-probe": [
+            "@php tests/deployments/runtime-health-probe.php"
+        ],
         "test:helpers": [
             "@php tests/helpers/diagnostics.php",
             "@php tests/helpers/ensure-event.php",
@@ -115,6 +121,8 @@
             "@test:control-light-fileset",
             "@test:deployment-restart",
             "@test:deployment-channel",
+            "@test:runtime-source-mirror",
+            "@test:runtime-health-probe",
             "@test:helpers",
             "@test:mqtt-exporter-core",
             "@test:mqtt-exporter-runtime",

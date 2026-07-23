@@ -60,6 +60,15 @@ The contract is:
 13. Package limits are enforced while reading every decompressed stream, not
     only from ZIP header metadata. Installation validates credential protection
     before mutation and restores replaced channel artifacts after later errors.
+14. Forced-command package transfer uses ordered bounded Base64 chunks because
+    Windows OpenSSH did not reliably forward stdin to this `ForceCommand`.
+15. Each deployment declares required global runtime functions. A hash-pinned,
+    side-effect-free Symcon script checks them before activation, after restart
+    and after rollback. Ready runlevel alone is not functional acceptance.
+16. The candidate bootstrap token is exactly the staged fileset's
+    `.saef-filesets/<targetDirectoryName>/bootstrap.php` path relative to the
+    Symcon scripts root. The builder and gateway reject merely name-matching
+    or otherwise divergent paths.
 
 Possession of the transport key does not replace SAEF's operational approval
 gates. Agents still require explicit approval before `activate`.
@@ -89,8 +98,9 @@ client key from choosing arbitrary files, services or credential destinations.
 
 - Windows OpenSSH and a carefully ACL-protected dedicated account require a
   one-time administrative setup.
-- Mobile package upload requires an SSH terminal with local-file redirection;
-  Safari and Apple Shortcuts are not clients for this first version.
+- Mobile package upload requires an SSH terminal that can run the bounded
+  `saef-deploy` chunk client; Safari and Apple Shortcuts are not clients for
+  this first version.
 - The DPAPI credential must be recreated when the Windows host changes.
 - The public repository can verify contracts statically, but the final
   PowerShell parser and OpenSSH configuration checks must run on Windows.

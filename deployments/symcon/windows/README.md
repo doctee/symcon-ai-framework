@@ -86,6 +86,16 @@ The JSON status file is replaced atomically after every phase change. It holds
 only state facts, timestamps and exception types. It deliberately excludes RPC
 credentials, file paths and exception messages.
 
+Runtime-health failures additionally expose one fixed diagnostic substage such
+as `source_hash`, `execution` or `result_contract`. These bounded values locate
+the rejected contract without returning source, function names, paths or error
+messages.
+
+The coordinator explicitly normalizes JSON arrays returned by Windows
+PowerShell 5.1 before counting required functions. This avoids treating a
+deserialized function list as one nested pipeline object while preserving the
+byte-exact contract hash.
+
 ## Transaction boundary
 
 The coordinator controls service restart, readiness verification and optional
@@ -103,6 +113,12 @@ iPhone and iPad.
 The channel consists of:
 
 - `Invoke-SaefDeploymentGateway.ps1`, the Windows forced-command dispatcher;
+- `Invoke-SaefRuntimeMirror.ps1`, the bounded post-activation mirror
+  coordinator;
+- `SaefRuntimeSourceMirror.php`, the hash-pinned deployment-internal mirror
+  reconciler;
+- `SaefRuntimeHealthProbe.php`, the inert, hash-pinned Symcon compatibility
+  sentinel executed around each activation restart;
 - `Initialize-SaefDeploymentChannel.ps1`, the one-time guarded Windows
   bootstrap;
 - `deployment-channel-policy.example.json`, the public policy shape;
@@ -116,22 +132,99 @@ The dispatcher recognizes exactly five commands:
 | Command | Side effect |
 | --- | --- |
 | `probe` | Validates pinned policy, DPAPI credential, active bootstrap, service state and read-only Symcon RPC readiness. |
-| `stage <package-sha256>` | Reads one bounded ZIP from standard input and stages an inactive fileset. |
+| `stage begin|chunk|commit ...` | Transfers one bounded ZIP as ordered fixed-size chunks and stages an inactive fileset only after full hash verification. |
 | `preflight <deployment-id>` | Revalidates every file, bootstrap drift and Symcon readiness without activation. |
 | `activate <deployment-id>` | Requires a fresh preflight, replaces one equal-length bootstrap token and invokes the restart coordinator with rollback. |
 | `status <deployment-id>` | Returns the sanitized bounded status record. |
 
 There is no command for arbitrary PowerShell, arbitrary paths, service names,
 RPC endpoints or script execution. All paths, limits, the loopback RPC URI and
-the hashes of the restart artifacts come from
+the hashes of the restart and mirror artifacts come from
 `deployment-channel.local.json` on the Windows host. That local file is
 excluded from Git.
+
+### Optional SAEF helper source mirror
+
+The channel can maintain one visible, non-authoritative Symcon script containing
+the `helpers/` source closure of the successfully activated fileset. The
+filesystem fileset remains authoritative. Domain runtime sources,
+installation-specific reference indexes, private configuration and ObjectIDs
+are not copied into this mirror.
+
+The generated script uses `__halt_compiler()` before the byte-exact helper
+payload, has no event or action binding and is never loaded by the runtime.
+Creation uses the active fileset's `SAEF_EnsureScript()`. Both currently
+deployable filesets therefore include that existing helper; the mirror does not
+introduce another Ensure implementation or public API.
+
+### Recommended Symcon placement
+
+Framework-owned runtime objects should live below a dedicated `System/SAEF`
+category. Place the runtime health probe and source mirror below its `Runtime`
+child; reserve sibling `Diagnostics` and `Maintenance` categories for objects
+with those explicit responsibilities. The mirror parent configured in the
+deployment-channel policy and its pinned local state must always match this
+live parent.
+
+System-wide MQTT owners should live below `System/Messaging/MQTT`, separated
+into `Discovery Exporter`, `Runtime` and `Diagnostics` where those
+responsibilities exist. Move a self-owned exporter tree only as a complete,
+ID-preserving unit. Broker transports, device adapters and device-specific MQTT
+objects remain with their owning system or device unless a separate ownership
+analysis justifies moving them.
+
+Enable the mirror only through the private initializer input by supplying an
+existing parent object ID:
+
+```powershell
+& .\Initialize-SaefDeploymentChannel.ps1 `
+    -DeploymentUser '<private-deployment-user>' `
+    -PublicKeyPath '<private-ed25519-public-key-path>' `
+    -RpcCredential $credential `
+    -RuntimeMirrorParentID <private-existing-parent-id>
+```
+
+The initializer only records and protects this local policy; it does not create
+the script. Each deployment preflight validates the parent and any previously
+pinned mirror ID without mutation. After a successful activation and restart,
+the channel reconciles the mirror automatically and records its script ID and
+hashes only in excluded local state. Identical content is a no-op, existing
+presentation is preserved, and a failed content update restores the previous
+mirror.
+
+Mirror failure, including failure to start the pinned mirror coordinator, does
+not invalidate a successfully restarted runtime. Such an activation returns
+exit code `0` with outcome `activated_mirror_degraded`; when the coordinator
+started, its separate mirror status record provides the bounded failure stage.
+Operators can repair discoverability without rolling back healthy production
+code. Initial creation and later updates are therefore Symcon mutations and
+remain subject to the normal reviewed deployment activation gate.
 
 `probe` invokes the existing restart coordinator strictly in preflight-only
 mode. It writes a bounded local status record but cannot stop or restart a
 service, change the bootstrap or activate a fileset. A `ready` response therefore
 also proves that the DPAPI credential can be decrypted by the SSH execution
 identity and that authenticated loopback RPC is operational.
+
+### Runtime compatibility gate
+
+Every deployment plan declares a sorted, unique and bounded list of global PHP
+functions that must survive the activation. A dedicated Symcon script containing
+the byte-exact `SaefRuntimeHealthProbe.php` source checks that contract in a
+normal script context. The restart coordinator verifies the script object type
+and source hash, runs the probe before activation, runs it again after the new
+kernel reaches the ready runlevel, and repeats it after any rollback restart.
+
+Runlevel readiness alone is not functional acceptance. If the post-restart
+probe finds a missing function or rejects its contract, the restart coordinator
+uses the existing byte-exact bootstrap rollback and does not report the
+candidate runtime as activated. The probe has no event, action or device access;
+it only validates function availability and returns counts plus a contract hash.
+
+The probe script is created once through the existing `SAEF_EnsureScript()`
+helper under an explicitly selected private parent. Its resulting private object
+ID is supplied as `-RuntimeHealthProbeScriptID` when installing the channel.
+The initializer never invents Symcon object creation logic.
 
 ### Package contract
 
@@ -140,7 +233,11 @@ references:
 
 - one reviewed generated fileset;
 - a byte-exact snapshot of the currently active bootstrap;
-- equal-byte-length current and candidate bootstrap tokens; and
+- equal-byte-length current and candidate bootstrap tokens;
+- the exact candidate token
+  `.saef-filesets/<targetDirectoryName>/bootstrap.php` relative to the Symcon
+  scripts root;
+- a non-empty `requiredRuntimeFunctions` compatibility contract; and
 - a private ZIP output path.
 
 Build the package from the repository root:
@@ -157,12 +254,19 @@ package hash, file count and package size.
 The gateway independently checks:
 
 - the transmitted ZIP hash and compressed-size limit;
+- the declared positive package byte count and one active upload at a time;
+- ordered 4096-byte raw chunks transported as bounded Base64 command
+  arguments, without general stdin, SFTP or filesystem access;
+- automatic cleanup of expired upload state and full package hash verification
+  before ZIP processing;
 - exact archive membership, path safety and duplicate names;
 - expanded size and file-count limits enforced again while each decompressed
   stream is read;
 - a bounded persistent deployment count and total managed byte budget;
 - every declared file size and SHA-256 value;
 - immutable target and deployment identities;
+- exact agreement between the candidate bootstrap token and the managed
+  fileset destination;
 - the complete staged directory before preflight and activation; and
 - active and candidate bootstrap hashes around the exact token replacement.
 
@@ -186,8 +290,9 @@ administrator account. The configured deployment account must exist, be
 enabled and currently remain a local administrator because the bounded gateway
 coordinates the IP-Symcon service restart. It should be denied local and Remote
 Desktop logon after bootstrap.
-The non-mutating preflight checks the source inventory, Symcon, OpenSSH,
-loopback RPC configuration and all paths:
+The non-mutating preflight verifies the source checksums, parses every supplied
+PowerShell runtime source, and checks Symcon, OpenSSH, loopback RPC configuration
+and all paths:
 
 ```powershell
 Unblock-File .\*.ps1
@@ -210,7 +315,8 @@ $credential = Get-Credential
 & .\Initialize-SaefDeploymentChannel.ps1 `
     -DeploymentUser '<private-deployment-user>' `
     -PublicKeyPath '<private-ed25519-public-key-path>' `
-    -RpcCredential $credential
+    -RpcCredential $credential `
+    -RuntimeHealthProbeScriptID <private-existing-probe-script-id>
 
 $LASTEXITCODE
 Get-Content .\deployment-channel-bootstrap-status.local.json -Raw
@@ -300,14 +406,14 @@ deployments/symcon/windows/saef-deploy saef-symcon status saef-example-release
 ```
 
 The client requires strict host-key checking, batch public-key authentication,
-no TTY and no forwarding. It computes the package SHA-256 locally and streams
-the package through standard input.
+no TTY and no forwarding. It computes the package SHA-256 locally and transfers
+ordered 4096-byte chunks through the bounded forced-command protocol.
 
 ### iPhone and iPad client
 
-Use an SSH terminal that supports key authentication, host-key verification,
-local files and input redirection, for example Blink Shell or an equivalent
-managed client. Configure the same private SSH alias and pinned host key. Copy
+Use an SSH terminal that supports key authentication, host-key verification and
+local files, for example Termius, Blink Shell or an equivalent managed client.
+Configure the same private SSH alias and pinned host key. Copy
 only the reviewed ZIP into the terminal's private file area and run the same
 `saef-deploy` script or the equivalent commands:
 
@@ -318,11 +424,12 @@ ssh -T saef-symcon activate saef-example-release
 ssh -T saef-symcon status saef-example-release
 ```
 
-For package transfer, calculate the SHA-256 in the terminal and stream the
-file without converting it to text:
+For package transfer, use the same `saef-deploy` client so the package is sent
+through the ordered chunk protocol. Raw stdin upload and SFTP are intentionally
+not available.
 
 ```console
-ssh -T saef-symcon "stage <lowercase-package-sha256>" < candidate.local.zip
+./saef-deploy saef-symcon stage candidate.local.zip
 ```
 
 Do not place the SSH private key, package, bootstrap snapshot, host identity or

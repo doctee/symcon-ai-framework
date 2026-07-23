@@ -9,6 +9,8 @@ parameters:
         - templates
         - examples
         - tools
+        - deployments/symcon/windows/SaefRuntimeSourceMirror.php
+        - deployments/symcon/windows/SaefRuntimeHealthProbe.php
         - case-studies/control-light/candidate
         - case-studies/mqtt-discovery-exporter/candidate
         - case-studies/navimow/distribution

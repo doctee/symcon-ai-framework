@@ -122,10 +122,20 @@ Do not create mirrors for every source file by default. Small wrappers already
 visible in Symcon, generated bundles that are themselves the installed source,
 or files without an operational discoverability need do not benefit enough.
 
-## Promotion gate
+## Implemented variants and promotion gate
 
-ControlLight is the first validated implementation. Before SAEF exposes a new
-public helper, record a second independent use case and compare at least:
+ControlLight is the first validated implementation and uses a private reference
+index for one case-study runtime. The restricted deployment channel is the
+second implementation: it projects only the verified `helpers/` source closure
+of an activated fileset and updates it automatically after a successful
+restart.
+
+The second use case confirms the shared ownership, deterministic generation,
+no-op, presentation and rollback principles. It also exposes a meaningful
+difference: a case-study mirror indexes configured runtime references, while
+the deployment mirror indexes fileset source paths and hashes. SAEF therefore
+does not yet expose a public mirror helper. Before such an API is proposed,
+compare at least:
 
 - ownership and placement requirements;
 - source and reference-index formats;
@@ -133,8 +143,9 @@ public helper, record a second independent use case and compare at least:
 - rollback behavior;
 - diagnostics returned to deployment tooling.
 
-Until that review, keep provisioner conveniences inside the case study and
-reuse the existing `SAEF_EnsureScript()` helper for object creation.
+Until that review, keep provisioner conveniences inside their case study or
+deployment boundary and reuse the existing `SAEF_EnsureScript()` helper for
+object creation.
 
 ## Related artifacts
 
@@ -143,3 +154,4 @@ reuse the existing `SAEF_EnsureScript()` helper for object creation.
 - `knowledge/EK-005-idempotent-configuration.md`
 - `case-studies/control-light/30-runtime-mirror-reference-search-pilot.md`
 - `case-studies/control-light/31-managed-runtime-mirror-generator.md`
+- `deployments/symcon/windows/README.md`

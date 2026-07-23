@@ -31,7 +31,16 @@ param(
     [string] $RollbackBootstrapPath,
 
     [Parameter()]
-    [string] $ExpectedRollbackBootstrapSha256
+    [string] $ExpectedRollbackBootstrapSha256,
+
+    [Parameter()]
+    [int] $RuntimeHealthProbeScriptID = 0,
+
+    [Parameter()]
+    [string] $ExpectedRuntimeHealthProbeSha256,
+
+    [Parameter()]
+    [string] $RequiredRuntimeFunctionsBase64
 )
 
 Set-StrictMode -Version 2.0
@@ -46,6 +55,7 @@ $ExitPreflightFailed = 10
 $ExitActivationFailed = 20
 $ExitRolledBack = 30
 $ExitRollbackFailed = 40
+$script:runtimeHealthCheck = 'not_started'
 
 function Read-RestartPolicy {
     param([Parameter(Mandatory = $true)][string] $Path)
@@ -260,15 +270,16 @@ function Start-SymconService {
 function Invoke-SymconRpc {
     param(
         [Parameter(Mandatory = $true)][string] $Method,
-        [Parameter(Mandatory = $true)][int] $TimeoutSeconds
+        [Parameter(Mandatory = $true)][int] $TimeoutSeconds,
+        [Parameter()][array] $Parameters = @()
     )
 
     $body = [ordered]@{
         jsonrpc = '2.0'
         method = $Method
-        params = @()
+        params = $Parameters
         id = 1
-    } | ConvertTo-Json -Compress
+    } | ConvertTo-Json -Depth 8 -Compress
 
     $request = @{
         Uri = $RpcUri
@@ -306,6 +317,81 @@ function Invoke-SymconRpc {
         throw [System.InvalidOperationException]::new('Symcon RPC response has no result.')
     }
     return $response.result
+}
+
+function Invoke-RuntimeHealthProbe {
+    param([Parameter(Mandatory = $true)][int] $TimeoutSeconds)
+
+    $script:runtimeHealthCheck = 'parameters'
+    if ($RuntimeHealthProbeScriptID -le 0 -or
+        $ExpectedRuntimeHealthProbeSha256 -notmatch '^[a-f0-9]{64}$' -or
+        [string]::IsNullOrWhiteSpace($RequiredRuntimeFunctionsBase64) -or
+        $RequiredRuntimeFunctionsBase64.Length -gt 65536) {
+        throw [System.InvalidOperationException]::new('Runtime health probe parameters are invalid.')
+    }
+    $script:runtimeHealthCheck = 'contract_decode'
+    $contractBytes = [Convert]::FromBase64String($RequiredRuntimeFunctionsBase64)
+    try {
+        if ($contractBytes.Length -le 0 -or $contractBytes.Length -gt 32768) {
+            throw [System.InvalidOperationException]::new('Runtime health contract is outside policy.')
+        }
+        $contractJson = [Text.UTF8Encoding]::new($false, $true).GetString($contractBytes)
+        $decodedFunctions = $contractJson | ConvertFrom-Json
+        if ($decodedFunctions -isnot [System.Array]) {
+            throw [System.InvalidOperationException]::new('Runtime health function list is not an array.')
+        }
+        $requiredFunctions = [object[]] $decodedFunctions
+        if ($requiredFunctions.Count -lt 1 -or $requiredFunctions.Count -gt 256) {
+            throw [System.InvalidOperationException]::new('Runtime health function list is outside policy.')
+        }
+        $contractSha256 = [BitConverter]::ToString(
+            [Security.Cryptography.SHA256]::Create().ComputeHash($contractBytes)
+        ).Replace('-', '').ToLowerInvariant()
+    } finally {
+        [Array]::Clear($contractBytes, 0, $contractBytes.Length)
+    }
+
+    $script:runtimeHealthCheck = 'object_exists'
+    if (-not [bool] (Invoke-SymconRpc -Method 'IPS_ObjectExists' -Parameters @($RuntimeHealthProbeScriptID) `
+        -TimeoutSeconds $TimeoutSeconds)) {
+        throw [System.InvalidOperationException]::new('Runtime health probe script is missing.')
+    }
+    $script:runtimeHealthCheck = 'object_type'
+    $probeObject = Invoke-SymconRpc -Method 'IPS_GetObject' -Parameters @($RuntimeHealthProbeScriptID) `
+        -TimeoutSeconds $TimeoutSeconds
+    if ([int] $probeObject.ObjectType -ne 3) {
+        throw [System.InvalidOperationException]::new('Runtime health probe object type is invalid.')
+    }
+    $script:runtimeHealthCheck = 'source_hash'
+    $probeSource = [string] (Invoke-SymconRpc -Method 'IPS_GetScriptContent' `
+        -Parameters @($RuntimeHealthProbeScriptID) -TimeoutSeconds $TimeoutSeconds)
+    $probeSourceBytes = [Text.Encoding]::UTF8.GetBytes($probeSource)
+    try {
+        $probeSha256 = [BitConverter]::ToString(
+            [Security.Cryptography.SHA256]::Create().ComputeHash($probeSourceBytes)
+        ).Replace('-', '').ToLowerInvariant()
+    } finally {
+        [Array]::Clear($probeSourceBytes, 0, $probeSourceBytes.Length)
+    }
+    if ($probeSha256 -ne $ExpectedRuntimeHealthProbeSha256) {
+        throw [System.InvalidOperationException]::new('Runtime health probe source hash mismatch.')
+    }
+    $script:runtimeHealthCheck = 'execution'
+    $probeResultText = [string] (Invoke-SymconRpc -Method 'IPS_RunScriptWaitEx' `
+        -Parameters @($RuntimeHealthProbeScriptID, @{ SAEF_RUNTIME_HEALTH_CONTRACT = $contractJson }) `
+        -TimeoutSeconds $TimeoutSeconds)
+    if ($probeResultText.Length -le 0 -or $probeResultText.Length -gt 8192) {
+        throw [System.InvalidOperationException]::new('Runtime health probe result is outside policy.')
+    }
+    $script:runtimeHealthCheck = 'result_contract'
+    $probeResult = $probeResultText | ConvertFrom-Json
+    if ($probeResult.formatVersion -ne 1 -or $probeResult.success -ne $true -or
+        [int] $probeResult.requiredFunctionCount -ne $requiredFunctions.Count -or
+        [int] $probeResult.missingFunctionCount -ne 0 -or
+        [string] $probeResult.contractSha256 -ne $contractSha256) {
+        throw [System.InvalidOperationException]::new('Runtime health probe rejected the active function contract.')
+    }
+    $script:runtimeHealthCheck = 'passed'
 }
 
 function Wait-SymconReady {
@@ -429,6 +515,9 @@ $policy = $null
 $effectiveServiceName = $null
 $baselineStartTime = $null
 $rollbackConfigured = $false
+$runtimeHealthConfigured = $RuntimeHealthProbeScriptID -gt 0 -or
+    -not [string]::IsNullOrWhiteSpace($ExpectedRuntimeHealthProbeSha256) -or
+    -not [string]::IsNullOrWhiteSpace($RequiredRuntimeFunctionsBase64)
 $preflightCheck = 'policy'
 
 try {
@@ -439,6 +528,11 @@ try {
     }
     if ($null -eq $Credential -and -not [string]::IsNullOrWhiteSpace($CredentialPath)) {
         $Credential = Import-MachineCredential -Path $CredentialPath
+    }
+    if ($runtimeHealthConfigured -and ($RuntimeHealthProbeScriptID -le 0 -or
+        [string]::IsNullOrWhiteSpace($ExpectedRuntimeHealthProbeSha256) -or
+        [string]::IsNullOrWhiteSpace($RequiredRuntimeFunctionsBase64))) {
+        throw [System.InvalidOperationException]::new('Runtime health probe parameters must be complete.')
     }
     $preflightCheck = 'service_name'
     $effectiveServiceName = if ([string]::IsNullOrWhiteSpace($ServiceName)) {
@@ -479,6 +573,10 @@ try {
     }
     $preflightCheck = 'kernel_start_time'
     $baselineStartTime = [long] (Invoke-SymconRpc -Method 'IPS_GetKernelStartTime' -TimeoutSeconds ([int] $policy.rpcTimeoutSeconds))
+    if ($runtimeHealthConfigured) {
+        $preflightCheck = 'runtime_health_probe'
+        Invoke-RuntimeHealthProbe -TimeoutSeconds ([int] $policy.rpcTimeoutSeconds)
+    }
 } catch {
     $statusParameters = @{
         Phase = 'preflight'
@@ -487,6 +585,7 @@ try {
         Details = @{
             failedCheck = $preflightCheck
             errorType = $_.Exception.GetType().FullName
+            runtimeHealthCheck = $script:runtimeHealthCheck
         }
     }
     Write-RestartStatus @statusParameters
@@ -525,6 +624,9 @@ try {
         Policy = $policy
     }
     $ready = Restart-SymconAndWait @restartParameters
+    if ($runtimeHealthConfigured) {
+        Invoke-RuntimeHealthProbe -TimeoutSeconds ([int] $policy.rpcTimeoutSeconds)
+    }
     $activatedStatus = @{
         Phase = 'activation_restart'
         Outcome = 'activated'
@@ -580,6 +682,9 @@ try {
         Policy = $policy
     }
     $ready = Restart-SymconAndWait @rollbackRestartParameters
+    if ($runtimeHealthConfigured) {
+        Invoke-RuntimeHealthProbe -TimeoutSeconds ([int] $policy.rpcTimeoutSeconds)
+    }
     $rolledBackStatus = @{
         Phase = 'rollback'
         Outcome = 'rolled_back'

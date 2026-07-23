@@ -54,7 +54,28 @@ case "$operation" in
             printf '%s\n' 'No SHA-256 command is available.' >&2
             exit 69
         fi
-        ssh_command "stage $package_hash" < "$package"
+        package_bytes=$(wc -c < "$package" | tr -d '[:space:]')
+        case "$package_bytes" in
+            *[!0-9]*|'')
+                printf '%s\n' 'Deployment package size is invalid.' >&2
+                exit 69
+                ;;
+        esac
+        chunk_bytes=4096
+        ssh_command "stage begin $package_hash $package_bytes"
+        chunk_index=0
+        offset=0
+        while [ "$offset" -lt "$package_bytes" ]; do
+            chunk=$(dd if="$package" bs="$chunk_bytes" skip="$chunk_index" count=1 2>/dev/null | base64 | tr -d '\r\n')
+            [ -n "$chunk" ] || {
+                printf '%s\n' 'Deployment package chunk encoding failed.' >&2
+                exit 74
+            }
+            ssh_command "stage chunk $package_hash $chunk_index $chunk" >/dev/null
+            chunk_index=$((chunk_index + 1))
+            offset=$((offset + chunk_bytes))
+        done
+        ssh_command "stage commit $package_hash"
         ;;
     preflight|activate|status)
         [ "$#" -eq 1 ] || usage

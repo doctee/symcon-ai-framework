@@ -18,11 +18,32 @@ $ExitPreflightFailed = 30
 $ExitActivationFailed = 40
 $ExitManualRecovery = 50
 $ChannelMutexName = 'Global\SAEF.DeploymentChannel'
+$UploadChunkBytes = 4096
+$script:failureCode = 'request'
 
 function Test-HexSha256 {
     param([Parameter(Mandatory = $true)][string] $Value)
 
     return $Value -match '^[a-f0-9]{64}$'
+}
+
+function Assert-RuntimeHealthContract {
+    param([Parameter(Mandatory = $true)] $RuntimeHealth)
+
+    $requiredFunctions = @($RuntimeHealth.requiredFunctions)
+    if ($requiredFunctions.Count -lt 1 -or $requiredFunctions.Count -gt 256) {
+        throw [System.InvalidOperationException]::new('Runtime health function list is outside policy.')
+    }
+    $previous = $null
+    foreach ($function in $requiredFunctions) {
+        $name = [string] $function
+        if ($function -isnot [string] -or $name -notmatch '^[A-Za-z_][A-Za-z0-9_]{0,127}$' -or
+            ($null -ne $previous -and [string]::CompareOrdinal($previous, $name) -ge 0)) {
+            throw [System.InvalidOperationException]::new('Runtime health function contract is invalid.')
+        }
+        $previous = $name
+    }
+    return $requiredFunctions
 }
 
 function Test-SafeIdentifier {
@@ -299,6 +320,18 @@ function Read-ChannelPolicy {
         'expectedRestartCoordinatorSha256',
         'restartPolicyPath',
         'expectedRestartPolicySha256',
+        'runtimeHealthProbeEnabled',
+        'runtimeHealthProbeScriptID',
+        'expectedRuntimeHealthProbeSha256',
+        'runtimeMirrorEnabled',
+        'runtimeMirrorCoordinatorPath',
+        'expectedRuntimeMirrorCoordinatorSha256',
+        'runtimeMirrorReconcilerPath',
+        'expectedRuntimeMirrorReconcilerSha256',
+        'runtimeMirrorParentID',
+        'runtimeMirrorIdent',
+        'runtimeMirrorName',
+        'runtimeMirrorPosition',
         'credentialPath',
         'rpcUri',
         'serviceName',
@@ -326,7 +359,16 @@ function Read-ChannelPolicy {
             throw [System.InvalidOperationException]::new('Deployment channel policy limit is outside its hard bound.')
         }
     }
-    foreach ($name in @('scriptsRoot', 'managedFilesetRoot', 'stateRoot', 'restartCoordinatorPath', 'restartPolicyPath', 'credentialPath')) {
+    foreach ($name in @(
+        'scriptsRoot',
+        'managedFilesetRoot',
+        'stateRoot',
+        'restartCoordinatorPath',
+        'restartPolicyPath',
+        'runtimeMirrorCoordinatorPath',
+        'runtimeMirrorReconcilerPath',
+        'credentialPath'
+    )) {
         if (-not [IO.Path]::IsPathRooted([string] $policy.$name)) {
             throw [System.InvalidOperationException]::new('Deployment channel policy requires absolute local paths.')
         }
@@ -352,8 +394,24 @@ function Read-ChannelPolicy {
         throw [System.InvalidOperationException]::new('Active bootstrap must be outside managed deployment roots.')
     }
     if (-not (Test-HexSha256 -Value ([string] $policy.expectedRestartCoordinatorSha256)) -or
-        -not (Test-HexSha256 -Value ([string] $policy.expectedRestartPolicySha256))) {
+        -not (Test-HexSha256 -Value ([string] $policy.expectedRestartPolicySha256)) -or
+        -not (Test-HexSha256 -Value ([string] $policy.expectedRuntimeMirrorCoordinatorSha256)) -or
+        -not (Test-HexSha256 -Value ([string] $policy.expectedRuntimeMirrorReconcilerSha256))) {
         throw [System.InvalidOperationException]::new('Pinned coordinator hashes are invalid.')
+    }
+    if ($policy.runtimeMirrorEnabled -isnot [bool] -or
+        [int] $policy.runtimeMirrorParentID -lt 0 -or
+        ([bool] $policy.runtimeMirrorEnabled -and [int] $policy.runtimeMirrorParentID -le 0) -or
+        [string] $policy.runtimeMirrorIdent -notmatch '^[A-Za-z0-9_]{1,128}$' -or
+        [string]::IsNullOrWhiteSpace([string] $policy.runtimeMirrorName) -or
+        ([string] $policy.runtimeMirrorName).Length -gt 255) {
+        throw [System.InvalidOperationException]::new('Runtime mirror policy is invalid.')
+    }
+    if ($policy.runtimeHealthProbeEnabled -isnot [bool] -or
+        [int] $policy.runtimeHealthProbeScriptID -lt 0 -or
+        ([bool] $policy.runtimeHealthProbeEnabled -and [int] $policy.runtimeHealthProbeScriptID -le 0) -or
+        -not (Test-HexSha256 -Value ([string] $policy.expectedRuntimeHealthProbeSha256))) {
+        throw [System.InvalidOperationException]::new('Runtime health probe policy is invalid.')
     }
     $uri = [Uri] ([string] $policy.rpcUri)
     if ($uri.Scheme -notin @('http', 'https') -or $uri.Host -notin @('127.0.0.1', 'localhost', '::1')) {
@@ -367,14 +425,24 @@ function Read-ChannelPolicy {
             throw [System.IO.DirectoryNotFoundException]::new('Configured deployment directory is missing.')
         }
     }
-    foreach ($file in @($policy.restartCoordinatorPath, $policy.restartPolicyPath, $policy.credentialPath)) {
+    foreach ($file in @(
+        $policy.restartCoordinatorPath,
+        $policy.restartPolicyPath,
+        $policy.runtimeMirrorCoordinatorPath,
+        $policy.runtimeMirrorReconcilerPath,
+        $policy.credentialPath
+    )) {
         if (-not (Test-Path -LiteralPath ([string] $file) -PathType Leaf)) {
             throw [System.IO.FileNotFoundException]::new('Configured deployment dependency is missing.')
         }
     }
     if ((Get-Sha256 -Path ([string] $policy.restartCoordinatorPath)) -ne [string] $policy.expectedRestartCoordinatorSha256 -or
-        (Get-Sha256 -Path ([string] $policy.restartPolicyPath)) -ne [string] $policy.expectedRestartPolicySha256) {
-        throw [System.InvalidOperationException]::new('Pinned restart dependency hash mismatch.')
+        (Get-Sha256 -Path ([string] $policy.restartPolicyPath)) -ne [string] $policy.expectedRestartPolicySha256 -or
+        (Get-Sha256 -Path ([string] $policy.runtimeMirrorCoordinatorPath)) -ne
+            [string] $policy.expectedRuntimeMirrorCoordinatorSha256 -or
+        (Get-Sha256 -Path ([string] $policy.runtimeMirrorReconcilerPath)) -ne
+            [string] $policy.expectedRuntimeMirrorReconcilerSha256) {
+        throw [System.InvalidOperationException]::new('Pinned deployment dependency hash mismatch.')
     }
     return $policy
 }
@@ -434,6 +502,26 @@ function Get-TokenReplacement {
     return $candidate
 }
 
+function Get-ManagedFilesetBootstrapToken {
+    param(
+        [Parameter(Mandatory = $true)] $Policy,
+        [Parameter(Mandatory = $true)][string] $TargetDirectoryName
+    )
+
+    if (-not (Test-SafeIdentifier -Value $TargetDirectoryName)) {
+        throw [System.InvalidOperationException]::new('Managed fileset target identity is invalid.')
+    }
+    $scriptsRoot = [IO.Path]::GetFullPath([string] $Policy.scriptsRoot)
+    $scriptsPrefix = $scriptsRoot.TrimEnd([char[]] @('\', '/')) + [IO.Path]::DirectorySeparatorChar
+    $targetBootstrap = [IO.Path]::GetFullPath((Join-Path `
+        (Join-Path ([string] $Policy.managedFilesetRoot) $TargetDirectoryName) `
+        'bootstrap.php'))
+    if (-not $targetBootstrap.StartsWith($scriptsPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw [System.InvalidOperationException]::new('Managed fileset bootstrap is outside the scripts root.')
+    }
+    return $targetBootstrap.Substring($scriptsPrefix.Length).Replace('\', '/')
+}
+
 function Read-DeploymentManifest {
     param([Parameter(Mandatory = $true)][string] $Path)
 
@@ -454,6 +542,7 @@ function Read-DeploymentManifest {
     if ($manifest.bootstrap.oldToken -isnot [string] -or $manifest.bootstrap.newToken -isnot [string]) {
         throw [System.InvalidOperationException]::new('Deployment manifest bootstrap tokens are invalid.')
     }
+    $null = Assert-RuntimeHealthContract -RuntimeHealth $manifest.runtimeHealth
     return [ordered]@{ manifest = $manifest; text = $manifestText }
 }
 
@@ -472,6 +561,7 @@ function Get-DeploymentPaths {
         manifestPath = Join-Path $stateDirectory 'deployment.json'
         statusPath = Join-Path $stateDirectory 'status.json'
         restartStatusPath = Join-Path $stateDirectory 'restart-status.json'
+        mirrorStatusPath = Join-Path $stateDirectory 'runtime-mirror-status.json'
         rollbackPath = Join-Path $stateDirectory 'rollback-bootstrap.bin'
     }
 }
@@ -516,6 +606,11 @@ function Assert-StagedDeployment {
     $targetDirectory = Join-Path ([string] $Policy.managedFilesetRoot) ([string] $manifest.targetDirectoryName)
     if (-not (Test-Path -LiteralPath $targetDirectory -PathType Container)) {
         throw [System.IO.DirectoryNotFoundException]::new('Staged fileset directory is missing.')
+    }
+    $expectedNewToken = Get-ManagedFilesetBootstrapToken -Policy $Policy `
+        -TargetDirectoryName ([string] $manifest.targetDirectoryName)
+    if ([string] $manifest.bootstrap.newToken -ne $expectedNewToken) {
+        throw [System.InvalidOperationException]::new('Candidate token does not select the managed fileset bootstrap.')
     }
     $files = @($manifest.files)
     if ($files.Count -lt 1 -or $files.Count -gt [int] $Policy.maxFileCount) {
@@ -579,7 +674,8 @@ function Invoke-RestartCoordinator {
         [Parameter(Mandatory = $true)][string] $ExpectedActiveSha256,
         [Parameter()][switch] $PreflightOnly,
         [Parameter()][string] $RollbackPath,
-        [Parameter()][string] $ExpectedRollbackSha256
+        [Parameter()][string] $ExpectedRollbackSha256,
+        [Parameter()][array] $RequiredRuntimeFunctions
     )
 
     $powerShellExecutable = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
@@ -604,6 +700,52 @@ function Invoke-RestartCoordinator {
             '-RollbackBootstrapPath', $RollbackPath,
             '-ExpectedRollbackBootstrapSha256', $ExpectedRollbackSha256
         )
+    }
+    if ($null -ne $RequiredRuntimeFunctions) {
+        if (-not [bool] $Policy.runtimeHealthProbeEnabled) {
+            throw [System.InvalidOperationException]::new('Runtime health probe is required but not configured.')
+        }
+        $contractJson = ConvertTo-Json -InputObject @($RequiredRuntimeFunctions) -Compress
+        $arguments += @(
+            '-RuntimeHealthProbeScriptID', [string] $Policy.runtimeHealthProbeScriptID,
+            '-ExpectedRuntimeHealthProbeSha256', [string] $Policy.expectedRuntimeHealthProbeSha256,
+            '-RequiredRuntimeFunctionsBase64',
+                [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($contractJson))
+        )
+    }
+    & $powerShellExecutable @arguments | Out-Null
+    return [int] $LASTEXITCODE
+}
+
+function Invoke-RuntimeMirrorCoordinator {
+    param(
+        [Parameter(Mandatory = $true)] $Policy,
+        [Parameter(Mandatory = $true)][string] $FilesetPath,
+        [Parameter(Mandatory = $true)][string] $StatusPath,
+        [Parameter()][switch] $PreflightOnly
+    )
+
+    $powerShellExecutable = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $arguments = @(
+        '-NoLogo',
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', [string] $Policy.runtimeMirrorCoordinatorPath,
+        '-RpcUri', [string] $Policy.rpcUri,
+        '-CredentialPath', [string] $Policy.credentialPath,
+        '-ReconcilerPath', [string] $Policy.runtimeMirrorReconcilerPath,
+        '-ExpectedReconcilerSha256', [string] $Policy.expectedRuntimeMirrorReconcilerSha256,
+        '-FilesetPath', $FilesetPath,
+        '-ParentID', [string] $Policy.runtimeMirrorParentID,
+        '-Ident', [string] $Policy.runtimeMirrorIdent,
+        '-Name', [string] $Policy.runtimeMirrorName,
+        '-Position', [string] $Policy.runtimeMirrorPosition,
+        '-StatePath', (Join-Path ([string] $Policy.stateRoot) 'runtime-source-mirror.local.json'),
+        '-StatusPath', $StatusPath
+    )
+    if ($PreflightOnly) {
+        $arguments += '-PreflightOnly'
     }
     & $powerShellExecutable @arguments | Out-Null
     return [int] $LASTEXITCODE
@@ -646,15 +788,181 @@ function Get-ManagedDeploymentUsage {
     }
 }
 
-function Receive-Package {
+function Get-UploadPaths {
     param(
         [Parameter(Mandatory = $true)] $Policy,
+        [Parameter(Mandatory = $true)][string] $PackageSha256
+    )
+
+    if (-not (Test-HexSha256 -Value $PackageSha256)) {
+        throw [System.InvalidOperationException]::new('Upload package hash is invalid.')
+    }
+    return [ordered]@{
+        dataPath = Join-Path ([string] $Policy.stateRoot) ('.saef-upload-' + $PackageSha256 + '.bin')
+        statePath = Join-Path ([string] $Policy.stateRoot) ('.saef-upload-' + $PackageSha256 + '.local.json')
+    }
+}
+
+function Read-UploadState {
+    param(
+        [Parameter(Mandatory = $true)][string] $Path,
         [Parameter(Mandatory = $true)][string] $ExpectedPackageSha256
     )
 
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf) -or
+        (Get-Item -LiteralPath $Path).Length -gt 65536) {
+        throw [System.IO.FileNotFoundException]::new('Upload state is missing or invalid.')
+    }
+    $state = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    if ($state.formatVersion -ne 1 -or [string] $state.packageSha256 -ne $ExpectedPackageSha256 -or
+        [long] $state.expectedBytes -le 0 -or [int] $state.chunkBytes -ne $UploadChunkBytes -or
+        [int] $state.expectedChunks -le 0 -or [int] $state.nextIndex -lt 0 -or
+        [long] $state.receivedBytes -lt 0 -or $state.createdUtc -isnot [string]) {
+        throw [System.InvalidOperationException]::new('Upload state contract is invalid.')
+    }
+    return $state
+}
+
+function Remove-Upload {
+    param(
+        [Parameter(Mandatory = $true)][string] $DataPath,
+        [Parameter(Mandatory = $true)][string] $StatePath
+    )
+
+    foreach ($path in @($DataPath, $StatePath)) {
+        if (Test-Path -LiteralPath $path -PathType Leaf) {
+            Remove-Item -LiteralPath $path -Force
+        }
+    }
+}
+
+function Start-PackageUpload {
+    param(
+        [Parameter(Mandatory = $true)] $Policy,
+        [Parameter(Mandatory = $true)][string] $PackageSha256,
+        [Parameter(Mandatory = $true)][long] $ExpectedPackageBytes
+    )
+
+    $script:failureCode = 'stage_begin'
+    if (-not (Test-HexSha256 -Value $PackageSha256) -or $ExpectedPackageBytes -le 0 -or
+        $ExpectedPackageBytes -gt [long] $Policy.maxPackageBytes) {
+        throw [System.InvalidOperationException]::new('Upload declaration is outside policy.')
+    }
+    $activeStates = @(Get-ChildItem -LiteralPath ([string] $Policy.stateRoot) `
+        -Filter '.saef-upload-*.local.json' -File -Force)
+    foreach ($activeStateFile in $activeStates) {
+        if ($activeStateFile.Name -notmatch '^\.saef-upload-([a-f0-9]{64})\.local\.json$') {
+            throw [System.InvalidOperationException]::new('Upload state root contains an unexpected file.')
+        }
+        $activeHash = $Matches[1]
+        $activePaths = Get-UploadPaths -Policy $Policy -PackageSha256 $activeHash
+        $activeState = Read-UploadState -Path $activePaths.statePath -ExpectedPackageSha256 $activeHash
+        $createdUtc = [DateTime]::Parse([string] $activeState.createdUtc).ToUniversalTime()
+        if (([DateTime]::UtcNow - $createdUtc).TotalSeconds -le [int] $Policy.maxPreflightAgeSeconds) {
+            throw [System.InvalidOperationException]::new('Another package upload is active.')
+        }
+        Remove-Upload -DataPath $activePaths.dataPath -StatePath $activePaths.statePath
+    }
+
+    $paths = Get-UploadPaths -Policy $Policy -PackageSha256 $PackageSha256
+    if ((Test-Path -LiteralPath $paths.dataPath) -or (Test-Path -LiteralPath $paths.statePath)) {
+        throw [System.InvalidOperationException]::new('Upload identity already exists.')
+    }
+    [IO.File]::WriteAllBytes($paths.dataPath, [byte[]]::new(0))
+    $expectedChunks = [int] [Math]::Ceiling($ExpectedPackageBytes / [double] $UploadChunkBytes)
+    $state = [ordered]@{
+        formatVersion = 1
+        createdUtc = [DateTime]::UtcNow.ToString('o')
+        packageSha256 = $PackageSha256
+        expectedBytes = $ExpectedPackageBytes
+        chunkBytes = $UploadChunkBytes
+        expectedChunks = $expectedChunks
+        nextIndex = 0
+        receivedBytes = 0
+    }
+    try {
+        Write-AtomicText -Path $paths.statePath -Text (($state | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
+    } catch {
+        Remove-Upload -DataPath $paths.dataPath -StatePath $paths.statePath
+        throw
+    }
+    return $state
+}
+
+function Add-PackageUploadChunk {
+    param(
+        [Parameter(Mandatory = $true)] $Policy,
+        [Parameter(Mandatory = $true)][string] $PackageSha256,
+        [Parameter(Mandatory = $true)][int] $Index,
+        [Parameter(Mandatory = $true)][string] $Base64Chunk
+    )
+
+    $script:failureCode = 'stage_chunk'
+    if ($Index -lt 0 -or $Base64Chunk.Length -gt 8192 -or
+        $Base64Chunk -notmatch '^[A-Za-z0-9+/]+={0,2}$') {
+        throw [System.InvalidOperationException]::new('Upload chunk argument is invalid.')
+    }
+    $paths = Get-UploadPaths -Policy $Policy -PackageSha256 $PackageSha256
+    $state = Read-UploadState -Path $paths.statePath -ExpectedPackageSha256 $PackageSha256
+    if ($Index -ne [int] $state.nextIndex -or $Index -ge [int] $state.expectedChunks -or
+        -not (Test-Path -LiteralPath $paths.dataPath -PathType Leaf)) {
+        throw [System.InvalidOperationException]::new('Upload chunk sequence is invalid.')
+    }
+    $chunk = [Convert]::FromBase64String($Base64Chunk)
+    $remaining = [long] $state.expectedBytes - [long] $state.receivedBytes
+    $expectedChunkBytes = [int] [Math]::Min([long] $UploadChunkBytes, $remaining)
+    if ($chunk.Length -ne $expectedChunkBytes) {
+        throw [System.InvalidOperationException]::new('Upload chunk byte count is invalid.')
+    }
+
+    $dataLength = (Get-Item -LiteralPath $paths.dataPath).Length
+    if ($dataLength -eq [long] $state.receivedBytes) {
+        $stream = [IO.File]::Open($paths.dataPath, [IO.FileMode]::Append, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        try {
+            $stream.Write($chunk, 0, $chunk.Length)
+            $stream.Flush($true)
+        } finally {
+            $stream.Dispose()
+        }
+    } elseif ($dataLength -eq [long] $state.receivedBytes + $chunk.Length) {
+        $stream = [IO.File]::OpenRead($paths.dataPath)
+        try {
+            $null = $stream.Seek(-$chunk.Length, [IO.SeekOrigin]::End)
+            $existingChunk = [byte[]]::new($chunk.Length)
+            $read = $stream.Read($existingChunk, 0, $existingChunk.Length)
+        } finally {
+            $stream.Dispose()
+        }
+        if ($read -ne $chunk.Length -or (Get-BytesSha256 -Bytes $existingChunk) -ne
+            (Get-BytesSha256 -Bytes $chunk)) {
+            throw [System.InvalidOperationException]::new('Upload chunk recovery hash mismatch.')
+        }
+    } else {
+        throw [System.InvalidOperationException]::new('Upload data length differs from state.')
+    }
+
+    $state.nextIndex = [int] $state.nextIndex + 1
+    $state.receivedBytes = [long] $state.receivedBytes + $chunk.Length
+    Write-AtomicText -Path $paths.statePath -Text (($state | ConvertTo-Json -Depth 4) + [Environment]::NewLine)
+    return $state
+}
+
+function Receive-Package {
+    param(
+        [Parameter(Mandatory = $true)] $Policy,
+        [Parameter(Mandatory = $true)][string] $ExpectedPackageSha256,
+        [Parameter(Mandatory = $true)][long] $ExpectedPackageBytes,
+        [Parameter(Mandatory = $true)][string] $IncomingPath
+    )
+
+    $script:failureCode = 'stage_argument'
     if (-not (Test-HexSha256 -Value $ExpectedPackageSha256)) {
         throw [System.InvalidOperationException]::new('Package hash argument is invalid.')
     }
+    if ($ExpectedPackageBytes -le 0 -or $ExpectedPackageBytes -gt [long] $Policy.maxPackageBytes) {
+        throw [System.InvalidOperationException]::new('Package byte count is outside policy.')
+    }
+    $script:failureCode = 'stage_usage'
     $usage = Get-ManagedDeploymentUsage -Policy $Policy
     if ([int] $usage.deploymentCount -ge [int] $Policy.maxDeploymentCount) {
         throw [System.InvalidOperationException]::new('Managed deployment count reached policy.')
@@ -662,33 +970,25 @@ function Receive-Package {
     Add-Type -AssemblyName System.IO.Compression
     Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-    $incomingPath = Join-Path ([string] $Policy.stateRoot) ('.saef-incoming-' + [Guid]::NewGuid().ToString('N') + '.zip')
     $temporaryTarget = $null
     $finalTarget = $null
     $stageCommitted = $false
     $stateDirectory = $null
     try {
-        $inputStream = [Console]::OpenStandardInput()
-        $outputStream = [IO.File]::Create($incomingPath)
-        try {
-            $buffer = [byte[]]::new(65536)
-            $total = 0L
-            while (($read = $inputStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
-                $total += $read
-                if ($total -gt [long] $Policy.maxPackageBytes) {
-                    throw [System.InvalidOperationException]::new('Package exceeds configured byte limit.')
-                }
-                $outputStream.Write($buffer, 0, $read)
-            }
-        } finally {
-            $outputStream.Dispose()
+        $script:failureCode = 'stage_upload_contract'
+        if (-not (Test-Path -LiteralPath $IncomingPath -PathType Leaf) -or
+            (Get-Item -LiteralPath $IncomingPath).Length -ne $ExpectedPackageBytes) {
+            throw [System.InvalidOperationException]::new('Uploaded package byte count differs from its declaration.')
         }
-        if ((Get-Sha256 -Path $incomingPath) -ne $ExpectedPackageSha256) {
+        $script:failureCode = 'stage_transfer_hash'
+        if ((Get-Sha256 -Path $IncomingPath) -ne $ExpectedPackageSha256) {
             throw [System.InvalidOperationException]::new('Transferred package hash mismatch.')
         }
 
-        $archive = [IO.Compression.ZipFile]::OpenRead($incomingPath)
+        $script:failureCode = 'stage_archive_open'
+        $archive = [IO.Compression.ZipFile]::OpenRead($IncomingPath)
         try {
+            $script:failureCode = 'stage_manifest'
             $entries = @($archive.Entries)
             $manifestEntries = @($entries | Where-Object { $_.FullName -eq 'deployment.json' })
             if ($manifestEntries.Count -ne 1) {
@@ -719,9 +1019,18 @@ function Receive-Package {
             if ($manifest.bootstrap.oldToken -isnot [string] -or $manifest.bootstrap.newToken -isnot [string]) {
                 throw [System.InvalidOperationException]::new('Package bootstrap token is invalid.')
             }
+            $null = Assert-RuntimeHealthContract -RuntimeHealth $manifest.runtimeHealth
             if (-not ([string] $manifest.bootstrap.newToken).Contains([string] $manifest.targetDirectoryName)) {
                 throw [System.InvalidOperationException]::new('Candidate token does not identify the staged fileset.')
             }
+            $expectedNewToken = Get-ManagedFilesetBootstrapToken -Policy $Policy `
+                -TargetDirectoryName ([string] $manifest.targetDirectoryName)
+            if ([string] $manifest.bootstrap.newToken -ne $expectedNewToken) {
+                throw [System.InvalidOperationException]::new(
+                    'Candidate token does not select the managed fileset bootstrap.'
+                )
+            }
+            $script:failureCode = 'stage_archive_contract'
             $files = @($manifest.files)
             if ($files.Count -lt 1 -or $files.Count -gt [int] $Policy.maxFileCount -or
                 $entries.Count -ne $files.Count + 1) {
@@ -746,6 +1055,7 @@ function Receive-Package {
             if ([long] $usage.managedBytes + $expandedBytes -gt [long] $Policy.maxManagedBytes) {
                 throw [System.InvalidOperationException]::new('Managed deployment storage would exceed policy.')
             }
+            $script:failureCode = 'stage_entry_hashes'
             $manifestFilePaths = @{}
             foreach ($file in $files) {
                 $relative = [string] $file.path
@@ -774,12 +1084,14 @@ function Receive-Package {
                 }
             }
 
+            $script:failureCode = 'stage_identity'
             $targetDirectory = Join-Path ([string] $Policy.managedFilesetRoot) ([string] $manifest.targetDirectoryName)
             $finalTarget = $targetDirectory
             $stateDirectory = Join-Path ([string] $Policy.stateRoot) ([string] $manifest.deploymentId)
             if ((Test-Path -LiteralPath $targetDirectory) -or (Test-Path -LiteralPath $stateDirectory)) {
                 throw [System.InvalidOperationException]::new('Deployment identity or target already exists.')
             }
+            $script:failureCode = 'stage_extract'
             $temporaryTarget = Join-Path ([string] $Policy.managedFilesetRoot) ('.saef-stage-' + [Guid]::NewGuid().ToString('N'))
             [IO.Directory]::CreateDirectory($temporaryTarget) | Out-Null
             foreach ($file in $files) {
@@ -796,6 +1108,7 @@ function Receive-Package {
                     $entryStream.Dispose()
                 }
             }
+            $script:failureCode = 'stage_commit'
             [IO.Directory]::Move($temporaryTarget, $targetDirectory)
             $temporaryTarget = $null
             [IO.Directory]::CreateDirectory($stateDirectory) | Out-Null
@@ -819,8 +1132,8 @@ function Receive-Package {
             -not (Test-Path -LiteralPath (Join-Path $stateDirectory 'deployment.json') -PathType Leaf)) {
             Remove-Item -LiteralPath $stateDirectory -Recurse -Force
         }
-        if (Test-Path -LiteralPath $incomingPath -PathType Leaf) {
-            Remove-Item -LiteralPath $incomingPath -Force
+        if (Test-Path -LiteralPath $IncomingPath -PathType Leaf) {
+            Remove-Item -LiteralPath $IncomingPath -Force
         }
     }
 }
@@ -832,13 +1145,32 @@ function Invoke-DeploymentPreflight {
     )
 
     $deployment = Assert-StagedDeployment -Policy $Policy -DeploymentId $DeploymentId
+    $requiredRuntimeFunctions = Assert-RuntimeHealthContract -RuntimeHealth $deployment.manifest.runtimeHealth
     $restartExit = Invoke-RestartCoordinator -Policy $Policy -StatusPath $deployment.paths.restartStatusPath `
         -ActiveBootstrapPath $deployment.bootstrapPath `
-        -ExpectedActiveSha256 ([string] $deployment.manifest.bootstrap.expectedActiveSha256) -PreflightOnly
+        -ExpectedActiveSha256 ([string] $deployment.manifest.bootstrap.expectedActiveSha256) -PreflightOnly `
+        -RequiredRuntimeFunctions $requiredRuntimeFunctions
     if ($restartExit -ne 0) {
         return Write-DeploymentStatus -Path $deployment.paths.statusPath -DeploymentId $DeploymentId `
             -Phase 'preflight' -Outcome 'failed' -ExitCode $ExitPreflightFailed `
             -Details @{ restartExitCode = $restartExit; activationAttempted = $false }
+    }
+    if ([bool] $Policy.runtimeMirrorEnabled) {
+        try {
+            $mirrorExit = Invoke-RuntimeMirrorCoordinator -Policy $Policy `
+                -FilesetPath $deployment.targetDirectory -StatusPath $deployment.paths.mirrorStatusPath -PreflightOnly
+        } catch {
+            $mirrorExit = -1
+        }
+        if ($mirrorExit -ne 0) {
+            return Write-DeploymentStatus -Path $deployment.paths.statusPath -DeploymentId $DeploymentId `
+                -Phase 'preflight' -Outcome 'failed' -ExitCode $ExitPreflightFailed `
+                -Details @{
+                    restartExitCode = $restartExit
+                    mirrorExitCode = $mirrorExit
+                    activationAttempted = $false
+                }
+        }
     }
     return Write-DeploymentStatus -Path $deployment.paths.statusPath -DeploymentId $DeploymentId `
         -Phase 'preflight' -Outcome 'passed' -ExitCode $ExitSuccess `
@@ -862,6 +1194,7 @@ function Invoke-DeploymentActivation {
         throw [System.InvalidOperationException]::new('Deployment requires a fresh successful preflight.')
     }
     $deployment = Assert-StagedDeployment -Policy $Policy -DeploymentId $DeploymentId
+    $requiredRuntimeFunctions = Assert-RuntimeHealthContract -RuntimeHealth $deployment.manifest.runtimeHealth
     if ([string] $preflightStatus.manifestSha256 -ne $deployment.manifestHash) {
         throw [System.InvalidOperationException]::new('Deployment manifest changed after preflight.')
     }
@@ -881,7 +1214,8 @@ function Invoke-DeploymentActivation {
         $restartExit = Invoke-RestartCoordinator -Policy $Policy -StatusPath $paths.restartStatusPath `
             -ActiveBootstrapPath $deployment.bootstrapPath `
             -ExpectedActiveSha256 ([string] $deployment.manifest.bootstrap.expectedCandidateSha256) `
-            -RollbackPath $paths.rollbackPath -ExpectedRollbackSha256 $rollbackSha256
+            -RollbackPath $paths.rollbackPath -ExpectedRollbackSha256 $rollbackSha256 `
+            -RequiredRuntimeFunctions $requiredRuntimeFunctions
     } catch {
         Write-AtomicBytes -Path $deployment.bootstrapPath -Bytes $deployment.activeBytes
         if ((Get-Sha256 -Path $deployment.bootstrapPath) -ne $rollbackSha256) {
@@ -899,9 +1233,34 @@ function Invoke-DeploymentActivation {
                 -Phase 'activation' -Outcome 'manual_recovery_required' -ExitCode $ExitManualRecovery `
                 -Details @{ restartExitCode = $restartExit; activationAttempted = $true; rollbackAttempted = $false }
         }
+        $mirrorExit = $null
+        if ([bool] $Policy.runtimeMirrorEnabled) {
+            try {
+                $mirrorExit = Invoke-RuntimeMirrorCoordinator -Policy $Policy `
+                    -FilesetPath $deployment.targetDirectory -StatusPath $paths.mirrorStatusPath
+            } catch {
+                $mirrorExit = -1
+            }
+            if ($mirrorExit -ne 0) {
+                return Write-DeploymentStatus -Path $paths.statusPath -DeploymentId $DeploymentId `
+                    -Phase 'activation' -Outcome 'activated_mirror_degraded' -ExitCode $ExitSuccess `
+                    -Details @{
+                        restartExitCode = $restartExit
+                        mirrorExitCode = $mirrorExit
+                        activationAttempted = $true
+                        rollbackAttempted = $false
+                        runtimeActivated = $true
+                    }
+            }
+        }
         return Write-DeploymentStatus -Path $paths.statusPath -DeploymentId $DeploymentId `
             -Phase 'activation' -Outcome 'activated' -ExitCode $ExitSuccess `
-            -Details @{ restartExitCode = $restartExit; activationAttempted = $true; rollbackAttempted = $false }
+            -Details @{
+                restartExitCode = $restartExit
+                mirrorExitCode = $mirrorExit
+                activationAttempted = $true
+                rollbackAttempted = $false
+            }
     }
     if ($restartExit -eq 10) {
         Write-AtomicBytes -Path $deployment.bootstrapPath -Bytes $deployment.activeBytes
@@ -933,7 +1292,9 @@ $operation = 'request'
 $exitCode = $ExitRequestRejected
 $channelMutex = $null
 try {
+    $script:failureCode = 'policy'
     $policy = Read-ChannelPolicy -Path $PolicyPath
+    $script:failureCode = 'command'
     $originalCommand = [string] $env:SSH_ORIGINAL_COMMAND
     if ([string]::IsNullOrWhiteSpace($originalCommand)) {
         throw [System.InvalidOperationException]::new('A deployment operation is required.')
@@ -958,19 +1319,68 @@ try {
             throw [System.InvalidOperationException]::new('Runtime readiness probe failed.')
         }
         Write-JsonResponse -Success $true -Operation $operation -Outcome 'ready' -ExitCode $ExitSuccess `
-            -Details @{ channelVersion = 1; allowedOperations = @('probe', 'stage', 'preflight', 'activate', 'status') }
+            -Details @{ channelVersion = 6; allowedOperations = @('probe', 'stage', 'preflight', 'activate', 'status') }
         exit $ExitSuccess
     }
     if ($operation -eq 'stage') {
         $exitCode = $ExitStageFailed
-        if ($parts.Count -ne 2) {
-            throw [System.InvalidOperationException]::new('Stage requires exactly one package hash.')
+        if ($parts.Count -lt 3) {
+            throw [System.InvalidOperationException]::new('Stage requires a bounded subcommand.')
         }
         $channelMutex = Enter-ChannelMutex
-        $status = Receive-Package -Policy $policy -ExpectedPackageSha256 $parts[1]
-        Write-JsonResponse -Success $true -Operation $operation -Outcome 'staged' -ExitCode $ExitSuccess `
-            -Details @{ deploymentId = $status.deploymentId; packageSha256 = $status.packageSha256; fileCount = $status.fileCount }
-        exit $ExitSuccess
+        $stageMode = $parts[1].ToLowerInvariant()
+        $packageSha256 = $parts[2]
+        if ($stageMode -eq 'begin') {
+            $packageBytes = 0L
+            if ($parts.Count -ne 4 -or
+                -not [long]::TryParse($parts[3], [Globalization.NumberStyles]::None, [Globalization.CultureInfo]::InvariantCulture, [ref] $packageBytes)) {
+                throw [System.InvalidOperationException]::new('Stage begin requires one hash and one byte count.')
+            }
+            $uploadState = Start-PackageUpload -Policy $policy -PackageSha256 $packageSha256 `
+                -ExpectedPackageBytes $packageBytes
+            Write-JsonResponse -Success $true -Operation $operation -Outcome 'upload_started' -ExitCode $ExitSuccess `
+                -Details @{ packageSha256 = $packageSha256; expectedChunks = [int] $uploadState.expectedChunks }
+            exit $ExitSuccess
+        }
+        if ($stageMode -eq 'chunk') {
+            $chunkIndex = -1
+            if ($parts.Count -ne 5 -or
+                -not [int]::TryParse($parts[3], [Globalization.NumberStyles]::None, [Globalization.CultureInfo]::InvariantCulture, [ref] $chunkIndex)) {
+                throw [System.InvalidOperationException]::new('Stage chunk requires hash, index and data.')
+            }
+            $uploadState = Add-PackageUploadChunk -Policy $policy -PackageSha256 $packageSha256 `
+                -Index $chunkIndex -Base64Chunk $parts[4]
+            Write-JsonResponse -Success $true -Operation $operation -Outcome 'chunk_accepted' -ExitCode $ExitSuccess `
+                -Details @{ packageSha256 = $packageSha256; nextIndex = [int] $uploadState.nextIndex }
+            exit $ExitSuccess
+        }
+        if ($stageMode -eq 'commit') {
+            if ($parts.Count -ne 3) {
+                throw [System.InvalidOperationException]::new('Stage commit requires one package hash.')
+            }
+            $uploadPaths = Get-UploadPaths -Policy $policy -PackageSha256 $packageSha256
+            $uploadState = Read-UploadState -Path $uploadPaths.statePath `
+                -ExpectedPackageSha256 $packageSha256
+            if ([int] $uploadState.nextIndex -ne [int] $uploadState.expectedChunks -or
+                [long] $uploadState.receivedBytes -ne [long] $uploadState.expectedBytes) {
+                throw [System.InvalidOperationException]::new('Package upload is incomplete.')
+            }
+            try {
+                $status = Receive-Package -Policy $policy -ExpectedPackageSha256 $packageSha256 `
+                    -ExpectedPackageBytes ([long] $uploadState.expectedBytes) `
+                    -IncomingPath $uploadPaths.dataPath
+            } finally {
+                Remove-Upload -DataPath $uploadPaths.dataPath -StatePath $uploadPaths.statePath
+            }
+            Write-JsonResponse -Success $true -Operation $operation -Outcome 'staged' -ExitCode $ExitSuccess `
+                -Details @{
+                    deploymentId = $status.deploymentId
+                    packageSha256 = $status.packageSha256
+                    fileCount = $status.fileCount
+                }
+            exit $ExitSuccess
+        }
+        throw [System.InvalidOperationException]::new('Stage subcommand is not allowed.')
     }
     if ($parts.Count -ne 2 -or -not (Test-SafeIdentifier -Value $parts[1])) {
         throw [System.InvalidOperationException]::new('Operation requires exactly one valid deployment identifier.')
@@ -978,6 +1388,7 @@ try {
     $deploymentId = $parts[1]
     if ($operation -eq 'preflight') {
         $exitCode = $ExitPreflightFailed
+        $script:failureCode = 'preflight_contract'
         $channelMutex = Enter-ChannelMutex
         $status = Invoke-DeploymentPreflight -Policy $policy -DeploymentId $deploymentId
         $success = [int] $status.exitCode -eq 0
@@ -999,17 +1410,58 @@ try {
         throw [System.IO.FileNotFoundException]::new('Deployment status is missing.')
     }
     $status = Get-Content -LiteralPath $paths.statusPath -Raw | ConvertFrom-Json
-    Write-JsonResponse -Success $true -Operation $operation -Outcome ([string] $status.outcome) -ExitCode $ExitSuccess `
-        -Details @{
-            deploymentId = $deploymentId
-            phase = [string] $status.phase
-            deploymentExitCode = [int] $status.exitCode
-            statusTimestampUtc = [string] $status.timestampUtc
+    $statusDetails = @{
+        deploymentId = $deploymentId
+        phase = [string] $status.phase
+        deploymentExitCode = [int] $status.exitCode
+        statusTimestampUtc = [string] $status.timestampUtc
+    }
+    if (Test-Path -LiteralPath $paths.mirrorStatusPath -PathType Leaf) {
+        $mirrorStatusFile = Get-Item -LiteralPath $paths.mirrorStatusPath
+        if ($mirrorStatusFile.Length -le 65536) {
+            $mirrorStatus = Get-Content -LiteralPath $paths.mirrorStatusPath -Raw | ConvertFrom-Json
+            $allowedMirrorFailureCodes = @(
+                'request', 'path_contract', 'rpc_endpoint', 'reconciler_integrity',
+                'fileset_provenance', 'credential_source', 'mirror_state', 'mirror_ownership',
+                'reconcile_execution', 'reconcile_result', 'state_commit'
+            )
+            $statusDetails['mirrorOutcome'] = [string] $mirrorStatus.outcome
+            if ($mirrorStatus.PSObject.Properties.Name -contains 'failureCode' -and
+                [string] $mirrorStatus.failureCode -in $allowedMirrorFailureCodes) {
+                $statusDetails['mirrorFailureCode'] = [string] $mirrorStatus.failureCode
+            }
         }
+    }
+    if (Test-Path -LiteralPath $paths.restartStatusPath -PathType Leaf) {
+        $restartStatusFile = Get-Item -LiteralPath $paths.restartStatusPath
+        if ($restartStatusFile.Length -le 65536) {
+            $restartStatus = Get-Content -LiteralPath $paths.restartStatusPath -Raw | ConvertFrom-Json
+            $allowedRestartChecks = @(
+                'policy', 'credential_source', 'service_name', 'rollback_parameters',
+                'active_bootstrap_hash', 'service_state', 'kernel_runlevel',
+                'kernel_start_time', 'runtime_health_probe'
+            )
+            $allowedRuntimeHealthChecks = @(
+                'not_started', 'parameters', 'contract_decode', 'object_exists',
+                'object_type', 'source_hash', 'execution', 'result_contract', 'passed'
+            )
+            $statusDetails['restartOutcome'] = [string] $restartStatus.outcome
+            if ($restartStatus.PSObject.Properties.Name -contains 'failedCheck' -and
+                [string] $restartStatus.failedCheck -in $allowedRestartChecks) {
+                $statusDetails['restartFailedCheck'] = [string] $restartStatus.failedCheck
+            }
+            if ($restartStatus.PSObject.Properties.Name -contains 'runtimeHealthCheck' -and
+                [string] $restartStatus.runtimeHealthCheck -in $allowedRuntimeHealthChecks) {
+                $statusDetails['runtimeHealthCheck'] = [string] $restartStatus.runtimeHealthCheck
+            }
+        }
+    }
+    Write-JsonResponse -Success $true -Operation $operation -Outcome ([string] $status.outcome) -ExitCode $ExitSuccess `
+        -Details $statusDetails
     exit $ExitSuccess
 } catch {
     Write-JsonResponse -Success $false -Operation $operation -Outcome 'rejected' -ExitCode $exitCode `
-        -Details @{ errorType = $_.Exception.GetType().FullName }
+        -Details @{ errorType = $_.Exception.GetType().FullName; failureCode = $script:failureCode }
     exit $exitCode
 } finally {
     if ($null -ne $channelMutex) {
