@@ -1,7 +1,7 @@
 {
     "formatVersion": 1,
     "name": "saef-control-light",
-    "entry": "case-studies/control-light/candidate/ControlLightRuntime.php",
+    "entry": "case-studies/control-light/candidate/ControlLightFileset.php",
     "phpMinimum": "8.2",
     "outputDirectory": "dist/symcon/saef-control-light",
     "functionExports": [
@@ -13,6 +13,7 @@
         "SAEF_EnsureErrorRingBufferVariable",
         "SAEF_EnsureLink",
         "SAEF_EnsureRegistryVariable",
+        "SAEF_EnsureScript",
         "SAEF_EnsureStatisticsVariables",
         "SAEF_EnsureTriggeredScriptEvent",
         "SAEF_EnsureVariable",
@@ -41,6 +42,7 @@
         "SAEF_WriteRegistry"
     ],
     "classExports": [
+        "SAEF\\CaseStudy\\ControlLight\\ControlLightCommandException",
         "SAEF\\CaseStudy\\ControlLight\\ControlLightCore",
         "SAEF\\CaseStudy\\ControlLight\\ControlLightRuntime"
     ]

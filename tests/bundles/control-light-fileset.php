@@ -33,14 +33,20 @@ try {
         512,
         JSON_THROW_ON_ERROR
     );
-    assertControlLightFilesetSame(11, count($sourceMap['orderedSources'] ?? []), 'Source closure differs.');
+    assertControlLightFilesetSame(14, count($sourceMap['orderedSources'] ?? []), 'Source closure differs.');
     assertControlLightFilesetSame(
         true,
         in_array('SAEF_EnsureLink', $sourceMap['functionExports'] ?? [], true),
         'EnsureLink is missing from the fileset.'
     );
     assertControlLightFilesetSame(
+        true,
+        in_array('SAEF_EnsureScript', $sourceMap['functionExports'] ?? [], true),
+        'EnsureScript is missing from the fileset.'
+    );
+    assertControlLightFilesetSame(
         [
+            'SAEF\\CaseStudy\\ControlLight\\ControlLightCommandException',
             'SAEF\\CaseStudy\\ControlLight\\ControlLightCore',
             'SAEF\\CaseStudy\\ControlLight\\ControlLightRuntime',
         ],

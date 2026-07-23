@@ -16,6 +16,7 @@ require_once __DIR__ . '/../../../helpers/diagnostics/Registry.php';
 require_once __DIR__ . '/../../../helpers/diagnostics/Statistics.php';
 require_once __DIR__ . '/../../../helpers/variable/WaitForVariable.php';
 require_once __DIR__ . '/ControlLightCore.php';
+require_once __DIR__ . '/ControlLightCommandException.php';
 
 /**
  * IP-Symcon runtime candidate for ControlLight v2.
@@ -116,9 +117,36 @@ final class ControlLightRuntime
             return ['status' => 'ignored_sender', 'sender' => $sender];
         } catch (Throwable $exception) {
             self::recordFailure($diagnostics, $exception, 'runtime');
+            if ($exception instanceof ControlLightCommandException) {
+                return self::commandFailureResult($sourceIPS, $exception);
+            }
+
             \IPS_LogMessage('SAEF ControlLight v2', 'Runtime failed: ' . $exception->getMessage());
             throw $exception;
         }
+    }
+
+    /**
+     * Convert an expected command failure at the Symcon action boundary.
+     *
+     * RequestAction() executes action scripts across a Symcon engine boundary,
+     * where rethrowing an operational exception creates an additional
+     * ScriptEngine fatal even if the initiating caller catches it.
+     *
+     * @param array<string, mixed> $sourceIPS
+     *
+     * @return array<string, mixed>
+     */
+    private static function commandFailureResult(
+        array $sourceIPS,
+        ControlLightCommandException $exception
+    ): array {
+        return [
+            'status' => 'command_failed',
+            'failureClass' => $exception->failureClass(),
+            'capability' => $exception->capability(),
+            'sender' => (string)($sourceIPS['SENDER'] ?? ''),
+        ];
     }
 
     /**
@@ -217,6 +245,17 @@ final class ControlLightRuntime
 
         self::deactivateObsoleteExternalEvents($ownerScriptID, count($configuration['externalTriggers']));
 
+        if ($targetRootID !== null && $configuration['availability']['enabled'] === true) {
+            $availabilityVariableID = self::resolveTargetVariable(
+                $targetRootID,
+                $configuration['availability']['targetIdent'],
+                $configuration['availability']['targetType']
+            );
+            if ($availabilityVariableID !== null) {
+                $resources['availabilityVariableID'] = $availabilityVariableID;
+            }
+        }
+
         return $resources;
     }
 
@@ -295,7 +334,10 @@ final class ControlLightRuntime
             self::syncAll($resources, $configuration);
             if (!$confirmed) {
                 \SAEF_IncrementStatistic($diagnostics['statisticIDs']['CONFIRMATION_TIMEOUTS']);
-                throw new RuntimeException('Authoritative feedback confirmation timed out: ' . $capability);
+                throw new ControlLightCommandException(
+                    self::feedbackFailureClass($resources, $configuration),
+                    $capability
+                );
             }
 
             \SAEF_SetStatisticTimestamp($diagnostics['statisticIDs']['LAST_FEEDBACK']);
@@ -485,6 +527,22 @@ final class ControlLightRuntime
         if ($variable['VariableCustomAction'] <= 0 && $variable['VariableAction'] <= 0) {
             throw new RuntimeException('Target variable has no action: ' . $capability);
         }
+    }
+
+    /** @param array<string, mixed> $resources @param array<string, mixed> $configuration */
+    private static function feedbackFailureClass(array $resources, array $configuration): string
+    {
+        $availabilityVariableID = $resources['availabilityVariableID'] ?? null;
+        if (!is_int($availabilityVariableID)) {
+            return ControlLightCommandException::FAILURE_FEEDBACK_TIMEOUT;
+        }
+
+        return ControlLightCore::availabilityValueMatches(
+            \GetValue($availabilityVariableID),
+            $configuration
+        )
+            ? ControlLightCommandException::FAILURE_FEEDBACK_TIMEOUT
+            : ControlLightCommandException::FAILURE_DEVICE_OFFLINE;
     }
 
     /** @param array<string, mixed> $externalTrigger */
@@ -703,11 +761,16 @@ final class ControlLightRuntime
         }
 
         try {
+            $context = ['phase' => $phase, 'type' => $exception::class];
+            if ($exception instanceof ControlLightCommandException) {
+                $context['failureClass'] = $exception->failureClass();
+                $context['capability'] = $exception->capability();
+            }
             \SAEF_AppendErrorRingBufferEntry(
                 $diagnostics['errorRingBufferID'],
                 'ControlLight failure during ' . $phase . '.',
                 self::DIAGNOSTIC_ERROR_CAPACITY,
-                ['phase' => $phase, 'type' => $exception::class]
+                $context
             );
         } catch (Throwable $diagnosticException) {
             \IPS_LogMessage(

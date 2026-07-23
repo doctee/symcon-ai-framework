@@ -2,12 +2,16 @@
     "formatVersion": 1,
     "manifest": "deployments/symcon/control-light.fileset.json",
     "name": "saef-control-light",
-    "entry": "case-studies/control-light/candidate/ControlLightRuntime.php",
+    "entry": "case-studies/control-light/candidate/ControlLightFileset.php",
     "phpMinimum": "8.2",
     "orderedSources": [
         {
+            "path": "case-studies/control-light/candidate/ControlLightCommandException.php",
+            "sha256": "b5357a30e60b6a22b494264463a2361f7cef8d6d6b8bdf84f6cf67d0ddd25d20"
+        },
+        {
             "path": "case-studies/control-light/candidate/ControlLightCore.php",
-            "sha256": "9ab110c151238cd2b5fa706c54665cae3f3722e175626366e45e0f7d5ba6ec9b"
+            "sha256": "5a430cb529b26a7b45f7c982f1f80d667ff604eb8e4e3e4ed3e59363b72892a3"
         },
         {
             "path": "helpers/diagnostics/ConfigurationHash.php",
@@ -47,11 +51,19 @@
         },
         {
             "path": "case-studies/control-light/candidate/ControlLightRuntime.php",
-            "sha256": "2e5df4e53c9719f75e877110d4d9b37c2c7bc47075a5295bcf818f41c722426d"
+            "sha256": "ce2a20e31a36833647e76b6b5ced0d3d47e93e017252dec29347ba0d9a3d0d91"
+        },
+        {
+            "path": "helpers/object/EnsureScript.php",
+            "sha256": "02f062764e84f8b0b2317c1926da9fa89e38bb855c97a6531779bfa677427002"
+        },
+        {
+            "path": "case-studies/control-light/candidate/ControlLightFileset.php",
+            "sha256": "409da93fb016f2e18e5994502215b8bf862c08ce1ea8468284d7b37b90a8f7d9"
         }
     ],
-    "bootstrapSha256": "60ecc330c1c6e081db0273deebb649fc693ee747d9b9cc6cc9288c01cd18ed5c",
-    "filesetSha256": "434d0ad0cfd2789214e98e5ff843c7a3218612e6b4b4d130f3aee679a1abc8be",
+    "bootstrapSha256": "287eb5f61807351722616a7b555fedf65921f68fc0240ec39ba5429368e1eec6",
+    "filesetSha256": "29149b17e87164591da522daf4535f82e9d243b1029423bfc270a623c4f7ce33",
     "functionExports": [
         "SAEF_AppendErrorRingBufferEntry",
         "SAEF_ClearErrorRingBuffer",
@@ -61,6 +73,7 @@
         "SAEF_EnsureErrorRingBufferVariable",
         "SAEF_EnsureLink",
         "SAEF_EnsureRegistryVariable",
+        "SAEF_EnsureScript",
         "SAEF_EnsureStatisticsVariables",
         "SAEF_EnsureTriggeredScriptEvent",
         "SAEF_EnsureVariable",
@@ -89,6 +102,7 @@
         "SAEF_WriteRegistry"
     ],
     "classExports": [
+        "SAEF\\CaseStudy\\ControlLight\\ControlLightCommandException",
         "SAEF\\CaseStudy\\ControlLight\\ControlLightCore",
         "SAEF\\CaseStudy\\ControlLight\\ControlLightRuntime"
     ],
@@ -97,6 +111,7 @@
         "SAEF_HELPER_CONFIGURATION_HASH",
         "SAEF_HELPER_ENSURE_EVENT",
         "SAEF_HELPER_ENSURE_LINK",
+        "SAEF_HELPER_ENSURE_SCRIPT",
         "SAEF_HELPER_ENSURE_VARIABLE",
         "SAEF_HELPER_ERROR_RING_BUFFER",
         "SAEF_HELPER_REGISTRY",

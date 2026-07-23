@@ -44,6 +44,7 @@ final class ControlLightTopologyFake
         self::variable(201, 200, 'state', 'Target State', 0, '~Switch', 500);
         self::variable(202, 200, 'brightness', 'Target Brightness', 1, '', 500);
         self::variable(203, 200, 'color_temp_kelvin', 'Target Temperature', 1, '', 500);
+        self::variable(204, 200, 'device_status', 'Target Availability', 0, '', 0);
 
         self::object(150, 6, 100, 'LINK_TARGET_PARENT', 'User Target Link', 91, 'LinkIcon', true);
         self::$links[150] = ['TargetID' => 200];
@@ -342,6 +343,7 @@ assertTopologySame(true, ControlLightTopologyFake::$objects[161]['ObjectIsHidden
 assertTopologySame(0, ControlLightTopologyFake::$variables[161]['VariableCustomAction'], 'Disabled color action remained active.');
 assertTopologySame(101, ControlLightTopologyFake::$variables[$first['localVariableIDs']['brightness']]['VariableCustomAction'], 'Brightness action differs.');
 assertTopologySame(101, ControlLightTopologyFake::$variables[$first['localVariableIDs']['colorTemperature']]['VariableCustomAction'], 'Temperature action differs.');
+assertTopologySame(204, $first['availabilityVariableID'], 'Availability variable resolution differs.');
 
 $firstDiagnostics = ControlLightRuntime::initializeDiagnostics(101, $configuration);
 $writesAfterFirstDiagnostics = ControlLightTopologyFake::$valueWrites;

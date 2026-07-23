@@ -13,6 +13,7 @@ foreach ([
     'SAEF_EnsureErrorRingBufferVariable',
     'SAEF_EnsureLink',
     'SAEF_EnsureRegistryVariable',
+    'SAEF_EnsureScript',
     'SAEF_EnsureStatisticsVariables',
     'SAEF_EnsureTriggeredScriptEvent',
     'SAEF_EnsureVariable',
@@ -45,6 +46,7 @@ foreach ([
     }
 }
 foreach ([
+    'SAEF\CaseStudy\ControlLight\ControlLightCommandException',
     'SAEF\CaseStudy\ControlLight\ControlLightCore',
     'SAEF\CaseStudy\ControlLight\ControlLightRuntime',
 ] as $saefFilesetClass) {
@@ -57,6 +59,7 @@ foreach ([
     'SAEF_HELPER_CONFIGURATION_HASH',
     'SAEF_HELPER_ENSURE_EVENT',
     'SAEF_HELPER_ENSURE_LINK',
+    'SAEF_HELPER_ENSURE_SCRIPT',
     'SAEF_HELPER_ENSURE_VARIABLE',
     'SAEF_HELPER_ERROR_RING_BUFFER',
     'SAEF_HELPER_REGISTRY',
@@ -76,4 +79,4 @@ if ($saefFilesetConflicts !== []) {
 }
 unset($saefFilesetConflicts, $saefFilesetFunction, $saefFilesetClass, $saefFilesetConstant);
 
-require_once __DIR__ . '/case-studies/control-light/candidate/ControlLightRuntime.php';
+require_once __DIR__ . '/case-studies/control-light/candidate/ControlLightFileset.php';

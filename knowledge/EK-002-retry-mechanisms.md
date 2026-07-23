@@ -156,6 +156,38 @@ When a supervised test observes an unexpected transition:
 An additional command or a payload from another controller is concurrency
 evidence, not a reason to lengthen the wait automatically.
 
+### Availability Is Post-Failure Evidence
+
+Device availability commonly lags a hard power transition. A light can be
+powered on physically while its gateway still exposes the preceding offline
+value. Using that value as a pre-dispatch gate would lose an interactive
+command arriving during reconnection.
+
+For a permitted device command, use this sequence:
+
+1. dispatch the command without waiting for availability to become true;
+2. perform the normal bounded authoritative-feedback check;
+3. return success immediately when feedback confirms the expected condition;
+4. only after missing feedback, inspect the latest optional availability value;
+5. classify the failure as `device_offline` when the device is still reported
+   unavailable, otherwise retain the general feedback-timeout class.
+
+Availability is therefore diagnostic evidence after a failed confirmation. It
+does not replace domain-specific safety interlocks and does not authorize an
+otherwise unsafe command. Automatic callers may stop or alter their own retry
+sequence for `device_offline`, while interactive callers remain free to try
+again after the device reconnects.
+
+Do not use an uncaught exception as a transport mechanism across a Symcon
+action-script boundary. `RequestAction()` can cause the action script's
+exception to be reported independently by the ScriptEngine, even when the
+initiating script catches its own call. The action script should persist the
+classified operational failure in bounded diagnostics and return normally.
+The initiating automation remains responsible for its own authoritative
+feedback check or an explicitly designed shared status contract. Configuration
+and programming defects are not expected operational failures and should still
+fail visibly.
+
 ### Retry Safety
 
 Only retry operations that are safe to repeat.

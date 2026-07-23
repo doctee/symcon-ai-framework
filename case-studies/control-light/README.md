@@ -137,6 +137,13 @@ same brightness semantics are safe for every existing consumer.
 - `45-cl026-functional-and-autooff-test-report.md` records the complete
   STATE/DIMMER/color-temperature sequence, real Auto-Off timer shutdown,
   exact baseline restoration and final all-wrapper regression.
+- `46-v0.2-scope-closure.md` closes the rollout with seven fully tested v2
+  wrappers and an explicit retain decision for the 22 heterogeneous legacy
+  wrappers.
+- `47-availability-aware-feedback-classification.md` adds the post-v0.2
+  availability contract: command dispatch is never gated by a possibly stale
+  indicator, while an unconfirmed command can be classified as
+  `device_offline` for diagnostics and caller-specific recovery.
 - `tests/control-light/fixtures/installed-contracts.json` is a sanitized
   29-instance regression inventory.
 - `private/control-light/migration-manifest.local.json` contains the private
@@ -173,10 +180,11 @@ records exactly one mode before live preflight:
   retained target brightness.
 
 The sanitized fixture marks the seven active v2 instances as `reported`. The
-remaining 22 legacy instances stay `pending` until the default has been applied
-and their consumers have been checked. A pending value is rejected by the
-normalized runtime configuration and therefore cannot reach live execution
-accidentally.
+remaining 22 legacy instances stay `pending` and are explicitly retained for
+the v0.2 rollout. Each future migration must apply the default or justify an
+exception after its consumers have been checked. A pending value is rejected
+by the normalized runtime configuration and therefore cannot reach live
+execution accidentally.
 
 ## Downstream Auto-Off Contract
 
@@ -200,6 +208,36 @@ This contract allowed the modernized Auto-Off automation to operate safely
 against the former legacy `CL-026` wrapper and remains valid after its v2
 migration.
 
+## Availability Contract
+
+Availability is optional protocol metadata and is not a ControlLight
+capability. The Z2M preset resolves the boolean `device_status` target when it
+exists; other presets remain unconfigured unless an installation supplies an
+explicit target Ident, type and available value.
+
+ControlLight deliberately does not read availability before dispatch. A lamp
+that has just regained physical power can still carry a stale offline marker
+when a voice, visualization or wall-control command arrives. The permitted
+command is sent once and evaluated through the normal bounded authoritative
+feedback contract. Successful feedback wins regardless of the prior
+availability marker.
+
+Only after confirmation times out does ControlLight read the latest optional
+availability value. A still-unavailable target raises a classified
+`device_offline` `ControlLightCommandException`; an available or unconfigured
+target remains `feedback_timeout`. The bounded error history records failure
+class and capability without duplicating device snapshots or creating a new
+diagnostics store. Automatic consumers may apply their own bounded recovery
+policy to the typed failure, but availability does not change interactive
+dispatch semantics.
+
+The outer ControlLight runtime boundary converts a classified command failure
+to the structured `command_failed` result after recording diagnostics. It does
+not rethrow the expected operational exception through the Symcon action-script
+boundary, because that would create an additional uncaught ScriptEngine fatal.
+Unexpected configuration and programming failures continue to be logged and
+re-thrown.
+
 ## Current Live State and Blockers
 
 Seven instances are active on v2 with `reported` brightness semantics: the
@@ -214,6 +252,14 @@ device sequence plus a real Auto-Off timer shutdown. All seven retain
 authoritative feedback and complete enabled-capability device evidence. The other 22 wrappers remain
 legacy, and all 29 source identities continue to participate in regression
 checks.
+
+All seven v2 wrappers now select the availability-aware post-v0.2 runtime from
+one immutable staged fileset. Its activation preserved System.Locals and every
+legacy wrapper, updated the non-executable runtime mirror byte-exactly and
+passed one non-commanding reconciliation per wrapper with zero command, error,
+timeout or local-value deltas. Five targets reported available and two reported
+unavailable during the final readback; availability did not gate command-free
+activation or reconciliation.
 
 The global load owner supplies the corrected shared wait helper, verified by
 Reflection after a clean-process restart. The corrected helper confirmed the

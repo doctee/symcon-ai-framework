@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use SAEF\CaseStudy\ControlLight\ControlLightCore;
+use SAEF\CaseStudy\ControlLight\ControlLightCommandException;
 use SAEF\CaseStudy\ControlLight\ControlLightRuntime;
 
 final class ControlLightFakeRuntime
@@ -159,6 +160,7 @@ function controlLightRuntimeFixture(string $semantics = ControlLightCore::BRIGHT
     ControlLightFakeRuntime::variable(11, 1, 0);
     ControlLightFakeRuntime::variable(20, 0, false, true);
     ControlLightFakeRuntime::variable(21, 1, 10, true);
+    ControlLightFakeRuntime::variable(22, 0, false);
     ControlLightFakeRuntime::variable(30, 1, 0);
     ControlLightFakeRuntime::variable(31, 1, 0);
     ControlLightFakeRuntime::variable(32, 1, 0);
@@ -176,6 +178,7 @@ function controlLightRuntimeFixture(string $semantics = ControlLightCore::BRIGHT
         'resources' => [
             'localVariableIDs' => ['state' => 10, 'brightness' => 11],
             'targetVariableIDs' => ['state' => 20, 'brightness' => 21],
+            'availabilityVariableID' => 22,
             'externalTriggers' => [],
         ],
         'diagnostics' => [
@@ -223,6 +226,27 @@ $tests['confirms delayed feedback through bounded waiting'] = static function ()
     assertControlLightRuntimeSame(60, GetValue(11), 'Delayed local feedback differs.');
 };
 
+$tests['dispatches during a stale offline indication and accepts immediate feedback'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    assertControlLightRuntimeSame(false, GetValue(22), 'Availability precondition differs.');
+
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'state',
+        true,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+
+    assertControlLightRuntimeSame('confirmed', $result['status'], 'Hard-on command was not confirmed.');
+    assertControlLightRuntimeSame(
+        [['variableID' => 20, 'value' => true]],
+        ControlLightFakeRuntime::$actions,
+        'Stale offline indication blocked or duplicated the command.'
+    );
+};
+
 $tests['reports timeout without optimistic local state'] = static function (): void {
     $fixture = controlLightRuntimeFixture();
     ControlLightFakeRuntime::$feedbackMode = 'none';
@@ -240,10 +264,67 @@ $tests['reports timeout without optimistic local state'] = static function (): v
         if (!str_contains($exception->getMessage(), 'confirmation timed out')) {
             throw $exception;
         }
+        if (!$exception instanceof ControlLightCommandException) {
+            throw new RuntimeException('Timeout did not use the classified command exception.');
+        }
+        assertControlLightRuntimeSame(
+            ControlLightCommandException::FAILURE_DEVICE_OFFLINE,
+            $exception->failureClass(),
+            'Offline timeout failure class differs.'
+        );
     }
     assertControlLightRuntimeSame(10, GetValue(11), 'Unconfirmed local brightness changed.');
     assertControlLightRuntimeSame(1, GetValue(31), 'Timeout statistic differs.');
     assertControlLightRuntimeSame(['SAEF_CONTROL_LIGHT_1000'], ControlLightFakeRuntime::$semaphoreLeaves, 'Timeout leaked semaphore.');
+};
+
+$tests['keeps an available target timeout distinct from device offline'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    ControlLightFakeRuntime::$feedbackMode = 'none';
+    SetValue(22, true);
+
+    try {
+        ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'brightness',
+            70,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        throw new RuntimeException('Available-target timeout was not reported.');
+    } catch (ControlLightCommandException $exception) {
+        assertControlLightRuntimeSame(
+            ControlLightCommandException::FAILURE_FEEDBACK_TIMEOUT,
+            $exception->failureClass(),
+            'Available-target timeout failure class differs.'
+        );
+    }
+    assertControlLightRuntimeSame(1, count(ControlLightFakeRuntime::$actions), 'Available target command count differs.');
+};
+
+$tests['treats missing optional availability as an unclassified feedback timeout'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    ControlLightFakeRuntime::$feedbackMode = 'none';
+    unset($fixture['resources']['availabilityVariableID']);
+
+    try {
+        ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'brightness',
+            70,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        throw new RuntimeException('Missing-availability timeout was not reported.');
+    } catch (ControlLightCommandException $exception) {
+        assertControlLightRuntimeSame(
+            ControlLightCommandException::FAILURE_FEEDBACK_TIMEOUT,
+            $exception->failureClass(),
+            'Missing-availability timeout failure class differs.'
+        );
+    }
 };
 
 $tests['rejects parallel execution before device action'] = static function (): void {
@@ -356,6 +437,19 @@ $tests['keeps diagnostic failures secondary and error history generic'] = static
     $recordFailure->invoke(
         null,
         [
+            'statisticIDs' => ['ERRORS' => 33],
+            'errorRingBufferID' => 34,
+        ],
+        new ControlLightCommandException(ControlLightCommandException::FAILURE_DEVICE_OFFLINE, 'state'),
+        'runtime'
+    );
+    $history = SAEF_ReadErrorRingBuffer(34);
+    assertControlLightRuntimeSame('device_offline', $history[1]['context']['failureClass'], 'Failure class context differs.');
+    assertControlLightRuntimeSame('state', $history[1]['context']['capability'], 'Failure capability context differs.');
+
+    $recordFailure->invoke(
+        null,
+        [
             'statisticIDs' => ['ERRORS' => 9998],
             'errorRingBufferID' => 9999,
         ],
@@ -363,6 +457,29 @@ $tests['keeps diagnostic failures secondary and error history generic'] = static
         'runtime'
     );
     assertControlLightRuntimeSame(2, count(ControlLightFakeRuntime::$logs), 'Secondary failures were not logged.');
+};
+
+$tests['converts classified command failures at the Symcon action boundary'] = static function (): void {
+    $resultMethod = new ReflectionMethod(ControlLightRuntime::class, 'commandFailureResult');
+    $result = $resultMethod->invoke(
+        null,
+        ['SENDER' => 'Action'],
+        new ControlLightCommandException(
+            ControlLightCommandException::FAILURE_DEVICE_OFFLINE,
+            'state'
+        )
+    );
+
+    assertControlLightRuntimeSame(
+        [
+            'status' => 'command_failed',
+            'failureClass' => 'device_offline',
+            'capability' => 'state',
+            'sender' => 'Action',
+        ],
+        $result,
+        'Classified action-boundary result differs.'
+    );
 };
 
 $passed = 0;

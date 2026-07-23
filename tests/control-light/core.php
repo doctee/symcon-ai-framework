@@ -148,6 +148,23 @@ $tests['uses bounded target comparison tolerances'] = static function (): void {
     assertControlLightSame(false, ControlLightCore::targetValueMatches('colorTemperature', 2600, 2606, $configuration), 'Temperature mismatch was accepted.');
 };
 
+$tests['normalizes optional availability without making it a capability'] = static function (): void {
+    $z2m = ControlLightCore::normalizeConfiguration([
+        'preset' => 'Z2M',
+        'brightnessSemantics' => ControlLightCore::BRIGHTNESS_REPORTED,
+    ]);
+    assertControlLightSame(true, $z2m['availability']['enabled'], 'Z2M availability is disabled.');
+    assertControlLightSame('device_status', $z2m['availability']['targetIdent'], 'Z2M availability Ident differs.');
+    assertControlLightSame(true, ControlLightCore::availabilityValueMatches(true, $z2m), 'Available Z2M value differs.');
+    assertControlLightSame(false, ControlLightCore::availabilityValueMatches(false, $z2m), 'Offline Z2M value differs.');
+
+    $matter = ControlLightCore::normalizeConfiguration([
+        'preset' => 'MATTER',
+        'brightnessSemantics' => ControlLightCore::BRIGHTNESS_REPORTED,
+    ]);
+    assertControlLightSame(false, $matter['availability']['enabled'], 'Unconfigured Matter availability is enabled.');
+};
+
 $tests['rejects ambiguous or unbounded configuration'] = static function (): void {
     assertControlLightThrows(
         InvalidArgumentException::class,
@@ -179,6 +196,19 @@ $tests['rejects ambiguous or unbounded configuration'] = static function (): voi
             'authoritativeFeedback' => false,
         ]),
         'Non-authoritative v2 mode was accepted.'
+    );
+    assertControlLightThrows(
+        InvalidArgumentException::class,
+        static fn(): array => ControlLightCore::normalizeConfiguration([
+            'preset' => 'Z2M',
+            'brightnessSemantics' => ControlLightCore::BRIGHTNESS_REPORTED,
+            'availability' => [
+                'targetIdent' => 'device_status',
+                'targetType' => 0,
+                'availableValue' => 'online',
+            ],
+        ]),
+        'Availability value with the wrong variable type was accepted.'
     );
 };
 

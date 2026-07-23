@@ -338,6 +338,12 @@ Use `SetValue()` only for variables owned by the script itself or for calculated
 - Use `HasAction()` or equivalent checks where a generic helper must decide whether a variable has action semantics.
 - Treat authoritative feedback as confirmation of the observed result at that
   point in time, not as proof of exclusive target ownership.
+- Treat a device-availability value as diagnostic evidence, not as a general
+  command gate. A device that has just regained power may still be reported as
+  unavailable when an interactive command arrives. Unless the domain contract
+  requires a separate safety interlock, issue the permitted command first,
+  perform bounded authoritative confirmation and inspect the latest
+  availability only if confirmation fails.
 - Document multi-controller targets explicitly. A script-local or named
   semaphore serializes only callers that participate in the same lock; it does
   not exclude device modules, physical controls, MQTT clients or other
@@ -865,6 +871,20 @@ Common failure classes include:
 - invalid response,
 - actuator command failed,
 - archive access failure.
+
+When authoritative device feedback times out, a separately reported
+availability value may refine the failure to `device_offline`. The command must
+not be reclassified merely because availability was stale before dispatch. If
+feedback succeeds, the command succeeds regardless of that earlier indicator.
+Automatic callers may use the resulting failure class for their own bounded
+retry policy; interactive command dispatch remains a separate responsibility.
+At a Symcon action-script boundary, expected operational failures must not be
+re-thrown merely to transport that classification. Symcon can report such an
+exception as an additional uncaught ScriptEngine fatal even when the initiating
+caller handles `RequestAction()`. Record the classification in bounded runtime
+diagnostics and complete the action script normally; callers that require
+confirmation must evaluate authoritative feedback or an explicit shared status
+contract. Unexpected configuration and programming failures remain exceptions.
 
 #### Anti-Patterns
 

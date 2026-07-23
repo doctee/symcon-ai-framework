@@ -70,6 +70,7 @@ final class ControlLightCore
         if (!is_array($semaphore)) {
             throw new InvalidArgumentException('configuration.semaphore must be an array.');
         }
+        $availability = self::normalizeAvailability($merged['availability']);
 
         $normalized = [
             'version' => self::optionalString($merged, 'version') ?? 'ControlLight-v2-candidate',
@@ -92,6 +93,7 @@ final class ControlLightCore
                 ),
             ],
             'debug' => self::requireBoolean($merged, 'debug'),
+            'availability' => $availability,
             'capabilities' => [],
             'externalTriggers' => self::normalizeExternalTriggers($merged['externalTriggers']),
         ];
@@ -203,6 +205,17 @@ final class ControlLightCore
         };
     }
 
+    /** @param array<string, mixed> $configuration Normalized configuration. */
+    public static function availabilityValueMatches(mixed $actualValue, array $configuration): bool
+    {
+        $availability = $configuration['availability'] ?? null;
+        if (!is_array($availability) || ($availability['enabled'] ?? false) !== true) {
+            throw new InvalidArgumentException('Availability is not enabled.');
+        }
+
+        return $actualValue === $availability['availableValue'];
+    }
+
     /** @return array<string, mixed> */
     private static function defaultConfiguration(): array
     {
@@ -238,6 +251,11 @@ final class ControlLightCore
                 'timeoutMilliseconds' => 5 * 1000,
             ],
             'debug' => false,
+            'availability' => [
+                'targetIdent' => '',
+                'targetType' => 0,
+                'availableValue' => true,
+            ],
             'externalTriggers' => [],
         ];
     }
@@ -251,6 +269,11 @@ final class ControlLightCore
                 'identDim' => 'brightness',
                 'identTemp' => 'color_temp_kelvin',
                 'identColor' => 'color',
+                'availability' => [
+                    'targetIdent' => 'device_status',
+                    'targetType' => 0,
+                    'availableValue' => true,
+                ],
             ],
             'MATTER', 'HA', 'HOMEASSISTANT' => [
                 'identState' => 'light_status',
@@ -347,6 +370,46 @@ final class ControlLightCore
         }
 
         return $normalized;
+    }
+
+    /** @return array{enabled: bool, targetIdent: string, targetType: int, availableValue: mixed} */
+    private static function normalizeAvailability(mixed $availability): array
+    {
+        if (!is_array($availability)) {
+            throw new InvalidArgumentException('configuration.availability must be an array.');
+        }
+
+        $targetIdent = self::requireString($availability, 'targetIdent');
+        $targetType = self::requireIntegerRange(
+            $availability,
+            'targetType',
+            0,
+            3,
+            'configuration.availability'
+        );
+        if (!array_key_exists('availableValue', $availability)) {
+            throw new InvalidArgumentException('configuration.availability.availableValue is required.');
+        }
+        $availableValue = $availability['availableValue'];
+        $validType = match ($targetType) {
+            0 => is_bool($availableValue),
+            1 => is_int($availableValue),
+            2 => is_float($availableValue),
+            3 => is_string($availableValue),
+            default => false,
+        };
+        if (!$validType) {
+            throw new InvalidArgumentException(
+                'configuration.availability.availableValue must match targetType.'
+            );
+        }
+
+        return [
+            'enabled' => $targetIdent !== '',
+            'targetIdent' => $targetIdent,
+            'targetType' => $targetType,
+            'availableValue' => $availableValue,
+        ];
     }
 
     /** @param array<string, mixed> $configuration */

@@ -18,6 +18,12 @@ $configuration = [
     'authoritativeFeedback' => true,
 
     /*
+     * Availability is never a command gate. It is inspected only after a
+     * missing authoritative confirmation to classify the operational failure.
+     * The Z2M preset uses the boolean device_status variable by default.
+     */
+
+    /*
      * Required migration decision before an instance may pass live preflight:
      * - reported: DIMMER mirrors retained device brightness while switched off.
      * - effective: DIMMER is zero while STATE is false.
