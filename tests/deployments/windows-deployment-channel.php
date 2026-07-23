@@ -98,6 +98,8 @@ assertDeploymentChannel(
 
 $requiredGatewayFragments = [
     "@('probe', 'stage', 'preflight', 'activate', 'status')",
+    '$ChannelVersion = 7',
+    'channelVersion = $ChannelVersion',
     '[string] $env:SSH_ORIGINAL_COMMAND',
     'maxPackageBytes',
     'maxExpandedBytes',

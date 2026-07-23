@@ -17,9 +17,9 @@
     "sourceInputHash": "6a48dae9a76dc23b7ac3dce498b4dff48085a9a9c9de75411b959c6d7eedd259",
     "artifact": {
         "path": "dist/symcon/saef-ensure-variable.php",
-        "sha256": "235b075c9e7f9d4c9da1fa2db9248d2b320aa2cdf68d50f7ee617fa587599c39"
+        "sha256": "19c1409b421653c456babc49196053821fcf5e98e1d77c058e76984e19d39108"
     },
-    "frameworkVersion": "0.2.0",
+    "frameworkVersion": "0.3.0",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

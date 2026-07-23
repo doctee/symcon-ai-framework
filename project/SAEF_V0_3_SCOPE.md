@@ -1,8 +1,9 @@
 # SAEF v0.3 Scope
 
-**Status:** Proposed release scope
+**Status:** Confirmed release scope; readiness gates open
 **Target:** `v0.3.0`
 **Decision date:** 2026-07-21
+**Readiness review:** 2026-07-23
 
 ## Version Decision
 
@@ -90,7 +91,8 @@ runtime.
 
 ## Immediate Next Boundary
 
-The final System Functions pilot call and its regular scheduled observation are
-complete. No prepared live mutation remains in the current scope. The immediate
-next boundary is repository consolidation and release preparation; it must not
-operate a device.
+Repository consolidation, clean public-tree verification and CI are complete.
+Deployment channel version 7 passed its guarded Windows installation, deep
+probe and bounded rejection checks without activating a fileset or operating a
+device. The immediate next boundary is the framework version change and
+deterministic regeneration of the bundle and both filesets.

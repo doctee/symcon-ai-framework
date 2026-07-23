@@ -17,6 +17,7 @@ $ExitStageFailed = 20
 $ExitPreflightFailed = 30
 $ExitActivationFailed = 40
 $ExitManualRecovery = 50
+$ChannelVersion = 7
 $ChannelMutexName = 'Global\SAEF.DeploymentChannel'
 $UploadChunkBytes = 4096
 $script:failureCode = 'request'
@@ -1319,7 +1320,10 @@ try {
             throw [System.InvalidOperationException]::new('Runtime readiness probe failed.')
         }
         Write-JsonResponse -Success $true -Operation $operation -Outcome 'ready' -ExitCode $ExitSuccess `
-            -Details @{ channelVersion = 6; allowedOperations = @('probe', 'stage', 'preflight', 'activate', 'status') }
+            -Details @{
+                channelVersion = $ChannelVersion
+                allowedOperations = @('probe', 'stage', 'preflight', 'activate', 'status')
+            }
         exit $ExitSuccess
     }
     if ($operation -eq 'stage') {

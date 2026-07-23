@@ -1,9 +1,9 @@
 # SAEF Deployment Channel Security Gate
 
-**Result:** Transport security PASS; corrected runtime activation PASS after
-successful rollback of the first candidate
+**Result:** Transport security PASS through channel version 7; corrected
+runtime activation PASS after successful rollback of the first candidate
 
-**Date:** 2026-07-22
+**Date:** 2026-07-22; version 7 reverified 2026-07-23
 
 **Scope:** Restricted Windows OpenSSH deployment channel
 
@@ -126,6 +126,16 @@ the same runtime contract after restart and created the non-executable source
 mirror. An independent probe found all 75 expected functions, including the
 new `SAEF_EnsureScript()`, and the exact candidate bootstrap hash.
 
+### Channel Version 7 Reverification
+
+The repository successor was installed through the same guarded Windows
+bootstrap without activating a fileset or restarting IP-Symcon. Its external
+deep probe returned channel version 7 and authenticated ready state. Repeated
+negative checks rejected an unknown operation, an extra probe argument and an
+incomplete stage command with sanitized command failures. A forced TTY request
+was rejected by SSH with exit code `255`. A final deep probe still returned
+ready state, confirming that the rejection checks did not alter channel state.
+
 ## Repository Verification
 
 The repository checks cover:
@@ -162,15 +172,17 @@ gate and independent verification.
 - Mobile use inherits the key storage, host-key verification and local-file
   security of the selected SSH terminal.
 
-These risks are accepted for channel version 5. A future version should reduce
-the Windows service-control privilege or add a separate local activation
-authorization mechanism before expanding network exposure.
+These risks are accepted for the live-tested channel version 7. Version 7
+additionally preserves explicit deployment status when the optional mirror
+coordinator cannot start. A future version should reduce the Windows
+service-control privilege or add a separate local activation authorization
+mechanism before expanding network exposure.
 
 ## Gate Decision
 
-The restricted transport channel is **PASS** for supervised SAEF use on the
-reviewed private network. The first runtime activation remains recorded as
-**FAIL with successful rollback**; the corrected immutable candidate is
+The restricted transport channel version 7 is **PASS** for supervised SAEF use
+on the reviewed private network. The first runtime activation remains recorded
+as **FAIL with successful rollback**; the corrected immutable candidate is
 **PASS** after preflight, explicit authorization, post-restart runtime-health
 verification and source-mirror reconciliation.
 

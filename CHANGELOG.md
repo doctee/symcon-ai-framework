@@ -9,6 +9,8 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-23
+
 ### Added
 
 - Added a gated v0.2 Symcon rollout plan based on a sanitized read-only live
@@ -79,6 +81,8 @@ This project adheres to Semantic Versioning.
   helper closure, with deterministic fileset provenance, `__halt_compiler()`,
   pinned ownership, no-op reconciliation, readback verification and mirror-only
   rollback.
+- Added the v0.3 release-readiness gate with explicit API, provenance, channel
+  version, artifact, clean-checkout, CI and publication criteria.
 
 ### Changed
 
@@ -104,6 +108,12 @@ This project adheres to Semantic Versioning.
 - Preserved explicit deployment status when the optional runtime-mirror
   coordinator cannot start: preflight now fails closed, while a successfully
   restarted runtime is retained as `activated_mirror_degraded`.
+- Advanced the repository deployment-channel contract to version 7 so the
+  mirror-launch status correction cannot be confused with the live-tested
+  version 6 implementation.
+- Recorded the successful guarded Windows installation and security
+  reverification of deployment-channel version 7, including deep readiness,
+  bounded malformed-command rejection, TTY denial and a final healthy probe.
 - Documented the recommended Symcon object layout for framework-owned runtime
   objects and system-wide MQTT owners while retaining device-specific MQTT
   objects with their domain owners.

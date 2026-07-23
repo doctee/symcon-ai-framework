@@ -70,6 +70,7 @@ Important current artifacts include:
 - `project/SAEF_V0_2_CHANGE_INVENTORY.md`
 - `project/SAEF_V0_2_RELEASE_READINESS.md`
 - `project/SAEF_V0_3_SCOPE.md`
+- `project/SAEF_V0_3_RELEASE_READINESS.md`
 - `project/SAEF_DEPLOYMENT_CHANNEL_SECURITY_GATE.md`
 - `adr/ADR-0005-generate-symcon-helper-bundles.md`
 - `bundles/symcon/ensure-variable.bundle.json`
