@@ -1,8 +1,7 @@
 # System Functions Migration Wave 1
 
-**Release-review status:** 2026-07-20; second migration immediate verification
-passed, scheduled observation remains pending. No live probe was performed by
-this documentation review.
+**Operational status:** 2026-07-23; all three pilot migrations and the final
+regular scheduled-execution gate passed bounded read-only verification.
 
 ## Outcome
 
@@ -10,8 +9,9 @@ The first migration preparation wave identified direct callers without storing
 their script names, object IDs, argument values or source. A later separately
 authorized pilot migrated one four-argument call after runtime bundle
 deployment. Following its completed operational observation, exactly one
-additional four-argument call was migrated. One legacy call remains unchanged
-as the control.
+additional four-argument call was migrated and observed before the third call
+received its own authorization. All three pilot calls now use
+`SAEF_EnsureVariable`; no legacy pilot call remains.
 
 The scan used PHP tokens rather than text matching. It excludes the function
 library itself, function definitions, comments, strings, object methods, static
@@ -206,11 +206,27 @@ MCP source read-back and bounded structured probes completed the final check
 without temporary live objects.
 
 The second migration passed its immediate direct read-back and structural
-verification. The live caller now contains two SAEF calls and one unchanged
-legacy control call. Target identity, value, metadata, archive/link state,
-object structure, event schedule and domain state were preserved without a
-manual caller execution, temporary live object or device action.
+verification. At that gate, the live caller contained two SAEF calls and one
+unchanged legacy control call. Target identity, value, metadata, archive/link
+state, object structure, event schedule and domain state were preserved without
+a manual caller execution, temporary live object or device action.
 
-The next action is read-only observation of the next regular scheduled
-execution. The final legacy call must remain unchanged until that gate passes.
-No helper or API change is needed.
+The first regular scheduled execution after the second migration passed. At
+that observation gate, the event advanced at its configured cadence with
+explicit action binding, the source retained its two-SAEF/one-legacy
+distribution, and the selected target, topology, archive/link state and domain
+branch remained compatible. The bounded read-only verification reported no
+transport error, execution error or truncation and created no temporary object.
+
+The scheduled-observation gate is closed. A fresh read-only contract check
+classified the final legacy call as **MIGRATE**: exactly one function-name
+replacement produced the three-SAEF/zero-legacy candidate, the existing
+integer target and profile were compatible, and archive, link and child state
+required no migration. The dedicated variable remains appropriate because it
+represents visible domain state rather than runtime metadata.
+
+The final call was separately authorized and migrated after an exact drift
+check and recoverable source backup. Immediate read-back and subsequent regular
+scheduled execution preserved all three target contracts, event binding,
+topology and the expected domain branch. The caller now contains three SAEF
+calls and no legacy pilot call. No helper or public API change was needed.

@@ -1,16 +1,17 @@
 # System Functions Pilot Deployment Plan
 
-**Release-review status:** 2026-07-20; recorded evidence was reviewed without a
-new live-system read or mutation.
+**Operational status:** 2026-07-23; all three migrations and the final regular
+scheduled observation passed bounded read-only verification.
 
 ## Status
 
 The three four-argument `CreateVariableByIdent` calls were ready for controlled
 migration from a data and object-contract perspective. Runtime deployment is
-available, and the first call completed the authorized two-run pilot and an
-operational observation period exceeding 48 hours. Exactly one further call
-has now been migrated with an unchanged target contract. The final legacy call
-remains unchanged as the control for the next regular scheduled observation.
+available, the first call completed the authorized two-run pilot and an
+operational observation period exceeding 48 hours, and the second call passed
+its regular scheduled observation. The final call was migrated with an
+unchanged target contract and subsequently passed its required regular
+scheduled observation. The three-call pilot is complete.
 
 This plan contains no private script names, object IDs, Idents or captions. It
 records only sanitized aggregate results from the separately authorized live
@@ -23,7 +24,7 @@ change.
 | Legacy function available at runtime | Yes |
 | `SAEF_EnsureVariable` available at runtime | Yes |
 | Separate generated runtime artifact | Active and hash-verified |
-| Live calls using `SAEF_EnsureVariable` | 2 |
+| Live calls using `SAEF_EnsureVariable` | 3 |
 | Four-argument pilot calls | 3 |
 | Calls with direct parameter mapping | 3 |
 | Existing names matching the caller contract | 3 |
@@ -192,15 +193,37 @@ target compatibility, object structure, archive/link state and domain values.
 The final read-only check used direct bounded MCP result channels and required
 no temporary live marker.
 
-Exactly one of the two remaining calls has now been migrated. Direct source
+Exactly one of the two remaining calls was then migrated. Direct source
 read-back confirmed the intended two-SAEF/one-legacy distribution. The selected
 target retained its identity, value, metadata, archive/link state and
 surrounding object structure; the event schedule and domain state were also
 unchanged. No manual caller execution, temporary live object or device action
 was used for this verification.
 
-The next gate is the first regular scheduled execution after this second
-migration. The final legacy call remains a control until that observation has
-passed. No third migration is authorized by this plan before that result.
+The first regular scheduled execution after the second migration passed. The
+event advanced at its configured cadence and retained its explicit action
+binding. Direct source read-back still showed two SAEF calls and one legacy
+control. The migrated target contract, object topology, archive/link state and
+expected already-off domain branch remained stable. The bounded probe had no
+transport error, execution error or truncation and created no temporary live
+object.
 
-**Caller contract: PASS — Runtime deployment: PASS — First live migration: PASS — Operational observation: PASS — Second migration immediate verification: PASS — Scheduled observation: PENDING.**
+The final legacy call has subsequently passed a fresh read-only migration
+contract check. Exactly one in-memory replacement produced the intended
+three-SAEF/zero-legacy candidate, while the existing integer target, profile,
+archive/link state and object structure remained compatible. The target is a
+deliberate domain-state variable and remains dedicated and visible.
+
+The decision was **MIGRATE**. The third live source change was separately
+authorized after a fresh drift check and recoverable source backup. Immediate
+read-back confirmed the expected three-SAEF/zero-legacy distribution while the
+target contract, event binding, object topology and already-off domain branch
+remained unchanged. No manual caller execution or device action occurred.
+
+Subsequent regular scheduled execution advanced the event, retained the
+expected source and all three target contracts, and updated the owned state
+without an unexplained domain transition. The actor remained off and the error
+state remained clear. No manual caller execution or device action was used for
+acceptance.
+
+**Caller contract: PASS — Runtime deployment: PASS — All three migrations: PASS — Final scheduled observation: PASS — Pilot: COMPLETE.**
