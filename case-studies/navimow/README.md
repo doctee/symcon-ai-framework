@@ -1,6 +1,6 @@
 # Navimow Native IP-Symcon Module Case Study
 
-**Status:** Adaptive polling published as immutable `pilot-0.1.0.4`; one Stop follow-up published and second waiting window active
+**Status:** Private pilot `pilot-0.1.0.4`; OAuth vendor evaluation and Stop second waiting window active; generic Start statically analyzed
 **Scope:** Native IP-Symcon module for Segway Navimow robotic mowers  
 **Implementation state:** The canonical case-study distribution implements
 OAuth, discovery, adaptive read-only status polling and bounded Dock, Pause and
@@ -99,6 +99,9 @@ template or a general SAEF reference implementation.
 | `78-stop-vendor-response-and-gate-decision.md` | Classified same-day silence as a pending waiting window rather than support, rejection or mature no-response evidence. |
 | `79-adaptive-polling-and-power-hint-implementation.md` | Separates a private station-power wake hint from API-owned state, implements bounded active-state polling, records the passive natural-transition result and publishes immutable `pilot-0.1.0.4`. |
 | `80-stop-vendor-inquiry-follow-up.md` | Revalidates unchanged official evidence, publishes and verifies the single permitted Stop follow-up, and keeps capture and implementation blocked through the second waiting window. |
+| `81-oauth-vendor-response-and-release-gate-review.md` | Classifies the official evaluation acknowledgement as Class F and preserves the private pilot while public OAuth, Store setup and broad release remain blocked. |
+| `82-start-command-support-and-semantics-analysis.md` | Confirms official generic Start support, excludes unavailable zone targeting and defines the evidence gates before any capture or implementation. |
+| `83-stop-second-window-monitoring-checkpoint.md` | Confirms no Stop response or source change during the second waiting window and prohibits further contact or actuation before the next gate. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
