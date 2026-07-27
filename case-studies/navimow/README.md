@@ -1,6 +1,6 @@
 # Navimow Native IP-Symcon Module Case Study
 
-**Status:** Private pilot `pilot-0.1.0.4`; OAuth vendor evaluation and Stop second waiting window active; generic Start statically analyzed
+**Status:** Private pilot `pilot-0.1.0.4`; OAuth vendor evaluation and Stop second waiting window active; read-only MQTT/WSS evidence track prioritized
 **Scope:** Native IP-Symcon module for Segway Navimow robotic mowers  
 **Implementation state:** The canonical case-study distribution implements
 OAuth, discovery, adaptive read-only status polling and bounded Dock, Pause and
@@ -102,6 +102,8 @@ template or a general SAEF reference implementation.
 | `81-oauth-vendor-response-and-release-gate-review.md` | Classifies the official evaluation acknowledgement as Class F and preserves the private pilot while public OAuth, Store setup and broad release remain blocked. |
 | `82-start-command-support-and-semantics-analysis.md` | Confirms official generic Start support, excludes unavailable zone targeting and defines the evidence gates before any capture or implementation. |
 | `83-stop-second-window-monitoring-checkpoint.md` | Confirms no Stop response or source change during the second waiting window and prohibits further contact or actuation before the next gate. |
+| `84-navimow-pro-community-source-review.md` | Classifies `ilguala/navimow_pro`, records private zone/start evidence and rejects private-protocol adoption. |
+| `85-mqtt-wss-track-reprioritization-and-evidence-plan.md` | Promotes receive-only MQTT/WSS evidence work, defines exact topics, privacy, reconciliation and staged Symcon gates. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

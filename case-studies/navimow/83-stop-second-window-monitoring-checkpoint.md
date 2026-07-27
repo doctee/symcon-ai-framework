@@ -159,6 +159,8 @@ planned publication date.
 
 If a maintainer responds, create an immediate response-and-gate review.
 
-Otherwise, on or after 2026-08-10 create
-`84-stop-no-response-classification-and-scope-decision.md` and decide whether
-Stop is formally excluded from the intended module command set.
+Otherwise, on or after 2026-08-10 create the next available numbered
+`stop-no-response-classification-and-scope-decision.md` step and decide whether
+Stop is formally excluded from the intended module command set. Steps 84 and 85
+were subsequently assigned to the explicitly reprioritized MQTT evidence
+track; this does not change the Stop waiting deadline.
