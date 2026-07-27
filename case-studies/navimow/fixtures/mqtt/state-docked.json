@@ -1,0 +1,10 @@
+{
+  "topic": "/downlink/vehicle/DEVICE_001/realtimeDate/state",
+  "channel": "state",
+  "payload": {
+    "battery": 9,
+    "device_id": "DEVICE_001",
+    "state": "isDocked",
+    "timestamp": 1700000150000
+  }
+}

@@ -108,6 +108,7 @@ template or a general SAEF reference implementation.
 | `87-mqtt-wss-private-capture-report.md` | Closes the successful docked WSS transport gate, promotes partial location fixtures and keeps MQTT state authority blocked. |
 | `88-mqtt-partial-payload-parser-design-and-implementation.md` | Implements an offline exact-topic parser and timestamp-aware accumulator for fixture-backed partial location messages. |
 | `89-mqtt-active-rest-comparison-capture-procedure.md` | Prepares a bounded receive-only active MQTT run with read-only REST comparison and fixed physical-phase markers. |
+| `90-mqtt-active-rest-comparison-capture-report.md` | Closes two active comparison sessions, proves direct MQTT state/battery and rapid location transitions, and retains REST authority. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

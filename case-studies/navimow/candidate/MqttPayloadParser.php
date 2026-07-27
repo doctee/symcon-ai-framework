@@ -60,7 +60,13 @@ final class MqttPayloadParser
             );
         }
 
-        if ($channel !== 'location') {
+        if ($channel === 'location') {
+            $patches = self::parseLocation($decoded);
+        } elseif ($channel === 'state') {
+            $patches = [
+                self::parseState($decoded, $expectedDeviceId),
+            ];
+        } else {
             throw new MqttPayloadException(
                 sprintf(
                     'MQTT %s payload contract is not fixture-backed.',
@@ -72,7 +78,7 @@ final class MqttPayloadParser
         return [
             'channel' => $channel,
             'deviceId' => $expectedDeviceId,
-            'patches' => self::parseLocation($decoded),
+            'patches' => $patches,
         ];
     }
 
@@ -181,18 +187,82 @@ final class MqttPayloadParser
         sort($nullFields);
         sort($unknownFields);
 
-        if (!isset($fields['time'])) {
-            throw new MqttPayloadException(
-                'MQTT location entry requires an integer time field.'
-            );
-        }
-
         return [
             'fields' => $fields,
             'presentFields' => array_keys($entry),
             'nullFields' => $nullFields,
             'unknownFields' => $unknownFields,
-            'sourceTimestamp' => $fields['time'],
+            'sourceTimestamp' => $fields['time'] ?? null,
+        ];
+    }
+
+    private static function parseState(
+        mixed $decoded,
+        string $expectedDeviceId
+    ): array {
+        if (
+            !is_array($decoded)
+            || $decoded === []
+            || array_is_list($decoded)
+            || count($decoded) > self::MAX_FIELDS_PER_ENTRY
+        ) {
+            throw new MqttPayloadException(
+                'MQTT state payload must be a bounded non-empty JSON object.'
+            );
+        }
+
+        $deviceId = $decoded['device_id'] ?? null;
+        $state = $decoded['state'] ?? null;
+        $battery = $decoded['battery'] ?? null;
+        $timestamp = $decoded['timestamp'] ?? null;
+        if (
+            !is_string($deviceId)
+            || !hash_equals($expectedDeviceId, $deviceId)
+        ) {
+            throw new MqttPayloadException(
+                'MQTT state payload device ID does not match the topic.'
+            );
+        }
+        if (
+            !is_string($state)
+            || preg_match('/^is[A-Za-z0-9]{1,62}$/D', $state) !== 1
+        ) {
+            throw new MqttPayloadException(
+                'MQTT state payload state is invalid.'
+            );
+        }
+        if (!is_int($battery) || $battery < 0 || $battery > 100) {
+            throw new MqttPayloadException(
+                'MQTT state payload battery is invalid.'
+            );
+        }
+        if (!is_int($timestamp)) {
+            throw new MqttPayloadException(
+                'MQTT state payload timestamp is invalid.'
+            );
+        }
+
+        $knownFields = [
+            'battery',
+            'device_id',
+            'state',
+            'timestamp',
+        ];
+        $unknownFields = array_values(
+            array_diff(array_keys($decoded), $knownFields)
+        );
+        sort($unknownFields);
+
+        return [
+            'fields' => [
+                'battery' => $battery,
+                'state' => $state,
+                'timestamp' => $timestamp,
+            ],
+            'presentFields' => array_keys($decoded),
+            'nullFields' => [],
+            'unknownFields' => $unknownFields,
+            'sourceTimestamp' => $timestamp,
         ];
     }
 

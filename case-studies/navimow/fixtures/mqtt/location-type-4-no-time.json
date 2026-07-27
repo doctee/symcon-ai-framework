@@ -1,0 +1,10 @@
+{
+  "topic": "/downlink/vehicle/DEVICE_001/realtimeDate/location",
+  "channel": "location",
+  "payload": [
+    {
+      "taskDelay": true,
+      "type": 4
+    }
+  ]
+}

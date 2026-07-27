@@ -27,9 +27,17 @@ final class MqttPartialStateAccumulator
             );
         }
 
+        if ($sourceTimestamp === null) {
+            return $this->result(
+                false,
+                'missing-timestamp',
+                $nullFields,
+                $unknownFields
+            );
+        }
+
         if (
-            $sourceTimestamp !== null
-            && $this->lastTimestamp !== null
+            $this->lastTimestamp !== null
             && $sourceTimestamp < $this->lastTimestamp
         ) {
             return $this->result(
@@ -46,11 +54,8 @@ final class MqttPartialStateAccumulator
             }
         }
         if (
-            $sourceTimestamp !== null
-            && (
-                $this->lastTimestamp === null
-                || $sourceTimestamp > $this->lastTimestamp
-            )
+            $this->lastTimestamp === null
+            || $sourceTimestamp > $this->lastTimestamp
         ) {
             $this->lastTimestamp = $sourceTimestamp;
         }

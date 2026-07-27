@@ -47,6 +47,19 @@ function assertExactLocationTopic(array $fixture): void
     );
 }
 
+function assertExactStateTopic(array $fixture): void
+{
+    assertMqttFixture(
+        ($fixture['topic'] ?? null)
+            === '/downlink/vehicle/DEVICE_001/realtimeDate/state',
+        'MQTT state fixture has an unexpected topic.'
+    );
+    assertMqttFixture(
+        ($fixture['channel'] ?? null) === 'state',
+        'MQTT state fixture has an unexpected channel.'
+    );
+}
+
 $credential = loadMqttFixture($fixtureDirectory . '/credential-shape.json');
 assertMqttFixture(($credential['code'] ?? null) === 1, 'Credential fixture must be successful.');
 $credentialData = $credential['data'] ?? null;
@@ -104,6 +117,61 @@ assertMqttFixture(
 assertMqttFixture(
     !array_key_exists('vehicleState', $partialEntry),
     'Absent vehicleState must remain absent.'
+);
+
+foreach (
+    [
+        'state-running.json' => 'isRunning',
+        'state-docking.json' => 'isDocking',
+        'state-docked.json' => 'isDocked',
+    ] as $file => $expectedState
+) {
+    $stateFixture = loadMqttFixture($fixtureDirectory . '/' . $file);
+    assertExactStateTopic($stateFixture);
+    $statePayload = $stateFixture['payload'] ?? null;
+    assertMqttFixture(
+        is_array($statePayload)
+            && ($statePayload['device_id'] ?? null) === 'DEVICE_001'
+            && ($statePayload['state'] ?? null) === $expectedState
+            && is_int($statePayload['battery'] ?? null)
+            && is_int($statePayload['timestamp'] ?? null),
+        sprintf('MQTT state fixture %s changed shape.', $file)
+    );
+}
+
+foreach (
+    [
+        'location-running.json' => 4,
+        'location-docking.json' => 5,
+        'location-docked.json' => 2,
+    ] as $file => $expectedState
+) {
+    $stateFixture = loadMqttFixture($fixtureDirectory . '/' . $file);
+    assertExactLocationTopic($stateFixture);
+    $statePayload = $stateFixture['payload'] ?? null;
+    assertMqttFixture(
+        is_array($statePayload)
+            && count($statePayload) === 1
+            && is_array($statePayload[0])
+            && ($statePayload[0]['vehicleState'] ?? null) === $expectedState,
+        sprintf('MQTT numeric state fixture %s changed shape.', $file)
+    );
+}
+
+$typeFour = loadMqttFixture(
+    $fixtureDirectory . '/location-type-4-no-time.json'
+);
+assertExactLocationTopic($typeFour);
+$typeFourPayload = $typeFour['payload'] ?? null;
+assertMqttFixture(
+    is_array($typeFourPayload)
+        && count($typeFourPayload) === 1
+        && is_array($typeFourPayload[0])
+        && $typeFourPayload[0] === [
+            'taskDelay' => true,
+            'type' => 4,
+        ],
+    'Timestamp-less type-4 fixture changed shape.'
 );
 
 $publicText = '';

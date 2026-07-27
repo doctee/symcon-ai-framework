@@ -13,6 +13,8 @@ use Navimow\MqttPayloadParser;
 const MQTT_DEVICE_ID = 'DEVICE_001';
 const MQTT_LOCATION_TOPIC =
     '/downlink/vehicle/DEVICE_001/realtimeDate/location';
+const MQTT_STATE_TOPIC =
+    '/downlink/vehicle/DEVICE_001/realtimeDate/state';
 
 function loadMqttParserFixture(string $name): string
 {
@@ -198,6 +200,98 @@ assertMqttParser(
     'Duplicate patch was not idempotent.'
 );
 
+$stateAccumulator = new MqttPartialStateAccumulator();
+foreach (
+    [
+        'state-running.json' => ['isRunning', 43],
+        'state-docking.json' => ['isDocking', 10],
+        'state-docked.json' => ['isDocked', 9],
+    ] as $fixture => [$expectedState, $expectedBattery]
+) {
+    $stateResult = MqttPayloadParser::parse(
+        MQTT_STATE_TOPIC,
+        loadMqttParserFixture($fixture),
+        MQTT_DEVICE_ID
+    );
+    assertMqttParser(
+        $stateResult['channel'] === 'state'
+            && count($stateResult['patches']) === 1,
+        sprintf('State fixture %s was not parsed.', $fixture)
+    );
+    $statePatch = $stateResult['patches'][0];
+    assertMqttParser(
+        $statePatch['fields']['state'] === $expectedState
+            && $statePatch['fields']['battery'] === $expectedBattery
+            && is_int($statePatch['sourceTimestamp']),
+        sprintf('State fixture %s changed mapping.', $fixture)
+    );
+    assertMqttParser(
+        $stateAccumulator->apply($statePatch)['accepted'] === true,
+        sprintf('State fixture %s was not accumulated.', $fixture)
+    );
+}
+assertMqttParser(
+    $stateAccumulator->snapshot()['fields']['state'] === 'isDocked'
+        && $stateAccumulator->snapshot()['fields']['battery'] === 9,
+    'State transition accumulation did not reach Docked.'
+);
+
+$stateWithUnknown = MqttPayloadParser::parse(
+    MQTT_STATE_TOPIC,
+    '{"device_id":"DEVICE_001","state":"isRunning","battery":50,'
+        . '"timestamp":1700000200000,"vendorPrivate":{"value":"discard"}}',
+    MQTT_DEVICE_ID
+);
+assertMqttParser(
+    $stateWithUnknown['patches'][0]['unknownFields'] === ['vendorPrivate']
+        && !array_key_exists(
+            'vendorPrivate',
+            $stateWithUnknown['patches'][0]['fields']
+        ),
+    'Unknown state field value was retained.'
+);
+
+$numericStates = [];
+foreach (
+    [
+        'location-running.json',
+        'location-docking.json',
+        'location-docked.json',
+    ] as $fixture
+) {
+    $numericResult = MqttPayloadParser::parse(
+        MQTT_LOCATION_TOPIC,
+        loadMqttParserFixture($fixture),
+        MQTT_DEVICE_ID
+    );
+    $numericStates[] = $numericResult['patches'][0]['fields']['vehicleState'];
+}
+assertMqttParser(
+    $numericStates === [4, 5, 2],
+    'Observed numeric transition states changed.'
+);
+
+$typeFourResult = MqttPayloadParser::parse(
+    MQTT_LOCATION_TOPIC,
+    loadMqttParserFixture('location-type-4-no-time.json'),
+    MQTT_DEVICE_ID
+);
+$typeFourPatch = $typeFourResult['patches'][0];
+assertMqttParser(
+    $typeFourPatch['sourceTimestamp'] === null
+        && $typeFourPatch['fields'] === ['type' => 4]
+        && $typeFourPatch['unknownFields'] === ['taskDelay'],
+    'Timestamp-less type-4 patch changed classification.'
+);
+$beforeTypeFour = $accumulator->snapshot();
+$typeFourApply = $accumulator->apply($typeFourPatch);
+assertMqttParser(
+    $typeFourApply['accepted'] === false
+        && $typeFourApply['reason'] === 'missing-timestamp'
+        && $typeFourApply['state'] === $beforeTypeFour,
+    'Timestamp-less patch changed accumulated state.'
+);
+
 assertMqttParserThrows(
     static fn (): array => MqttPayloadParser::parse(
         '/downlink/vehicle/DEVICE_OTHER/realtimeDate/location',
@@ -217,10 +311,37 @@ assertMqttParserThrows(
 assertMqttParserThrows(
     static fn (): array => MqttPayloadParser::parse(
         '/downlink/vehicle/DEVICE_001/realtimeDate/state',
+        '{"device_id":"DEVICE_OTHER","state":"isRunning",'
+            . '"battery":50,"timestamp":1700000000000}',
+        MQTT_DEVICE_ID
+    ),
+    'State payload for another mower was accepted.'
+);
+assertMqttParserThrows(
+    static fn (): array => MqttPayloadParser::parse(
+        MQTT_STATE_TOPIC,
+        '{"device_id":"DEVICE_001","state":"isRunning",'
+            . '"battery":101,"timestamp":1700000000000}',
+        MQTT_DEVICE_ID
+    ),
+    'Out-of-range state battery was accepted.'
+);
+assertMqttParserThrows(
+    static fn (): array => MqttPayloadParser::parse(
+        MQTT_STATE_TOPIC,
+        '{"device_id":"DEVICE_001","state":"isRunning","battery":50,'
+            . '"timestamp":"1700000000000"}',
+        MQTT_DEVICE_ID
+    ),
+    'String state timestamp was accepted.'
+);
+assertMqttParserThrows(
+    static fn (): array => MqttPayloadParser::parse(
+        '/downlink/vehicle/DEVICE_001/realtimeDate/event',
         '{}',
         MQTT_DEVICE_ID
     ),
-    'Unverified state payload contract was accepted.'
+    'Unverified event payload contract was accepted.'
 );
 assertMqttParserThrows(
     static fn (): array => MqttPayloadParser::parse(
@@ -253,14 +374,6 @@ assertMqttParserThrows(
         MQTT_DEVICE_ID
     ),
     'Invalid numeric field was accepted.'
-);
-assertMqttParserThrows(
-    static fn (): array => MqttPayloadParser::parse(
-        MQTT_LOCATION_TOPIC,
-        '[{"type":3}]',
-        MQTT_DEVICE_ID
-    ),
-    'Timestamp-less location entry was accepted.'
 );
 assertMqttParserThrows(
     static fn (): array => MqttPayloadParser::parse(
