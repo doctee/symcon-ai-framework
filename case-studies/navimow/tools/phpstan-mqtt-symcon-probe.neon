@@ -1,0 +1,13 @@
+parameters:
+    level: 5
+
+    parallel:
+        maximumNumberOfProcesses: 1
+
+    paths:
+        - symcon-mqtt-spike-library
+
+    bootstrapFiles:
+        - ../../../stubs/symcon.php
+
+    treatPhpDocTypesAsCertain: true

@@ -111,6 +111,7 @@ template or a general SAEF reference implementation.
 | `90-mqtt-active-rest-comparison-capture-report.md` | Closes two active comparison sessions, proves direct MQTT state/battery and rapid location transitions, and retains REST authority. |
 | `91-mqtt-symcon-transport-topology-spike.md` | Selects the native WebSocket-to-MQTT chain conditionally from read-only Symcon capability evidence and defines its live gate. |
 | `92-native-mqtt-wss-symcon-live-spike-plan.md` | Plans a disposable receive-only native WSS/MQTT live probe with private credential entry, bounded evidence and verified rollback. |
+| `93-native-mqtt-wss-symcon-spike-harness-implementation.md` | Implements, validates and publishes the isolated receive-only probe branch while keeping the live Symcon gate closed. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
