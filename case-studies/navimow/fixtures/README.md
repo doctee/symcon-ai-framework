@@ -1,7 +1,7 @@
 # Navimow Fixture Workspace
 
-**Status:** Fixture workspace prepared  
-**Scope:** Sanitized API payload fixtures for the Navimow case study  
+**Status:** REST fixtures established; initial MQTT fixtures promoted
+**Scope:** Sanitized REST and MQTT payload fixtures for the Navimow case study
 **Boundary:** No raw captures, secrets or private installation data may be stored here.
 
 ## Purpose
@@ -41,10 +41,13 @@ fixtures/
     api-temporary-failure.json
   mqtt/
     README.md
+    credential-shape.json
+    location-pose-partial.json
+    location-type-3-partial.json
 ```
 
-The `mqtt/` area is reserved for the later MQTT/WSS phase. It should not
-contain MQTT payload fixtures until the MQTT technical spike starts.
+The MQTT/WSS technical spike started in steps 85 and 86. Its first docked
+receive-only evidence is documented in step 87 and the nested MQTT README.
 
 ## Required REST Fixtures
 
@@ -70,6 +73,18 @@ the first parser and contract validation work:
 If `vehicle-status-mowing.json` cannot be collected immediately, document the
 gap and proceed only with an explicit note in the contract or implementation
 plan.
+
+## Initial MQTT Fixtures
+
+| Fixture | Purpose |
+| --- | --- |
+| `mqtt/credential-shape.json` | Validate the redacted MQTT credential envelope. |
+| `mqtt/location-pose-partial.json` | Validate a location array with pose and numeric state fields. |
+| `mqtt/location-type-3-partial.json` | Validate a partial location array that omits pose and state. |
+
+These fixtures do not approve productive MQTT state mapping. In particular,
+numeric `vehicleState` and `type` semantics remain open until an active
+REST/MQTT comparison capture is complete.
 
 ## Sanitization Rules
 

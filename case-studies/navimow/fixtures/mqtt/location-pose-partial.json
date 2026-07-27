@@ -1,0 +1,14 @@
+{
+  "topic": "/downlink/vehicle/DEVICE_001/realtimeDate/location",
+  "channel": "location",
+  "payload": [
+    {
+      "postureTheta": "0.387",
+      "postureX": 1.0,
+      "postureY": 2.0,
+      "time": 1700000000000,
+      "type": 1,
+      "vehicleState": 1
+    }
+  ]
+}

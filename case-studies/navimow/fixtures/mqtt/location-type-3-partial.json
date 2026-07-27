@@ -1,0 +1,10 @@
+{
+  "topic": "/downlink/vehicle/DEVICE_001/realtimeDate/location",
+  "channel": "location",
+  "payload": [
+    {
+      "time": 1700000000500,
+      "type": 3
+    }
+  ]
+}
