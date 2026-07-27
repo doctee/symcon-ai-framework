@@ -104,6 +104,7 @@ template or a general SAEF reference implementation.
 | `83-stop-second-window-monitoring-checkpoint.md` | Confirms no Stop response or source change during the second waiting window and prohibits further contact or actuation before the next gate. |
 | `84-navimow-pro-community-source-review.md` | Classifies `ilguala/navimow_pro`, records private zone/start evidence and rejects private-protocol adoption. |
 | `85-mqtt-wss-track-reprioritization-and-evidence-plan.md` | Promotes receive-only MQTT/WSS evidence work, defines exact topics, privacy, reconciliation and staged Symcon gates. |
+| `86-mqtt-wss-private-capture-procedure.md` | Implements the bounded private receive-only WSS/MQTT capture procedure with exact-topic and no-publish enforcement. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
