@@ -1,4 +1,4 @@
-.PHONY: bundle-build bundle-check fileset-build fileset-check control-light-fileset-build control-light-fileset-check test-bundles test-filesets test-control-light-fileset test-deployment-restart test-deployment-channel test-runtime-source-mirror test-runtime-health-probe test-helpers test-mqtt-exporter-core test-mqtt-exporter-runtime test-mqtt-exporter-reconcile test-mqtt-exporter-execute test-mqtt-exporter-dispatch test-mqtt-exporter-cleanup test-mqtt-exporter-fixtures test-control-light-core test-control-light-runtime test-control-light-topology test-control-light-runtime-mirror test-navimow-rest-auth test-navimow-pilot test-navimow-distribution lint phpstan phpstan-bundle phpcs check
+.PHONY: bundle-build bundle-check fileset-build fileset-check control-light-fileset-build control-light-fileset-check open-meteo-fileset-build open-meteo-fileset-check open-meteo-publication-check open-meteo-publication-prepare test-bundles test-filesets test-control-light-fileset test-deployment-restart test-deployment-channel test-runtime-source-mirror test-runtime-health-probe test-helpers test-mqtt-exporter-core test-mqtt-exporter-runtime test-mqtt-exporter-reconcile test-mqtt-exporter-execute test-mqtt-exporter-dispatch test-mqtt-exporter-cleanup test-mqtt-exporter-fixtures test-control-light-core test-control-light-runtime test-control-light-topology test-control-light-runtime-mirror test-navimow-rest-auth test-navimow-pilot test-navimow-distribution test-open-meteo-publication test-open-meteo-offline lint phpstan phpstan-bundle phpcs check
 
 bundle-build:
 	composer bundle:build
@@ -17,6 +17,18 @@ control-light-fileset-build:
 
 control-light-fileset-check:
 	composer control-light:fileset-check
+
+open-meteo-fileset-build:
+	php tools/build-symcon-module-fileset.php deployments/symcon/open-meteo-module.fileset.json
+
+open-meteo-fileset-check:
+	php tools/build-symcon-module-fileset.php --check deployments/symcon/open-meteo-module.fileset.json
+
+open-meteo-publication-check:
+	php tools/publish-open-meteo-module.php --check
+
+open-meteo-publication-prepare:
+	php tools/publish-open-meteo-module.php --prepare
 
 test-bundles:
 	composer test:bundles
@@ -84,6 +96,12 @@ test-navimow-pilot:
 test-navimow-distribution:
 	composer test:navimow-distribution
 
+test-open-meteo-offline:
+	case-studies/open-meteo/tools/check-offline.sh
+
+test-open-meteo-publication:
+	php case-studies/open-meteo/tests/publication.php
+
 lint:
 	composer lint
 
@@ -96,5 +114,5 @@ phpstan-bundle:
 phpcs:
 	composer phpcs
 
-check:
+check: test-open-meteo-offline
 	composer check

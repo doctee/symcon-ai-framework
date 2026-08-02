@@ -1,0 +1,15 @@
+parameters:
+    level: 8
+
+    parallel:
+        maximumNumberOfProcesses: 1
+
+    paths:
+        - distribution
+        - tests
+
+    bootstrapFiles:
+        - ../../helpers/object/EnsureProfile.php
+        - ../../helpers/diagnostics/ConfigurationHash.php
+
+    treatPhpDocTypesAsCertain: true

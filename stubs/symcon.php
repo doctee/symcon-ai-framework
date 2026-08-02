@@ -18,9 +18,11 @@ class IPSModule
 
     protected function RegisterPropertyString(string $ident, string $default): void {}
     protected function RegisterPropertyInteger(string $ident, int $default): void {}
+    protected function RegisterPropertyFloat(string $ident, float $default): void {}
     protected function RegisterPropertyBoolean(string $ident, bool $default): void {}
     protected function ReadPropertyString(string $ident): string {}
     protected function ReadPropertyInteger(string $ident): int {}
+    protected function ReadPropertyFloat(string $ident): float {}
     protected function ReadPropertyBoolean(string $ident): bool {}
 
     protected function RegisterAttributeString(string $ident, string $default): void {}
@@ -54,11 +56,21 @@ class IPSModule
         int $position
     ): void {}
 
+    protected function RegisterVariableFloat(
+        string $ident,
+        string $name,
+        string $profile,
+        int $position
+    ): void {}
+
     protected function SetValue(string $ident, mixed $value): void {}
     protected function GetValue(string $ident): mixed {}
     protected function GetIDForIdent(string $ident): int {}
+    protected function RegisterReference(int $id): void {}
+    protected function UnregisterReference(int $id): void {}
     protected function RegisterTimer(string $ident, int $interval, string $script): void {}
     protected function SetTimerInterval(string $ident, int $interval): void {}
+    protected function SetStatus(int $status): void {}
     protected function SendDataToParent(string $json): string {}
     protected function SendDataToChildren(string $json): void {}
     protected function SendDebug(string $message, mixed $data, int $format): void {}

@@ -1,0 +1,80 @@
+{
+  "elements": [
+    {
+      "type": "CheckBox",
+      "name": "LocationConfigured",
+      "caption": "Location configuration is complete"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "Latitude",
+      "caption": "Latitude",
+      "minimum": -90,
+      "maximum": 90,
+      "digits": 6
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "Longitude",
+      "caption": "Longitude",
+      "minimum": -180,
+      "maximum": 180,
+      "digits": 6
+    },
+    {
+      "type": "CheckBox",
+      "name": "UseElevation",
+      "caption": "Use explicit elevation"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "Elevation",
+      "caption": "Elevation in metres",
+      "minimum": -500,
+      "maximum": 9000,
+      "digits": 1
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "Timezone",
+      "caption": "IANA time zone"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "ForecastDays",
+      "caption": "Forecast days",
+      "minimum": 1,
+      "maximum": 10
+    },
+    {
+      "type": "CheckBox",
+      "name": "WithSoil",
+      "caption": "Include model-grid soil values"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "PollingIntervalMinutes",
+      "caption": "Planned polling interval in minutes",
+      "minimum": 30
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "HttpTimeoutSeconds",
+      "caption": "Planned HTTP timeout in seconds",
+      "minimum": 1,
+      "maximum": 60
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "StaleAfterMinutes",
+      "caption": "Stale threshold in minutes",
+      "minimum": 30
+    }
+  ],
+  "actions": [
+    {
+      "type": "Label",
+      "caption": "Inactive scaffold: no timer is registered and no Open-Meteo request can be executed."
+    }
+  ]
+}

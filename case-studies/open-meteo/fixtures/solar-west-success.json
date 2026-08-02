@@ -1,0 +1,16 @@
+{
+  "latitude": 48.0,
+  "longitude": 11.0,
+  "utc_offset_seconds": 3600,
+  "timezone": "Europe/Berlin",
+  "hourly_units": {
+    "time": "unixtime",
+    "temperature_2m": "°C",
+    "global_tilted_irradiance": "W/m²"
+  },
+  "hourly": {
+    "time": [1735718400, 1735722000, 1735725600],
+    "temperature_2m": [5.0, 10.0, 15.0],
+    "global_tilted_irradiance": [0.0, 200.0, 900.0]
+  }
+}

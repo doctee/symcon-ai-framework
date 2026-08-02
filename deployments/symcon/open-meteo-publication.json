@@ -1,0 +1,23 @@
+{
+  "formatVersion": 1,
+  "repository": {
+    "name": "doctee/saef-open-meteo",
+    "publicUrl": "https://github.com/doctee/saef-open-meteo",
+    "cloneUrl": "git@github.com:doctee/saef-open-meteo.git",
+    "branch": "main",
+    "confirmation": "publish-doctee-saef-open-meteo-main"
+  },
+  "generatedDirectory": "dist/symcon/saef-open-meteo-module",
+  "sourceMap": "fileset.sources.json",
+  "sidecar": "fileset.sha256",
+  "metadata": [
+    {
+      "source": "LICENSE",
+      "target": "LICENSE"
+    },
+    {
+      "source": "case-studies/open-meteo/publication/README.md",
+      "target": "README.md"
+    }
+  ]
+}

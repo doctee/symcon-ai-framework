@@ -1,0 +1,100 @@
+{
+    "formatVersion": 1,
+    "name": "saef-open-meteo-module",
+    "phpMinimum": "8.2",
+    "outputDirectory": "dist/symcon/saef-open-meteo-module",
+    "files": [
+        {
+            "source": "case-studies/open-meteo/distribution/OpenMeteoSolarForecast/form.json",
+            "target": "OpenMeteoSolarForecast/form.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/OpenMeteoSolarForecast/locale.json",
+            "target": "OpenMeteoSolarForecast/locale.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/OpenMeteoSolarForecast/module.json",
+            "target": "OpenMeteoSolarForecast/module.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/OpenMeteoSolarForecast/module.php",
+            "target": "OpenMeteoSolarForecast/module.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/form.json",
+            "target": "OpenMeteoWeather/form.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/locale.json",
+            "target": "OpenMeteoWeather/locale.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/module.json",
+            "target": "OpenMeteoWeather/module.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/module.php",
+            "target": "OpenMeteoWeather/module.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/library.json",
+            "target": "library.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/FieldCatalog.php",
+            "target": "libs/OpenMeteo/FieldCatalog.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/ForecastPoint.php",
+            "target": "libs/OpenMeteo/ForecastPoint.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/ForecastSeries.php",
+            "target": "libs/OpenMeteo/ForecastSeries.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/ForecastStateReducer.php",
+            "target": "libs/OpenMeteo/ForecastStateReducer.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/IntervalAligner.php",
+            "target": "libs/OpenMeteo/IntervalAligner.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/ParsedForecast.php",
+            "target": "libs/OpenMeteo/ParsedForecast.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/Profiles.php",
+            "target": "libs/OpenMeteo/Profiles.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/PvConfiguration.php",
+            "target": "libs/OpenMeteo/PvConfiguration.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/RequestBuilder.php",
+            "target": "libs/OpenMeteo/RequestBuilder.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/ResponseParser.php",
+            "target": "libs/OpenMeteo/ResponseParser.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/SolarForecastCalculator.php",
+            "target": "libs/OpenMeteo/SolarForecastCalculator.php"
+        },
+        {
+            "source": "helpers/common/Validation.php",
+            "target": "libs/SAEF/helpers/common/Validation.php"
+        },
+        {
+            "source": "helpers/diagnostics/ConfigurationHash.php",
+            "target": "libs/SAEF/helpers/diagnostics/ConfigurationHash.php"
+        },
+        {
+            "source": "helpers/object/EnsureProfile.php",
+            "target": "libs/SAEF/helpers/object/EnsureProfile.php"
+        }
+    ]
+}
