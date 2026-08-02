@@ -56,3 +56,37 @@ and PHPCS checks as well as the repository-wide check. Publication and
 installation remain separate guarded workflows. A new single-location live
 request requires a fresh preflight and explicit activation gate; provider
 replacement and consumer migration remain later work.
+
+## Corrected live validation
+
+After the corrected parser was published and the installed library was updated
+to that exact public revision, the separately authorized single-location pilot
+was repeated. Two activation checks stopped before the request because their
+test assertions were stricter than the module contract: persisted historical
+runtime state was republished during `ApplyChanges()`, and a numerically equal
+elevation used a different JSON number representation. Both checks performed
+their prepared rollback, left the timer disabled and issued no provider
+request. The assertions were corrected only after independent readback proved
+the inactive baseline and unchanged controls.
+
+The final bounded run then:
+
+1. verified the installed revision, inactive configuration, empty cache,
+   object structure, source-provider configuration and unchanged solar control;
+2. activated the existing isolated weather instance without an HTTP request;
+3. issued exactly one explicit Open-Meteo update;
+4. received `success: true` with result code `ok`;
+5. atomically published current weather, daily/hourly forecast and soil values;
+   and
+6. restored the unconfigured status and disabled timer in the same execution.
+
+The independent postflight confirmed status `104`, timer interval and next run
+of zero, no timer-triggered request, unchanged object structure, unchanged
+source and solar controls, and an unchanged root category. The successful pilot
+values remain only in the isolated instance variables as evidence; its cache is
+not exposed while the instance is unconfigured. No productive provider,
+consumer or solar connection was changed.
+
+The existing visibility-gap fixture remains the regression proof for the
+provider response shape observed in both live attempts. No private coordinates,
+ObjectIDs or installation metadata are included in this report.
