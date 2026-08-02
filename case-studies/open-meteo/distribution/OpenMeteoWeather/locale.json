@@ -10,10 +10,11 @@
       "IANA time zone": "IANA-Zeitzone",
       "Forecast days": "Vorhersagetage",
       "Include model-grid soil values": "Bodenwerte des Modellgitters einbeziehen",
-      "Planned polling interval in minutes": "Geplantes Abfrageintervall in Minuten",
-      "Planned HTTP timeout in seconds": "Geplanter HTTP-Timeout in Sekunden",
+      "Polling interval in minutes": "Abfrageintervall in Minuten",
+      "HTTP timeout in seconds": "HTTP-Timeout in Sekunden",
       "Stale threshold in minutes": "Veraltet-Schwelle in Minuten",
-      "Inactive scaffold: no timer is registered and no Open-Meteo request can be executed.": "Inaktives Geruest: Es wird kein Timer registriert und keine Open-Meteo-Abfrage kann ausgefuehrt werden."
+      "Update weather now": "Wetter jetzt aktualisieren",
+      "Open-Meteo values are model forecasts, not local sensor measurements.": "Open-Meteo-Werte sind Modellvorhersagen und keine lokalen Sensormessungen."
     }
   }
 }

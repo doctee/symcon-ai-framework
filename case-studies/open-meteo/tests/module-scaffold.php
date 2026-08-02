@@ -10,10 +10,12 @@ $scaffoldInstances = [];
 
 class IPSModule
 {
+    public int $InstanceID = 42;
+
     /** @var array<string, mixed> */
     private array $properties = [];
 
-    /** @var array<string, int> */
+    /** @var array<string, int|string> */
     private array $attributes = [];
 
     /** @var array<string, array{id: int, type: string, profile: string, position: int}> */
@@ -21,7 +23,8 @@ class IPSModule
 
     private int $nextVariableId = 1000;
     private int $status = 0;
-    private int $timerRegistrations = 0;
+    /** @var array<string, array{interval: int, script: string}> */
+    private array $timers = [];
     private int $parentLifecycleCalls = 0;
 
     /** @var array<string, mixed> */
@@ -71,12 +74,32 @@ class IPSModule
             throw new RuntimeException('Unknown test attribute.');
         }
 
-        return $this->attributes[$ident];
+        return (int) $this->attributes[$ident];
     }
 
     protected function WriteAttributeInteger(string $ident, int $value): void
     {
         $this->ReadAttributeInteger($ident);
+        $this->attributes[$ident] = $value;
+    }
+
+    protected function RegisterAttributeString(string $ident, string $default): void
+    {
+        $this->attributes[$ident] ??= $default;
+    }
+
+    protected function ReadAttributeString(string $ident): string
+    {
+        if (!array_key_exists($ident, $this->attributes)) {
+            throw new RuntimeException('Unknown test attribute.');
+        }
+
+        return (string) $this->attributes[$ident];
+    }
+
+    protected function WriteAttributeString(string $ident, string $value): void
+    {
+        $this->ReadAttributeString($ident);
         $this->attributes[$ident] = $value;
     }
 
@@ -138,7 +161,15 @@ class IPSModule
 
     protected function RegisterTimer(string $ident, int $interval, string $script): void
     {
-        $this->timerRegistrations++;
+        $this->timers[$ident] ??= ['interval' => $interval, 'script' => $script];
+    }
+
+    protected function SetTimerInterval(string $ident, int $interval): void
+    {
+        if (!isset($this->timers[$ident])) {
+            throw new RuntimeException('Unknown test timer.');
+        }
+        $this->timers[$ident]['interval'] = $interval;
     }
 
     protected function RegisterReference(int $objectId): void
@@ -156,7 +187,12 @@ class IPSModule
         if (!isset($this->variables[$ident])) {
             throw new RuntimeException('Unknown test variable.');
         }
-        $this->values[$ident] = $value;
+        $this->values[$ident] = match ($this->variables[$ident]['type']) {
+            'boolean' => (bool) $value,
+            'float' => (float) $value,
+            'integer' => (int) $value,
+            default => (string) $value,
+        };
     }
 
     protected function SetStatus(int $status): void
@@ -183,7 +219,12 @@ class IPSModule
 
     public function testTimerRegistrations(): int
     {
-        return $this->timerRegistrations;
+        return count($this->timers);
+    }
+
+    public function testTimerInterval(string $ident): int
+    {
+        return $this->timers[$ident]['interval'] ?? -1;
     }
 
     /** @return list<int> */
@@ -334,10 +375,31 @@ function IPS_GetInstance(int $instanceId): array
     return $scaffoldInstances[$instanceId] ?? [];
 }
 
+function IPS_SemaphoreEnter(string $name, int $milliseconds): bool
+{
+    return true;
+}
+
+function IPS_SemaphoreLeave(string $name): bool
+{
+    return true;
+}
+
+function IPS_LogMessage(string $sender, string $message): void
+{
+}
+
+/** @param array<string, int|string|bool> $parameters */
+function Sys_GetURLContentEx(string $url, array $parameters): string|false
+{
+    return $url === '' ? '' : false;
+}
+
 require_once dirname(__DIR__, 3) . '/helpers/object/EnsureProfile.php';
 require_once dirname(__DIR__, 3) . '/helpers/diagnostics/ConfigurationHash.php';
 require_once __DIR__ . '/../distribution/OpenMeteoWeather/module.php';
 require_once __DIR__ . '/../distribution/OpenMeteoSolarForecast/module.php';
+require_once __DIR__ . '/TestOpenMeteoWeather.php';
 
 function scaffoldCheck(bool $condition, string $message): void
 {
@@ -403,19 +465,15 @@ foreach (['OpenMeteoWeather', 'OpenMeteoSolarForecast'] as $moduleName) {
         str_contains($source, 'class ' . $moduleName . ' extends IPSModule'),
         'Module PHP class does not match its metadata name.'
     );
-    foreach (
-        [
-        'RegisterTimer',
-        'SetTimerInterval',
-        'SendDataToParent',
-        'curl_',
-        'UpdateData(',
-        ] as $forbidden
-    ) {
-        scaffoldCheck(
-            !str_contains($source, $forbidden),
-            'Inactive module contains an activation surface.'
-        );
+    scaffoldCheck(!str_contains($source, 'curl_'), 'Module must not use direct cURL calls.');
+    scaffoldCheck(!str_contains($source, 'SendDataToParent'), 'Module transport boundary differs.');
+    if ($moduleName === 'OpenMeteoSolarForecast') {
+        foreach (['RegisterTimer', 'SetTimerInterval', 'UpdateData('] as $forbidden) {
+            scaffoldCheck(
+                !str_contains($source, $forbidden),
+                'Inactive solar module contains an activation surface.'
+            );
+        }
     }
 }
 
@@ -433,16 +491,163 @@ scaffoldCheck(
     'Repeated weather ApplyChanges changed variable identity.'
 );
 scaffoldCheck($scaffoldProfiles === $profiles, 'Repeated profile creation was not idempotent.');
-scaffoldCheck($weather->testTimerRegistrations() === 0, 'Weather scaffold registered a timer.');
+scaffoldCheck($weather->testTimerRegistrations() === 1, 'Weather update timer is missing.');
+scaffoldCheck($weather->testTimerInterval('UpdateData') === 0, 'Unconfigured timer must be disabled.');
 
 $weather->testSetProperty('LocationConfigured', true);
 $weather->testSetProperty('Latitude', 48.0);
 $weather->testSetProperty('Longitude', 11.0);
 $weather->ApplyChanges();
-scaffoldCheck($weather->testStatus() === 104, 'Valid weather scaffold must remain inactive.');
+scaffoldCheck($weather->testStatus() === 102, 'Valid weather module must become active.');
+scaffoldCheck(
+    $weather->testTimerInterval('UpdateData') === 3600000,
+    'Weather polling interval differs.'
+);
 $weather->testSetProperty('Timezone', 'Invalid/Zone');
 $weather->ApplyChanges();
 scaffoldCheck($weather->testStatus() === 200, 'Invalid weather configuration must fail closed.');
+scaffoldCheck($weather->testTimerInterval('UpdateData') === 0, 'Invalid timer must be disabled.');
+
+/**
+ * @param list<string> $fields
+ *
+ * @return array<string, string>
+ */
+function scaffoldWeatherUnits(array $fields): array
+{
+    $units = [];
+    foreach ($fields as $field) {
+        $units[$field] = match (true) {
+            str_contains($field, 'temperature'), str_contains($field, 'dew_point') => '°C',
+            str_contains($field, 'humidity'), str_contains($field, 'probability'),
+                str_contains($field, 'cloud_cover') => '%',
+            str_contains($field, 'soil_moisture') => 'm³/m³',
+            str_contains($field, 'snowfall') => 'cm',
+            $field === 'vapour_pressure_deficit' => 'kPa',
+            str_contains($field, 'pressure') => 'hPa',
+            str_contains($field, 'wind_direction') => '°',
+            str_contains($field, 'wind_speed'), str_contains($field, 'wind_gusts') => 'km/h',
+            $field === 'weather_code' => 'wmo code',
+            $field === 'is_day' => '',
+            $field === 'visibility' => 'm',
+            $field === 'sunshine_duration' => 's',
+            $field === 'precipitation_hours' => 'h',
+            $field === 'shortwave_radiation_sum' => 'MJ/m²',
+            $field === 'sunrise', $field === 'sunset' => 'unixtime',
+            default => 'mm',
+        };
+    }
+
+    return $units;
+}
+
+function scaffoldWeatherValue(string $field, int $index): int|float
+{
+    return match (true) {
+        $field === 'weather_code' => 1,
+        $field === 'is_day' => 1,
+        $field === 'sunrise' => 1735707600 + ($index * 86400),
+        $field === 'sunset' => 1735743600 + ($index * 86400),
+        str_contains($field, 'wind_direction') => 180,
+        str_contains($field, 'probability'), str_contains($field, 'humidity'),
+            str_contains($field, 'cloud_cover') => 50,
+        str_contains($field, 'soil_moisture') => 0.25,
+        default => 10.0 + $index,
+    };
+}
+
+function scaffoldWeatherResponse(bool $withSoil): string
+{
+    $currentFields = \SAEF\CaseStudy\OpenMeteo\FieldCatalog::weatherCurrentFields();
+    $hourlyFields = \SAEF\CaseStudy\OpenMeteo\FieldCatalog::weatherHourlyFields($withSoil);
+    $dailyFields = \SAEF\CaseStudy\OpenMeteo\FieldCatalog::weatherDailyFields();
+    $payload = [
+        'latitude' => 48.0,
+        'longitude' => 11.0,
+        'timezone' => 'Europe/Berlin',
+        'utc_offset_seconds' => 3600,
+        'current_units' => scaffoldWeatherUnits($currentFields),
+        'current' => ['time' => 1735718400, 'interval' => 900],
+        'hourly_units' => scaffoldWeatherUnits($hourlyFields),
+        'hourly' => ['time' => [1735718400, 1735722000, 1735725600]],
+        'daily_units' => scaffoldWeatherUnits($dailyFields),
+        'daily' => ['time' => [1735686000, 1735772400]],
+    ];
+    foreach ($currentFields as $field) {
+        $payload['current'][$field] = scaffoldWeatherValue($field, 0);
+    }
+    foreach ($hourlyFields as $field) {
+        $payload['hourly'][$field] = [
+            scaffoldWeatherValue($field, 0),
+            scaffoldWeatherValue($field, 1),
+            scaffoldWeatherValue($field, 2),
+        ];
+    }
+    foreach ($dailyFields as $field) {
+        $payload['daily'][$field] = [
+            scaffoldWeatherValue($field, 0),
+            scaffoldWeatherValue($field, 1),
+        ];
+    }
+
+    return json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+}
+
+$runtimeWeather = new TestOpenMeteoWeather();
+$runtimeWeather->Create();
+$runtimeWeather->ApplyChanges();
+$runtimeWeather->testSetProperty('LocationConfigured', true);
+$runtimeWeather->testSetProperty('Latitude', 48.0);
+$runtimeWeather->testSetProperty('Longitude', 11.0);
+$runtimeWeather->ApplyChanges();
+$runtimeWeather->testQueueResponse(scaffoldWeatherResponse(false));
+$success = json_decode($runtimeWeather->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(
+    ($success['success'] ?? null) === true,
+    'Weather update did not succeed: ' . json_encode($success)
+);
+scaffoldCheck($runtimeWeather->testReadValue('DataState') === 2, 'Weather data is not current.');
+scaffoldCheck($runtimeWeather->testReadValue('Temperature') === 10.0, 'Current value differs.');
+scaffoldCheck(
+    $runtimeWeather->testReadValue('TodayTemperatureMax') === 10.0,
+    'Daily value differs.'
+);
+$current = json_decode($runtimeWeather->GetCurrentJson(), true, 32, JSON_THROW_ON_ERROR);
+scaffoldCheck(isset($current['data']['temperature_2m']), 'Current cache is unavailable.');
+$hourly = json_decode(
+    $runtimeWeather->GetHourlyForecastJson(
+        1735718400,
+        1735725601,
+        '["temperature_2m","precipitation"]'
+    ),
+    true,
+    64,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    count($hourly['data']['temperature_2m'] ?? []) === 3,
+    'Bounded hourly forecast differs.'
+);
+
+$runtimeWeather->testSetNow(1735718460);
+$runtimeWeather->testQueueResponse(false);
+$failure = json_decode($runtimeWeather->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($failure['code'] ?? null) === 'transport_error', 'Failure classification differs.');
+scaffoldCheck($runtimeWeather->testReadValue('DataState') === 4, 'Last-good failure must warn.');
+scaffoldCheck($runtimeWeather->testReadValue('Temperature') === 10.0, 'Last-good value was cleared.');
+scaffoldCheck(
+    $runtimeWeather->testTimerInterval('UpdateData') === 300000,
+    'First retry interval differs.'
+);
+
+$runtimeWeather->testSetNow(1735729261);
+$runtimeWeather->testQueueResponse(false);
+$runtimeWeather->UpdateData();
+scaffoldCheck($runtimeWeather->testReadValue('DataState') === 3, 'Old last-good data must be stale.');
+scaffoldCheck(
+    $runtimeWeather->testTimerInterval('UpdateData') === 900000,
+    'Second retry interval differs.'
+);
 
 $solar = new OpenMeteoSolarForecast();
 $solar->Create();

@@ -12,6 +12,7 @@ foreach (
     'IntervalAligner.php',
     'RequestBuilder.php',
     'ResponseParser.php',
+    'WeatherForecastProjector.php',
     'PvConfiguration.php',
     'SolarForecastCalculator.php',
     'ForecastStateReducer.php',

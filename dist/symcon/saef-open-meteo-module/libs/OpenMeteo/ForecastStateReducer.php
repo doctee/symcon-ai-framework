@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SAEF\CaseStudy\OpenMeteo;
 
 use InvalidArgumentException;
+use JsonException;
 
 final class ForecastStateReducer
 {
@@ -13,6 +14,100 @@ final class ForecastStateReducer
     public const STATE_STALE = 'stale';
     public const STATE_WARNING = 'warning';
     public const STATE_ERROR = 'error';
+
+    /**
+     * @return array{
+     *     state: string,
+     *     configurationHash: string,
+     *     hasData: bool,
+     *     lastAttempt: ?int,
+     *     lastSuccess: ?int,
+     *     validFrom: ?int,
+     *     validTo: ?int,
+     *     retryCount: int,
+     *     maxRetries: int,
+     *     errorCode: ?string
+     * }
+     */
+    public static function fromJson(string $json, string $configurationHash, int $maxRetries): array
+    {
+        try {
+            $state = json_decode($json, true, 32, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return self::initial($configurationHash, $maxRetries);
+        }
+        if (!is_array($state)) {
+            return self::initial($configurationHash, $maxRetries);
+        }
+
+        try {
+            self::assertState($state);
+        } catch (InvalidArgumentException) {
+            return self::initial($configurationHash, $maxRetries);
+        }
+        if (
+            !is_string($state['state'])
+            || !is_bool($state['hasData'])
+            || (!is_int($state['lastAttempt']) && $state['lastAttempt'] !== null)
+            || (!is_int($state['lastSuccess']) && $state['lastSuccess'] !== null)
+            || (!is_int($state['validFrom']) && $state['validFrom'] !== null)
+            || (!is_int($state['validTo']) && $state['validTo'] !== null)
+            || !is_int($state['retryCount'])
+            || !is_int($state['maxRetries'])
+            || (!is_string($state['errorCode']) && $state['errorCode'] !== null)
+            || $state['maxRetries'] !== $maxRetries
+            || !in_array($state['state'], [
+                self::STATE_UNCONFIGURED,
+                self::STATE_CURRENT,
+                self::STATE_STALE,
+                self::STATE_WARNING,
+                self::STATE_ERROR,
+            ], true)
+            || $state['retryCount'] < 0
+            || $state['retryCount'] > $state['maxRetries']
+            || ($state['errorCode'] !== null
+                && preg_match('/^[a-z][a-z0-9_]*$/', $state['errorCode']) !== 1)
+            || ($state['hasData'] && (
+                $state['lastSuccess'] === null
+                || $state['validFrom'] === null
+                || $state['validTo'] === null
+                || $state['validTo'] <= $state['validFrom']
+            ))
+            || (!$state['hasData'] && (
+                $state['lastSuccess'] !== null
+                || $state['validFrom'] !== null
+                || $state['validTo'] !== null
+            ))
+        ) {
+            return self::initial($configurationHash, $maxRetries);
+        }
+
+        /** @var array{
+         *     state: string,
+         *     configurationHash: string,
+         *     hasData: bool,
+         *     lastAttempt: ?int,
+         *     lastSuccess: ?int,
+         *     validFrom: ?int,
+         *     validTo: ?int,
+         *     retryCount: int,
+         *     maxRetries: int,
+         *     errorCode: ?string
+         * } $state */
+        return self::configurationChanged($state, $configurationHash);
+    }
+
+    /** @param array<string, mixed> $state */
+    public static function toJson(array $state): string
+    {
+        self::assertState($state);
+
+        try {
+            return json_encode($state, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        } catch (JsonException) {
+            throw new InvalidArgumentException('Forecast state cannot be encoded.');
+        }
+    }
 
     /**
      * @return array{
