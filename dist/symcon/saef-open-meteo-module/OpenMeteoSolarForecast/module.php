@@ -568,6 +568,10 @@ class OpenMeteoSolarForecast extends IPSModule
     {
         $registeredInstanceId = $this->ReadAttributeInteger('RegisteredWeatherReferenceId');
         if ($registeredInstanceId === $desiredInstanceId) {
+            if ($desiredInstanceId > 0) {
+                $this->RegisterReference($desiredInstanceId);
+            }
+
             return;
         }
         if ($registeredInstanceId > 0) {

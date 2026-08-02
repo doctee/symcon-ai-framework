@@ -589,6 +589,10 @@ class OpenMeteoWeather extends IPSModule
     {
         $registeredInstanceId = $this->ReadAttributeInteger('RegisteredLocationReferenceId');
         if ($registeredInstanceId === $desiredInstanceId) {
+            if ($desiredInstanceId > 0) {
+                $this->RegisterReference($desiredInstanceId);
+            }
+
             return;
         }
         if ($registeredInstanceId > 0) {

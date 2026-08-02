@@ -242,6 +242,11 @@ class IPSModule
         return $references;
     }
 
+    public function testDropReferences(): void
+    {
+        $this->references = [];
+    }
+
     public function testReadValue(string $ident): mixed
     {
         return $this->values[$ident] ?? null;
@@ -588,6 +593,12 @@ $weather->testSetProperty('LocationInstanceId', 2001);
 $weather->ApplyChanges();
 scaffoldCheck($weather->testStatus() === 102, 'Shared-location weather module must become active.');
 scaffoldCheck($weather->testReferences() === [2001], 'Shared location reference was not registered.');
+$weather->testDropReferences();
+$weather->ApplyChanges();
+scaffoldCheck(
+    $weather->testReferences() === [2001],
+    'Shared location reference was not restored after registry drift.'
+);
 $weatherDescriptor = json_decode(
     $weather->GetLocationDescriptor(),
     true,
@@ -883,6 +894,12 @@ scaffoldConfigureSolar($solar, 1001);
 $solar->ApplyChanges();
 scaffoldCheck($solar->testStatus() === 102, 'Valid solar module must become active.');
 scaffoldCheck($solar->testReferences() === [1001], 'Weather reference was not registered.');
+$solar->testDropReferences();
+$solar->ApplyChanges();
+scaffoldCheck(
+    $solar->testReferences() === [1001],
+    'Weather reference was not restored after registry drift.'
+);
 scaffoldCheck($solar->testTimerInterval('UpdateData') === 0, 'Solar automatic updates must default off.');
 scaffoldCheck(
     is_string($solar->testReadValue('ConfigurationHash'))

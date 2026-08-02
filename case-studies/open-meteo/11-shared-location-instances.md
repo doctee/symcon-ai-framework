@@ -51,6 +51,12 @@ after a library update. Clearing `LocationInstanceId` returns to that fallback.
 An invalid replacement retains the last valid registered reference and fails
 closed.
 
+Reference reconciliation is self-healing after a module-library reload. The
+tracking attribute may survive while IP-Symcon rebuilds the actual reference
+registry, so every valid `ApplyChanges()` idempotently registers the desired
+positive reference again instead of trusting the attribute as proof of the
+runtime registry state.
+
 The location values are included in the existing weather configuration hash.
 Changing the shared location therefore invalidates an old forecast cache before
 new values are published.
@@ -123,5 +129,6 @@ issued for the second shadow.
 The scaffold test verifies that shared locations are idempotent and have no
 variables, timers or transport surface; valid and invalid configurations get
 the expected status; Weather resolves a valid descriptor, registers the
-reference, preserves the last valid reference after an invalid replacement and
-can return to the legacy direct-coordinate fallback.
+reference, restores a missing runtime reference after retained attribute state,
+preserves the last valid reference after an invalid replacement and can return
+to the legacy direct-coordinate fallback.

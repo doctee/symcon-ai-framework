@@ -88,9 +88,10 @@ separate contract and evidence gate.
 ## Offline Proof
 
 The synthetic module harness verifies default-manual migration safety,
-idempotent lifecycle behavior, weather-reference validation, two serialized
-orientation requests, separate direct-AC and PV-input clipping, storage-coupled
-PV harvest, bounded cache access, last-good
+idempotent lifecycle behavior, weather-reference validation and restoration
+after runtime registry drift, two serialized orientation requests, separate
+direct-AC and PV-input clipping, storage-coupled PV harvest, bounded cache
+access, last-good
 retention, manual-mode retry suppression, automatic polling and the first retry
 interval. The deterministic fileset includes `SolarForecastProjector`.
 
