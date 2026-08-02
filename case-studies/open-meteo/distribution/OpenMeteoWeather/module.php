@@ -18,6 +18,9 @@ if (!function_exists('SAEF_EnsureProfile')) {
 if (!function_exists('SAEF_CreateConfigurationHash')) {
     require_once __DIR__ . '/../libs/SAEF/helpers/diagnostics/ConfigurationHash.php';
 }
+if (!function_exists('SAEF_ValidateMutableObject')) {
+    require_once __DIR__ . '/../libs/SAEF/helpers/common/Validation.php';
+}
 require_once __DIR__ . '/../libs/OpenMeteo/Profiles.php';
 
 use SAEF\CaseStudy\OpenMeteo\FieldCatalog;
@@ -38,6 +41,19 @@ class OpenMeteoWeather extends IPSModule
     private const MAXIMUM_CACHE_QUERY_SECONDS = 864000;
     private const LOCATION_MODULE_ID = '{3B6B9CB0-8D95-4358-874A-13FF1A8BECD1}';
     private const MAXIMUM_LOCATION_DESCRIPTOR_BYTES = 4096;
+
+    /** @var list<string> */
+    private const SOIL_VARIABLE_IDENTS = [
+        'SoilTemperature0cm',
+        'SoilTemperature6cm',
+        'SoilTemperature18cm',
+        'SoilTemperature54cm',
+        'SoilMoisture0To1cm',
+        'SoilMoisture1To3cm',
+        'SoilMoisture3To9cm',
+        'SoilMoisture9To27cm',
+        'SoilMoisture27To81cm',
+    ];
 
     /** @var array<string, int> */
     private const DATA_STATE_VALUES = [
@@ -69,6 +85,8 @@ class OpenMeteoWeather extends IPSModule
         $this->RegisterPropertyString('Timezone', 'Europe/Berlin');
         $this->RegisterPropertyInteger('ForecastDays', 7);
         $this->RegisterPropertyBoolean('WithSoil', false);
+        $this->RegisterPropertyBoolean('ManageSoilVariableVisibility', false);
+        $this->RegisterPropertyBoolean('ShowSoilVariables', true);
         $this->RegisterPropertyBoolean('EnableAutomaticUpdates', true);
         $this->RegisterPropertyInteger('PollingIntervalMinutes', 60);
         $this->RegisterPropertyInteger('HttpTimeoutSeconds', 10);
@@ -93,6 +111,16 @@ class OpenMeteoWeather extends IPSModule
         $this->registerOperationalVariables();
         $this->registerWeatherVariables();
         $this->registerSoilVariables();
+
+        try {
+            $this->reconcileSoilVariableVisibility();
+        } catch (Throwable) {
+            $this->SetTimerInterval('UpdateData', 0);
+            $this->SetValue('DataState', 5);
+            $this->SetStatus(self::STATUS_CONFIGURATION_ERROR);
+
+            return;
+        }
 
         if (!$this->hasLocationConfiguration()) {
             $this->reconcileLocationReference(0);
@@ -711,5 +739,29 @@ class OpenMeteoWeather extends IPSModule
             'OPENMETEO.SoilMoisture',
             480
         );
+    }
+
+    /**
+     * Soil visibility is explicitly opted into and controlled by module properties.
+     * Variable identity and user-owned archive configuration remain untouched.
+     */
+    private function reconcileSoilVariableVisibility(): void
+    {
+        if (!$this->ReadPropertyBoolean('ManageSoilVariableVisibility')) {
+            return;
+        }
+        $hidden = !$this->ReadPropertyBoolean('WithSoil')
+            || !$this->ReadPropertyBoolean('ShowSoilVariables');
+        foreach (self::SOIL_VARIABLE_IDENTS as $ident) {
+            $variableId = $this->GetIDForIdent($ident);
+            SAEF_ValidateMutableObject($variableId, 2);
+            $object = IPS_GetObject($variableId);
+            if (($object['ParentID'] ?? null) !== $this->InstanceID) {
+                throw new RuntimeException('Soil variable ownership differs.');
+            }
+            if (($object['ObjectIsHidden'] ?? null) !== $hidden) {
+                IPS_SetHidden($variableId, $hidden);
+            }
+        }
     }
 }

@@ -17,7 +17,10 @@ The weather module contains a bounded Open-Meteo runtime with last-good cache
 and can optionally reference `SharedLocation`; its existing direct coordinate
 properties remain a compatible fallback. Automatic polling can be disabled
 without disabling explicit manual updates, including all transport-error retry
-timers. Installing the library alone does not configure a location, start an
+timers. Soil request selection and soil-variable visibility are separate;
+visibility management is opt-in, and managed disabled soil variables remain
+stable but hidden instead of being deleted.
+Installing the library alone does not configure a location, start an
 inactive instance or migrate a consumer. OpenWeather and SolCast are not
 modified by installing this preview.
 

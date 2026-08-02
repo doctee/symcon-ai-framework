@@ -65,6 +65,16 @@
     },
     {
       "type": "CheckBox",
+      "name": "ManageSoilVariableVisibility",
+      "caption": "Manage soil variable visibility"
+    },
+    {
+      "type": "CheckBox",
+      "name": "ShowSoilVariables",
+      "caption": "Show soil variables when soil values are enabled"
+    },
+    {
+      "type": "CheckBox",
       "name": "EnableAutomaticUpdates",
       "caption": "Enable automatic updates"
     },

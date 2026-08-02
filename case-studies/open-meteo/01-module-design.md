@@ -208,7 +208,9 @@ It does not own:
 | `ForecastDays` | integer | yes | no | Default `7`, allowed `1..10` for DWD profile |
 | `EnableAutomaticUpdates` | boolean | yes | no | Default `true`; `false` keeps normal and retry timers disabled while allowing explicit manual updates |
 | `PollingIntervalMinutes` | integer | yes | no | Default `60`, minimum `30` |
-| `EnableSoilProfile` | boolean | no | no | Default `true` for the target design |
+| `WithSoil` | boolean | no | no | Default `false`; controls only the model-grid soil request profile |
+| `ManageSoilVariableVisibility` | boolean | no | no | Default `false`; explicitly opts into module-managed soil visibility without changing existing presentation during an update |
+| `ShowSoilVariables` | boolean | no | no | Default `true`; effective only while visibility management and `WithSoil` are enabled |
 | `EnableRawDiagnostics` | boolean | no | no | Default `false` |
 | `HttpTimeoutSeconds` | integer | yes | no | Explicit, conservative bounded value |
 | `StaleAfterMinutes` | integer | yes | no | Default derived from polling interval |
@@ -220,6 +222,14 @@ actual forecast location in a private installation.
 Changing location, elevation, time zone, provider profile or enabled fields
 changes the configuration hash and invalidates the previous cache for public
 output until a valid response for the new configuration has been parsed.
+
+`ManageSoilVariableVisibility` and `ShowSoilVariables` are presentation-only
+and are intentionally excluded from the request-configuration hash. Management
+is opt-in so a module update preserves existing user presentation. When
+enabled, the nine stable soil variables are never deleted: the module manages
+only their visibility, validates every positive variable target and leaves
+ObjectIDs, values, archive configuration, links, names, positions, icons and
+profiles untouched.
 
 The provider-neutral shared-location contract is defined separately in
 `11-shared-location-instances.md`. No public artifact contains productive
