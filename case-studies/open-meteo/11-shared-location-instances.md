@@ -65,18 +65,26 @@ The private rollout remains split into separately authorized gates:
    freshly verified, non-zero parent;
 3. both locations were configured from unchanged private source instances and
    their normalized descriptors were independently read back;
-4. the next gate may point one inactive or shadow weather instance at its
-   matching location with automatic updates disabled, then verify reference,
-   status and request URL without changing legacy providers;
-5. migrate the second weather instance only after the first proof; and
-6. retain the direct fields until rollback and consumer checks are complete.
+4. one inactive Weather instance was linked to its matching shared location
+   with automatic updates disabled; reference, active status, empty cache and
+   request structure were verified without executing the request;
+5. exactly one bounded manual Weather update was executed successfully while
+   automatic updates remained disabled;
+6. a separate Weather shadow instance was created for the second location with
+   automatic updates disabled and its request structure was verified without
+   executing the request;
+7. the next gate may execute exactly one bounded manual update for that second
+   shadow or extend the first controlled request profile; and
+8. migrate consumers only after the corresponding runtime proofs, while
+   retaining direct fields until rollback checks are complete.
 
-The completed postflight verified exactly two active instances, stable source
-configuration, empty child/timer/reference sets and unchanged root, parent,
-Weather and Solar controls. Every further configuration change still requires
-a fresh live preflight and explicit authorization. Parent ObjectID `0` is never
-treated as an editable category; object creation must use a freshly resolved,
-validated parent ID.
+The SharedLocation-creation postflight verified exactly two active location
+instances, stable source configuration, empty child/timer/reference sets and
+unchanged root, parent, Weather and Solar controls at that gate. Later Weather
+gates retained the same root, parent, Solar and source baselines. Every further
+configuration change still requires a fresh live preflight and explicit
+authorization. Parent ObjectID `0` is never treated as an editable category;
+object creation must use a freshly resolved, validated parent ID.
 
 The Weather module therefore exposes an explicit automatic-update switch.
 Disabling it keeps a valid configured instance active while its normal polling
@@ -84,6 +92,31 @@ timer and all transport-error retry timers remain at zero. Manual updates stay
 available as a separately controlled action. The switch defaults to enabled so
 existing configured installations preserve their scheduling behavior after an
 update.
+
+The first controlled shadow-link attempt was rejected by an over-strict
+operational-metadata assertion and restored the safe inactive configuration.
+Changing the location intentionally changes the forecast configuration hash,
+which resets the runtime state and its previous attempt timestamp without
+issuing a request. A fresh, explicitly authorized attempt accepted that reset
+and independently proved an active reference with interval, next run and last
+run all at zero. Legacy providers and the second shared location remained
+unchanged.
+
+The first authorized provider request returned a complete valid current,
+hourly and seven-day daily forecast. Independent cache reads proved curated
+current fields and bounded forecast slices without another request. Different
+hourly fields intentionally retain their source interval semantics:
+instantaneous observations may have zero-width validity points, while
+accumulated precipitation uses intervals and may overlap one additional query
+boundary. Automatic interval, next run and last run all remained zero after the
+successful manual update.
+
+The second Weather shadow was created below the same freshly verified,
+non-root system category through the existing SAEF instance helper. Its stable
+Ident, exact module type, shared-location reference, active status, empty cache
+and zero timer state were independently read back. The first Weather forecast
+and both location definitions remained unchanged, and no provider request was
+issued for the second shadow.
 
 ## Offline Proof
 
