@@ -308,6 +308,7 @@ require_once dirname(__DIR__, 2) . '/helpers/object/EnsureScript.php';
 const TEST_MODULE_GUID = '{11111111-1111-1111-1111-111111111111}';
 
 try {
+    verifyMutableObjectGuard();
     verifyVariablePresentationPolicy();
     verifyCategoryPresentationPolicy();
     verifyInstanceAndDummyPresentationPolicy();
@@ -317,6 +318,24 @@ try {
 } catch (Throwable $exception) {
     fwrite(STDERR, 'FAIL: ' . $exception->getMessage() . "\n");
     exit(1);
+}
+
+function verifyMutableObjectGuard(): void
+{
+    PresentationFakeSymconRuntime::reset();
+    $categoryID = PresentationFakeSymconRuntime::createObject(0);
+    SAEF_ValidateMutableObject($categoryID, 0);
+
+    assertThrows(
+        static fn () => SAEF_ValidateMutableObject(0),
+        InvalidArgumentException::class,
+        'Root object ID 0 must never be accepted as a mutation target.'
+    );
+    assertThrows(
+        static fn () => SAEF_ValidateMutableObject($categoryID, 1),
+        RuntimeException::class,
+        'A mutation target with an unexpected object type must be rejected.'
+    );
 }
 
 function verifyVariablePresentationPolicy(): void
@@ -465,4 +484,20 @@ function assertSameValue(mixed $expected, mixed $actual, string $message): void
     if ($expected !== $actual) {
         throw new RuntimeException($message);
     }
+}
+
+/** @param class-string<Throwable> $expectedClass */
+function assertThrows(callable $operation, string $expectedClass, string $message): void
+{
+    try {
+        $operation();
+    } catch (Throwable $exception) {
+        if ($exception instanceof $expectedClass) {
+            return;
+        }
+
+        throw new RuntimeException($message . ' Unexpected exception: ' . $exception::class);
+    }
+
+    throw new RuntimeException($message);
 }

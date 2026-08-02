@@ -15,11 +15,11 @@
         },
         {
             "path": "helpers/common/Validation.php",
-            "sha256": "c3681fbf1ace68c221238378671b941faea0e6c63753de20bc6919827b17e90e"
+            "sha256": "370b4160f8cc7b24bef42c40fada9febe567b43a780b73150cc1997595f18885"
         },
         {
             "path": "helpers/object/EnsureVariable.php",
-            "sha256": "92eb6a6ba3282940c4e30b0098f9d0f28a6b216ebd278916f49603adb96bff8e"
+            "sha256": "845c8f49e2e0446d9a8744a89dfc7f0cc34fcb5510f35da9c964d2b31ab45fcc"
         },
         {
             "path": "helpers/diagnostics/ErrorRingBuffer.php",
@@ -35,15 +35,15 @@
         },
         {
             "path": "helpers/object/EnsureCategory.php",
-            "sha256": "b416545193b8f750832f9f92ed2dfb4629b3edf3c33b52b55bca7bbedddcdeca"
+            "sha256": "8386edbc49b95ce451c027f52577f428565d683126b68dee7adf1c678490f49a"
         },
         {
             "path": "helpers/object/EnsureEvent.php",
-            "sha256": "7cfd74af7508d73b7417511b4db40425412fbf6a0faf05dc51879ef109b3e4a4"
+            "sha256": "ab49255b3ba84a45c949056e7ff8e7a99c67c54af24df791d6beac634fc5cd05"
         },
         {
             "path": "helpers/object/EnsureInstance.php",
-            "sha256": "082379e56a5310db10d9adc4fb2087965233e2356b1025f8d9aa8ae81cfd578a"
+            "sha256": "44c560c04b268cca8743933d173d05207abfe8297d5d8bec95080a743eae2ad3"
         },
         {
             "path": "helpers/variable/WaitForVariable.php",
@@ -55,15 +55,15 @@
         },
         {
             "path": "helpers/object/EnsureScript.php",
-            "sha256": "02f062764e84f8b0b2317c1926da9fa89e38bb855c97a6531779bfa677427002"
+            "sha256": "26ff9087f162e588c5b3a26aef13af625157c4e325dcb840a5f247b822d649b1"
         },
         {
             "path": "case-studies/mqtt-discovery-exporter/candidate/MqttDiscoveryExporterFileset.php",
             "sha256": "240e9a398d50fd922a681fbc3de228da6867a47aebb15c649fead24b371dfd31"
         }
     ],
-    "bootstrapSha256": "6ff0f6669bc1ca591bdfb77e1e750dd2cc353712ecaffc192d4d072efa3141d1",
-    "filesetSha256": "2127336c3611feadf6d1724e8e434a113b9df49fe1b81bcf478619674a0cd122",
+    "bootstrapSha256": "dd9ffc5d3dabaf4e0e467a5eb8f6b815bed97854cf0c1f6cbca0369cd4555674",
+    "filesetSha256": "e087e077292f0b639f4188979f2ca1d382879bd01f9b1db96b096b4764a90061",
     "functionExports": [
         "SAEF_AppendErrorRingBufferEntry",
         "SAEF_ClearErrorRingBuffer",
@@ -91,6 +91,7 @@
         "SAEF_ValidateErrorRingBufferVariable",
         "SAEF_ValidateIdent",
         "SAEF_ValidateModuleGuid",
+        "SAEF_ValidateMutableObject",
         "SAEF_ValidateObjectName",
         "SAEF_ValidateParentObject",
         "SAEF_ValidateRegistryVariable",

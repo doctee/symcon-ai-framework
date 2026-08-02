@@ -37,6 +37,7 @@ if (!defined('SAEF_HELPER_ENSURE_SCRIPT')) {
         $created = $existingID === false;
         if ($created) {
             $scriptID = IPS_CreateScript($scriptType);
+            SAEF_ValidateMutableObject($scriptID, 3);
             IPS_SetParent($scriptID, $parentID);
             IPS_SetIdent($scriptID, $ident);
         } else {
@@ -53,6 +54,7 @@ if (!defined('SAEF_HELPER_ENSURE_SCRIPT')) {
             $scriptID = $existingID;
         }
 
+        SAEF_ValidateMutableObject($scriptID, 3);
         if ($created || $updateExistingPresentation) {
             IPS_SetName($scriptID, $name);
 

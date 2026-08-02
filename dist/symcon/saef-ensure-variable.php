@@ -9,7 +9,7 @@ declare(strict_types=1);
  * - helpers/common/Validation.php
  * - helpers/object/EnsureVariable.php
  *
- * Source input SHA-256: 6a48dae9a76dc23b7ac3dce498b4dff48085a9a9c9de75411b959c6d7eedd259
+ * Source input SHA-256: c1beb979bb6fefa8569c2176e461b6aabd8f9fdc7c8ee064afbf71e945056b67
  * SAEF version: 0.3.0
  * Builder version: 1.0.0
  * SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
@@ -22,6 +22,7 @@ foreach ([
     'SAEF_EnsureVariable',
     'SAEF_ValidateIdent',
     'SAEF_ValidateModuleGuid',
+    'SAEF_ValidateMutableObject',
     'SAEF_ValidateObjectName',
     'SAEF_ValidateParentObject',
     'SAEF_ValidateScriptType',
@@ -59,6 +60,36 @@ if (!defined('SAEF_HELPER_VALIDATION')) {
     {
         if ($parentID <= 0 || !IPS_ObjectExists($parentID)) {
             throw new InvalidArgumentException('Parent object does not exist: ' . $parentID);
+        }
+    }
+
+    /**
+     * Rejects the root object and validates a concrete mutation target.
+     *
+     * Object ID 0 is the IP-Symcon root category. Failed lookups and creation
+     * calls can be coerced to 0 in weakly typed caller code, so every object
+     * mutator must validate its target before the first write.
+     */
+    function SAEF_ValidateMutableObject(int $objectID, ?int $expectedObjectType = null): void
+    {
+        if ($objectID <= 0) {
+            throw new InvalidArgumentException('Mutable object ID must be greater than zero.');
+        }
+        if (!IPS_ObjectExists($objectID)) {
+            throw new RuntimeException('Mutable object does not exist: ' . $objectID);
+        }
+        if ($expectedObjectType === null) {
+            return;
+        }
+
+        $object = IPS_GetObject($objectID);
+        if (($object['ObjectType'] ?? null) !== $expectedObjectType) {
+            throw new RuntimeException(sprintf(
+                'Mutable object %d has type %s, expected %d.',
+                $objectID,
+                (string) ($object['ObjectType'] ?? 'missing'),
+                $expectedObjectType
+            ));
         }
     }
 
@@ -178,6 +209,7 @@ if (!defined('SAEF_HELPER_ENSURE_VARIABLE')) {
         $created = $existingID === false;
         if ($created) {
             $variableID = IPS_CreateVariable($type);
+            SAEF_ValidateMutableObject($variableID, 2);
             IPS_SetParent($variableID, $parentID);
             IPS_SetIdent($variableID, $ident);
         } else {
@@ -204,6 +236,7 @@ if (!defined('SAEF_HELPER_ENSURE_VARIABLE')) {
             }
         }
 
+        SAEF_ValidateMutableObject($variableID, 2);
         if ($created || $updateExistingPresentation) {
             IPS_SetName($variableID, $name);
 

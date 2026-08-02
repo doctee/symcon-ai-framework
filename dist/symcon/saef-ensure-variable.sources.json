@@ -7,17 +7,17 @@
     "orderedSources": [
         {
             "path": "helpers/common/Validation.php",
-            "sha256": "c3681fbf1ace68c221238378671b941faea0e6c63753de20bc6919827b17e90e"
+            "sha256": "370b4160f8cc7b24bef42c40fada9febe567b43a780b73150cc1997595f18885"
         },
         {
             "path": "helpers/object/EnsureVariable.php",
-            "sha256": "92eb6a6ba3282940c4e30b0098f9d0f28a6b216ebd278916f49603adb96bff8e"
+            "sha256": "845c8f49e2e0446d9a8744a89dfc7f0cc34fcb5510f35da9c964d2b31ab45fcc"
         }
     ],
-    "sourceInputHash": "6a48dae9a76dc23b7ac3dce498b4dff48085a9a9c9de75411b959c6d7eedd259",
+    "sourceInputHash": "c1beb979bb6fefa8569c2176e461b6aabd8f9fdc7c8ee064afbf71e945056b67",
     "artifact": {
         "path": "dist/symcon/saef-ensure-variable.php",
-        "sha256": "19c1409b421653c456babc49196053821fcf5e98e1d77c058e76984e19d39108"
+        "sha256": "f5578e24d3f99dc4c84cb0506b84311649b31fc91ad990d077d29e6214adab21"
     },
     "frameworkVersion": "0.3.0",
     "builderVersion": "1.0.0",

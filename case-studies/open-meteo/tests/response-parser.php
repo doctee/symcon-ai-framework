@@ -102,6 +102,34 @@ throws(
     UnexpectedValueException::class,
     'Null values must be rejected.'
 );
+$visibilityWithGap = ResponseParser::parse(
+    $mutate(static function (array &$payload): void {
+        $payload['hourly_units']['visibility'] = 'm';
+        $payload['hourly']['visibility'] = [10000.0, null, 8000.0];
+    }),
+    [],
+    ['visibility'],
+    []
+);
+same(2, $visibilityWithGap->hourly('visibility')->count(), 'Visibility gap was not omitted.');
+same(
+    1735725600,
+    $visibilityWithGap->hourly('visibility')->points()[1]->sourceTimestamp(),
+    'Visibility timestamps were not preserved across a gap.'
+);
+throws(
+    static fn () => ResponseParser::parse(
+        $mutate(static function (array &$payload): void {
+            $payload['hourly_units']['visibility'] = 'm';
+            $payload['hourly']['visibility'] = [null, null, null];
+        }),
+        [],
+        ['visibility'],
+        []
+    ),
+    UnexpectedValueException::class,
+    'An entirely unavailable visibility series must be rejected.'
+);
 throws(
     static fn () => ResponseParser::parse(
         $mutate(static function (array &$payload): void {

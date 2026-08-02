@@ -177,6 +177,11 @@ final class FieldCatalog
         return self::SOIL_HOURLY_FIELDS;
     }
 
+    public static function permitsNullGap(string $section, string $field): bool
+    {
+        return $section === 'hourly' && $field === 'visibility';
+    }
+
     public static function semantics(string $section, string $field): string
     {
         if ($section === 'daily') {

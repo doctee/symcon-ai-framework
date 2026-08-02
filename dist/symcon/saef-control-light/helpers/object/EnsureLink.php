@@ -40,6 +40,7 @@ if (!defined('SAEF_HELPER_ENSURE_LINK')) {
         $created = $existingID === false;
         if ($created) {
             $linkID = IPS_CreateLink();
+            SAEF_ValidateMutableObject($linkID, 6);
             IPS_SetParent($linkID, $parentID);
             IPS_SetIdent($linkID, $ident);
         } else {
@@ -56,6 +57,7 @@ if (!defined('SAEF_HELPER_ENSURE_LINK')) {
             $linkID = $existingID;
         }
 
+        SAEF_ValidateMutableObject($linkID, 6);
         IPS_SetLinkTargetID($linkID, $targetID);
 
         if ($created || $updateExistingPresentation) {

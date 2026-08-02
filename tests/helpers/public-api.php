@@ -48,6 +48,7 @@ $expectedPublicFunctions = [
     'SAEF_UpdateRegistryEntry',
     'SAEF_ValidateIdent',
     'SAEF_ValidateModuleGuid',
+    'SAEF_ValidateMutableObject',
     'SAEF_ValidateObjectName',
     'SAEF_ValidateParentObject',
     'SAEF_ValidateScriptType',
