@@ -18,9 +18,6 @@ if (!function_exists('SAEF_EnsureProfile')) {
 if (!function_exists('SAEF_CreateConfigurationHash')) {
     require_once __DIR__ . '/../libs/SAEF/helpers/diagnostics/ConfigurationHash.php';
 }
-if (!function_exists('SAEF_ValidateMutableObject')) {
-    require_once __DIR__ . '/../libs/SAEF/helpers/common/Validation.php';
-}
 require_once __DIR__ . '/../libs/OpenMeteo/Profiles.php';
 
 use SAEF\CaseStudy\OpenMeteo\FieldCatalog;
@@ -754,9 +751,14 @@ class OpenMeteoWeather extends IPSModule
             || !$this->ReadPropertyBoolean('ShowSoilVariables');
         foreach (self::SOIL_VARIABLE_IDENTS as $ident) {
             $variableId = $this->GetIDForIdent($ident);
-            SAEF_ValidateMutableObject($variableId, 2);
+            if ($variableId <= 0 || !IPS_ObjectExists($variableId)) {
+                throw new RuntimeException('Soil variable target is invalid.');
+            }
             $object = IPS_GetObject($variableId);
-            if (($object['ParentID'] ?? null) !== $this->InstanceID) {
+            if (
+                ($object['ObjectType'] ?? null) !== 2
+                || ($object['ParentID'] ?? null) !== $this->InstanceID
+            ) {
                 throw new RuntimeException('Soil variable ownership differs.');
             }
             if (($object['ObjectIsHidden'] ?? null) !== $hidden) {
