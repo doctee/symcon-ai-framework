@@ -35,7 +35,7 @@ generated tree by manifest and are not copied into the editable module source.
 ## Manifest and Builder
 
 `deployments/symcon/open-meteo-module.fileset.json` is the complete allowlist.
-It maps 29 sorted, unique source paths to 29 unique library targets.
+It maps 30 sorted, unique source paths to 30 unique library targets.
 
 `tools/build-symcon-module-fileset.php` is separate from the existing PHP
 closure fileset builder because an IP-Symcon module library also needs JSON
@@ -52,7 +52,7 @@ metadata, forms and translations. The module builder enforces:
 - output strictly below `dist/symcon/`; and
 - atomic per-file writes.
 
-The builder emits 31 files: 29 payloads, `fileset.sources.json` and
+The builder emits 32 files: 30 payloads, `fileset.sources.json` and
 `fileset.sha256`. The source map records source, target, SHA-256 and byte count
 for every payload plus the builder version, licence and complete fileset hash.
 

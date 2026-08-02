@@ -161,6 +161,7 @@ function Sys_GetURLContentEx(string $url, array $parameters): string|false {}
 function IPS_SemaphoreEnter(string $name, int $milliseconds): bool {}
 function IPS_SemaphoreLeave(string $name): bool {}
 function SAEFLOCATION_GetDescriptor(int $instanceId): string {}
+function OMWEATHER_GetLocationDescriptor(int $instanceId): string {}
 
 function GetValue(int $id): mixed {}
 function SetValue(int $id, mixed $value): void {}

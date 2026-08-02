@@ -4,10 +4,10 @@ This case study defines a SAEF-aligned path for replacing provider-specific
 OpenWeather and SolCast consumers with read-only Open-Meteo weather, soil and
 photovoltaic forecasts.
 
-The current case-study state includes the offline core, a productive weather
-runtime candidate, an inactive solar scaffold and an offline-only
-provider-neutral shared-location candidate. The shared-location increment has
-not been published or installed. It does not disable any existing provider.
+The current case-study state includes the offline core, productive weather and
+solar runtime candidates and an offline-only provider-neutral shared-location
+candidate. The solar runtime increment has not been published or installed. It
+does not disable any existing provider.
 
 ## Scope
 
@@ -39,6 +39,7 @@ and consumer mappings belong in `private/` or an ignored `*.local.*` file.
 | `07-controlled-publication-workflow.md` | Defines the one-way checked/prepare/apply publisher from canonical SAEF sources to the public module repository. |
 | `08-weather-runtime.md` | Describes the bounded weather transport, last-good cache, stale/retry behavior and offline runtime proof. |
 | `11-shared-location-instances.md` | Defines the provider-neutral system-wide location contract and compatible weather migration path. |
+| `12-solar-runtime.md` | Defines the manual-first solar transport, atomic multi-orientation calculation, cache API and deferred calibration boundary. |
 | `distribution/libs/OpenMeteo/` | Pure request, parsing, interval, PV and runtime-state domain classes. |
 | `distribution/` | Canonical candidate IP-Symcon library source with shared-location, weather and solar modules. |
 | `../../dist/symcon/saef-open-meteo-module/` | Generated standalone module fileset; never edit it directly. |
@@ -58,8 +59,8 @@ the first live request was rolled back:
    verified offline;
 4. the weather module has a bounded timer/HTTP adapter, atomic candidate
    validation, last-good cache and explicit stale/retry behavior; and
-5. the solar module remains inactive until the weather runtime contract is
-   accepted and separately exercised.
+5. the solar module has a manual-first, atomic multi-orientation runtime with
+   automatic updates disabled by default.
 
 The generated fileset contains the shared profile and configuration-hash
 helpers required by the modules without duplicating their canonical sources.

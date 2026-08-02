@@ -105,6 +105,10 @@
             "target": "libs/OpenMeteo/SolarForecastCalculator.php"
         },
         {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/SolarForecastProjector.php",
+            "target": "libs/OpenMeteo/SolarForecastProjector.php"
+        },
+        {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/WeatherForecastProjector.php",
             "target": "libs/OpenMeteo/WeatherForecastProjector.php"
         },

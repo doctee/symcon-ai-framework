@@ -4,14 +4,19 @@
       "Open-Meteo Solar Forecast": "Open-Meteo Solarvorhersage",
       "Open-Meteo Weather instance": "Open-Meteo-Wetterinstanz",
       "Forecast days": "Vorhersagetage",
-      "Planned polling interval in minutes": "Geplantes Abfrageintervall in Minuten",
+      "Forecast output": "Vorhersageausgabe",
+      "Direct AC output": "Direkter AC-Ausgang",
+      "PV harvest before storage dispatch": "PV-Ernte vor Speichersteuerung",
+      "Enable automatic updates": "Automatische Aktualisierungen aktivieren",
+      "Polling interval in minutes": "Abfrageintervall in Minuten",
       "PV arrays JSON": "PV-Flaechen als JSON",
       "Inverter groups JSON": "Wechselrichtergruppen als JSON",
       "Enable shading profile": "Verschattungsprofil aktivieren",
       "Enable calibration": "Kalibrierung aktivieren",
-      "Planned HTTP timeout in seconds": "Geplanter HTTP-Timeout in Sekunden",
+      "HTTP timeout in seconds": "HTTP-Timeout in Sekunden",
       "Stale threshold in minutes": "Veraltet-Schwelle in Minuten",
-      "Inactive scaffold: configuration may be validated, but no timer or solar request is available.": "Inaktives Geruest: Die Konfiguration kann validiert werden, aber es gibt keinen Timer und keine Solarabfrage.",
+      "Update solar forecast now": "Solarvorhersage jetzt aktualisieren",
+      "Automatic updates default to off and ApplyChanges never performs a request.": "Automatische Aktualisierungen sind standardmaessig aus und ApplyChanges fuehrt niemals eine Abfrage aus.",
       "Installation-specific PV data belongs in private configuration and must not be committed.": "Installationsspezifische PV-Daten gehoeren in eine private Konfiguration und duerfen nicht committed werden."
     }
   }
