@@ -5,10 +5,9 @@ OpenWeather and SolCast consumers with read-only Open-Meteo weather, soil and
 photovoltaic forecasts.
 
 The current case-study state includes the offline core, a productive weather
-runtime candidate and an inactive solar scaffold. The previously published
-standalone revision remains inactive; this newer runtime candidate has only
-been verified offline and has not been published or installed. It does not
-disable any existing provider.
+runtime candidate, an inactive solar scaffold and an offline-only
+provider-neutral shared-location candidate. The shared-location increment has
+not been published or installed. It does not disable any existing provider.
 
 ## Scope
 
@@ -39,8 +38,9 @@ and consumer mappings belong in `private/` or an ignored `*.local.*` file.
 | `06-publication-and-inactive-live-install.md` | Records public standalone publication, the corrected module-name defect and the successful inactive live idempotency gate. |
 | `07-controlled-publication-workflow.md` | Defines the one-way checked/prepare/apply publisher from canonical SAEF sources to the public module repository. |
 | `08-weather-runtime.md` | Describes the bounded weather transport, last-good cache, stale/retry behavior and offline runtime proof. |
+| `11-shared-location-instances.md` | Defines the provider-neutral system-wide location contract and compatible weather migration path. |
 | `distribution/libs/OpenMeteo/` | Pure request, parsing, interval, PV and runtime-state domain classes. |
-| `distribution/` | Canonical candidate IP-Symcon library source with inactive weather/solar module scaffolds. |
+| `distribution/` | Canonical candidate IP-Symcon library source with shared-location, weather and solar modules. |
 | `../../dist/symcon/saef-open-meteo-module/` | Generated standalone module fileset; never edit it directly. |
 | `../../tools/publish-open-meteo-module.php` | Guarded one-way publisher; check and prepare are local, apply requires explicit immutable gates. |
 | `fixtures/` | Synthetic provider responses without installation data. |

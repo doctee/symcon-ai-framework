@@ -8,6 +8,9 @@ $scaffoldProfiles = [];
 /** @var array<int, array<string, mixed>> $scaffoldInstances */
 $scaffoldInstances = [];
 
+/** @var array<int, SharedLocation> $scaffoldLocationModules */
+$scaffoldLocationModules = [];
+
 class IPSModule
 {
     public int $InstanceID = 42;
@@ -389,6 +392,17 @@ function IPS_LogMessage(string $sender, string $message): void
 {
 }
 
+function SAEFLOCATION_GetDescriptor(int $instanceId): string
+{
+    global $scaffoldLocationModules;
+
+    if (!isset($scaffoldLocationModules[$instanceId])) {
+        throw new RuntimeException('Unknown shared location test instance.');
+    }
+
+    return $scaffoldLocationModules[$instanceId]->GetDescriptor();
+}
+
 /** @param array<string, int|string|bool> $parameters */
 function Sys_GetURLContentEx(string $url, array $parameters): string|false
 {
@@ -397,6 +411,7 @@ function Sys_GetURLContentEx(string $url, array $parameters): string|false
 
 require_once dirname(__DIR__, 3) . '/helpers/object/EnsureProfile.php';
 require_once dirname(__DIR__, 3) . '/helpers/diagnostics/ConfigurationHash.php';
+require_once __DIR__ . '/../distribution/SharedLocation/module.php';
 require_once __DIR__ . '/../distribution/OpenMeteoWeather/module.php';
 require_once __DIR__ . '/../distribution/OpenMeteoSolarForecast/module.php';
 require_once __DIR__ . '/TestOpenMeteoWeather.php';
@@ -421,7 +436,7 @@ scaffoldCheck(
 );
 
 $moduleIds = [];
-foreach (['OpenMeteoWeather', 'OpenMeteoSolarForecast'] as $moduleName) {
+foreach (['SharedLocation', 'OpenMeteoWeather', 'OpenMeteoSolarForecast'] as $moduleName) {
     $moduleRoot = $root . '/' . $moduleName;
     foreach (['module.json', 'form.json', 'locale.json'] as $jsonFile) {
         $decoded = json_decode(
@@ -477,6 +492,52 @@ foreach (['OpenMeteoWeather', 'OpenMeteoSolarForecast'] as $moduleName) {
     }
 }
 
+$sharedLocation = new SharedLocation();
+$sharedLocation->Create();
+$sharedLocation->ApplyChanges();
+scaffoldCheck(
+    $sharedLocation->testStatus() === 104,
+    'Unconfigured shared location must be inactive.'
+);
+scaffoldCheck(
+    $sharedLocation->testVariables() === [],
+    'Shared location must not create child variables.'
+);
+scaffoldCheck(
+    $sharedLocation->testTimerRegistrations() === 0,
+    'Shared location must not register a timer.'
+);
+$sharedLocation->testSetProperty('LocationConfigured', true);
+$sharedLocation->testSetProperty('LocationKey', 'location_a');
+$sharedLocation->testSetProperty('Latitude', 48.0);
+$sharedLocation->testSetProperty('Longitude', 11.0);
+$sharedLocation->ApplyChanges();
+scaffoldCheck($sharedLocation->testStatus() === 102, 'Valid shared location must become active.');
+$sharedDescriptor = json_decode(
+    $sharedLocation->GetDescriptor(),
+    true,
+    16,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    ($sharedDescriptor['location']['key'] ?? null) === 'location_a',
+    'Shared location key differs.'
+);
+$sharedLocation->testSetProperty('LocationKey', 'Invalid Key');
+$sharedLocation->ApplyChanges();
+scaffoldCheck(
+    $sharedLocation->testStatus() === 200,
+    'Invalid shared location must fail closed.'
+);
+$sharedLocation->testSetProperty('LocationKey', 'location_a');
+$sharedLocation->ApplyChanges();
+$scaffoldInstances[2001] = [
+    'ModuleInfo' => [
+        'ModuleID' => '{3B6B9CB0-8D95-4358-874A-13FF1A8BECD1}',
+    ],
+];
+$scaffoldLocationModules[2001] = $sharedLocation;
+
 $weather = new OpenMeteoWeather();
 $weather->Create();
 $weather->ApplyChanges();
@@ -507,6 +568,34 @@ $weather->testSetProperty('Timezone', 'Invalid/Zone');
 $weather->ApplyChanges();
 scaffoldCheck($weather->testStatus() === 200, 'Invalid weather configuration must fail closed.');
 scaffoldCheck($weather->testTimerInterval('UpdateData') === 0, 'Invalid timer must be disabled.');
+$weather->testSetProperty('LocationConfigured', false);
+$weather->testSetProperty('LocationInstanceId', 2001);
+$weather->ApplyChanges();
+scaffoldCheck($weather->testStatus() === 102, 'Shared-location weather module must become active.');
+scaffoldCheck($weather->testReferences() === [2001], 'Shared location reference was not registered.');
+$weatherDescriptor = json_decode(
+    $weather->GetLocationDescriptor(),
+    true,
+    16,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    (float) ($weatherDescriptor['location']['latitude'] ?? 0.0) === 48.0,
+    'Weather did not resolve the shared latitude.'
+);
+$weather->testSetProperty('LocationInstanceId', 2002);
+$weather->ApplyChanges();
+scaffoldCheck($weather->testStatus() === 200, 'Unknown shared location must fail closed.');
+scaffoldCheck(
+    $weather->testReferences() === [2001],
+    'Invalid shared location replaced the last valid reference.'
+);
+$weather->testSetProperty('LocationInstanceId', 0);
+$weather->testSetProperty('LocationConfigured', true);
+$weather->testSetProperty('Timezone', 'Europe/Berlin');
+$weather->ApplyChanges();
+scaffoldCheck($weather->testStatus() === 102, 'Legacy location fallback must remain active.');
+scaffoldCheck($weather->testReferences() === [], 'Legacy location fallback retained a reference.');
 
 /**
  * @param list<string> $fields
@@ -647,6 +736,26 @@ scaffoldCheck($runtimeWeather->testReadValue('DataState') === 3, 'Old last-good 
 scaffoldCheck(
     $runtimeWeather->testTimerInterval('UpdateData') === 900000,
     'Second retry interval differs.'
+);
+
+$sharedRuntimeWeather = new TestOpenMeteoWeather();
+$sharedRuntimeWeather->Create();
+$sharedRuntimeWeather->testSetProperty('LocationInstanceId', 2001);
+$sharedRuntimeWeather->ApplyChanges();
+$sharedRuntimeWeather->testQueueResponse(scaffoldWeatherResponse(false));
+$sharedRuntimeResult = json_decode(
+    $sharedRuntimeWeather->UpdateData(),
+    true,
+    16,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    ($sharedRuntimeResult['success'] ?? null) === true,
+    'Weather update through a shared location did not succeed.'
+);
+scaffoldCheck(
+    $sharedRuntimeWeather->testReferences() === [2001],
+    'Shared-location runtime reference differs.'
 );
 
 $solar = new OpenMeteoSolarForecast();

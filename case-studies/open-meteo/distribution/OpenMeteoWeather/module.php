@@ -7,6 +7,7 @@ require_once __DIR__ . '/../libs/OpenMeteo/ForecastPoint.php';
 require_once __DIR__ . '/../libs/OpenMeteo/ForecastSeries.php';
 require_once __DIR__ . '/../libs/OpenMeteo/ParsedForecast.php';
 require_once __DIR__ . '/../libs/OpenMeteo/IntervalAligner.php';
+require_once __DIR__ . '/../libs/OpenMeteo/LocationDefinition.php';
 require_once __DIR__ . '/../libs/OpenMeteo/RequestBuilder.php';
 require_once __DIR__ . '/../libs/OpenMeteo/ResponseParser.php';
 require_once __DIR__ . '/../libs/OpenMeteo/ForecastStateReducer.php';
@@ -21,6 +22,7 @@ require_once __DIR__ . '/../libs/OpenMeteo/Profiles.php';
 
 use SAEF\CaseStudy\OpenMeteo\FieldCatalog;
 use SAEF\CaseStudy\OpenMeteo\ForecastStateReducer;
+use SAEF\CaseStudy\OpenMeteo\LocationDefinition;
 use SAEF\CaseStudy\OpenMeteo\Profiles;
 use SAEF\CaseStudy\OpenMeteo\RequestBuilder;
 use SAEF\CaseStudy\OpenMeteo\ResponseParser;
@@ -34,6 +36,8 @@ class OpenMeteoWeather extends IPSModule
     private const MAX_RETRY_STEP = 4;
     private const SEMAPHORE_TIMEOUT_MILLISECONDS = 1000;
     private const MAXIMUM_CACHE_QUERY_SECONDS = 864000;
+    private const LOCATION_MODULE_ID = '{3B6B9CB0-8D95-4358-874A-13FF1A8BECD1}';
+    private const MAXIMUM_LOCATION_DESCRIPTOR_BYTES = 4096;
 
     /** @var array<string, int> */
     private const DATA_STATE_VALUES = [
@@ -56,6 +60,7 @@ class OpenMeteoWeather extends IPSModule
     {
         parent::Create();
 
+        $this->RegisterPropertyInteger('LocationInstanceId', 0);
         $this->RegisterPropertyBoolean('LocationConfigured', false);
         $this->RegisterPropertyFloat('Latitude', 0.0);
         $this->RegisterPropertyFloat('Longitude', 0.0);
@@ -70,6 +75,7 @@ class OpenMeteoWeather extends IPSModule
 
         $this->RegisterAttributeString('RuntimeState', '');
         $this->RegisterAttributeString('ForecastCache', '');
+        $this->RegisterAttributeInteger('RegisteredLocationReferenceId', 0);
 
         $this->RegisterTimer(
             'UpdateData',
@@ -87,7 +93,8 @@ class OpenMeteoWeather extends IPSModule
         $this->registerWeatherVariables();
         $this->registerSoilVariables();
 
-        if (!$this->ReadPropertyBoolean('LocationConfigured')) {
+        if (!$this->hasLocationConfiguration()) {
+            $this->reconcileLocationReference(0);
             $this->SetTimerInterval('UpdateData', 0);
             $this->SetValue('DataState', 0);
             $this->SetStatus(self::STATUS_INACTIVE);
@@ -96,10 +103,17 @@ class OpenMeteoWeather extends IPSModule
         }
 
         try {
+            $locationInstanceId = $this->ReadPropertyInteger('LocationInstanceId');
+            if ($locationInstanceId <= 0) {
+                $this->reconcileLocationReference(0);
+            }
             RequestBuilder::normalizeLocationConfiguration(
                 $this->locationConfiguration(),
                 10
             );
+            if ($locationInstanceId > 0) {
+                $this->reconcileLocationReference($locationInstanceId);
+            }
             $this->validateRuntimePolicy();
             $state = $this->runtimeState();
             $this->writeRuntimeState($state);
@@ -115,7 +129,7 @@ class OpenMeteoWeather extends IPSModule
 
     public function UpdateData(): string
     {
-        if (!$this->ReadPropertyBoolean('LocationConfigured')) {
+        if (!$this->hasLocationConfiguration()) {
             return $this->result(false, 'configuration_missing');
         }
 
@@ -147,7 +161,7 @@ class OpenMeteoWeather extends IPSModule
 
     public function GetLocationDescriptor(): string
     {
-        if (!$this->ReadPropertyBoolean('LocationConfigured')) {
+        if (!$this->hasLocationConfiguration()) {
             return $this->result(false, 'configuration_missing');
         }
 
@@ -509,6 +523,15 @@ class OpenMeteoWeather extends IPSModule
     /** @return array<string, float|int|string|null> */
     private function locationConfiguration(): array
     {
+        $locationInstanceId = $this->ReadPropertyInteger('LocationInstanceId');
+        if ($locationInstanceId > 0) {
+            $location = $this->sharedLocationConfiguration($locationInstanceId);
+
+            return $location + [
+                'forecastDays' => $this->ReadPropertyInteger('ForecastDays'),
+            ];
+        }
+
         return [
             'latitude' => $this->ReadPropertyFloat('Latitude'),
             'longitude' => $this->ReadPropertyFloat('Longitude'),
@@ -518,6 +541,55 @@ class OpenMeteoWeather extends IPSModule
             'timezone' => trim($this->ReadPropertyString('Timezone')),
             'forecastDays' => $this->ReadPropertyInteger('ForecastDays'),
         ];
+    }
+
+    private function hasLocationConfiguration(): bool
+    {
+        return $this->ReadPropertyInteger('LocationInstanceId') > 0
+            || $this->ReadPropertyBoolean('LocationConfigured');
+    }
+
+    /** @return array{key: string, latitude: float, longitude: float, timezone: string, elevation: ?float} */
+    private function sharedLocationConfiguration(int $instanceId): array
+    {
+        if (!IPS_InstanceExists($instanceId)) {
+            throw new InvalidArgumentException('Shared location instance does not exist.');
+        }
+        $instance = IPS_GetInstance($instanceId);
+        $moduleId = $instance['ModuleInfo']['ModuleID'] ?? null;
+        if (!is_string($moduleId) || $moduleId !== self::LOCATION_MODULE_ID) {
+            throw new InvalidArgumentException('Shared location instance has an incompatible module type.');
+        }
+
+        $descriptorJson = SAEFLOCATION_GetDescriptor($instanceId);
+        if (strlen($descriptorJson) > self::MAXIMUM_LOCATION_DESCRIPTOR_BYTES) {
+            throw new InvalidArgumentException('Shared location descriptor is too large.');
+        }
+        $descriptor = json_decode($descriptorJson, true, 16, JSON_THROW_ON_ERROR);
+        if (
+            !is_array($descriptor)
+            || ($descriptor['success'] ?? null) !== true
+            || !is_array($descriptor['location'] ?? null)
+        ) {
+            throw new InvalidArgumentException('Shared location descriptor is unavailable.');
+        }
+
+        return LocationDefinition::normalize($descriptor['location']);
+    }
+
+    private function reconcileLocationReference(int $desiredInstanceId): void
+    {
+        $registeredInstanceId = $this->ReadAttributeInteger('RegisteredLocationReferenceId');
+        if ($registeredInstanceId === $desiredInstanceId) {
+            return;
+        }
+        if ($registeredInstanceId > 0) {
+            $this->UnregisterReference($registeredInstanceId);
+        }
+        if ($desiredInstanceId > 0) {
+            $this->RegisterReference($desiredInstanceId);
+        }
+        $this->WriteAttributeInteger('RegisteredLocationReferenceId', $desiredInstanceId);
     }
 
     private function validateRuntimePolicy(): void

@@ -1,6 +1,18 @@
 {
   "elements": [
     {
+      "type": "SelectInstance",
+      "name": "LocationInstanceId",
+      "caption": "Shared location instance",
+      "validModules": [
+        "{3B6B9CB0-8D95-4358-874A-13FF1A8BECD1}"
+      ]
+    },
+    {
+      "type": "Label",
+      "caption": "A selected shared location takes precedence over the legacy coordinate fields below."
+    },
+    {
       "type": "CheckBox",
       "name": "LocationConfigured",
       "caption": "Location configuration is complete"
