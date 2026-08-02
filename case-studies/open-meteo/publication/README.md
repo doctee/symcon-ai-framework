@@ -10,7 +10,8 @@ This repository contains three modules:
 - `SharedLocation`, a provider-neutral, read-only location descriptor without
   variables, timers or network access
 - `OpenMeteoWeather`
-- `OpenMeteoSolarForecast`, currently an inactive scaffold
+- `OpenMeteoSolarForecast`, a manual-first solar runtime whose automatic
+  updates default to disabled
 
 The weather module contains a bounded Open-Meteo runtime with last-good cache
 and can optionally reference `SharedLocation`; its existing direct coordinate

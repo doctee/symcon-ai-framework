@@ -5,7 +5,8 @@
 The weather module has a productive, read-only runtime adapter. A valid
 configuration activates a stateless IP-Symcon timer only when
 `EnableAutomaticUpdates` is enabled; `ApplyChanges()` itself performs no HTTP
-request. The solar module remains an inactive scaffold.
+request. The later solar runtime is documented separately in
+`12-solar-runtime.md`.
 
 This increment is implemented and verified offline only. It does not publish a
 new public-module revision, update an installed library, configure private

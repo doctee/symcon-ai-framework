@@ -243,6 +243,8 @@ be evaluated separately. It must not replace `dwd_icon` silently.
 | --- | --- | --- | --- | --- |
 | `WeatherInstanceId` | integer | yes | installation-specific | Must reference a compatible `OpenMeteoWeather` instance |
 | `ForecastDays` | integer | yes | no | Default `4`, allowed `1..7` initially |
+| `ForecastOutputMode` | enum | yes | no | `direct_ac` or storage-safe `pv_harvest`; default `direct_ac` |
+| `EnableAutomaticUpdates` | boolean | yes | no | Default `false` for migration safety; manual updates remain available |
 | `PollingIntervalMinutes` | integer | yes | no | Default `60`, minimum `30` |
 | `Arrays` | list | yes | installation-specific | At least one validated array |
 | `Inverters` | list | yes | installation-specific | At least one validated inverter group |
@@ -269,13 +271,20 @@ Each inverter entry contains:
 
 | Field | Type | Validation | Meaning |
 | --- | --- | --- | --- |
-| `Ident` | string | unique stable Ident | Inverter-group identity |
+| `Ident` | string | unique stable Ident | Conversion/storage-group identity |
+| `PvInputLimitKw` | float or null | finite and `> 0` when set | Optional group PV-input clipping limit |
 | `AcLimitKw` | float | finite and `> 0` | Group AC clipping limit |
-| `EfficiencyFactor` | float | finite and `0..1` | Optional fixed DC-to-AC efficiency |
+| `EfficiencyFactor` | float | finite and `0..1` | Fixed DC-to-AC efficiency for `direct_ac` |
 
 Clipping is applied after summing all arrays assigned to the same inverter.
 Per-array clipping would overstate output when several arrays share one
 inverter and under-model shared inverter constraints.
+
+`direct_ac` applies inverter efficiency and AC clipping. `pv_harvest` applies
+the optional PV-input limit but stops before battery dispatch and AC-grid clipping.
+The latter is required for DC-coupled storage: grid output can be lower while
+the battery charges or can remain positive after sunset while it discharges.
+Grid output is therefore not derivable from weather alone in that topology.
 
 ## 8. Canonical Forecast Data Contract
 
@@ -617,7 +626,7 @@ method is permitted and has no device side effect.
 | `OPENMETEO.Snowfall` | float | cm |
 | `OPENMETEO.SoilMoisture` | float | m3/m3 with suitable precision |
 | `OPENMETEO.Duration` | integer | seconds or duration presentation |
-| `OPENMETEO.Power` | float | W or kW, fixed contract before implementation |
+| `OPENMETEO.Power` | float | kW |
 | `OPENMETEO.Energy` | float | kWh |
 
 `OPENMETEO.DataState` initial associations:
@@ -653,8 +662,8 @@ The first runtime-facing methods should remain bounded:
 | Method | Result |
 | --- | --- |
 | `UpdateData()` | Fetches all unique orientations serially and atomically publishes only a complete valid result |
-| `GetPowerForecastJson(from, to, breakdown)` | Returns bounded AC power intervals, optionally grouped by array/inverter |
-| `GetDailyEnergyForecastJson(fromDate, toDate, breakdown)` | Returns bounded local-day energy totals |
+| `GetPowerForecastJson(from, to, breakdown)` | Returns bounded AC power intervals; first runtime supports `system` explicitly |
+| `GetDailyEnergyForecastJson(fromDate, toDate, breakdown)` | Returns bounded local-day energy totals; first runtime supports `system` explicitly |
 
 Bounds are enforced even for local callers. Unknown fields and out-of-cache
 ranges return a classified error instead of an unbounded raw cache dump.
@@ -684,6 +693,7 @@ Rules:
 - negative GTI rejects the response before calculation;
 - calculated negative array power is clamped to zero;
 - arrays are summed by `InverterIdent`;
+- `pv_harvest` publishes that summed DC-side result before storage dispatch;
 - inverter efficiency is applied once at inverter-group scope;
 - group AC output is clipped to `AcLimitKw`;
 - system output is the sum of clipped inverter-group outputs; and

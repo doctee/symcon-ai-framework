@@ -16,6 +16,87 @@ final class SolarForecastCalculator
         array $gtiByOrientation,
         ForecastSeries $temperature
     ): ForecastSeries {
+        $calculation = self::calculateDcPowerByInverter(
+            $configuration,
+            $gtiByOrientation,
+            $temperature
+        );
+
+        $result = [];
+        foreach ($calculation as $interval) {
+            $acPower = 0.0;
+            foreach ($configuration->inverters() as $inverter) {
+                $groupAcPower = $interval['dcByInverter'][$inverter['ident']]
+                    * $inverter['efficiencyFactor'];
+                $acPower += min($groupAcPower, $inverter['acLimitKw']);
+            }
+
+            $referencePoint = $interval['reference'];
+            $result[] = new ForecastPoint(
+                'ac_power',
+                'kW',
+                FieldCatalog::SEMANTICS_PRECEDING_INTERVAL,
+                $referencePoint->sourceTimestamp(),
+                $referencePoint->validFrom(),
+                $referencePoint->validTo(),
+                $acPower
+            );
+        }
+
+        return new ForecastSeries('ac_power', 'kW', $result);
+    }
+
+    /**
+     * Calculates weather-driven PV harvest before battery dispatch and AC-grid clipping.
+     *
+     * @param array<string, ForecastSeries> $gtiByOrientation
+     */
+    public static function calculatePvHarvest(
+        PvConfiguration $configuration,
+        array $gtiByOrientation,
+        ForecastSeries $temperature
+    ): ForecastSeries {
+        $calculation = self::calculateDcPowerByInverter(
+            $configuration,
+            $gtiByOrientation,
+            $temperature
+        );
+
+        $result = [];
+        foreach ($calculation as $interval) {
+            $referencePoint = $interval['reference'];
+            $harvestPower = 0.0;
+            foreach ($configuration->inverters() as $inverter) {
+                $groupPower = $interval['dcByInverter'][$inverter['ident']];
+                if ($inverter['pvInputLimitKw'] !== null) {
+                    $groupPower = min($groupPower, $inverter['pvInputLimitKw']);
+                }
+                $harvestPower += $groupPower;
+            }
+            $result[] = new ForecastPoint(
+                'pv_harvest_power',
+                'kW',
+                FieldCatalog::SEMANTICS_PRECEDING_INTERVAL,
+                $referencePoint->sourceTimestamp(),
+                $referencePoint->validFrom(),
+                $referencePoint->validTo(),
+                $harvestPower
+            );
+        }
+
+        return new ForecastSeries('pv_harvest_power', 'kW', $result);
+    }
+
+    /**
+     * @param array<string, ForecastSeries> $gtiByOrientation
+     *
+     * @return list<array{reference: ForecastPoint, dcByInverter: array<string, float>}>
+     */
+    private static function calculateDcPowerByInverter(
+        PvConfiguration $configuration,
+        array $gtiByOrientation,
+        ForecastSeries $temperature
+    ): array {
         if ($temperature->field() !== 'temperature_2m' || $temperature->unit() !== '°C') {
             throw new InvalidArgumentException('Solar temperature series contract is invalid.');
         }
@@ -89,32 +170,23 @@ final class SolarForecastCalculator
                 $dcByInverter[$array['inverterIdent']] += max(0.0, $dcPower);
             }
 
-            $acPower = 0.0;
-            foreach ($configuration->inverters() as $inverter) {
-                $groupAcPower = $dcByInverter[$inverter['ident']]
-                    * $inverter['efficiencyFactor'];
-                $acPower += min($groupAcPower, $inverter['acLimitKw']);
-            }
-
-            $result[] = new ForecastPoint(
-                'ac_power',
-                'kW',
-                FieldCatalog::SEMANTICS_PRECEDING_INTERVAL,
-                $referencePoint->sourceTimestamp(),
-                $referencePoint->validFrom(),
-                $referencePoint->validTo(),
-                $acPower
-            );
+            $result[] = [
+                'reference' => $referencePoint,
+                'dcByInverter' => $dcByInverter,
+            ];
         }
 
-        return new ForecastSeries('ac_power', 'kW', $result);
+        return $result;
     }
 
     public static function dailyEnergy(
         ForecastSeries $power,
         string $timezone
     ): ForecastSeries {
-        if ($power->field() !== 'ac_power' || $power->unit() !== 'kW') {
+        if (
+            !in_array($power->field(), ['ac_power', 'pv_harvest_power'], true)
+            || $power->unit() !== 'kW'
+        ) {
             throw new InvalidArgumentException('Solar power series contract is invalid.');
         }
 

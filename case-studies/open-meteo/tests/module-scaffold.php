@@ -11,6 +11,9 @@ $scaffoldInstances = [];
 /** @var array<int, SharedLocation> $scaffoldLocationModules */
 $scaffoldLocationModules = [];
 
+/** @var array<int, OpenMeteoWeather> $scaffoldWeatherModules */
+$scaffoldWeatherModules = [];
+
 class IPSModule
 {
     public int $InstanceID = 42;
@@ -403,6 +406,17 @@ function SAEFLOCATION_GetDescriptor(int $instanceId): string
     return $scaffoldLocationModules[$instanceId]->GetDescriptor();
 }
 
+function OMWEATHER_GetLocationDescriptor(int $instanceId): string
+{
+    global $scaffoldWeatherModules;
+
+    if (!isset($scaffoldWeatherModules[$instanceId])) {
+        throw new RuntimeException('Unknown weather test instance.');
+    }
+
+    return $scaffoldWeatherModules[$instanceId]->GetLocationDescriptor();
+}
+
 /** @param array<string, int|string|bool> $parameters */
 function Sys_GetURLContentEx(string $url, array $parameters): string|false
 {
@@ -415,6 +429,7 @@ require_once __DIR__ . '/../distribution/SharedLocation/module.php';
 require_once __DIR__ . '/../distribution/OpenMeteoWeather/module.php';
 require_once __DIR__ . '/../distribution/OpenMeteoSolarForecast/module.php';
 require_once __DIR__ . '/TestOpenMeteoWeather.php';
+require_once __DIR__ . '/TestOpenMeteoSolarForecast.php';
 
 function scaffoldCheck(bool $condition, string $message): void
 {
@@ -482,14 +497,6 @@ foreach (['SharedLocation', 'OpenMeteoWeather', 'OpenMeteoSolarForecast'] as $mo
     );
     scaffoldCheck(!str_contains($source, 'curl_'), 'Module must not use direct cURL calls.');
     scaffoldCheck(!str_contains($source, 'SendDataToParent'), 'Module transport boundary differs.');
-    if ($moduleName === 'OpenMeteoSolarForecast') {
-        foreach (['RegisterTimer', 'SetTimerInterval', 'UpdateData('] as $forbidden) {
-            scaffoldCheck(
-                !str_contains($source, $forbidden),
-                'Inactive solar module contains an activation surface.'
-            );
-        }
-    }
 }
 
 $sharedLocation = new SharedLocation();
@@ -786,47 +793,107 @@ scaffoldCheck(
     'Manual shared-location failure enabled a retry timer.'
 );
 
-$solar = new OpenMeteoSolarForecast();
-$solar->Create();
-$solar->ApplyChanges();
-scaffoldCheck($solar->testStatus() === 104, 'Unconfigured solar scaffold must be inactive.');
-scaffoldCheck(count($solar->testVariables()) === 10, 'Solar variable contract differs.');
-$solarVariables = $solar->testVariables();
+/** @return list<array<string, mixed>> */
+function scaffoldSolarArrays(): array
+{
+    return [
+        [
+            'Ident' => 'ArrayA',
+            'PeakPowerKw' => 0.7,
+            'TiltDegrees' => 30.0,
+            'AzimuthDegrees' => 0.0,
+            'TemperatureCoefficientPctPerC' => -0.35,
+            'NoctDeltaCAt800Wm2' => 25.0,
+            'DerateFactor' => 1.0,
+            'InverterIdent' => 'InverterA',
+        ],
+        [
+            'Ident' => 'ArrayB',
+            'PeakPowerKw' => 0.7,
+            'TiltDegrees' => 20.0,
+            'AzimuthDegrees' => -90.0,
+            'TemperatureCoefficientPctPerC' => -0.35,
+            'NoctDeltaCAt800Wm2' => 25.0,
+            'DerateFactor' => 1.0,
+            'InverterIdent' => 'InverterA',
+        ],
+    ];
+}
 
-$solar->testSetProperty('WeatherInstanceId', 1001);
+/** @return list<array<string, mixed>> */
+function scaffoldSolarInverters(): array
+{
+    return [[
+        'Ident' => 'InverterA',
+        'AcLimitKw' => 0.8,
+        'EfficiencyFactor' => 1.0,
+        'PvInputLimitKw' => 1.0,
+    ]];
+}
+
+function scaffoldConfigureSolar(IPSModule $solar, int $weatherInstanceId): void
+{
+    $solar->testSetProperty('WeatherInstanceId', $weatherInstanceId);
+    $solar->testSetProperty(
+        'ArraysJson',
+        json_encode(scaffoldSolarArrays(), JSON_THROW_ON_ERROR)
+    );
+    $solar->testSetProperty(
+        'InvertersJson',
+        json_encode(scaffoldSolarInverters(), JSON_THROW_ON_ERROR)
+    );
+}
+
+function scaffoldSolarResponse(float $irradiance): string
+{
+    return json_encode([
+        'latitude' => 48.0,
+        'longitude' => 11.0,
+        'timezone' => 'Europe/Berlin',
+        'utc_offset_seconds' => 3600,
+        'hourly_units' => [
+            'temperature_2m' => '°C',
+            'global_tilted_irradiance' => 'W/m²',
+        ],
+        'hourly' => [
+            'time' => [1735718400, 1735722000, 1735725600],
+            'temperature_2m' => [25.0, 25.0, 25.0],
+            'global_tilted_irradiance' => [$irradiance, $irradiance, $irradiance],
+        ],
+    ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+}
+
 $scaffoldInstances[1001] = [
     'ModuleInfo' => [
         'ModuleID' => '{B52FE951-7FBE-4882-B0E6-E143E5B5F31A}',
     ],
 ];
-$solar->testSetProperty('ArraysJson', json_encode([[
-    'Ident' => 'ArrayA',
-    'PeakPowerKw' => 5.0,
-    'TiltDegrees' => 30.0,
-    'AzimuthDegrees' => 0.0,
-    'TemperatureCoefficientPctPerC' => -0.4,
-    'NoctDeltaCAt800Wm2' => 25.0,
-    'DerateFactor' => 0.9,
-    'InverterIdent' => 'InverterA',
-]], JSON_THROW_ON_ERROR));
-$solar->testSetProperty('InvertersJson', json_encode([[
-    'Ident' => 'InverterA',
-    'AcLimitKw' => 4.0,
-    'EfficiencyFactor' => 0.96,
-]], JSON_THROW_ON_ERROR));
+$scaffoldWeatherModules[1001] = $weather;
+
+$solar = new OpenMeteoSolarForecast();
+$solar->Create();
 $solar->ApplyChanges();
-scaffoldCheck($solar->testStatus() === 104, 'Valid solar scaffold must remain inactive.');
+scaffoldCheck($solar->testStatus() === 104, 'Unconfigured solar module must be inactive.');
+scaffoldCheck(count($solar->testVariables()) === 10, 'Solar variable contract differs.');
+scaffoldCheck($solar->testTimerRegistrations() === 1, 'Solar update timer is missing.');
+scaffoldCheck($solar->testTimerInterval('UpdateData') === 0, 'Solar timer must start disabled.');
+$solarVariables = $solar->testVariables();
+
+scaffoldConfigureSolar($solar, 1001);
+$solar->ApplyChanges();
+scaffoldCheck($solar->testStatus() === 102, 'Valid solar module must become active.');
 scaffoldCheck($solar->testReferences() === [1001], 'Weather reference was not registered.');
+scaffoldCheck($solar->testTimerInterval('UpdateData') === 0, 'Solar automatic updates must default off.');
 scaffoldCheck(
     is_string($solar->testReadValue('ConfigurationHash'))
     && strlen($solar->testReadValue('ConfigurationHash')) === 64,
     'Solar configuration hash is missing.'
 );
+$solar->ApplyChanges();
 scaffoldCheck(
     $solar->testVariables() === $solarVariables,
     'Repeated solar ApplyChanges changed variable identity.'
 );
-scaffoldCheck($solar->testTimerRegistrations() === 0, 'Solar scaffold registered a timer.');
 
 $solar->testSetProperty('WeatherInstanceId', 1002);
 $solar->ApplyChanges();
@@ -837,11 +904,108 @@ $scaffoldInstances[1002] = [
         'ModuleID' => '{B52FE951-7FBE-4882-B0E6-E143E5B5F31A}',
     ],
 ];
+$scaffoldWeatherModules[1002] = $weather;
 $solar->ApplyChanges();
 scaffoldCheck($solar->testReferences() === [1002], 'Weather reference was not reconciled.');
 
 $solar->testSetProperty('EnableCalibration', true);
 $solar->ApplyChanges();
 scaffoldCheck($solar->testStatus() === 200, 'Deferred calibration must fail closed.');
+scaffoldCheck($solar->testTimerInterval('UpdateData') === 0, 'Invalid solar timer must be disabled.');
+
+$runtimeSolar = new TestOpenMeteoSolarForecast();
+$runtimeSolar->Create();
+scaffoldConfigureSolar($runtimeSolar, 1001);
+$runtimeSolar->ApplyChanges();
+$runtimeSolar->testQueueResponse(scaffoldSolarResponse(1000.0));
+$runtimeSolar->testQueueResponse(scaffoldSolarResponse(1000.0));
+$solarSuccess = json_decode($runtimeSolar->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($solarSuccess['success'] ?? null) === true, 'Solar update did not succeed.');
+scaffoldCheck(count($runtimeSolar->testRequestedUrls()) === 2, 'Solar orientations were not serialized.');
+scaffoldCheck($runtimeSolar->testReadValue('DataState') === 2, 'Solar data is not current.');
+scaffoldCheck(
+    abs((float) $runtimeSolar->testReadValue('CurrentPowerForecast') - 0.8) < 0.000001,
+    'Solar inverter clipping differs.'
+);
+scaffoldCheck(
+    (float) $runtimeSolar->testReadValue('TodayEnergyForecast') > 0.0,
+    'Solar daily energy was not projected.'
+);
+$powerForecast = json_decode(
+    $runtimeSolar->GetPowerForecastJson(1735714800, 1735725601),
+    true,
+    64,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    count($powerForecast['data']['system'] ?? []) === 3,
+    'Bounded solar power forecast differs.'
+);
+$unsupported = json_decode(
+    $runtimeSolar->GetPowerForecastJson(1735714800, 1735725601, 'array'),
+    true,
+    16,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    ($unsupported['code'] ?? null) === 'breakdown_unsupported',
+    'Unsupported solar breakdown was not rejected.'
+);
+
+$runtimeSolar->testSetNow(1735716660);
+$runtimeSolar->testQueueResponse(false);
+$solarFailure = json_decode($runtimeSolar->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($solarFailure['code'] ?? null) === 'transport_error', 'Solar failure differs.');
+scaffoldCheck($runtimeSolar->testReadValue('DataState') === 4, 'Solar last-good failure must warn.');
+scaffoldCheck(
+    abs((float) $runtimeSolar->testReadValue('CurrentPowerForecast') - 0.8) < 0.000001,
+    'Solar last-good value was cleared.'
+);
+scaffoldCheck(
+    $runtimeSolar->testTimerInterval('UpdateData') === 0,
+    'Manual solar failure enabled a retry timer.'
+);
+$runtimeSolar->testSetProperty('ForecastDays', 5);
+$runtimeSolar->ApplyChanges();
+scaffoldCheck(
+    (float) $runtimeSolar->testReadValue('CurrentPowerForecast') === 0.0,
+    'Changed solar configuration retained an incompatible public value.'
+);
+$invalidatedCache = json_decode(
+    $runtimeSolar->GetPowerForecastJson(1735714800, 1735725601),
+    true,
+    16,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    ($invalidatedCache['code'] ?? null) === 'cache_empty',
+    'Changed solar configuration retained an incompatible cache.'
+);
+$runtimeSolar->testSetProperty('ForecastOutputMode', 'pv_harvest');
+$runtimeSolar->ApplyChanges();
+$runtimeSolar->testQueueResponse(scaffoldSolarResponse(1000.0));
+$runtimeSolar->testQueueResponse(scaffoldSolarResponse(1000.0));
+$harvestSuccess = json_decode($runtimeSolar->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($harvestSuccess['success'] ?? null) === true, 'PV harvest update failed.');
+scaffoldCheck(
+    abs((float) $runtimeSolar->testReadValue('CurrentPowerForecast') - 1.0) < 0.000001,
+    'Storage-coupled PV harvest did not use its separate PV-input limit.'
+);
+
+$automaticSolar = new TestOpenMeteoSolarForecast();
+$automaticSolar->Create();
+scaffoldConfigureSolar($automaticSolar, 1001);
+$automaticSolar->testSetProperty('EnableAutomaticUpdates', true);
+$automaticSolar->ApplyChanges();
+scaffoldCheck(
+    $automaticSolar->testTimerInterval('UpdateData') === 3600000,
+    'Automatic solar polling interval differs.'
+);
+$automaticSolar->testQueueResponse(false);
+$automaticSolar->UpdateData();
+scaffoldCheck(
+    $automaticSolar->testTimerInterval('UpdateData') === 300000,
+    'Solar first retry interval differs.'
+);
 
 echo "module-scaffold: ok\n";

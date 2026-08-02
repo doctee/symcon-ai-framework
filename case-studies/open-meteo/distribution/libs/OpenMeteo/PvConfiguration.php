@@ -23,7 +23,7 @@ final class PvConfiguration
      */
     private array $arrays;
 
-    /** @var array<string, array{ident: string, acLimitKw: float, efficiencyFactor: float}> */
+    /** @var array<string, array{ident: string, acLimitKw: float, efficiencyFactor: float, pvInputLimitKw: ?float}> */
     private array $inverters;
 
     /**
@@ -58,7 +58,7 @@ final class PvConfiguration
         return $this->arrays;
     }
 
-    /** @return array<string, array{ident: string, acLimitKw: float, efficiencyFactor: float}> */
+    /** @return array<string, array{ident: string, acLimitKw: float, efficiencyFactor: float, pvInputLimitKw: ?float}> */
     public function inverters(): array
     {
         return $this->inverters;
@@ -90,7 +90,7 @@ final class PvConfiguration
     /**
      * @param list<array<string, mixed>> $entries
      *
-     * @return array<string, array{ident: string, acLimitKw: float, efficiencyFactor: float}>
+     * @return array<string, array{ident: string, acLimitKw: float, efficiencyFactor: float, pvInputLimitKw: ?float}>
      */
     private function normalizeInverters(array $entries): array
     {
@@ -102,12 +102,26 @@ final class PvConfiguration
             }
             $acLimitKw = self::number($entry, 'AcLimitKw', 'PV inverter');
             $efficiencyFactor = self::number($entry, 'EfficiencyFactor', 'PV inverter');
+            $pvInputLimitKw = self::optionalNumber(
+                $entry,
+                'PvInputLimitKw',
+                'PV inverter'
+            );
             self::assertRange($acLimitKw, PHP_FLOAT_MIN, PHP_FLOAT_MAX, 'PV inverter AC limit');
             self::assertRange($efficiencyFactor, 0.0, 1.0, 'PV inverter efficiency');
+            if ($pvInputLimitKw !== null) {
+                self::assertRange(
+                    $pvInputLimitKw,
+                    PHP_FLOAT_MIN,
+                    PHP_FLOAT_MAX,
+                    'PV inverter input limit'
+                );
+            }
             $result[$ident] = [
                 'ident' => $ident,
                 'acLimitKw' => $acLimitKw,
                 'efficiencyFactor' => $efficiencyFactor,
+                'pvInputLimitKw' => $pvInputLimitKw,
             ];
         }
 
@@ -116,7 +130,7 @@ final class PvConfiguration
 
     /**
      * @param list<array<string, mixed>> $entries
-     * @param array<string, array{ident: string, acLimitKw: float, efficiencyFactor: float}> $inverters
+     * @param array<string, array{ident: string, acLimitKw: float, efficiencyFactor: float, pvInputLimitKw: ?float}> $inverters
      *
      * @return list<array{
      *     ident: string,
@@ -205,6 +219,19 @@ final class PvConfiguration
         }
 
         return (float) $value;
+    }
+
+    /** @param array<string, mixed> $entry */
+    private static function optionalNumber(
+        array $entry,
+        string $key,
+        string $owner
+    ): ?float {
+        if (!array_key_exists($key, $entry) || $entry[$key] === null) {
+            return null;
+        }
+
+        return self::number($entry, $key, $owner);
     }
 
     private static function assertRange(
