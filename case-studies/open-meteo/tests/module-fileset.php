@@ -36,7 +36,7 @@ try {
         512,
         JSON_THROW_ON_ERROR
     );
-    openMeteoFilesetSame(23, count($sourceMap['files'] ?? []), 'Fileset source count differs.');
+    openMeteoFilesetSame(24, count($sourceMap['files'] ?? []), 'Fileset source count differs.');
     foreach ($sourceMap['files'] ?? [] as $file) {
         if (!is_array($file)) {
             throw new RuntimeException('Fileset source map entry is invalid.');
@@ -65,6 +65,7 @@ try {
         'OpenMeteoWeather/module.php',
         'OpenMeteoSolarForecast/module.php',
         'libs/OpenMeteo/Profiles.php',
+        'libs/OpenMeteo/WeatherForecastProjector.php',
         'libs/SAEF/helpers/object/EnsureProfile.php',
         'libs/SAEF/helpers/diagnostics/ConfigurationHash.php',
         ] as $required

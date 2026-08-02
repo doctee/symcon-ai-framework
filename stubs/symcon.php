@@ -156,6 +156,8 @@ function IPS_SetVariableProfileAssociation(string $name, int|float $value, strin
 
 function IPS_Sleep(int $milliseconds): void {}
 function IPS_LogMessage(string $sender, string $message): void {}
+/** @param array<string, int|string|bool> $parameters */
+function Sys_GetURLContentEx(string $url, array $parameters): string|false {}
 function IPS_SemaphoreEnter(string $name, int $milliseconds): bool {}
 function IPS_SemaphoreLeave(string $name): bool {}
 

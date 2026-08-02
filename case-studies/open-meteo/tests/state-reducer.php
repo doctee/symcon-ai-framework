@@ -35,4 +35,9 @@ $invalid = ForecastStateReducer::failure($invalid, 100, 'configuration_invalid',
 same(ForecastStateReducer::STATE_ERROR, $invalid['state'], 'Configuration failure must error.');
 same(3, $invalid['retryCount'], 'Non-retryable failure must exhaust retries.');
 
+$restored = ForecastStateReducer::fromJson(ForecastStateReducer::toJson($state), $hash, 2);
+same($state, $restored, 'Persisted runtime state differs.');
+$recovered = ForecastStateReducer::fromJson('{', $hash, 2);
+same(ForecastStateReducer::STATE_UNCONFIGURED, $recovered['state'], 'Invalid state did not recover.');
+
 echo "state-reducer: ok\n";

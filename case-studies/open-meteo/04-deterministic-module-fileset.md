@@ -51,7 +51,7 @@ metadata, forms and translations. The module builder enforces:
 - output strictly below `dist/symcon/`; and
 - atomic per-file writes.
 
-The builder emits 25 files: 23 payloads, `fileset.sources.json` and
+The builder emits 26 files: 24 payloads, `fileset.sources.json` and
 `fileset.sha256`. The source map records source, target, SHA-256 and byte count
 for every payload plus the builder version, licence and complete fileset hash.
 

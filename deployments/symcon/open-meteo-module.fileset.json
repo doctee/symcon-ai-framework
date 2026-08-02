@@ -85,6 +85,10 @@
             "target": "libs/OpenMeteo/SolarForecastCalculator.php"
         },
         {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/WeatherForecastProjector.php",
+            "target": "libs/OpenMeteo/WeatherForecastProjector.php"
+        },
+        {
             "source": "helpers/common/Validation.php",
             "target": "libs/SAEF/helpers/common/Validation.php"
         },
