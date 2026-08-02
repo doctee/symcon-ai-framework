@@ -90,6 +90,25 @@ try {
         $manifest,
     ]);
 
+    $additionalTarget = $temporaryRoots[0] . '/' . $relativeRoot . '/stale.php';
+    if (file_put_contents($additionalTarget, "<?php\n") === false) {
+        throw new RuntimeException('Cannot create additional fileset regression target.');
+    }
+    $additionalCheck = executeOpenMeteoFilesetCommand([
+        PHP_BINARY,
+        $builder,
+        '--check',
+        '--output-root=' . $temporaryRoots[0],
+        $manifest,
+    ]);
+    openMeteoFilesetSame(1, $additionalCheck['status'], 'Fileset check accepted an additional target.');
+    if (!str_contains($additionalCheck['stderr'], 'additional targets')) {
+        throw new RuntimeException('Additional fileset target failure is not classified.');
+    }
+    if (!unlink($additionalTarget)) {
+        throw new RuntimeException('Cannot remove additional fileset regression target.');
+    }
+
     fwrite(STDOUT, "module-fileset: ok\n");
 } catch (Throwable $exception) {
     fwrite(STDERR, 'module-fileset: failed: ' . $exception->getMessage() . "\n");
@@ -103,6 +122,21 @@ try {
 /** @param list<string> $command */
 function runOpenMeteoFilesetCommand(array $command): void
 {
+    $result = executeOpenMeteoFilesetCommand($command);
+    if ($result['status'] !== 0) {
+        throw new RuntimeException(
+            'Module fileset subprocess failed: ' . trim($result['stderr'] . $result['stdout'])
+        );
+    }
+}
+
+/**
+ * @param list<string> $command
+ *
+ * @return array{status: int, stdout: string, stderr: string}
+ */
+function executeOpenMeteoFilesetCommand(array $command): array
+{
     $pipes = [];
     $process = proc_open($command, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
     if (!is_resource($process)) {
@@ -112,10 +146,12 @@ function runOpenMeteoFilesetCommand(array $command): void
     $stderr = stream_get_contents($pipes[2]);
     fclose($pipes[1]);
     fclose($pipes[2]);
-    $status = proc_close($process);
-    if ($status !== 0) {
-        throw new RuntimeException('Module fileset subprocess failed: ' . trim($stderr . $stdout));
-    }
+
+    return [
+        'status' => proc_close($process),
+        'stdout' => $stdout,
+        'stderr' => $stderr,
+    ];
 }
 
 function openMeteoFilesetTemporaryRoot(string $prefix): string

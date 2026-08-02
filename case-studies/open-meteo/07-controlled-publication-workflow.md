@@ -125,5 +125,6 @@ changed publication remains a separate explicit approval.
 - canonical README and license copying;
 - stable publication identity across check and prepare;
 - rejection of existing prepare targets;
-- rejection of an ungated apply before network access; and
+- rejection of an ungated apply before network access;
+- rejection of directory symbolic links before file filtering; and
 - absence of any IP-Symcon live-operation surface in the publisher.

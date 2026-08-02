@@ -7,50 +7,63 @@ const SAEF_OPEN_METEO_PUBLICATION_HASH_CONTEXT = "SAEF-OPEN-METEO-PUBLICATION\0v
 const SAEF_OPEN_METEO_PUBLICATION_CONFIG = 'deployments/symcon/open-meteo-publication.json';
 const SAEF_OPEN_METEO_FILESET_MANIFEST = 'deployments/symcon/open-meteo-module.fileset.json';
 
-try {
-    $projectRoot = str_replace('\\', '/', dirname(__DIR__));
-    $arguments = openMeteoPublicationArguments($_SERVER['argv'] ?? null);
-    $options = parseOpenMeteoPublicationArguments($arguments);
-    $contract = loadOpenMeteoPublicationContract($projectRoot);
-    $candidate = buildOpenMeteoPublicationCandidate($projectRoot, $contract);
+if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) {
+    exit(runOpenMeteoPublicationCli($_SERVER));
+}
 
-    if ($options['mode'] === 'check') {
-        writeOpenMeteoPublicationResult([
-            'outcome' => 'checked',
-            'mutationAttempted' => false,
-            'repository' => $contract['repository']['name'],
-            'branch' => $contract['repository']['branch'],
-            'fileCount' => count($candidate['files']),
-            'filesetSha256' => $candidate['filesetSha256'],
-            'publicationSha256' => $candidate['publicationSha256'],
-        ]);
-        exit(0);
+/** @param array<string, mixed> $server */
+function runOpenMeteoPublicationCli(array $server): int
+{
+    try {
+        $projectRoot = str_replace('\\', '/', dirname(__DIR__));
+        $arguments = openMeteoPublicationArguments($server['argv'] ?? null);
+        $options = parseOpenMeteoPublicationArguments($arguments);
+        $contract = loadOpenMeteoPublicationContract($projectRoot);
+        $candidate = buildOpenMeteoPublicationCandidate($projectRoot, $contract);
+
+        if ($options['mode'] === 'check') {
+            writeOpenMeteoPublicationResult([
+                'outcome' => 'checked',
+                'mutationAttempted' => false,
+                'repository' => $contract['repository']['name'],
+                'branch' => $contract['repository']['branch'],
+                'fileCount' => count($candidate['files']),
+                'filesetSha256' => $candidate['filesetSha256'],
+                'publicationSha256' => $candidate['publicationSha256'],
+            ]);
+
+            return 0;
+        }
+
+        if ($options['mode'] === 'prepare') {
+            $target = $options['prepareTarget'] !== ''
+                ? $options['prepareTarget']
+                : newOpenMeteoPublicationPath('saef-open-meteo-prepare-');
+            writeOpenMeteoPublicationTree($target, $candidate['files']);
+            verifyOpenMeteoPublicationTree($target, $candidate['files']);
+            writeOpenMeteoPublicationResult([
+                'outcome' => 'prepared',
+                'mutationAttempted' => false,
+                'target' => $target,
+                'repository' => $contract['repository']['name'],
+                'branch' => $contract['repository']['branch'],
+                'fileCount' => count($candidate['files']),
+                'filesetSha256' => $candidate['filesetSha256'],
+                'publicationSha256' => $candidate['publicationSha256'],
+            ]);
+
+            return 0;
+        }
+
+        assertOpenMeteoApplyGate($options, $contract, $candidate);
+        applyOpenMeteoPublication($contract, $candidate, $options);
+
+        return 0;
+    } catch (Throwable $exception) {
+        fwrite(STDERR, 'Open-Meteo publication failed: ' . $exception->getMessage() . "\n");
+
+        return 1;
     }
-
-    if ($options['mode'] === 'prepare') {
-        $target = $options['prepareTarget'] !== ''
-            ? $options['prepareTarget']
-            : newOpenMeteoPublicationPath('saef-open-meteo-prepare-');
-        writeOpenMeteoPublicationTree($target, $candidate['files']);
-        verifyOpenMeteoPublicationTree($target, $candidate['files']);
-        writeOpenMeteoPublicationResult([
-            'outcome' => 'prepared',
-            'mutationAttempted' => false,
-            'target' => $target,
-            'repository' => $contract['repository']['name'],
-            'branch' => $contract['repository']['branch'],
-            'fileCount' => count($candidate['files']),
-            'filesetSha256' => $candidate['filesetSha256'],
-            'publicationSha256' => $candidate['publicationSha256'],
-        ]);
-        exit(0);
-    }
-
-    assertOpenMeteoApplyGate($options, $contract, $candidate);
-    applyOpenMeteoPublication($contract, $candidate, $options);
-} catch (Throwable $exception) {
-    fwrite(STDERR, 'Open-Meteo publication failed: ' . $exception->getMessage() . "\n");
-    exit(1);
 }
 
 /** @return list<string> */
@@ -569,7 +582,7 @@ function openMeteoPublicationTreeHashes(string $root, bool $allowGit): array
         new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)
     );
     foreach ($iterator as $item) {
-        if (!$item instanceof SplFileInfo || !$item->isFile()) {
+        if (!$item instanceof SplFileInfo) {
             continue;
         }
         $relative = str_replace('\\', '/', substr($item->getPathname(), strlen($root) + 1));
@@ -578,6 +591,9 @@ function openMeteoPublicationTreeHashes(string $root, bool $allowGit): array
         }
         if ($item->isLink()) {
             throw new RuntimeException('Publication tree contains a symbolic link.');
+        }
+        if (!$item->isFile()) {
+            continue;
         }
         $hash = hash_file('sha256', $item->getPathname());
         if ($hash === false) {

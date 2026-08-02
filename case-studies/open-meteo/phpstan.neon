@@ -8,6 +8,9 @@ parameters:
         - distribution
         - tests
 
+    scanFiles:
+        - ../../tools/publish-open-meteo-module.php
+
     bootstrapFiles:
         - ../../helpers/object/EnsureProfile.php
         - ../../helpers/diagnostics/ConfigurationHash.php

@@ -114,7 +114,7 @@ The test additionally proves:
 
 - all required library, module, core and helper targets exist;
 - the generated tree has no unlisted extra files;
-- `--check` accepts the tracked fileset;
+- `--check` accepts the tracked fileset and rejects an additional stale target;
 - generated payloads contain no private absolute path or ObjectID marker; and
 - temporary test trees are removed through an explicitly bounded path guard.
 

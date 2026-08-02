@@ -101,6 +101,28 @@ try {
         }
     }
 
+    $symlinkTree = $temporaryRoot . '/symlink-tree';
+    $symlinkTarget = $symlinkTree . '/target-directory';
+    if (!mkdir($symlinkTarget, 0700, true)) {
+        throw new RuntimeException('Cannot create publication symlink regression tree.');
+    }
+    if (!symlink($symlinkTarget, $symlinkTree . '/unknown-link')) {
+        throw new RuntimeException('Cannot create publication symlink regression link.');
+    }
+    require_once $publisher;
+    $symlinkRejected = false;
+    try {
+        openMeteoPublicationTreeHashes($symlinkTree, false);
+    } catch (RuntimeException $exception) {
+        if (!str_contains($exception->getMessage(), 'symbolic link')) {
+            throw $exception;
+        }
+        $symlinkRejected = true;
+    }
+    if (!$symlinkRejected) {
+        throw new RuntimeException('Publication tree accepted a directory symbolic link.');
+    }
+
     fwrite(STDOUT, "publication: ok\n");
 } catch (Throwable $exception) {
     fwrite(STDERR, 'publication: failed: ' . $exception->getMessage() . "\n");

@@ -302,10 +302,6 @@ function parseModuleFilesetArguments(array $arguments, string $projectRoot): arr
     if ($manifest === '' || $outputRoot === '' || !str_starts_with($outputRoot, '/')) {
         throw new InvalidArgumentException('Module fileset arguments are incomplete.');
     }
-    if ($check && $outputRoot !== $projectRoot) {
-        throw new InvalidArgumentException('--check cannot use a separate output root.');
-    }
-
     return ['manifest' => $manifest, 'check' => $check, 'outputRoot' => rtrim($outputRoot, '/')];
 }
 
@@ -328,13 +324,58 @@ function writeModuleFilesetOutputs(array $outputs, string $outputRoot): void
 /** @param array<string, string> $outputs */
 function checkModuleFilesetOutputs(array $outputs, string $projectRoot): void
 {
+    $sidecarPaths = array_values(array_filter(
+        array_keys($outputs),
+        static fn (string $path): bool => str_ends_with($path, '/fileset.sha256')
+    ));
+    if (count($sidecarPaths) !== 1) {
+        throw new RuntimeException('Generated module fileset output root is ambiguous.');
+    }
+    $relativeRoot = dirname($sidecarPaths[0]);
+    $absoluteRoot = $projectRoot . '/' . $relativeRoot;
+    if (!is_dir($absoluteRoot) || is_link($absoluteRoot)) {
+        throw new RuntimeException('Generated module fileset output root is missing or unsafe.');
+    }
+
+    $expected = [];
     foreach ($outputs as $relative => $contents) {
-        $current = is_file($projectRoot . '/' . $relative)
-            ? file_get_contents($projectRoot . '/' . $relative)
-            : false;
-        if ($current !== $contents) {
-            throw new RuntimeException('Generated module fileset is missing or stale.');
+        $prefix = $relativeRoot . '/';
+        if (!str_starts_with($relative, $prefix)) {
+            throw new RuntimeException('Generated module fileset output escaped its root.');
         }
+        $expected[substr($relative, strlen($prefix))] = $contents;
+    }
+    ksort($expected, SORT_STRING);
+
+    $actual = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($absoluteRoot, FilesystemIterator::SKIP_DOTS)
+    );
+    foreach ($iterator as $item) {
+        if (!$item instanceof SplFileInfo) {
+            continue;
+        }
+        if ($item->isLink()) {
+            throw new RuntimeException('Generated module fileset contains a symbolic link.');
+        }
+        if (!$item->isFile()) {
+            continue;
+        }
+        $relative = str_replace(
+            '\\',
+            '/',
+            substr($item->getPathname(), strlen($absoluteRoot) + 1)
+        );
+        $contents = file_get_contents($item->getPathname());
+        if ($contents === false) {
+            throw new RuntimeException('Generated module fileset target is unreadable.');
+        }
+        $actual[$relative] = $contents;
+    }
+    ksort($actual, SORT_STRING);
+
+    if ($actual !== $expected) {
+        throw new RuntimeException('Generated module fileset has missing, stale or additional targets.');
     }
 }
 
@@ -343,7 +384,7 @@ try {
     $options = parseModuleFilesetArguments($argv, $projectRoot);
     $outputs = (new SaefSymconModuleFilesetBuilder($projectRoot))->build($options['manifest']);
     if ($options['check']) {
-        checkModuleFilesetOutputs($outputs, $projectRoot);
+        checkModuleFilesetOutputs($outputs, $options['outputRoot']);
         fwrite(STDOUT, "Symcon module fileset artifacts are current.\n");
     } else {
         writeModuleFilesetOutputs($outputs, $options['outputRoot']);
