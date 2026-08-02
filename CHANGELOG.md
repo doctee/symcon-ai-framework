@@ -9,6 +9,14 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Added a guarded one-way Open-Meteo module publisher. SAEF remains the
+  editable source of truth while check and prepare stay local and
+  deterministic; publication requires exact fileset and remote-commit pins,
+  an explicit repository confirmation, allowlisted staging, fast-forward push
+  protection and an independent post-push clone verification.
+
 ## [0.3.0] - 2026-07-23
 
 ### Added

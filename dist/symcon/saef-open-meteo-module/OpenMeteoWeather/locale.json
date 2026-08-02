@@ -1,0 +1,19 @@
+{
+  "translations": {
+    "de": {
+      "Open-Meteo Weather": "Open-Meteo Wetter",
+      "Location configuration is complete": "Standortkonfiguration ist vollstaendig",
+      "Latitude": "Breitengrad",
+      "Longitude": "Laengengrad",
+      "Use explicit elevation": "Explizite Hoehe verwenden",
+      "Elevation in metres": "Hoehe in Metern",
+      "IANA time zone": "IANA-Zeitzone",
+      "Forecast days": "Vorhersagetage",
+      "Include model-grid soil values": "Bodenwerte des Modellgitters einbeziehen",
+      "Planned polling interval in minutes": "Geplantes Abfrageintervall in Minuten",
+      "Planned HTTP timeout in seconds": "Geplanter HTTP-Timeout in Sekunden",
+      "Stale threshold in minutes": "Veraltet-Schwelle in Minuten",
+      "Inactive scaffold: no timer is registered and no Open-Meteo request can be executed.": "Inaktives Geruest: Es wird kein Timer registriert und keine Open-Meteo-Abfrage kann ausgefuehrt werden."
+    }
+  }
+}
