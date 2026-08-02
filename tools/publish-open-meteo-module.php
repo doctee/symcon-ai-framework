@@ -408,7 +408,7 @@ function applyOpenMeteoPublication(array $contract, array $candidate, array $opt
             $contract['repository']['branch'],
             $options['expectedRemoteCommit']
         );
-        assertOpenMeteoPublicationPathSet($workingTree, $candidate['files'], true);
+        assertOpenMeteoPublicationBaselinePathsAllowed($workingTree, $candidate['files'], true);
         writeOpenMeteoPublicationFiles($workingTree, $candidate['files']);
         runOpenMeteoPublicationCommand(['git', 'diff', '--check'], $workingTree);
 
@@ -560,14 +560,18 @@ function verifyOpenMeteoPublicationTree(string $root, array $files, bool $allowG
 }
 
 /** @param array<string, string> $files */
-function assertOpenMeteoPublicationPathSet(string $root, array $files, bool $allowGit = false): void
-{
+function assertOpenMeteoPublicationBaselinePathsAllowed(
+    string $root,
+    array $files,
+    bool $allowGit = false
+): void {
     $actual = array_keys(openMeteoPublicationTreeHashes($root, $allowGit));
-    $expected = array_keys($files);
-    sort($actual, SORT_STRING);
-    sort($expected, SORT_STRING);
-    if ($actual !== $expected) {
-        throw new RuntimeException('Publication tree path set differs from the allowlist.');
+    foreach ($actual as $path) {
+        if (!array_key_exists($path, $files)) {
+            throw new RuntimeException(
+                'Publication baseline contains a path outside the allowlist.'
+            );
+        }
     }
 }
 
