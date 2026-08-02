@@ -75,6 +75,10 @@ Before any remote mutation the publisher:
 6. rechecks the remote branch immediately before push; and
 7. relies on a fast-forward push to reject a concurrent update.
 
+The remote baseline may omit newly added candidate paths that are already in
+the current allowlist. Any existing remote path outside that allowlist still
+stops publication before files are written or a mutation is attempted.
+
 After a push it performs a second independent shallow clone and verifies the
 new full commit and all 28 file hashes. A post-push verification failure is
 reported as a mutation-attempted failure and must be investigated rather than

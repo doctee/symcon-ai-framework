@@ -74,6 +74,37 @@ try {
         );
     }
 
+    require_once $publisher;
+    $baselineRoot = $temporaryRoot . '/baseline-subset';
+    if (!mkdir($baselineRoot, 0700, true)) {
+        throw new RuntimeException('Cannot create publication baseline regression tree.');
+    }
+    if (file_put_contents($baselineRoot . '/LICENSE', (string) file_get_contents($preparedRoot . '/LICENSE')) === false) {
+        throw new RuntimeException('Cannot create allowlisted publication baseline file.');
+    }
+    assertOpenMeteoPublicationBaselinePathsAllowed($baselineRoot, [
+        'LICENSE' => (string) file_get_contents($preparedRoot . '/LICENSE'),
+        'README.md' => (string) file_get_contents($preparedRoot . '/README.md'),
+    ]);
+    if (file_put_contents($baselineRoot . '/unexpected.txt', 'unexpected') === false) {
+        throw new RuntimeException('Cannot create unknown publication baseline file.');
+    }
+    $unknownBaselinePathRejected = false;
+    try {
+        assertOpenMeteoPublicationBaselinePathsAllowed($baselineRoot, [
+            'LICENSE' => (string) file_get_contents($preparedRoot . '/LICENSE'),
+            'README.md' => (string) file_get_contents($preparedRoot . '/README.md'),
+        ]);
+    } catch (RuntimeException $exception) {
+        if (!str_contains($exception->getMessage(), 'outside the allowlist')) {
+            throw $exception;
+        }
+        $unknownBaselinePathRejected = true;
+    }
+    if (!$unknownBaselinePathRejected) {
+        throw new RuntimeException('Publication baseline accepted an unknown path.');
+    }
+
     $secondPrepare = runOpenMeteoPublicationTestCommand([
         PHP_BINARY,
         $publisher,
@@ -109,7 +140,6 @@ try {
     if (!symlink($symlinkTarget, $symlinkTree . '/unknown-link')) {
         throw new RuntimeException('Cannot create publication symlink regression link.');
     }
-    require_once $publisher;
     $symlinkRejected = false;
     try {
         openMeteoPublicationTreeHashes($symlinkTree, false);
