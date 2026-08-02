@@ -31,14 +31,14 @@
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/form.json",
             "target": "OpenMeteoWeather/form.json",
-            "sha256": "d57a4348ca862a57f63fc27fb9f16783d19c33951d1ec3506a54f6d3aa754d41",
-            "bytes": 2213
+            "sha256": "5309ffe86bc9e0e8151be917142ae634edd3d5d1949c2c01e1b21e8a2331ce19",
+            "bytes": 2336
         },
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/locale.json",
             "target": "OpenMeteoWeather/locale.json",
-            "sha256": "ae69f40d4b00e3e7fa04d5d0c560fd6d35cee0c88c3877068642e03410d0f842",
-            "bytes": 1194
+            "sha256": "06d9c7d256566ee7322f00ea545fdcf5f57851f20d6bd76634cd80c951ee1b50",
+            "bytes": 1272
         },
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/module.json",
@@ -49,8 +49,8 @@
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/module.php",
             "target": "OpenMeteoWeather/module.php",
-            "sha256": "1fc961020b05f32402f5ec298ee042185b4e8792ee414ae82fa2e556fb48315b",
-            "bytes": 26459
+            "sha256": "06bf40842b7b4e7cabe509ebcb9e02b5ff40a34ea56fd090c243e79c39f9f96f",
+            "bytes": 26776
         },
         {
             "source": "case-studies/open-meteo/distribution/SharedLocation/form.json",
@@ -79,7 +79,7 @@
         {
             "source": "case-studies/open-meteo/distribution/library.json",
             "target": "library.json",
-            "sha256": "3b017ad8d3810effed9facf76b94ac0389f7b66382a5786240fbb2e391a8704e",
+            "sha256": "95c7d78c87f82c3e448494fe9c737ca6f9cc1f15b33473bafa06538d2af23e55",
             "bytes": 254
         },
         {
@@ -179,7 +179,7 @@
             "bytes": 3308
         }
     ],
-    "filesetSha256": "1a932ab8ec567f224de327077f2b23edf9de9b4de3e34b3b4867d2e85b082fd3",
+    "filesetSha256": "696e185a21dde7159b8645b94cc0b56879361f53bfee228d6082fbdf344b8726",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

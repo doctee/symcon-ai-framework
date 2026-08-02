@@ -69,6 +69,7 @@ class OpenMeteoWeather extends IPSModule
         $this->RegisterPropertyString('Timezone', 'Europe/Berlin');
         $this->RegisterPropertyInteger('ForecastDays', 7);
         $this->RegisterPropertyBoolean('WithSoil', false);
+        $this->RegisterPropertyBoolean('EnableAutomaticUpdates', true);
         $this->RegisterPropertyInteger('PollingIntervalMinutes', 60);
         $this->RegisterPropertyInteger('HttpTimeoutSeconds', 10);
         $this->RegisterPropertyInteger('StaleAfterMinutes', 180);
@@ -388,12 +389,19 @@ class OpenMeteoWeather extends IPSModule
     {
         $this->SetTimerInterval(
             'UpdateData',
-            $this->ReadPropertyInteger('PollingIntervalMinutes') * 60000
+            $this->ReadPropertyBoolean('EnableAutomaticUpdates')
+                ? $this->ReadPropertyInteger('PollingIntervalMinutes') * 60000
+                : 0
         );
     }
 
     private function scheduleAfterFailure(int $retryCount): void
     {
+        if (!$this->ReadPropertyBoolean('EnableAutomaticUpdates')) {
+            $this->SetTimerInterval('UpdateData', 0);
+
+            return;
+        }
         $minutes = self::RETRY_INTERVAL_MINUTES[$retryCount]
             ?? $this->ReadPropertyInteger('PollingIntervalMinutes');
         $this->SetTimerInterval('UpdateData', $minutes * 60000);

@@ -2,9 +2,10 @@
 
 ## Outcome
 
-The weather module now has a productive, read-only runtime adapter. A valid
-configuration activates a stateless IP-Symcon timer, while `ApplyChanges()`
-itself performs no HTTP request. The solar module remains an inactive scaffold.
+The weather module has a productive, read-only runtime adapter. A valid
+configuration activates a stateless IP-Symcon timer only when
+`EnableAutomaticUpdates` is enabled; `ApplyChanges()` itself performs no HTTP
+request. The solar module remains an inactive scaffold.
 
 This increment is implemented and verified offline only. It does not publish a
 new public-module revision, update an installed library, configure private
@@ -37,7 +38,9 @@ exceeds `StaleAfterMinutes`.
 
 Retry attempts are scheduled across executions at 5, 15 and 30 minutes. After
 that bounded sequence the module returns to the configured normal polling
-interval. There is no sleep loop or concurrent request fan-out.
+interval. With automatic updates disabled, both normal polling and retry timers
+remain at zero while an explicitly invoked `UpdateData()` is still allowed.
+There is no sleep loop or concurrent request fan-out.
 
 ## Forecast Access
 
@@ -59,6 +62,7 @@ and must not be logged or published.
 The module harness injects synthetic transport responses and verifies:
 
 - active/inactive timer reconciliation without an ApplyChanges fetch;
+- manual-only operation with normal and retry timers disabled;
 - a complete successful current/daily forecast publication;
 - bounded hourly cache queries;
 - transport failure classification;
