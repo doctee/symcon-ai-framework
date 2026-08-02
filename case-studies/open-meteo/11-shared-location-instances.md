@@ -2,13 +2,16 @@
 
 ## Outcome
 
-The candidate library contains a provider-neutral `SharedLocation` module. One
-instance represents one physical location. The intended private deployment has
-two explicitly named instances; their names, productive coordinates and
-ObjectIDs are deliberately absent from the public repository.
+The published library contains a provider-neutral `SharedLocation` module. One
+instance represents one physical location. The authorized private deployment
+created two explicitly named, active instances. Their names, productive
+coordinates and ObjectIDs are deliberately absent from the public repository.
 
-This increment is offline-only. It creates or changes no live IP-Symcon object,
-does not contact Open-Meteo and does not alter OpenWeather or SolCast.
+The controlled rollout contacted no forecast provider and changed neither the
+existing inactive Weather/Solar controls nor the legacy OpenWeather and SolCast
+providers. Private machine-readable evidence retains the installation-specific
+preflight, rollback proof for an initially rejected assertion and the completed
+independent postflight.
 
 ## Contract
 
@@ -52,22 +55,35 @@ The location values are included in the existing weather configuration hash.
 Changing the shared location therefore invalidates an old forecast cache before
 new values are published.
 
-## Planned Private Migration
+## Controlled Private Rollout
 
-Live rollout remains a separately authorized sequence:
+The private rollout remains split into separately authorized gates:
 
-1. install the exact published library revision without configuring consumers;
-2. create two explicitly named `SharedLocation` instances under a verified,
-   non-zero parent;
-3. configure both locations from private values and read back both descriptors;
-4. point one inactive or shadow weather instance at its matching location and
-   verify reference, status and request URL without changing legacy providers;
+1. the exact published library revision was installed without configuring
+   consumers;
+2. two explicitly named `SharedLocation` instances were created under a
+   freshly verified, non-zero parent;
+3. both locations were configured from unchanged private source instances and
+   their normalized descriptors were independently read back;
+4. the next gate may point one inactive or shadow weather instance at its
+   matching location with automatic updates disabled, then verify reference,
+   status and request URL without changing legacy providers;
 5. migrate the second weather instance only after the first proof; and
 6. retain the direct fields until rollback and consumer checks are complete.
 
-Every object creation or configuration change requires a fresh live preflight
-and explicit authorization. Parent ObjectID `0` is never treated as an editable
-category; object creation must use a freshly resolved, validated parent ID.
+The completed postflight verified exactly two active instances, stable source
+configuration, empty child/timer/reference sets and unchanged root, parent,
+Weather and Solar controls. Every further configuration change still requires
+a fresh live preflight and explicit authorization. Parent ObjectID `0` is never
+treated as an editable category; object creation must use a freshly resolved,
+validated parent ID.
+
+The Weather module therefore exposes an explicit automatic-update switch.
+Disabling it keeps a valid configured instance active while its normal polling
+timer and all transport-error retry timers remain at zero. Manual updates stay
+available as a separately controlled action. The switch defaults to enabled so
+existing configured installations preserve their scheduling behavior after an
+update.
 
 ## Offline Proof
 

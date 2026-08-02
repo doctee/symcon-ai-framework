@@ -12,6 +12,7 @@
       "IANA time zone": "IANA-Zeitzone",
       "Forecast days": "Vorhersagetage",
       "Include model-grid soil values": "Bodenwerte des Modellgitters einbeziehen",
+      "Enable automatic updates": "Automatische Aktualisierungen aktivieren",
       "Polling interval in minutes": "Abfrageintervall in Minuten",
       "HTTP timeout in seconds": "HTTP-Timeout in Sekunden",
       "Stale threshold in minutes": "Veraltet-Schwelle in Minuten",

@@ -564,6 +564,14 @@ scaffoldCheck(
     $weather->testTimerInterval('UpdateData') === 3600000,
     'Weather polling interval differs.'
 );
+$weather->testSetProperty('EnableAutomaticUpdates', false);
+$weather->ApplyChanges();
+scaffoldCheck($weather->testStatus() === 102, 'Manual-only weather module must remain active.');
+scaffoldCheck(
+    $weather->testTimerInterval('UpdateData') === 0,
+    'Manual-only weather timer must be disabled.'
+);
+$weather->testSetProperty('EnableAutomaticUpdates', true);
 $weather->testSetProperty('Timezone', 'Invalid/Zone');
 $weather->ApplyChanges();
 scaffoldCheck($weather->testStatus() === 200, 'Invalid weather configuration must fail closed.');
@@ -741,6 +749,7 @@ scaffoldCheck(
 $sharedRuntimeWeather = new TestOpenMeteoWeather();
 $sharedRuntimeWeather->Create();
 $sharedRuntimeWeather->testSetProperty('LocationInstanceId', 2001);
+$sharedRuntimeWeather->testSetProperty('EnableAutomaticUpdates', false);
 $sharedRuntimeWeather->ApplyChanges();
 $sharedRuntimeWeather->testQueueResponse(scaffoldWeatherResponse(false));
 $sharedRuntimeResult = json_decode(
@@ -756,6 +765,25 @@ scaffoldCheck(
 scaffoldCheck(
     $sharedRuntimeWeather->testReferences() === [2001],
     'Shared-location runtime reference differs.'
+);
+scaffoldCheck(
+    $sharedRuntimeWeather->testTimerInterval('UpdateData') === 0,
+    'Manual shared-location update enabled automatic polling.'
+);
+$sharedRuntimeWeather->testQueueResponse(false);
+$sharedRuntimeFailure = json_decode(
+    $sharedRuntimeWeather->UpdateData(),
+    true,
+    16,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    ($sharedRuntimeFailure['code'] ?? null) === 'transport_error',
+    'Manual shared-location failure classification differs.'
+);
+scaffoldCheck(
+    $sharedRuntimeWeather->testTimerInterval('UpdateData') === 0,
+    'Manual shared-location failure enabled a retry timer.'
 );
 
 $solar = new OpenMeteoSolarForecast();

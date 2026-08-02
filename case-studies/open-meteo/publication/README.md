@@ -14,9 +14,11 @@ This repository contains three modules:
 
 The weather module contains a bounded Open-Meteo runtime with last-good cache
 and can optionally reference `SharedLocation`; its existing direct coordinate
-properties remain a compatible fallback. Installing the library alone does not
-configure a location, start an inactive instance or migrate a consumer.
-OpenWeather and SolCast are not modified by installing this preview.
+properties remain a compatible fallback. Automatic polling can be disabled
+without disabling explicit manual updates, including all transport-error retry
+timers. Installing the library alone does not configure a location, start an
+inactive instance or migrate a consumer. OpenWeather and SolCast are not
+modified by installing this preview.
 
 ## Installation
 

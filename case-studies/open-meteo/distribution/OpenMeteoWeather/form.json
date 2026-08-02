@@ -64,6 +64,11 @@
       "caption": "Include model-grid soil values"
     },
     {
+      "type": "CheckBox",
+      "name": "EnableAutomaticUpdates",
+      "caption": "Enable automatic updates"
+    },
+    {
       "type": "NumberSpinner",
       "name": "PollingIntervalMinutes",
       "caption": "Polling interval in minutes",

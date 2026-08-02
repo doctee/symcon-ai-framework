@@ -206,6 +206,7 @@ It does not own:
 | `Timezone` | string | yes | no | Default `Europe/Berlin` |
 | `ProviderProfile` | enum | yes | no | First supported value `dwd_icon` |
 | `ForecastDays` | integer | yes | no | Default `7`, allowed `1..10` for DWD profile |
+| `EnableAutomaticUpdates` | boolean | yes | no | Default `true`; `false` keeps normal and retry timers disabled while allowing explicit manual updates |
 | `PollingIntervalMinutes` | integer | yes | no | Default `60`, minimum `30` |
 | `EnableSoilProfile` | boolean | no | no | Default `true` for the target design |
 | `EnableRawDiagnostics` | boolean | no | no | Default `false` |
