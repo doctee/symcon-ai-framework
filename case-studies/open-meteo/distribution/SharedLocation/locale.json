@@ -1,0 +1,15 @@
+{
+  "translations": {
+    "de": {
+      "Shared Location": "Gemeinsamer Standort",
+      "Location configuration is complete": "Standortkonfiguration ist vollstaendig",
+      "Stable location key": "Stabiler Standortschluessel",
+      "Latitude": "Breitengrad",
+      "Longitude": "Laengengrad",
+      "Use explicit elevation": "Explizite Hoehe verwenden",
+      "Elevation in metres": "Hoehe in Metern",
+      "IANA time zone": "IANA-Zeitzone",
+      "This instance only provides a validated location descriptor; it creates no child objects and performs no network requests.": "Diese Instanz liefert nur einen validierten Standortdeskriptor; sie erzeugt keine Unterobjekte und fuehrt keine Netzwerkanfragen aus."
+    }
+  }
+}

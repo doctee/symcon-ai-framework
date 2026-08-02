@@ -31,14 +31,14 @@
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/form.json",
             "target": "OpenMeteoWeather/form.json",
-            "sha256": "dbd76a702c0a2efe190bde7f1e3780a177d0d74dae224dfe106e4336175ed9ff",
-            "bytes": 1866
+            "sha256": "d57a4348ca862a57f63fc27fb9f16783d19c33951d1ec3506a54f6d3aa754d41",
+            "bytes": 2213
         },
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/locale.json",
             "target": "OpenMeteoWeather/locale.json",
-            "sha256": "659f05ada773262f99e2d18952dc756ccd2854410be7a1903c82ef375d2aa90a",
-            "bytes": 934
+            "sha256": "ae69f40d4b00e3e7fa04d5d0c560fd6d35cee0c88c3877068642e03410d0f842",
+            "bytes": 1194
         },
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/module.json",
@@ -49,13 +49,37 @@
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/module.php",
             "target": "OpenMeteoWeather/module.php",
-            "sha256": "be5584cf93a21308124109da39bfcf58ab9708ea0dacfb6a4f6762088ecc7d68",
-            "bytes": 23261
+            "sha256": "1fc961020b05f32402f5ec298ee042185b4e8792ee414ae82fa2e556fb48315b",
+            "bytes": 26459
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/SharedLocation/form.json",
+            "target": "SharedLocation/form.json",
+            "sha256": "34cf7cb8986294767e9513e46172ef1b09d9174e15668ad9867032eb5d11e046",
+            "bytes": 1183
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/SharedLocation/locale.json",
+            "target": "SharedLocation/locale.json",
+            "sha256": "8b30f46f6075b759e716646a76005b7f4d129a5000dc92c00b3b2dc09c44ac5e",
+            "bytes": 726
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/SharedLocation/module.json",
+            "target": "SharedLocation/module.json",
+            "sha256": "47627428953465012be1c58a4efe416a8a02847aecb8e2ca1f578dd13027f88d",
+            "bytes": 314
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/SharedLocation/module.php",
+            "target": "SharedLocation/module.php",
+            "sha256": "9d8431157b904f3894dc2c50bde5572ccb547bffbb152201986323c3425dea0f",
+            "bytes": 2747
         },
         {
             "source": "case-studies/open-meteo/distribution/library.json",
             "target": "library.json",
-            "sha256": "4d923737d6deb922845baffec6a27b3593a890fc033d21cd2f10b5ee436537e3",
+            "sha256": "3b017ad8d3810effed9facf76b94ac0389f7b66382a5786240fbb2e391a8704e",
             "bytes": 254
         },
         {
@@ -87,6 +111,12 @@
             "target": "libs/OpenMeteo/IntervalAligner.php",
             "sha256": "a92b1fd62d5531968cc1791de2065c3e67a323b020fb52c61b0444a35ef93968",
             "bytes": 2370
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/LocationDefinition.php",
+            "target": "libs/OpenMeteo/LocationDefinition.php",
+            "sha256": "070d990ba479cfcaf8f58b35ebc39c2a48b7dc3eebf1454ec8ac94dd39a03d64",
+            "bytes": 2643
         },
         {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/ParsedForecast.php",
@@ -149,7 +179,7 @@
             "bytes": 3308
         }
     ],
-    "filesetSha256": "0f2a3846a5325842149276f0b408c3de6329f629041b8264dbc101f94604289a",
+    "filesetSha256": "1a932ab8ec567f224de327077f2b23edf9de9b4de3e34b3b4867d2e85b082fd3",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

@@ -37,6 +37,22 @@
             "target": "OpenMeteoWeather/module.php"
         },
         {
+            "source": "case-studies/open-meteo/distribution/SharedLocation/form.json",
+            "target": "SharedLocation/form.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/SharedLocation/locale.json",
+            "target": "SharedLocation/locale.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/SharedLocation/module.json",
+            "target": "SharedLocation/module.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/SharedLocation/module.php",
+            "target": "SharedLocation/module.php"
+        },
+        {
             "source": "case-studies/open-meteo/distribution/library.json",
             "target": "library.json"
         },
@@ -59,6 +75,10 @@
         {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/IntervalAligner.php",
             "target": "libs/OpenMeteo/IntervalAligner.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/LocationDefinition.php",
+            "target": "libs/OpenMeteo/LocationDefinition.php"
         },
         {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/ParsedForecast.php",

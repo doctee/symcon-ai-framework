@@ -2,6 +2,8 @@
   "translations": {
     "de": {
       "Open-Meteo Weather": "Open-Meteo Wetter",
+      "Shared location instance": "Gemeinsame Standortinstanz",
+      "A selected shared location takes precedence over the legacy coordinate fields below.": "Ein ausgewaehlter gemeinsamer Standort hat Vorrang vor den bisherigen Koordinatenfeldern darunter.",
       "Location configuration is complete": "Standortkonfiguration ist vollstaendig",
       "Latitude": "Breitengrad",
       "Longitude": "Laengengrad",

@@ -288,7 +288,7 @@ function buildOpenMeteoPublicationCandidate(string $projectRoot, array $contract
         throw new RuntimeException('Generated fileset hash is invalid.');
     }
     $sourceEntries = $sourceMap['files'] ?? null;
-    if (!is_array($sourceEntries) || !array_is_list($sourceEntries) || count($sourceEntries) !== 24) {
+    if (!is_array($sourceEntries) || !array_is_list($sourceEntries) || count($sourceEntries) !== 29) {
         throw new RuntimeException('Generated publication payload count differs.');
     }
 
@@ -328,7 +328,7 @@ function buildOpenMeteoPublicationCandidate(string $projectRoot, array $contract
         );
     }
     ksort($files, SORT_STRING);
-    if (count($files) !== 28) {
+    if (count($files) !== 33) {
         throw new RuntimeException('Complete publication file count differs.');
     }
 
@@ -694,7 +694,14 @@ function assertOpenMeteoPublicationPrivacy(array $files): void
 /** @param array<string, string> $files */
 function assertOpenMeteoPublicationMetadata(array $files, string $publicUrl): void
 {
-    foreach (['library.json', 'OpenMeteoWeather/module.json', 'OpenMeteoSolarForecast/module.json'] as $path) {
+    foreach (
+        [
+            'library.json',
+            'SharedLocation/module.json',
+            'OpenMeteoWeather/module.json',
+            'OpenMeteoSolarForecast/module.json',
+        ] as $path
+    ) {
         $metadata = json_decode($files[$path] ?? '', true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($metadata) || ($metadata['url'] ?? null) !== $publicUrl) {
             throw new RuntimeException('Publication module URL differs in ' . $path . '.');

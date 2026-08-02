@@ -5,13 +5,17 @@ photovoltaic forecast model based on Open-Meteo.
 
 ## Current status
 
-This repository contains two deliberately inactive module scaffolds:
+This repository contains three modules:
 
+- `SharedLocation`, a provider-neutral, read-only location descriptor without
+  variables, timers or network access
 - `OpenMeteoWeather`
-- `OpenMeteoSolarForecast`
+- `OpenMeteoSolarForecast`, currently an inactive scaffold
 
-They register their configuration and presentation contracts, but currently
-contain no HTTP transport, update timer or productive provider migration.
+The weather module contains a bounded Open-Meteo runtime with last-good cache
+and can optionally reference `SharedLocation`; its existing direct coordinate
+properties remain a compatible fallback. Installing the library alone does not
+configure a location, start an inactive instance or migrate a consumer.
 OpenWeather and SolCast are not modified by installing this preview.
 
 ## Installation

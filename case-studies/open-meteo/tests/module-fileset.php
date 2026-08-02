@@ -36,7 +36,7 @@ try {
         512,
         JSON_THROW_ON_ERROR
     );
-    openMeteoFilesetSame(24, count($sourceMap['files'] ?? []), 'Fileset source count differs.');
+    openMeteoFilesetSame(29, count($sourceMap['files'] ?? []), 'Fileset source count differs.');
     foreach ($sourceMap['files'] ?? [] as $file) {
         if (!is_array($file)) {
             throw new RuntimeException('Fileset source map entry is invalid.');

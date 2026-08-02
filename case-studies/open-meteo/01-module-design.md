@@ -35,7 +35,9 @@ Official references:
 
 The solution should:
 
-- support one independently owned weather instance per location;
+- support one provider-neutral shared-location instance per physical location;
+- allow weather instances to reference that shared location while preserving
+  their direct coordinate properties as a migration fallback;
 - expose curated, stable and typed variables instead of mirroring arbitrary
   response JSON;
 - distinguish model conditions from local physical measurements;
@@ -81,6 +83,7 @@ The target is a small native module family backed by shared pure-PHP classes.
 
 | Component | Responsibility | First implementation |
 | --- | --- | --- |
+| `SharedLocation` | One physical location, stable key, coordinates, optional elevation and time zone; no variables, timers or network. | Required for system-wide reuse |
 | `OpenMeteoWeather` | One location, weather request profile, forecast cache, curated variables and weather diagnostics. | Required after offline core |
 | `OpenMeteoSolarForecast` | One PV system, orientation requests, PV calculation, bounded forecast cache and solar diagnostics. | Required after weather contract |
 | `OpenMeteoApiClient` | HTTP request execution and transport result envelope. | Offline interface first; live transport later |
@@ -98,19 +101,22 @@ semantics are designed to be provider-neutral, but a reusable provider facade
 or compatibility module should be added only after the real consumer inventory
 demonstrates a recurring need.
 
-### SAEF Decision AD-OM-001: Location and PV ownership stay separate
+### SAEF Decision AD-OM-001: Location, weather and PV ownership stay separate
 
-**Decision:** `OpenMeteoWeather` owns one location and its weather/soil data.
-`OpenMeteoSolarForecast` owns one PV system and references exactly one weather
-instance for location and time-zone configuration.
+**Decision:** `SharedLocation` owns one physical location and exposes a bounded,
+read-only descriptor. `OpenMeteoWeather` owns weather/soil data and optionally
+references exactly one shared location. `OpenMeteoSolarForecast` owns one PV
+system and references exactly one weather instance.
 
 **Rationale:** Weather consumers and PV installations have different field,
 calculation, update and migration contracts. Combining them would make soil or
 general weather changes affect the solar contract and would make multiple PV
 systems at one location awkward.
 
-**Consequence:** The solar instance needs a small read-only location contract
-from the weather instance. It must not write weather variables or configuration.
+**Consequence:** Weather keeps its direct coordinate properties as a compatible
+fallback, but a selected shared-location instance has precedence. The solar
+instance continues to obtain its small read-only location contract through the
+weather instance. Neither consumer writes location configuration.
 
 ### SAEF Decision AD-OM-002: Independent location instances before batching
 
@@ -131,10 +137,12 @@ The normal object-tree projection is intentionally small:
 
 ```text
 Open-Meteo
-|-- Weather location A (`OpenMeteoWeather`)
+|-- Location A (`SharedLocation`)
+|-- Location B (`SharedLocation`)
+|-- Weather location A (`OpenMeteoWeather` -> location A)
 |   |-- curated current and today variables
 |   `-- diagnostics
-|-- Weather location B (`OpenMeteoWeather`)
+|-- Weather location B (`OpenMeteoWeather` -> location B)
 |   |-- curated current and today variables
 |   `-- diagnostics
 |-- PV system A (`OpenMeteoSolarForecast` -> weather location A)
@@ -150,7 +158,7 @@ links, variable types and profile semantics are contract state.
 
 ### `OpenMeteoWeather` owns
 
-- public location configuration;
+- its shared-location reference or legacy direct location fallback;
 - one fixed endpoint/model profile;
 - field-profile selection;
 - polling and retry state;
@@ -189,8 +197,10 @@ It does not own:
 
 | Property | Type | Required | Private | Initial decision |
 | --- | --- | --- | --- | --- |
-| `Latitude` | float | yes | installation-specific | WGS84, validated to `-90..90` |
-| `Longitude` | float | yes | installation-specific | WGS84, validated to `-180..180` |
+| `LocationInstanceId` | integer | preferred | installation-specific | Exact `SharedLocation` module type; selected instance takes precedence |
+| `LocationConfigured` | boolean | legacy fallback | no | Enables only the direct coordinate fallback |
+| `Latitude` | float | legacy fallback | installation-specific | WGS84, validated to `-90..90` |
+| `Longitude` | float | legacy fallback | installation-specific | WGS84, validated to `-180..180` |
 | `ElevationMode` | enum | yes | no | `dem` or `explicit`; default `dem` |
 | `Elevation` | float | conditional | installation-specific | Required only for `explicit` |
 | `Timezone` | string | yes | no | Default `Europe/Berlin` |
@@ -209,6 +219,10 @@ actual forecast location in a private installation.
 Changing location, elevation, time zone, provider profile or enabled fields
 changes the configuration hash and invalidates the previous cache for public
 output until a valid response for the new configuration has been parsed.
+
+The provider-neutral shared-location contract is defined separately in
+`11-shared-location-instances.md`. No public artifact contains productive
+coordinates or live ObjectIDs.
 
 ### SAEF Decision AD-OM-003: Model profile is explicit
 

@@ -9,9 +9,10 @@ fileset at:
 dist/symcon/saef-open-meteo-module/
 ```
 
-The generated tree contains `library.json`, both inactive modules, their forms
-and translations, the complete pure Open-Meteo core, the shared SAEF profile
-helper, its validation dependency and the shared configuration-hash helper.
+The generated tree contains `library.json`, the shared-location, weather and
+solar modules, their forms and translations, the complete pure Open-Meteo core,
+the shared SAEF profile helper, its validation dependency and the shared
+configuration-hash helper.
 
 No source is transformed. Every generated payload file is a byte-exact copy of
 one explicitly listed canonical repository source.
@@ -34,7 +35,7 @@ generated tree by manifest and are not copied into the editable module source.
 ## Manifest and Builder
 
 `deployments/symcon/open-meteo-module.fileset.json` is the complete allowlist.
-It maps 23 sorted, unique source paths to 23 unique library targets.
+It maps 29 sorted, unique source paths to 29 unique library targets.
 
 `tools/build-symcon-module-fileset.php` is separate from the existing PHP
 closure fileset builder because an IP-Symcon module library also needs JSON
@@ -51,7 +52,7 @@ metadata, forms and translations. The module builder enforces:
 - output strictly below `dist/symcon/`; and
 - atomic per-file writes.
 
-The builder emits 26 files: 24 payloads, `fileset.sources.json` and
+The builder emits 31 files: 29 payloads, `fileset.sources.json` and
 `fileset.sha256`. The source map records source, target, SHA-256 and byte count
 for every payload plus the builder version, licence and complete fileset hash.
 
