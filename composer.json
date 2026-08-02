@@ -51,6 +51,7 @@
             "@php tests/deployments/runtime-health-probe.php"
         ],
         "test:helpers": [
+            "@php tests/helpers/object-mutation-safety.php",
             "@php tests/helpers/diagnostics.php",
             "@php tests/helpers/ensure-event.php",
             "@php tests/helpers/ensure-presentation.php",

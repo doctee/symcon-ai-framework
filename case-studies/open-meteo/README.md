@@ -49,7 +49,8 @@ and consumer mappings belong in `private/` or an ignored `*.local.*` file.
 
 ## Current Decision
 
-The weather runtime candidate remains offline-verified only:
+The corrected weather runtime candidate remains offline-verified only after
+the first live request was rolled back:
 
 1. pure-PHP request, response, projection and forecast-domain classes are present;
 2. sanitized synthetic fixtures cover weather, soil, solar and provider errors;
@@ -76,6 +77,10 @@ installation stopped before mutation because Module Control requires an
 accessible repository URL. See `05-inactive-live-preflight.md` for the
 historical preflight result. Public repository publication and the corrected
 inactive installation are recorded in `06-publication-and-inactive-live-install.md`.
+The first controlled weather request, exact rollback and visibility-gap
+correction are recorded in `09-weather-pilot-and-visibility-gap.md`.
+The corrected root-name incident and the new ObjectID-zero guardrail are
+recorded in `10-root-object-name-incident.md`.
 
 Run the focused gate from the repository root:
 

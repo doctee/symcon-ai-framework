@@ -149,7 +149,11 @@ final class ResponseParser
             $unit = self::unit($units, $field);
             $points = [];
             foreach ($times as $index => $timestamp) {
-                $value = self::numericValue($values[$index] ?? null, $field);
+                $rawValue = $values[$index] ?? null;
+                if ($rawValue === null && FieldCatalog::permitsNullGap($sectionName, $field)) {
+                    continue;
+                }
+                $value = self::numericValue($rawValue, $field);
                 $semantics = FieldCatalog::semantics($sectionName, $field);
                 [$validFrom, $validTo] = self::bounds(
                     $sectionName,
@@ -166,6 +170,11 @@ final class ResponseParser
                     $validFrom,
                     $validTo,
                     $value
+                );
+            }
+            if ($points === []) {
+                throw new UnexpectedValueException(
+                    sprintf('Open-Meteo field "%s" contains no usable values.', $field)
                 );
             }
             $result[$field] = new ForecastSeries($field, $unit, $points);

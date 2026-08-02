@@ -82,6 +82,12 @@ IP-Symcon installation.
   context. Do not copy them into public SAEF artifacts.
 - Creating temporary scripts, variables or other live objects requires explicit
   authorization and verified cleanup.
+- Treat ObjectID `0` as a critical protected root. Before every live object
+  mutation, require a positive target ID and verify object existence and type.
+  After `IPS_Create*()`, do not call `IPS_SetName()`, `IPS_SetParent()`,
+  `IPS_SetIdent()` or another mutator until the returned ID passes those checks.
+  Failed lookups, missing array entries and false-like results must stop the
+  operation; they must never be coerced into an ObjectID.
 
 ## Commit Style
 

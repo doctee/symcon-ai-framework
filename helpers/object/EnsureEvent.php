@@ -86,6 +86,7 @@ if (!defined('SAEF_HELPER_ENSURE_EVENT')) {
         $created = $existingID === false;
         if ($created) {
             $eventID = IPS_CreateEvent(1); // 1 = cyclic event
+            SAEF_ValidateMutableObject($eventID, 4);
             IPS_SetParent($eventID, $parentID);
             IPS_SetIdent($eventID, $ident);
         } else {
@@ -111,6 +112,7 @@ if (!defined('SAEF_HELPER_ENSURE_EVENT')) {
             }
         }
 
+        SAEF_ValidateMutableObject($eventID, 4);
         if ($created || $updateExistingPresentation) {
             IPS_SetName($eventID, $name);
 
@@ -215,6 +217,7 @@ if (!defined('SAEF_HELPER_ENSURE_EVENT')) {
         $created = $existingID === false;
         if ($created) {
             $eventID = IPS_CreateEvent(0); // 0 = triggered event
+            SAEF_ValidateMutableObject($eventID, 4);
             IPS_SetParent($eventID, $parentID);
             IPS_SetIdent($eventID, $ident);
         } else {
@@ -240,6 +243,7 @@ if (!defined('SAEF_HELPER_ENSURE_EVENT')) {
             }
         }
 
+        SAEF_ValidateMutableObject($eventID, 4);
         if ($created || $updateExistingPresentation) {
             IPS_SetName($eventID, $name);
 

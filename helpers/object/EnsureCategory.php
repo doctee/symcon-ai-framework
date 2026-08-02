@@ -48,6 +48,7 @@ if (!defined('SAEF_HELPER_ENSURE_CATEGORY')) {
         $created = $existingID === false;
         if ($created) {
             $categoryID = IPS_CreateCategory();
+            SAEF_ValidateMutableObject($categoryID, 0);
             IPS_SetParent($categoryID, $parentID);
             IPS_SetIdent($categoryID, $ident);
         } else {
@@ -64,6 +65,7 @@ if (!defined('SAEF_HELPER_ENSURE_CATEGORY')) {
             $categoryID = $existingID;
         }
 
+        SAEF_ValidateMutableObject($categoryID, 0);
         if ($created || $updateExistingPresentation) {
             IPS_SetName($categoryID, $name);
 

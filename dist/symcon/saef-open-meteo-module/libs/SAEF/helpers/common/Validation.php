@@ -17,6 +17,36 @@ if (!defined('SAEF_HELPER_VALIDATION')) {
         }
     }
 
+    /**
+     * Rejects the root object and validates a concrete mutation target.
+     *
+     * Object ID 0 is the IP-Symcon root category. Failed lookups and creation
+     * calls can be coerced to 0 in weakly typed caller code, so every object
+     * mutator must validate its target before the first write.
+     */
+    function SAEF_ValidateMutableObject(int $objectID, ?int $expectedObjectType = null): void
+    {
+        if ($objectID <= 0) {
+            throw new InvalidArgumentException('Mutable object ID must be greater than zero.');
+        }
+        if (!IPS_ObjectExists($objectID)) {
+            throw new RuntimeException('Mutable object does not exist: ' . $objectID);
+        }
+        if ($expectedObjectType === null) {
+            return;
+        }
+
+        $object = IPS_GetObject($objectID);
+        if (($object['ObjectType'] ?? null) !== $expectedObjectType) {
+            throw new RuntimeException(sprintf(
+                'Mutable object %d has type %s, expected %d.',
+                $objectID,
+                (string) ($object['ObjectType'] ?? 'missing'),
+                $expectedObjectType
+            ));
+        }
+    }
+
     function SAEF_ValidateIdent(string $ident): void
     {
         if ($ident === '') {

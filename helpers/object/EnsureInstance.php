@@ -37,6 +37,7 @@ if (!defined('SAEF_HELPER_ENSURE_INSTANCE')) {
         $created = $existingID === false;
         if ($created) {
             $instanceID = IPS_CreateInstance($moduleGuid);
+            SAEF_ValidateMutableObject($instanceID, 1);
             IPS_SetParent($instanceID, $parentID);
             IPS_SetIdent($instanceID, $ident);
         } else {
@@ -63,6 +64,7 @@ if (!defined('SAEF_HELPER_ENSURE_INSTANCE')) {
             }
         }
 
+        SAEF_ValidateMutableObject($instanceID, 1);
         if ($created || $updateExistingPresentation) {
             IPS_SetName($instanceID, $name);
 

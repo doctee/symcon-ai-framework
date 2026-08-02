@@ -1188,6 +1188,12 @@ Early validation moves failures to a controlled phase before external state is c
 Validate at least:
 
 - required ObjectIDs exist,
+- every object-mutation target is strictly greater than zero; ObjectID `0` is
+  the IP-Symcon root category and may be used only as an explicitly intended
+  parent or read target,
+- every result from `IPS_Create*()` is greater than zero, exists and has the
+  expected object type before calling `IPS_SetName()`, `IPS_SetParent()`,
+  `IPS_SetIdent()` or another object mutator,
 - variables have expected types,
 - profiles exist where required,
 - parent objects are valid,
@@ -1199,6 +1205,9 @@ Validate at least:
 
 - Validating configuration after switching devices.
 - Assuming an ObjectID still points to the expected object.
+- Passing a failed lookup, missing array element, `false`, `null` or unchecked
+  `IPS_Create*()` result to an integer ObjectID parameter; weak coercion can
+  turn it into the root ObjectID `0`.
 - Creating objects below an invalid or unintended parent.
 
 #### Exceptions

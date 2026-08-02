@@ -71,6 +71,7 @@ if (!defined('SAEF_HELPER_ENSURE_VARIABLE')) {
         $created = $existingID === false;
         if ($created) {
             $variableID = IPS_CreateVariable($type);
+            SAEF_ValidateMutableObject($variableID, 2);
             IPS_SetParent($variableID, $parentID);
             IPS_SetIdent($variableID, $ident);
         } else {
@@ -97,6 +98,7 @@ if (!defined('SAEF_HELPER_ENSURE_VARIABLE')) {
             }
         }
 
+        SAEF_ValidateMutableObject($variableID, 2);
         if ($created || $updateExistingPresentation) {
             IPS_SetName($variableID, $name);
 

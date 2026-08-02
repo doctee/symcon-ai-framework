@@ -475,7 +475,9 @@ A response is usable only when:
 - every requested field has an expected compatible unit;
 - `time` and every parallel value array have equal length;
 - timestamps are strictly ordered after normalization;
-- numeric values are finite or explicitly permitted `null` values;
+- numeric values are finite; explicitly permitted provider gaps, currently only
+  individual hourly `visibility` values, may be `null` and are omitted from
+  that field's canonical series;
 - the returned range covers the minimum accepted forecast horizon; and
 - GTI is non-negative when present.
 

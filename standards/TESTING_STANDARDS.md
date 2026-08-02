@@ -35,6 +35,12 @@ Before changing a live script or object:
 - predict whether executing the changed caller could issue a device action,
   notification or other external side effect.
 
+For object mutations, validate the concrete target immediately before the
+write. ObjectID `0` is the root category and must be rejected as a mutation
+target unless changing the root itself is the explicitly authorized operation.
+After any `IPS_Create*()` call, verify a positive ID, object existence and the
+expected object type before the first presentation or parent mutation.
+
 Do not infer permission for unrelated live objects from authorization for one
 caller or migration cohort.
 
