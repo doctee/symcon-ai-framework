@@ -100,7 +100,28 @@ The publisher does not:
 - commit any SAEF working-tree change.
 
 Repository publication and a later `MC_UpdateModule` remain separate approvals.
-The current inactive live instances are not touched by this workflow.
+Live instances are not touched by this workflow.
+
+## Module Update Reconciliation
+
+A separately authorized Module Control update may reload consumer instances
+before all referenced `SharedLocation` module contexts are ready. That
+temporary ordering does not justify a service restart or another provider
+request. Reconciliation follows this bounded sequence:
+
+1. verify that every referenced `SharedLocation` instance is active and returns
+   a structurally valid descriptor;
+2. call `ApplyChanges()` once for each affected Weather instance;
+3. verify Weather status, references, configuration hash, cache and fetch
+   timestamps without issuing a request;
+4. call `ApplyChanges()` once for each affected Solar instance only after its
+   Weather reference is active; and
+5. repeat the read-only projection to prove that a second reconciliation would
+   be a no-op.
+
+`MC_ReloadModule()` and service restarts are outside this recovery path. Any
+changed fetch timestamp or new provider traffic stops the gate and requires
+separate investigation.
 
 ## No-op Acceptance
 
