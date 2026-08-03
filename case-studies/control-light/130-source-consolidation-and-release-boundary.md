@@ -35,8 +35,11 @@ current `origin/main`. The consolidation imports only:
 Open-Meteo, Navimow and unrelated MQTT-exporter candidate changes from the
 original checkout are outside this branch. Only the MQTT exporter's generated
 shared-helper closure is synchronized; its runtime source is unchanged. The
-global changelog receives one consolidated ControlLight entry instead of
-replaying the original interleaved working-tree history.
+Open-Meteo offline-check wrapper receives the repository's established
+512-MiB PHPStan limit after the unmodified `origin/main` wrapper exhausted the
+local 128-MiB default; no module source changes. The global changelog receives
+one consolidated ControlLight entry instead of replaying the original
+interleaved working-tree history.
 
 ## State Classification
 

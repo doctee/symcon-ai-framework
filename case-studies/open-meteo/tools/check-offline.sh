@@ -26,6 +26,7 @@ do
 done
 
 "${repository_dir}/vendor/bin/phpstan" analyse \
+    --memory-limit=512M \
     --debug \
     --no-progress \
     --configuration="${case_study_dir}/phpstan.neon"
