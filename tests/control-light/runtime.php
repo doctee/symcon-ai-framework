@@ -24,6 +24,9 @@ final class ControlLightFakeRuntime
     public static bool $requestActionReturnsFalse = false;
     public static string $feedbackMode = 'immediate';
     public static ?array $pendingFeedback = null;
+    public static ?string $normalizedColorFeedback = null;
+    public static ?int $normalizedTemperatureFeedback = null;
+    public static bool $colorImplicitPowerOn = false;
 
     public static function reset(): void
     {
@@ -38,6 +41,9 @@ final class ControlLightFakeRuntime
         self::$requestActionReturnsFalse = false;
         self::$feedbackMode = 'immediate';
         self::$pendingFeedback = null;
+        self::$normalizedColorFeedback = null;
+        self::$normalizedTemperatureFeedback = null;
+        self::$colorImplicitPowerOn = false;
     }
 
     public static function variable(int $id, int $type, mixed $value, bool $action = false): void
@@ -106,12 +112,108 @@ function RequestAction(int $variableID, mixed $value): bool
     if (ControlLightFakeRuntime::$requestActionReturnsFalse) {
         return false;
     }
+    if ($variableID === 23 && ControlLightFakeRuntime::$normalizedTemperatureFeedback !== null) {
+        SetValue($variableID, ControlLightFakeRuntime::$normalizedTemperatureFeedback);
+        return true;
+    }
+    if ($variableID === 23 && ControlLightFakeRuntime::$normalizedColorFeedback !== null) {
+        SetValue($variableID, ControlLightFakeRuntime::$normalizedColorFeedback);
+        if (ControlLightFakeRuntime::$colorImplicitPowerOn) {
+            SetValue(20, true);
+        }
+        return true;
+    }
     if (ControlLightFakeRuntime::$feedbackMode === 'immediate') {
         SetValue($variableID, $value);
     } elseif (ControlLightFakeRuntime::$feedbackMode === 'delayed') {
         ControlLightFakeRuntime::$pendingFeedback = ['variableID' => $variableID, 'value' => $value];
     }
     return true;
+}
+
+/** @return array<string, mixed> */
+function controlLightTemperatureFixture(): array
+{
+    ControlLightFakeRuntime::reset();
+    ControlLightFakeRuntime::variable(10, 0, true);
+    ControlLightFakeRuntime::variable(11, 1, 100);
+    ControlLightFakeRuntime::variable(12, 1, 4000);
+    ControlLightFakeRuntime::variable(20, 0, true, true);
+    ControlLightFakeRuntime::variable(21, 1, 100, true);
+    ControlLightFakeRuntime::variable(22, 0, true);
+    ControlLightFakeRuntime::variable(23, 1, 4000, true);
+    ControlLightFakeRuntime::variable(30, 1, 0);
+    ControlLightFakeRuntime::variable(31, 1, 0);
+    ControlLightFakeRuntime::variable(32, 1, 0);
+    ControlLightFakeRuntime::variable(33, 1, 0);
+
+    return [
+        'configuration' => ControlLightCore::normalizeConfiguration([
+            'preset' => 'Z2M',
+            'identColor' => '',
+            'brightnessSemantics' => ControlLightCore::BRIGHTNESS_REPORTED,
+            'confirmation' => ['timeoutMilliseconds' => 100, 'pollIntervalMilliseconds' => 50],
+            'semaphore' => ['timeoutMilliseconds' => 100],
+        ]),
+        'resources' => [
+            'localVariableIDs' => ['state' => 10, 'brightness' => 11, 'colorTemperature' => 12],
+            'targetVariableIDs' => ['state' => 20, 'brightness' => 21, 'colorTemperature' => 23],
+            'availabilityVariableID' => 22,
+            'externalTriggers' => [],
+        ],
+        'diagnostics' => [
+            'statisticIDs' => [
+                'COMMANDS' => 30,
+                'CONFIRMATION_TIMEOUTS' => 31,
+                'LAST_FEEDBACK' => 32,
+                'ERRORS' => 33,
+            ],
+        ],
+    ];
+}
+
+/** @return array<string, mixed> */
+function controlLightColorTransitionFixture(string $mode = 'target-turns-on'): array
+{
+    ControlLightFakeRuntime::reset();
+    ControlLightFakeRuntime::variable(10, 0, false);
+    ControlLightFakeRuntime::variable(11, 1, 100);
+    ControlLightFakeRuntime::variable(12, 1, 16749095);
+    ControlLightFakeRuntime::variable(20, 0, false, true);
+    ControlLightFakeRuntime::variable(21, 1, 255, true);
+    ControlLightFakeRuntime::variable(23, 3, '[29.79,84.553]', true);
+    ControlLightFakeRuntime::variable(30, 1, 0);
+    ControlLightFakeRuntime::variable(31, 1, 0);
+    ControlLightFakeRuntime::variable(32, 1, 0);
+    ControlLightFakeRuntime::variable(33, 1, 0);
+
+    return [
+        'configuration' => ControlLightCore::normalizeConfiguration([
+            'preset' => 'MATTER',
+            'identTemp' => '',
+            'brightnessSemantics' => ControlLightCore::BRIGHTNESS_REPORTED,
+            'confirmation' => ['timeoutMilliseconds' => 100, 'pollIntervalMilliseconds' => 50],
+            'semaphore' => ['timeoutMilliseconds' => 100],
+            'colorOffStateTransition' => [
+                'mode' => $mode,
+                'hueToleranceDegrees' => 2.0,
+                'saturationTolerancePercentagePoints' => 0.5,
+            ],
+        ]),
+        'resources' => [
+            'localVariableIDs' => ['state' => 10, 'brightness' => 11, 'color' => 12],
+            'targetVariableIDs' => ['state' => 20, 'brightness' => 21, 'color' => 23],
+            'externalTriggers' => [],
+        ],
+        'diagnostics' => [
+            'statisticIDs' => [
+                'COMMANDS' => 30,
+                'CONFIRMATION_TIMEOUTS' => 31,
+                'LAST_FEEDBACK' => 32,
+                'ERRORS' => 33,
+            ],
+        ],
+    ];
 }
 
 function IPS_Sleep(int $milliseconds): void
@@ -123,12 +225,20 @@ function IPS_Sleep(int $milliseconds): void
 
 function IPS_SemaphoreEnter(string $name, int $milliseconds): bool
 {
+    if (str_starts_with($name, 'SAEF_STATISTIC_')) {
+        return true;
+    }
+
     ControlLightFakeRuntime::$semaphoreEnters[] = $name . ':' . (string)$milliseconds;
     return ControlLightFakeRuntime::$semaphoreAvailable;
 }
 
 function IPS_SemaphoreLeave(string $name): bool
 {
+    if (str_starts_with($name, 'SAEF_STATISTIC_')) {
+        return true;
+    }
+
     ControlLightFakeRuntime::$semaphoreLeaves[] = $name;
     return true;
 }
@@ -226,6 +336,30 @@ $tests['confirms delayed feedback through bounded waiting'] = static function ()
     assertControlLightRuntimeSame(60, GetValue(11), 'Delayed local feedback differs.');
 };
 
+$tests['confirms mired-quantized Kelvin feedback in the runtime path'] = static function (): void {
+    $fixture = controlLightTemperatureFixture();
+    ControlLightFakeRuntime::$normalizedTemperatureFeedback = 3906;
+
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'colorTemperature',
+        3900,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+
+    assertControlLightRuntimeSame('confirmed', $result['status'], 'Quantized Kelvin result differs.');
+    assertControlLightRuntimeSame(3906, GetValue(12), 'Reported Kelvin facade value differs.');
+    assertControlLightRuntimeSame(
+        [['variableID' => 23, 'value' => 3900]],
+        ControlLightFakeRuntime::$actions,
+        'Quantized Kelvin action differs.'
+    );
+    assertControlLightRuntimeSame(1, GetValue(30), 'Quantized Kelvin command statistic differs.');
+    assertControlLightRuntimeSame(0, GetValue(31), 'Quantized Kelvin caused a false timeout.');
+};
+
 $tests['dispatches during a stale offline indication and accepts immediate feedback'] = static function (): void {
     $fixture = controlLightRuntimeFixture();
     assertControlLightRuntimeSame(false, GetValue(22), 'Availability precondition differs.');
@@ -245,6 +379,82 @@ $tests['dispatches during a stale offline indication and accepts immediate feedb
         ControlLightFakeRuntime::$actions,
         'Stale offline indication blocked or duplicated the command.'
     );
+};
+
+$tests['confirms one-command off-state color transition with authoritative power-on'] = static function (): void {
+    $fixture = controlLightColorTransitionFixture();
+    ControlLightFakeRuntime::$normalizedColorFeedback = '[28.346,84.646]';
+    ControlLightFakeRuntime::$colorImplicitPowerOn = true;
+
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'color',
+        16749095,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+
+    assertControlLightRuntimeSame('confirmed', $result['status'], 'Off-state color result differs.');
+    assertControlLightRuntimeSame(
+        [['variableID' => 23, 'value' => '[29.722,84.706]']],
+        ControlLightFakeRuntime::$actions,
+        'Off-state color transition issued an unexpected command sequence.'
+    );
+    assertControlLightRuntimeSame(true, GetValue(10), 'Authoritative powered-on state was not synchronized.');
+    assertControlLightRuntimeSame(100, GetValue(11), 'Color transition changed independent brightness.');
+    assertControlLightRuntimeSame(1, GetValue(30), 'One-command transition statistic differs.');
+};
+
+$tests['requires power-on feedback for off-state color transition'] = static function (): void {
+    $fixture = controlLightColorTransitionFixture();
+    ControlLightFakeRuntime::$normalizedColorFeedback = '[28.346,84.646]';
+
+    try {
+        ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'color',
+            16749095,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        throw new RuntimeException('Missing power-on feedback was accepted.');
+    } catch (ControlLightCommandException $exception) {
+        assertControlLightRuntimeSame(
+            ControlLightCommandException::FAILURE_FEEDBACK_TIMEOUT,
+            $exception->failureClass(),
+            'Missing power-on feedback failure class differs.'
+        );
+    }
+    assertControlLightRuntimeSame(false, GetValue(10), 'Unconfirmed power state changed optimistically.');
+    assertControlLightRuntimeSame(1, GetValue(31), 'Transition timeout statistic differs.');
+};
+
+$tests['keeps narrow color tolerance while target is already on'] = static function (): void {
+    $fixture = controlLightColorTransitionFixture();
+    SetValue(20, true);
+    SetValue(10, true);
+    SetValue(23, '[100,100]');
+    ControlLightFakeRuntime::$normalizedColorFeedback = '[28.346,84.646]';
+
+    try {
+        ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'color',
+            16749095,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        throw new RuntimeException('On-state color used the relaxed transition tolerance.');
+    } catch (ControlLightCommandException $exception) {
+        assertControlLightRuntimeSame(
+            ControlLightCommandException::FAILURE_FEEDBACK_TIMEOUT,
+            $exception->failureClass(),
+            'On-state mismatch failure class differs.'
+        );
+    }
 };
 
 $tests['reports timeout without optimistic local state'] = static function (): void {
@@ -390,6 +600,167 @@ $tests['rejects a false action result'] = static function (): void {
     }
     assertControlLightRuntimeSame(0, GetValue(30), 'Rejected action was counted as a command.');
     assertControlLightRuntimeSame(['SAEF_CONTROL_LIGHT_1000'], ControlLightFakeRuntime::$semaphoreLeaves, 'Rejected action leaked semaphore.');
+};
+
+$tests['classifies unsupported remote on without issuing a target action'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    $fixture['configuration']['stateCommandMode'] = ControlLightCore::STATE_COMMAND_OFF_ONLY;
+
+    try {
+        ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'state',
+            true,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        throw new RuntimeException('Unsupported remote on was accepted.');
+    } catch (ControlLightCommandException $exception) {
+        assertControlLightRuntimeSame(
+            ControlLightCommandException::FAILURE_MANUAL_ACTIVATION_REQUIRED,
+            $exception->failureClass(),
+            'Manual activation failure class differs.'
+        );
+        assertControlLightRuntimeSame(
+            ['requestedState' => true],
+            $exception->details(),
+            'Manual activation diagnostics differ.'
+        );
+    }
+
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Remote on issued a target action.');
+    assertControlLightRuntimeSame(0, GetValue(30), 'Rejected remote on was counted as a command.');
+    assertControlLightRuntimeSame(
+        ['SAEF_CONTROL_LIGHT_1000'],
+        ControlLightFakeRuntime::$semaphoreLeaves,
+        'Rejected remote on leaked the semaphore.'
+    );
+};
+
+$tests['keeps off-only state idempotent when authoritative feedback is already on'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    $fixture['configuration']['stateCommandMode'] = ControlLightCore::STATE_COMMAND_OFF_ONLY;
+    SetValue(20, true);
+
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'state',
+        true,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+
+    assertControlLightRuntimeSame('already_confirmed', $result['status'], 'Confirmed manual-on state differs.');
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Confirmed manual-on issued an action.');
+};
+
+$tests['delegates off-only off commands even while facade feedback is still false'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    $fixture['configuration']['stateCommandMode'] = ControlLightCore::STATE_COMMAND_OFF_ONLY;
+
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'state',
+        false,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+
+    assertControlLightRuntimeSame('confirmed', $result['status'], 'Delegated off result differs.');
+    assertControlLightRuntimeSame(
+        [['variableID' => 20, 'value' => false]],
+        ControlLightFakeRuntime::$actions,
+        'Off-only off command was not delegated to the target adapter.'
+    );
+    assertControlLightRuntimeSame(1, GetValue(30), 'Delegated off command statistic differs.');
+};
+
+$tests['blocks voice control under the inverse alarm contract while retaining Action access'] = static function (): void {
+    controlLightRuntimeFixture();
+    $configuration = ControlLightCore::normalizeConfiguration([
+        'preset' => 'Z2M',
+        'identTemp' => '',
+        'identColor' => '',
+        'brightnessSemantics' => ControlLightCore::BRIGHTNESS_REPORTED,
+        'alarmID' => 22,
+        'alarmIDIsAlarmActive' => false,
+    ]);
+    $userMayControl = new ReflectionMethod(ControlLightRuntime::class, 'userMayControl');
+
+    assertControlLightRuntimeSame(
+        false,
+        $userMayControl->invoke(null, $configuration, 'VoiceControl'),
+        'Active inverse alarm contract permitted voice control.'
+    );
+    assertControlLightRuntimeSame(
+        false,
+        $userMayControl->invoke(null, $configuration, 'WebFront'),
+        'Active inverse alarm contract permitted WebFront control.'
+    );
+    assertControlLightRuntimeSame(
+        false,
+        $userMayControl->invoke(null, $configuration, 'External'),
+        'Active inverse alarm contract permitted an alarm-aware external trigger.'
+    );
+    assertControlLightRuntimeSame(
+        true,
+        $userMayControl->invoke(null, $configuration, 'Action'),
+        'Action sender must retain explicit bypass access.'
+    );
+
+    SetValue(22, true);
+    assertControlLightRuntimeSame(
+        true,
+        $userMayControl->invoke(null, $configuration, 'VoiceControl'),
+        'Inactive inverse alarm contract blocked voice control.'
+    );
+};
+
+$tests['maps independent external on and off update triggers deterministically'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    $on = [
+        'resolvedVariableID' => 40,
+        'action' => 'on',
+        'invert' => false,
+    ];
+    $off = [
+        'resolvedVariableID' => 41,
+        'action' => 'off',
+        'invert' => false,
+    ];
+    $resources = $fixture['resources'];
+    $resources['externalTriggers'] = [$on, $off];
+    $findTrigger = new ReflectionMethod(ControlLightRuntime::class, 'externalTriggerForVariable');
+    $triggerState = new ReflectionMethod(ControlLightRuntime::class, 'externalTriggerState');
+
+    assertControlLightRuntimeSame(
+        $on,
+        $findTrigger->invoke(null, 40, $resources),
+        'External on trigger mapping differs.'
+    );
+    assertControlLightRuntimeSame(
+        $off,
+        $findTrigger->invoke(null, 41, $resources),
+        'External off trigger mapping differs.'
+    );
+    assertControlLightRuntimeSame(
+        null,
+        $findTrigger->invoke(null, 42, $resources),
+        'Unknown external trigger was accepted.'
+    );
+    assertControlLightRuntimeSame(
+        true,
+        $triggerState->invoke(null, $on, true, $resources),
+        'External on trigger state differs.'
+    );
+    assertControlLightRuntimeSame(
+        false,
+        $triggerState->invoke(null, $off, true, $resources),
+        'External off trigger state differs.'
+    );
 };
 
 $tests['applies effective brightness when confirmed state turns off'] = static function (): void {

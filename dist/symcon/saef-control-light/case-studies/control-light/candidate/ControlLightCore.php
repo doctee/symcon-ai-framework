@@ -16,6 +16,12 @@ final class ControlLightCore
 {
     public const BRIGHTNESS_REPORTED = 'reported';
     public const BRIGHTNESS_EFFECTIVE = 'effective';
+    public const FEEDBACK_TARGET = 'target';
+    public const FEEDBACK_MEMBER_CONFIRMED = 'member-confirmed';
+    public const STATE_COMMAND_BIDIRECTIONAL = 'bidirectional';
+    public const STATE_COMMAND_OFF_ONLY = 'off-only';
+    public const TEMPERATURE_QUANTIZATION_NONE = 'none';
+    public const TEMPERATURE_QUANTIZATION_MIRED = 'mired';
 
     /** @var list<string> */
     private const CAPABILITIES = ['state', 'brightness', 'colorTemperature', 'color'];
@@ -79,6 +85,11 @@ final class ControlLightCore
             'alarmIDIsAlarmActive' => self::requireBoolean($merged, 'alarmIDIsAlarmActive'),
             'authoritativeFeedback' => self::requireBoolean($merged, 'authoritativeFeedback'),
             'brightnessSemantics' => $brightnessSemantics,
+            'stateCommandMode' => self::requireEnum(
+                $merged,
+                'stateCommandMode',
+                [self::STATE_COMMAND_BIDIRECTIONAL, self::STATE_COMMAND_OFF_ONLY]
+            ),
             'confirmation' => [
                 'timeoutMilliseconds' => $timeoutMilliseconds,
                 'pollIntervalMilliseconds' => $pollIntervalMilliseconds,
@@ -115,6 +126,10 @@ final class ControlLightCore
                 'position' => $definition['position'],
             ];
         }
+        $normalized['groupFeedback'] = self::normalizeGroupFeedback(
+            $merged['groupFeedback'],
+            $normalized['capabilities']
+        );
 
         $normalized['dimmerTargetMax'] = self::requireIntegerRange(
             $merged,
@@ -123,8 +138,85 @@ final class ControlLightCore
             65535,
             'configuration'
         );
+        $normalized['colorTemperatureTolerance'] = self::requireIntegerRange(
+            $merged,
+            'colorTemperatureTolerance',
+            0,
+            100,
+            'configuration'
+        );
+        $normalized['colorHueToleranceDegrees'] = self::requireFloatRange(
+            $merged,
+            'colorHueToleranceDegrees',
+            0.0,
+            5.0,
+            'configuration'
+        );
+        $normalized['colorSaturationTolerancePercentagePoints'] = self::requireFloatRange(
+            $merged,
+            'colorSaturationTolerancePercentagePoints',
+            0.0,
+            5.0,
+            'configuration'
+        );
+        $colorOffStateTransition = $merged['colorOffStateTransition'];
+        if (!is_array($colorOffStateTransition)) {
+            throw new InvalidArgumentException(
+                'configuration.colorOffStateTransition must be an array.'
+            );
+        }
+        $normalized['colorOffStateTransition'] = [
+            'mode' => self::requireEnum(
+                $colorOffStateTransition,
+                'mode',
+                ['unchanged', 'target-turns-on'],
+                'configuration.colorOffStateTransition'
+            ),
+            'hueToleranceDegrees' => self::requireFloatRange(
+                $colorOffStateTransition,
+                'hueToleranceDegrees',
+                0.0,
+                5.0,
+                'configuration.colorOffStateTransition'
+            ),
+            'saturationTolerancePercentagePoints' => self::requireFloatRange(
+                $colorOffStateTransition,
+                'saturationTolerancePercentagePoints',
+                0.0,
+                5.0,
+                'configuration.colorOffStateTransition'
+            ),
+        ];
+        if (
+            $normalized['colorOffStateTransition']['mode'] === 'target-turns-on'
+            && (
+                ($normalized['capabilities']['state']['enabled'] ?? false) !== true
+                || ($normalized['capabilities']['color']['enabled'] ?? false) !== true
+                || $merged['colorTargetFormat'] !== 'HS_ARRAY_STRING'
+            )
+        ) {
+            throw new InvalidArgumentException(
+                'target-turns-on color transition requires STATE, COLOR and HS_ARRAY_STRING.'
+            );
+        }
         $normalized['tempInputIsKelvin'] = self::requireBoolean($merged, 'tempInputIsKelvin');
         $normalized['tempTargetIsMired'] = self::requireBoolean($merged, 'tempTargetIsMired');
+        $normalized['colorTemperatureFeedbackQuantization'] = self::requireEnum(
+            $merged,
+            'colorTemperatureFeedbackQuantization',
+            [self::TEMPERATURE_QUANTIZATION_NONE, self::TEMPERATURE_QUANTIZATION_MIRED]
+        );
+        if (
+            $normalized['colorTemperatureFeedbackQuantization'] === self::TEMPERATURE_QUANTIZATION_MIRED
+            && (
+                $normalized['tempInputIsKelvin'] !== true
+                || $normalized['tempTargetIsMired'] === true
+            )
+        ) {
+            throw new InvalidArgumentException(
+                'Mired feedback quantization requires a Kelvin-valued target variable.'
+            );
+        }
         $normalized['colorTargetFormat'] = self::requireEnum(
             $merged,
             'colorTargetFormat',
@@ -198,9 +290,16 @@ final class ControlLightCore
         return match ($capability) {
             'state' => (bool)$actualTargetValue === (bool)$expectedTargetValue,
             'brightness' => abs((int)$actualTargetValue - (int)$expectedTargetValue) <= 1,
-            'colorTemperature' => abs((int)$actualTargetValue - (int)$expectedTargetValue) <= 5,
-            'color' => self::targetToLocal('color', $actualTargetValue, $configuration)
-                === self::targetToLocal('color', $expectedTargetValue, $configuration),
+            'colorTemperature' => self::targetTemperatureValueMatches(
+                (int)$expectedTargetValue,
+                (int)$actualTargetValue,
+                $configuration
+            ),
+            'color' => self::targetColorValueMatches(
+                $expectedTargetValue,
+                $actualTargetValue,
+                $configuration
+            ),
             default => throw new InvalidArgumentException('Unsupported capability: ' . $capability),
         };
     }
@@ -227,6 +326,7 @@ final class ControlLightCore
             'authoritativeFeedback' => true,
             // Normalization still requires the caller to provide this key explicitly.
             'brightnessSemantics' => self::BRIGHTNESS_REPORTED,
+            'stateCommandMode' => self::STATE_COMMAND_BIDIRECTIONAL,
             'identState' => '',
             'identDim' => '',
             'identTemp' => '',
@@ -236,6 +336,15 @@ final class ControlLightCore
             'typeTemp' => 1,
             'typeColor' => 1,
             'dimmerTargetMax' => 100,
+            'colorTemperatureTolerance' => 5,
+            'colorTemperatureFeedbackQuantization' => self::TEMPERATURE_QUANTIZATION_NONE,
+            'colorHueToleranceDegrees' => 0.5,
+            'colorSaturationTolerancePercentagePoints' => 0.5,
+            'colorOffStateTransition' => [
+                'mode' => 'unchanged',
+                'hueToleranceDegrees' => 0.5,
+                'saturationTolerancePercentagePoints' => 0.5,
+            ],
             'tempInputIsKelvin' => true,
             'tempTargetIsMired' => false,
             'colorTargetFormat' => 'INT_HEX',
@@ -257,6 +366,12 @@ final class ControlLightCore
                 'availableValue' => true,
             ],
             'externalTriggers' => [],
+            'groupFeedback' => [
+                'mode' => self::FEEDBACK_TARGET,
+                'freshnessSeconds' => 15 * 60,
+                'brightnessTolerance' => 1,
+                'members' => [],
+            ],
         ];
     }
 
@@ -269,6 +384,7 @@ final class ControlLightCore
                 'identDim' => 'brightness',
                 'identTemp' => 'color_temp_kelvin',
                 'identColor' => 'color',
+                'colorTemperatureFeedbackQuantization' => self::TEMPERATURE_QUANTIZATION_MIRED,
                 'availability' => [
                     'targetIdent' => 'device_status',
                     'targetType' => 0,
@@ -412,6 +528,148 @@ final class ControlLightCore
         ];
     }
 
+    /**
+     * @param mixed $groupFeedback
+     * @param array<string, array<string, mixed>> $capabilities
+     *
+     * @return array{
+     *   mode: string,
+     *   enabled: bool,
+     *   freshnessSeconds: int,
+     *   brightnessTolerance: int,
+     *   members: list<array{
+     *     key: string,
+     *     stateVariableID: int,
+     *     brightnessVariableID: int,
+     *     colorTemperatureVariableID?: int,
+     *     availabilityVariableID: int,
+     *     lastSeenVariableID: int
+     *   }>
+     * }
+     */
+    private static function normalizeGroupFeedback(mixed $groupFeedback, array $capabilities): array
+    {
+        if (!is_array($groupFeedback)) {
+            throw new InvalidArgumentException('configuration.groupFeedback must be an array.');
+        }
+        $groupFeedback = array_replace(
+            [
+                'mode' => self::FEEDBACK_TARGET,
+                'freshnessSeconds' => 15 * 60,
+                'brightnessTolerance' => 1,
+                'members' => [],
+            ],
+            $groupFeedback
+        );
+        $mode = self::normalizeEnumValue(
+            $groupFeedback['mode'] ?? null,
+            [self::FEEDBACK_TARGET, self::FEEDBACK_MEMBER_CONFIRMED],
+            'configuration.groupFeedback.mode'
+        );
+        $freshnessSeconds = self::requireIntegerRange(
+            $groupFeedback,
+            'freshnessSeconds',
+            1,
+            24 * 60 * 60,
+            'configuration.groupFeedback'
+        );
+        $brightnessTolerance = self::requireIntegerRange(
+            $groupFeedback,
+            'brightnessTolerance',
+            0,
+            10,
+            'configuration.groupFeedback'
+        );
+        $members = $groupFeedback['members'] ?? null;
+        if (!is_array($members)) {
+            throw new InvalidArgumentException('configuration.groupFeedback.members must be an array.');
+        }
+
+        if ($mode === self::FEEDBACK_TARGET) {
+            if ($members !== []) {
+                throw new InvalidArgumentException(
+                    'configuration.groupFeedback.members must be empty in target mode.'
+                );
+            }
+
+            return [
+                'mode' => $mode,
+                'enabled' => false,
+                'freshnessSeconds' => $freshnessSeconds,
+                'brightnessTolerance' => $brightnessTolerance,
+                'members' => [],
+            ];
+        }
+
+        if (
+            ($capabilities['state']['enabled'] ?? false) !== true
+            || ($capabilities['brightness']['enabled'] ?? false) !== true
+        ) {
+            throw new InvalidArgumentException(
+                'member-confirmed group feedback requires state and brightness capabilities.'
+            );
+        }
+        if (count($members) < 2 || count($members) > 32) {
+            throw new InvalidArgumentException(
+                'configuration.groupFeedback.members must contain between 2 and 32 members.'
+            );
+        }
+
+        $normalizedMembers = [];
+        $seenKeys = [];
+        $seenVariableIDs = [];
+        foreach ($members as $index => $member) {
+            $path = 'configuration.groupFeedback.members[' . (string)$index . ']';
+            if (!is_array($member)) {
+                throw new InvalidArgumentException($path . ' must be an array.');
+            }
+            $key = $member['key'] ?? null;
+            if (!is_string($key) || preg_match('/^[A-Za-z0-9_-]{1,32}$/', $key) !== 1) {
+                throw new InvalidArgumentException($path . '.key is invalid.');
+            }
+            if (isset($seenKeys[$key])) {
+                throw new InvalidArgumentException($path . '.key must be unique.');
+            }
+            $seenKeys[$key] = true;
+
+            $normalizedMember = ['key' => $key];
+            $variableKeys = [
+                'stateVariableID',
+                'brightnessVariableID',
+                'availabilityVariableID',
+                'lastSeenVariableID',
+            ];
+            if (($capabilities['colorTemperature']['enabled'] ?? false) === true) {
+                $variableKeys[] = 'colorTemperatureVariableID';
+            }
+            foreach ($variableKeys as $variableKey) {
+                $variableID = self::requireIntegerRange(
+                    $member,
+                    $variableKey,
+                    1,
+                    PHP_INT_MAX,
+                    $path
+                );
+                if (isset($seenVariableIDs[$variableID])) {
+                    throw new InvalidArgumentException(
+                        $path . '.' . $variableKey . ' must reference a unique variable.'
+                    );
+                }
+                $seenVariableIDs[$variableID] = true;
+                $normalizedMember[$variableKey] = $variableID;
+            }
+            $normalizedMembers[] = $normalizedMember;
+        }
+
+        return [
+            'mode' => $mode,
+            'enabled' => true,
+            'freshnessSeconds' => $freshnessSeconds,
+            'brightnessTolerance' => $brightnessTolerance,
+            'members' => $normalizedMembers,
+        ];
+    }
+
     /** @param array<string, mixed> $configuration */
     private static function assertCapabilityEnabled(string $capability, array $configuration): void
     {
@@ -456,6 +714,32 @@ final class ControlLightCore
         return $value;
     }
 
+    /** @param array<string, mixed> $configuration */
+    private static function targetTemperatureValueMatches(
+        int $expectedTargetValue,
+        int $actualTargetValue,
+        array $configuration
+    ): bool {
+        if (
+            abs($actualTargetValue - $expectedTargetValue)
+                <= (int)$configuration['colorTemperatureTolerance']
+        ) {
+            return true;
+        }
+
+        if (
+            $configuration['colorTemperatureFeedbackQuantization']
+                !== self::TEMPERATURE_QUANTIZATION_MIRED
+            || $expectedTargetValue <= 0
+            || $actualTargetValue <= 0
+        ) {
+            return false;
+        }
+
+        return self::kelvinToMired($actualTargetValue)
+            === self::kelvinToMired($expectedTargetValue);
+    }
+
     private static function localColorToTarget(int $color, string $format): int|string
     {
         $red = ($color >> 16) & 0xFF;
@@ -483,10 +767,8 @@ final class ControlLightCore
         }
 
         if ($format === 'HS_ARRAY_STRING') {
-            if (!isset($decoded[0], $decoded[1])) {
-                throw new InvalidArgumentException('HS target color requires hue and saturation.');
-            }
-            return self::hueSaturationToRgb((float)$decoded[0], (float)$decoded[1]);
+            [$hue, $saturation] = self::decodeHueSaturation($decoded);
+            return self::hueSaturationToRgb($hue, $saturation);
         }
 
         if (isset($decoded[0], $decoded[1], $decoded[2])) {
@@ -550,6 +832,78 @@ final class ControlLightCore
         return (self::limitInteger((int)round(($red + $match) * 255), 0, 255) << 16)
             + (self::limitInteger((int)round(($green + $match) * 255), 0, 255) << 8)
             + self::limitInteger((int)round(($blue + $match) * 255), 0, 255);
+    }
+
+    /** @param array<string, mixed> $configuration */
+    private static function targetColorValueMatches(
+        mixed $expectedTargetValue,
+        mixed $actualTargetValue,
+        array $configuration
+    ): bool {
+        if ($configuration['colorTargetFormat'] !== 'HS_ARRAY_STRING') {
+            return self::targetToLocal('color', $actualTargetValue, $configuration)
+                === self::targetToLocal('color', $expectedTargetValue, $configuration);
+        }
+
+        [$expectedHue, $expectedSaturation] = self::decodeHueSaturationJson($expectedTargetValue);
+        [$actualHue, $actualSaturation] = self::decodeHueSaturationJson($actualTargetValue);
+        $saturationTolerance = (float)$configuration['colorSaturationTolerancePercentagePoints'];
+        if (abs($expectedSaturation - $actualSaturation) > $saturationTolerance) {
+            return false;
+        }
+
+        if ($expectedSaturation <= $saturationTolerance && $actualSaturation <= $saturationTolerance) {
+            return true;
+        }
+
+        $linearHueDistance = abs($expectedHue - $actualHue);
+        $circularHueDistance = min($linearHueDistance, 360.0 - $linearHueDistance);
+
+        return $circularHueDistance <= (float)$configuration['colorHueToleranceDegrees'];
+    }
+
+    /** @return array{0: float, 1: float} */
+    private static function decodeHueSaturationJson(mixed $value): array
+    {
+        $decoded = json_decode((string)$value, true);
+        if (!is_array($decoded)) {
+            throw new InvalidArgumentException('Target color is not valid JSON.');
+        }
+
+        return self::decodeHueSaturation($decoded);
+    }
+
+    /**
+     * @param array<mixed> $decoded
+     *
+     * @return array{0: float, 1: float}
+     */
+    private static function decodeHueSaturation(array $decoded): array
+    {
+        if (
+            count($decoded) !== 2
+            || !array_key_exists(0, $decoded)
+            || !array_key_exists(1, $decoded)
+            || (!is_int($decoded[0]) && !is_float($decoded[0]))
+            || (!is_int($decoded[1]) && !is_float($decoded[1]))
+        ) {
+            throw new InvalidArgumentException('HS target color requires exactly numeric hue and saturation.');
+        }
+
+        $hue = (float)$decoded[0];
+        $saturation = (float)$decoded[1];
+        if (
+            !is_finite($hue)
+            || !is_finite($saturation)
+            || $hue < 0.0
+            || $hue > 360.0
+            || $saturation < 0.0
+            || $saturation > 100.0
+        ) {
+            throw new InvalidArgumentException('HS target color is outside the supported domain.');
+        }
+
+        return [$hue === 360.0 ? 0.0 : $hue, $saturation];
     }
 
     private static function scaleInteger(int $value, int $sourceMax, int $targetMax): int
@@ -634,10 +988,42 @@ final class ControlLightCore
         return $source[$key];
     }
 
+    /** @param array<string, mixed> $source */
+    private static function requireFloatRange(
+        array $source,
+        string $key,
+        float $minimum,
+        float $maximum,
+        string $path
+    ): float {
+        if (
+            !array_key_exists($key, $source)
+            || (!is_int($source[$key]) && !is_float($source[$key]))
+            || !is_finite((float)$source[$key])
+        ) {
+            throw new InvalidArgumentException($path . '.' . $key . ' must be a finite number.');
+        }
+        $value = (float)$source[$key];
+        if ($value < $minimum || $value > $maximum) {
+            throw new InvalidArgumentException(sprintf(
+                '%s.%s must be between %.3F and %.3F.',
+                $path,
+                $key,
+                $minimum,
+                $maximum
+            ));
+        }
+        return $value;
+    }
+
     /** @param array<string, mixed> $source @param list<string> $allowed */
-    private static function requireEnum(array $source, string $key, array $allowed): string
-    {
-        return self::normalizeEnumValue($source[$key] ?? null, $allowed, 'configuration.' . $key);
+    private static function requireEnum(
+        array $source,
+        string $key,
+        array $allowed,
+        string $path = 'configuration'
+    ): string {
+        return self::normalizeEnumValue($source[$key] ?? null, $allowed, $path . '.' . $key);
     }
 
     /** @param list<string> $allowed */

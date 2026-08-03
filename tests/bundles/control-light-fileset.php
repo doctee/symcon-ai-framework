@@ -33,7 +33,7 @@ try {
         512,
         JSON_THROW_ON_ERROR
     );
-    assertControlLightFilesetSame(14, count($sourceMap['orderedSources'] ?? []), 'Source closure differs.');
+    assertControlLightFilesetSame(18, count($sourceMap['orderedSources'] ?? []), 'Source closure differs.');
     assertControlLightFilesetSame(
         true,
         in_array('SAEF_EnsureLink', $sourceMap['functionExports'] ?? [], true),
@@ -49,6 +49,10 @@ try {
             'SAEF\\CaseStudy\\ControlLight\\ControlLightCommandException',
             'SAEF\\CaseStudy\\ControlLight\\ControlLightCore',
             'SAEF\\CaseStudy\\ControlLight\\ControlLightRuntime',
+            'SAEF\\CaseStudy\\ControlLight\\HueWallSwitchCore',
+            'SAEF\\CaseStudy\\ControlLight\\HueWallSwitchRuntime',
+            'SAEF\\CaseStudy\\ControlLight\\ManualOnPulseOffCore',
+            'SAEF\\CaseStudy\\ControlLight\\ManualOnPulseOffRuntime',
         ],
         $sourceMap['classExports'] ?? [],
         'ControlLight class exports differ.'

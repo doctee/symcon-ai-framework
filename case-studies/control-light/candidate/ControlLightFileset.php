@@ -11,3 +11,5 @@ namespace SAEF\CaseStudy\ControlLight;
 
 require_once __DIR__ . '/../../../helpers/object/EnsureScript.php';
 require_once __DIR__ . '/ControlLightRuntime.php';
+require_once __DIR__ . '/HueWallSwitchRuntime.php';
+require_once __DIR__ . '/ManualOnPulseOffRuntime.php';

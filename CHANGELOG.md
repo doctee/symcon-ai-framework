@@ -11,6 +11,13 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Consolidated the post-v0.3 ControlLight evolution on a clean `origin/main`
+  boundary: member-confirmed groups, Hue Wall and Manual-On/Pulse-Off adapters,
+  HS/off-state color contracts, per-variable Statistics serialization, the
+  Z2M Mired-aware Kelvin matcher, installed-instance fixtures, executable
+  regressions and sanitized live-gate reports. The consolidation changes no
+  live runtime; shared-helper activation and Mired functional verification
+  remain explicit later gates.
 - Added a guarded one-way Open-Meteo module publisher. SAEF remains the
   editable source of truth while check and prepare stay local and
   deterministic; publication requires exact fileset and remote-commit pins,
