@@ -12,6 +12,8 @@
       "IANA time zone": "IANA-Zeitzone",
       "Forecast days": "Vorhersagetage",
       "Include model-grid soil values": "Bodenwerte des Modellgitters einbeziehen",
+      "Manage soil variable visibility": "Sichtbarkeit der Bodenvariablen verwalten",
+      "Show soil variables when soil values are enabled": "Bodenvariablen anzeigen, wenn Bodenwerte aktiviert sind",
       "Enable automatic updates": "Automatische Aktualisierungen aktivieren",
       "Polling interval in minutes": "Abfrageintervall in Minuten",
       "HTTP timeout in seconds": "HTTP-Timeout in Sekunden",

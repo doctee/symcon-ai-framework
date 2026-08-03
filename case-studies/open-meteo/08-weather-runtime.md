@@ -43,6 +43,21 @@ interval. With automatic updates disabled, both normal polling and retry timers
 remain at zero while an explicitly invoked `UpdateData()` is still allowed.
 There is no sleep loop or concurrent request fan-out.
 
+## Soil Presentation
+
+`WithSoil` controls the request profile. `ManageSoilVariableVisibility`
+explicitly opts into module-managed presentation and defaults to `false` so a
+library update cannot overwrite existing user visibility. Once opted in,
+`ShowSoilVariables` controls the nine stable soil variables. They are visible
+only when soil requests and presentation are both enabled; otherwise they
+remain present but hidden. Presentation-only changes do not invalidate the
+forecast cache or issue a request.
+
+Visibility reconciliation is idempotent and validates each positive variable
+target, object type and instance ownership before mutation. It does not delete
+variables or change values, archives, links, names, positions, icons or
+profiles.
+
 ## Forecast Access
 
 The module stores the curated current, hourly and daily series as a bounded
@@ -68,8 +83,10 @@ The module harness injects synthetic transport responses and verifies:
 - bounded hourly cache queries;
 - transport failure classification;
 - last-good value retention;
-- warning-to-stale transition; and
-- the first two persistent retry intervals.
+- warning-to-stale transition;
+- the first two persistent retry intervals; and
+- stable soil variable identity and idempotent managed visibility for every
+  combination of request and presentation settings.
 
 The deterministic module fileset includes the pure
 `WeatherForecastProjector`. Network traffic and IP-Symcon live mutations remain

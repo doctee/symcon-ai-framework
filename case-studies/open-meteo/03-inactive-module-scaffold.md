@@ -54,7 +54,11 @@ The module registers 41 stable variables: six operational/freshness variables,
 17 curated current-weather variables, nine today variables and nine soil
 variables. Soil variable identity is always preserved; `WithSoil` controls the
 future request profile rather than deleting variables and possible user archive
-configuration.
+configuration. `ManageSoilVariableVisibility` is an opt-in declaration of
+module-managed presentation, preserving existing user visibility after a
+library update. When opted in, soil variables are visible only when soil
+requests and `ShowSoilVariables` are both enabled. Reconciliation validates a
+positive owned variable target and never mutates the root object.
 
 ## Solar Scaffold
 
