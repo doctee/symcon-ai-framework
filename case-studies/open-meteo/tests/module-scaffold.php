@@ -14,6 +14,14 @@ $scaffoldLocationModules = [];
 /** @var array<int, OpenMeteoWeather> $scaffoldWeatherModules */
 $scaffoldWeatherModules = [];
 
+/** @var array<int, array{ObjectType: int, ParentID: int, ObjectIsHidden: bool}> $scaffoldObjects */
+$scaffoldObjects = [];
+
+/** @var list<array{id: int, hidden: bool}> $scaffoldHiddenMutations */
+$scaffoldHiddenMutations = [];
+
+$scaffoldNextVariableId = 1000;
+
 class IPSModule
 {
     public int $InstanceID = 42;
@@ -27,7 +35,6 @@ class IPSModule
     /** @var array<string, array{id: int, type: string, profile: string, position: int}> */
     private array $variables = [];
 
-    private int $nextVariableId = 1000;
     private int $status = 0;
     /** @var array<string, array{interval: int, script: string}> */
     private array $timers = [];
@@ -206,6 +213,11 @@ class IPSModule
         $this->status = $status;
     }
 
+    protected function GetIDForIdent(string $ident): int
+    {
+        return $this->variables[$ident]['id'] ?? 0;
+    }
+
     public function testSetProperty(string $ident, mixed $value): void
     {
         $this->property($ident);
@@ -252,6 +264,45 @@ class IPSModule
         return $this->values[$ident] ?? null;
     }
 
+    public function testVariableHidden(string $ident): bool
+    {
+        global $scaffoldObjects;
+
+        $id = $this->variables[$ident]['id'] ?? 0;
+        if ($id <= 0 || !isset($scaffoldObjects[$id])) {
+            throw new RuntimeException('Unknown test variable visibility.');
+        }
+
+        return $scaffoldObjects[$id]['ObjectIsHidden'];
+    }
+
+    public function testHiddenMutationCount(): int
+    {
+        global $scaffoldHiddenMutations;
+
+        return count($scaffoldHiddenMutations);
+    }
+
+    public function testSetVariableParent(string $ident, int $parentId): void
+    {
+        global $scaffoldObjects;
+
+        $id = $this->variables[$ident]['id'] ?? 0;
+        if ($id <= 0 || !isset($scaffoldObjects[$id])) {
+            throw new RuntimeException('Unknown test variable ownership.');
+        }
+        $scaffoldObjects[$id]['ParentID'] = $parentId;
+    }
+
+    public function testSetVariableHidden(string $ident, bool $hidden): void
+    {
+        $id = $this->variables[$ident]['id'] ?? 0;
+        if ($id <= 0) {
+            throw new RuntimeException('Unknown test variable presentation.');
+        }
+        IPS_SetHidden($id, $hidden);
+    }
+
     private function property(string $ident): mixed
     {
         if (!array_key_exists($ident, $this->properties)) {
@@ -267,6 +318,8 @@ class IPSModule
         string $profile,
         int $position
     ): void {
+        global $scaffoldNextVariableId, $scaffoldObjects;
+
         if (isset($this->variables[$ident])) {
             if (
                 $this->variables[$ident]['type'] !== $type
@@ -279,13 +332,45 @@ class IPSModule
             return;
         }
 
+        $variableId = $scaffoldNextVariableId++;
         $this->variables[$ident] = [
-            'id' => $this->nextVariableId++,
+            'id' => $variableId,
             'type' => $type,
             'profile' => $profile,
             'position' => $position,
         ];
+        $scaffoldObjects[$variableId] = [
+            'ObjectType' => 2,
+            'ParentID' => $this->InstanceID,
+            'ObjectIsHidden' => false,
+        ];
     }
+}
+
+function IPS_ObjectExists(int $id): bool
+{
+    global $scaffoldObjects;
+
+    return isset($scaffoldObjects[$id]);
+}
+
+/** @return array<string, int|bool> */
+function IPS_GetObject(int $id): array
+{
+    global $scaffoldObjects;
+
+    return $scaffoldObjects[$id] ?? [];
+}
+
+function IPS_SetHidden(int $id, bool $hidden): void
+{
+    global $scaffoldObjects, $scaffoldHiddenMutations;
+
+    if (!isset($scaffoldObjects[$id])) {
+        throw new RuntimeException('Unknown hidden mutation target.');
+    }
+    $scaffoldObjects[$id]['ObjectIsHidden'] = $hidden;
+    $scaffoldHiddenMutations[] = ['id' => $id, 'hidden' => $hidden];
 }
 
 function IPS_VariableProfileExists(string $name): bool
@@ -430,6 +515,7 @@ function Sys_GetURLContentEx(string $url, array $parameters): string|false
 
 require_once dirname(__DIR__, 3) . '/helpers/object/EnsureProfile.php';
 require_once dirname(__DIR__, 3) . '/helpers/diagnostics/ConfigurationHash.php';
+require_once dirname(__DIR__, 3) . '/helpers/common/Validation.php';
 require_once __DIR__ . '/../distribution/SharedLocation/module.php';
 require_once __DIR__ . '/../distribution/OpenMeteoWeather/module.php';
 require_once __DIR__ . '/../distribution/OpenMeteoSolarForecast/module.php';
@@ -558,14 +644,96 @@ scaffoldCheck(count($weather->testVariables()) === 41, 'Weather variable contrac
 scaffoldCheck(count($scaffoldProfiles) === 11, 'Open-Meteo profile contract differs.');
 $profiles = $scaffoldProfiles;
 $weatherVariables = $weather->testVariables();
+$soilVariableIdents = [
+    'SoilTemperature0cm',
+    'SoilTemperature6cm',
+    'SoilTemperature18cm',
+    'SoilTemperature54cm',
+    'SoilMoisture0To1cm',
+    'SoilMoisture1To3cm',
+    'SoilMoisture3To9cm',
+    'SoilMoisture9To27cm',
+    'SoilMoisture27To81cm',
+];
+foreach ($soilVariableIdents as $ident) {
+    scaffoldCheck(
+        !$weather->testVariableHidden($ident),
+        'Unmanaged soil presentation changed on module creation.'
+    );
+}
+scaffoldCheck(!$weather->testVariableHidden('Temperature'), 'Weather variable was hidden.');
+$weather->testSetVariableHidden('SoilTemperature0cm', true);
+$hiddenMutationCount = $weather->testHiddenMutationCount();
 $weather->ApplyChanges();
 scaffoldCheck(
     $weather->testVariables() === $weatherVariables,
     'Repeated weather ApplyChanges changed variable identity.'
 );
+scaffoldCheck(
+    $weather->testHiddenMutationCount() === $hiddenMutationCount,
+    'Repeated weather ApplyChanges changed stable soil presentation.'
+);
+scaffoldCheck(
+    $weather->testVariableHidden('SoilTemperature0cm'),
+    'Unmanaged user soil visibility was not preserved.'
+);
 scaffoldCheck($scaffoldProfiles === $profiles, 'Repeated profile creation was not idempotent.');
 scaffoldCheck($weather->testTimerRegistrations() === 1, 'Weather update timer is missing.');
 scaffoldCheck($weather->testTimerInterval('UpdateData') === 0, 'Unconfigured timer must be disabled.');
+
+$weather->testSetProperty('ManageSoilVariableVisibility', true);
+$weather->ApplyChanges();
+foreach ($soilVariableIdents as $ident) {
+    scaffoldCheck($weather->testVariableHidden($ident), 'Managed disabled soil variable is visible.');
+}
+$managedHiddenMutationCount = $weather->testHiddenMutationCount();
+$weather->ApplyChanges();
+scaffoldCheck(
+    $weather->testHiddenMutationCount() === $managedHiddenMutationCount,
+    'Repeated managed soil presentation reconciliation was not a no-op.'
+);
+$weather->testSetProperty('WithSoil', true);
+$weather->ApplyChanges();
+foreach ($soilVariableIdents as $ident) {
+    scaffoldCheck(!$weather->testVariableHidden($ident), 'Enabled soil variable must be visible.');
+}
+$weather->testSetProperty('ShowSoilVariables', false);
+$weather->ApplyChanges();
+foreach ($soilVariableIdents as $ident) {
+    scaffoldCheck($weather->testVariableHidden($ident), 'Explicitly hidden soil variable is visible.');
+}
+$weather->testSetProperty('ShowSoilVariables', true);
+$weather->ApplyChanges();
+foreach ($soilVariableIdents as $ident) {
+    scaffoldCheck(!$weather->testVariableHidden($ident), 'Explicitly shown soil variable is hidden.');
+}
+$weather->testSetProperty('WithSoil', false);
+$weather->ApplyChanges();
+foreach ($soilVariableIdents as $ident) {
+    scaffoldCheck($weather->testVariableHidden($ident), 'Disabled soil variable became visible.');
+}
+
+$ownershipWeather = new OpenMeteoWeather();
+$ownershipWeather->Create();
+$ownershipWeather->testSetProperty('ManageSoilVariableVisibility', true);
+$ownershipWeather->ApplyChanges();
+$ownershipWeather->testSetVariableParent('SoilTemperature0cm', 0);
+$ownershipMutationCount = $ownershipWeather->testHiddenMutationCount();
+$ownershipWeather->ApplyChanges();
+scaffoldCheck(
+    $ownershipWeather->testStatus() === 200,
+    'Soil presentation ownership drift did not fail closed.'
+);
+scaffoldCheck(
+    $ownershipWeather->testHiddenMutationCount() === $ownershipMutationCount,
+    'Soil presentation ownership drift performed a mutation.'
+);
+$ownershipWeather->testSetVariableParent('SoilTemperature0cm', $ownershipWeather->InstanceID);
+$ownershipWeather->ApplyChanges();
+scaffoldCheck(
+    $ownershipWeather->testStatus() === 104,
+    'Restored soil presentation ownership did not recover.'
+);
 
 $weather->testSetProperty('LocationConfigured', true);
 $weather->testSetProperty('Latitude', 48.0);
@@ -762,6 +930,68 @@ scaffoldCheck($runtimeWeather->testReadValue('DataState') === 3, 'Old last-good 
 scaffoldCheck(
     $runtimeWeather->testTimerInterval('UpdateData') === 900000,
     'Second retry interval differs.'
+);
+
+$soilRuntimeWeather = new TestOpenMeteoWeather();
+$soilRuntimeWeather->Create();
+$soilRuntimeWeather->testSetProperty('LocationConfigured', true);
+$soilRuntimeWeather->testSetProperty('Latitude', 48.0);
+$soilRuntimeWeather->testSetProperty('Longitude', 11.0);
+$soilRuntimeWeather->testSetProperty('WithSoil', true);
+$soilRuntimeWeather->testSetProperty('ManageSoilVariableVisibility', true);
+$soilRuntimeWeather->ApplyChanges();
+$soilRuntimeWeather->testQueueResponse(scaffoldWeatherResponse(true));
+$soilRuntimeResult = json_decode(
+    $soilRuntimeWeather->UpdateData(),
+    true,
+    16,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    ($soilRuntimeResult['success'] ?? null) === true,
+    'Soil weather update did not succeed.'
+);
+scaffoldCheck(
+    $soilRuntimeWeather->testReadValue('SoilMoisture0To1cm') === 0.25,
+    'Soil weather value differs.'
+);
+$soilLastAttempt = $soilRuntimeWeather->testReadValue('LastFetchAttempt');
+$soilLastSuccess = $soilRuntimeWeather->testReadValue('LastSuccess');
+$soilRuntimeWeather->testSetProperty('ShowSoilVariables', false);
+$soilRuntimeWeather->ApplyChanges();
+foreach ($soilVariableIdents as $ident) {
+    scaffoldCheck(
+        $soilRuntimeWeather->testVariableHidden($ident),
+        'Presentation-disabled soil variable is visible.'
+    );
+}
+$soilCacheAfterHide = json_decode(
+    $soilRuntimeWeather->GetCurrentJson(),
+    true,
+    32,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    ($soilCacheAfterHide['success'] ?? null) === true,
+    'Soil presentation change invalidated the weather cache.'
+);
+scaffoldCheck(
+    $soilRuntimeWeather->testReadValue('LastFetchAttempt') === $soilLastAttempt
+    && $soilRuntimeWeather->testReadValue('LastSuccess') === $soilLastSuccess,
+    'Soil presentation change altered request markers.'
+);
+$soilRuntimeWeather->testSetProperty('ShowSoilVariables', true);
+$soilRuntimeWeather->ApplyChanges();
+foreach ($soilVariableIdents as $ident) {
+    scaffoldCheck(
+        !$soilRuntimeWeather->testVariableHidden($ident),
+        'Presentation-enabled soil variable is hidden.'
+    );
+}
+scaffoldCheck(
+    $soilRuntimeWeather->testReadValue('LastFetchAttempt') === $soilLastAttempt
+    && $soilRuntimeWeather->testReadValue('LastSuccess') === $soilLastSuccess,
+    'Showing soil variables altered request markers.'
 );
 
 $sharedRuntimeWeather = new TestOpenMeteoWeather();
