@@ -71,7 +71,7 @@ must be recorded in `CHANGELOG.md`, even when the PHP signature is unchanged.
 | `SAEF_WriteRegistry()` | Write registry metadata to a JSON string variable |
 | `SAEF_UpdateRegistryEntry()` | Update one registry entry and persist the registry |
 | `SAEF_EnsureStatisticsVariables()` | Idempotently create or update statistic variables |
-| `SAEF_IncrementStatistic()` | Increment an integer or float statistic variable |
+| `SAEF_IncrementStatistic()` | Increment an integer or float statistic variable with per-variable serialization |
 | `SAEF_SetStatisticTimestamp()` | Set an integer statistic variable to a Unix timestamp |
 | `SAEF_EnsureErrorRingBufferVariable()` | Idempotently create or update a string variable for bounded error history |
 | `SAEF_ReadErrorRingBuffer()` | Read bounded error history from a JSON string variable |

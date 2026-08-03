@@ -131,6 +131,11 @@ Typical statistics include:
 
 Use separate typed variables where practical. This keeps profiles, ownership and type conflicts visible.
 
+Counter increments are read-modify-write operations. SAEF serializes each
+statistics variable independently so parallel automation paths cannot lose an
+increment. The lock is scoped to one counter update; it must not serialize the
+surrounding device command or unrelated statistics variables.
+
 ### Error Ring Buffer
 
 An error ring buffer is a bounded JSON list of recent errors.
