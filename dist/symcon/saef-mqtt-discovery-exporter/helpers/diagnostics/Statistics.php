@@ -126,51 +126,61 @@ if (!defined('SAEF_HELPER_STATISTICS')) {
             throw new RuntimeException('Statistic variable must be integer or float: ' . $variableID);
         }
 
-        if ($variableType === 1) {
-            if (!is_int($currentValue = GetValue($variableID))) {
-                throw new RuntimeException('Integer statistic variable must contain an integer: ' . $variableID);
-            }
+        $semaphoreName = 'SAEF_STATISTIC_' . $variableID;
+        $semaphoreTimeoutMilliseconds = 1000;
+        if (!IPS_SemaphoreEnter($semaphoreName, $semaphoreTimeoutMilliseconds)) {
+            throw new RuntimeException('Statistic variable is busy: ' . $variableID);
+        }
 
-            if (is_float($increment)) {
-                if (floor($increment) !== $increment) {
-                    throw new InvalidArgumentException(
-                        'Integer statistic increment must be a finite whole number: ' . $variableID
-                    );
+        try {
+            if ($variableType === 1) {
+                if (!is_int($currentValue = GetValue($variableID))) {
+                    throw new RuntimeException('Integer statistic variable must contain an integer: ' . $variableID);
                 }
 
-                if ($increment < PHP_INT_MIN || $increment >= PHP_INT_MAX) {
-                    throw new InvalidArgumentException('Integer statistic increment is out of range: ' . $variableID);
+                if (is_float($increment)) {
+                    if (floor($increment) !== $increment) {
+                        throw new InvalidArgumentException(
+                            'Integer statistic increment must be a finite whole number: ' . $variableID
+                        );
+                    }
+
+                    if ($increment < PHP_INT_MIN || $increment >= PHP_INT_MAX) {
+                        throw new InvalidArgumentException('Integer statistic increment is out of range: ' . $variableID);
+                    }
+
+                    $increment = (int)$increment;
                 }
 
-                $increment = (int)$increment;
+                if (
+                    ($increment > 0 && $currentValue > PHP_INT_MAX - $increment)
+                    || ($increment < 0 && $currentValue < PHP_INT_MIN - $increment)
+                ) {
+                    throw new RuntimeException('Integer statistic increment would overflow: ' . $variableID);
+                }
+
+                $updatedValue = $currentValue + $increment;
+                SetValue($variableID, $updatedValue);
+
+                return $updatedValue;
             }
 
-            if (
-                ($increment > 0 && $currentValue > PHP_INT_MAX - $increment)
-                || ($increment < 0 && $currentValue < PHP_INT_MIN - $increment)
-            ) {
-                throw new RuntimeException('Integer statistic increment would overflow: ' . $variableID);
+            $currentValue = GetValue($variableID);
+            if (!is_int($currentValue) && !is_float($currentValue)) {
+                throw new RuntimeException('Float statistic variable must contain a numeric value: ' . $variableID);
             }
 
-            $updatedValue = $currentValue + $increment;
+            $updatedValue = (float)$currentValue + (float)$increment;
+            if (!is_finite($updatedValue)) {
+                throw new RuntimeException('Float statistic increment must produce a finite value: ' . $variableID);
+            }
+
             SetValue($variableID, $updatedValue);
 
             return $updatedValue;
+        } finally {
+            IPS_SemaphoreLeave($semaphoreName);
         }
-
-        $currentValue = GetValue($variableID);
-        if (!is_int($currentValue) && !is_float($currentValue)) {
-            throw new RuntimeException('Float statistic variable must contain a numeric value: ' . $variableID);
-        }
-
-        $updatedValue = (float)$currentValue + (float)$increment;
-        if (!is_finite($updatedValue)) {
-            throw new RuntimeException('Float statistic increment must produce a finite value: ' . $variableID);
-        }
-
-        SetValue($variableID, $updatedValue);
-
-        return $updatedValue;
     }
 
     /**
