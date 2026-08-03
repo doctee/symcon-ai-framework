@@ -335,6 +335,10 @@ final class DiagnosticsFakeSymconRuntime
 
     public static function semaphoreEnter(string $name, int $milliseconds): bool
     {
+        if (str_starts_with($name, 'SAEF_STATISTIC_')) {
+            return $milliseconds > 0;
+        }
+
         return $name !== '' && $milliseconds > 0 && self::$semaphoreEnterResult;
     }
 
