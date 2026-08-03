@@ -101,7 +101,56 @@ On failure, stop the migration cohort. Preserve the managed target object and
 restore only the changed source or configuration from the prepared rollback.
 Do not delete and recreate variables merely to recover from a caller migration.
 
-## 9. Static analysis boundaries for runtime fakes
+## 9. Live evidence closure
+
+An authorized live mutation or real-device test is not complete when the
+runtime check passes. Its evidence and the framework's current-state claims
+must also be reconciled.
+
+Keep exact installation evidence in a private machine-readable artifact. JSON
+is recommended for deterministic review and follow-up automation. The artifact
+should record, where applicable:
+
+- a format version, UTC timestamp, phase and outcome;
+- the explicit authorization kind and bounded scope;
+- MCP transport errors, PHP execution errors and output truncation as separate
+  fields;
+- package, source, configuration or activation hashes needed to identify the
+  tested candidate;
+- whether mutation and device actions were attempted, including the exact
+  intended action count;
+- initial, intermediate and final domain values;
+- diagnostic counter baselines and deltas;
+- compensation, rollback and initial-state restoration outcomes;
+- the size and result of any source or topology regression; and
+- an explanation when asynchronous feedback produces a later settled counter
+  state that differs from the immediate test result.
+
+Private evidence may contain installation ObjectIDs, names and paths only below
+`private/` or in an ignored `*.local.*` artifact. Do not copy those details into
+public documentation.
+
+Add or update a sanitized public report when the live result changes a
+framework case study, current support statement, migration classification or
+regression fixture. The report explains the engineering decision and result,
+while the private JSON retains exact reproducibility evidence.
+
+After a successful live gate:
+
+1. preserve release reports and dated readiness reports as historical
+   snapshots;
+2. update only current-status documentation and sanitized fixtures;
+3. update executable expectations derived from those fixtures;
+4. add an Unreleased changelog entry when the repository's documented
+   capability or current rollout state changed; and
+5. rerun the relevant focused tests followed by the complete repository gate.
+
+A private JSON file without current fixture reconciliation is incomplete when
+the repository claims to model the live cohort. A public report without exact
+private evidence is incomplete when installation-specific rollback or audit
+details are required.
+
+## 10. Static analysis boundaries for runtime fakes
 
 PHP test entrypoints that emulate IP-Symcon functions in the global namespace
 shall not be analyzed in the same PHPStan process as production candidates or
