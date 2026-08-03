@@ -79,9 +79,11 @@ The private rollout remains split into separately authorized gates:
 6. a separate Weather shadow instance was created for the second location with
    automatic updates disabled and its request structure was verified without
    executing the request;
-7. the next gate may execute exactly one bounded manual update for that second
-   shadow or extend the first controlled request profile; and
-8. migrate consumers only after the corresponding runtime proofs, while
+7. exactly one bounded manual update was then executed successfully for that
+   second shadow while automatic updates remained disabled;
+8. the optional soil profile was enabled on one Weather instance and exactly
+   one bounded manual update verified all soil series; and
+9. migrate consumers only after the corresponding runtime proofs, while
    retaining direct fields until rollback checks are complete.
 
 The SharedLocation-creation postflight verified exactly two active location
@@ -123,6 +125,23 @@ Ident, exact module type, shared-location reference, active status, empty cache
 and zero timer state were independently read back. The first Weather forecast
 and both location definitions remained unchanged, and no provider request was
 issued for the second shadow.
+
+The separately authorized second provider request subsequently returned a
+complete valid current, hourly and seven-day daily forecast. Independent local
+cache reads verified the same curated current fields and bounded interval
+semantics without another provider request. Both Weather instances remained
+manual-only with interval, next run and last run at zero; the first forecast,
+both shared locations and the inactive Solar instance remained unchanged.
+
+The soil-profile pilot first proved that changing the request profile rejects
+the previous cache before any transport attempt. The one authorized request
+then returned all four soil-temperature and five volumetric-soil-moisture
+series. Independent reads verified bounded hourly points, the expected units,
+fresh public-variable timestamps, the normal current and daily weather fields,
+and an unchanged request timestamp during postflight. Variable visibility was
+preserved because presentation remains user-owned. The second Weather instance,
+both shared locations and the inactive Solar instance remained unchanged, and
+no automatic or retry timer was created.
 
 ## Offline Proof
 

@@ -4,10 +4,10 @@ This case study defines a SAEF-aligned path for replacing provider-specific
 OpenWeather and SolCast consumers with read-only Open-Meteo weather, soil and
 photovoltaic forecasts.
 
-The current case-study state includes the offline core, productive weather and
-solar runtime candidates and an offline-only provider-neutral shared-location
-candidate. The solar runtime increment has not been published or installed. It
-does not disable any existing provider.
+The current case-study state includes the published provider-neutral shared
+location, weather and solar runtimes. Two shared locations and weather runtimes
+are active, and the storage-aware solar path has passed manual and automatic
+update observation without disabling an existing provider.
 
 ## Scope
 
@@ -40,6 +40,9 @@ and consumer mappings belong in `private/` or an ignored `*.local.*` file.
 | `08-weather-runtime.md` | Describes the bounded weather transport, last-good cache, stale/retry behavior and offline runtime proof. |
 | `11-shared-location-instances.md` | Defines the provider-neutral system-wide location contract and compatible weather migration path. |
 | `12-solar-runtime.md` | Defines the manual-first solar transport, atomic multi-orientation calculation, cache API and deferred calibration boundary. |
+| `13-soil-variable-visibility-live-activation.md` | Records the controlled soil-variable presentation activation and module-update reconciliation. |
+| `14-solar-pilot-and-automatic-observation.md` | Records the sanitized storage-coupled solar pilot, scheduled-cycle observation and calibration boundary. |
+| `15-live-object-presentation-cleanup.md` | Records the guarded live rename and reparent cleanup without changing runtime configuration or provider traffic. |
 | `distribution/libs/OpenMeteo/` | Pure request, parsing, interval, PV and runtime-state domain classes. |
 | `distribution/` | Canonical candidate IP-Symcon library source with shared-location, weather and solar modules. |
 | `../../dist/symcon/saef-open-meteo-module/` | Generated standalone module fileset; never edit it directly. |
@@ -50,8 +53,8 @@ and consumer mappings belong in `private/` or an ignored `*.local.*` file.
 
 ## Current Decision
 
-The corrected weather runtime candidate remains offline-verified only after
-the first live request was rolled back:
+The generated module is published and its weather and solar paths have passed
+controlled live pilots and scheduled-cycle observation:
 
 1. pure-PHP request, response, projection and forecast-domain classes are present;
 2. sanitized synthetic fixtures cover weather, soil, solar and provider errors;
@@ -59,8 +62,12 @@ the first live request was rolled back:
    verified offline;
 4. the weather module has a bounded timer/HTTP adapter, atomic candidate
    validation, last-good cache and explicit stale/retry behavior; and
-5. the solar module has a manual-first, atomic multi-orientation runtime with
-   automatic updates disabled by default.
+5. two provider-neutral shared locations and two Weather consumers are active;
+6. soil-variable visibility is module-managed only where explicitly enabled;
+7. the solar module has an atomic multi-orientation, storage-aware runtime; and
+8. one storage-coupled `pv_harvest` pilot and a later scheduled cycle produced
+   bounded current caches while configuration, references and the
+   provider-parallel boundary remained unchanged.
 
 The generated fileset contains the shared profile and configuration-hash
 helpers required by the modules without duplicating their canonical sources.
@@ -69,9 +76,8 @@ SAEF remains the editable source of truth. The public module repository is a
 generated release mirror and must not be edited independently. The controlled
 workflow is documented in `07-controlled-publication-workflow.md`.
 
-Public mirror publication, installed-library update, live API traffic,
-productive configuration, provider deactivation and consumer migration are
-separate later gates.
+Provider deactivation, consumer migration, shading and forecast-to-measurement
+calibration remain separate later gates.
 
 The authorized inactive live preflight found no candidate collision, but the
 installation stopped before mutation because Module Control requires an
@@ -82,6 +88,11 @@ The first controlled weather request, exact rollback and visibility-gap
 correction are recorded in `09-weather-pilot-and-visibility-gap.md`.
 The corrected root-name incident and the new ObjectID-zero guardrail are
 recorded in `10-root-object-name-incident.md`.
+Soil-variable visibility and module-update reconciliation are recorded in
+`13-soil-variable-visibility-live-activation.md`. The storage-coupled solar
+request and scheduled-cycle evidence are recorded in
+`14-solar-pilot-and-automatic-observation.md`. The later object-tree presentation
+cleanup is recorded in `15-live-object-presentation-cleanup.md`.
 
 Run the focused gate from the repository root:
 

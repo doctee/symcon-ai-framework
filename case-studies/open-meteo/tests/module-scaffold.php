@@ -1184,9 +1184,38 @@ $powerForecast = json_decode(
     64,
     JSON_THROW_ON_ERROR
 );
+$powerPoints = $powerForecast['data']['system'] ?? [];
 scaffoldCheck(
-    count($powerForecast['data']['system'] ?? []) === 3,
+    count($powerPoints) === 3,
     'Bounded solar power forecast differs.'
+);
+foreach ($powerPoints as $powerPoint) {
+    scaffoldCheck(
+        is_array($powerPoint)
+        && ($powerPoint['unit'] ?? null) === 'kW'
+        && ($powerPoint['semantics'] ?? null) === 'preceding_interval'
+        && is_numeric($powerPoint['value'] ?? null)
+        && is_finite((float) $powerPoint['value'])
+        && (float) $powerPoint['value'] >= 0.0,
+        'Solar power cache unit, semantics or value differs.'
+    );
+}
+$dailyEnergyForecast = json_decode(
+    $runtimeSolar->GetDailyEnergyForecastJson(1735686000, 1735772400),
+    true,
+    64,
+    JSON_THROW_ON_ERROR
+);
+$dailyEnergyPoints = $dailyEnergyForecast['data']['system'] ?? [];
+scaffoldCheck(count($dailyEnergyPoints) === 1, 'Bounded solar daily energy differs.');
+scaffoldCheck(
+    is_array($dailyEnergyPoints[0] ?? null)
+    && ($dailyEnergyPoints[0]['unit'] ?? null) === 'kWh'
+    && ($dailyEnergyPoints[0]['semantics'] ?? null) === 'local_day'
+    && is_numeric($dailyEnergyPoints[0]['value'] ?? null)
+    && is_finite((float) $dailyEnergyPoints[0]['value'])
+    && (float) $dailyEnergyPoints[0]['value'] >= 0.0,
+    'Solar daily energy cache unit, semantics or value differs.'
 );
 $unsupported = json_decode(
     $runtimeSolar->GetPowerForecastJson(1735714800, 1735725601, 'array'),
@@ -1238,6 +1267,21 @@ scaffoldCheck(
     abs((float) $runtimeSolar->testReadValue('CurrentPowerForecast') - 1.0) < 0.000001,
     'Storage-coupled PV harvest did not use its separate PV-input limit.'
 );
+$harvestForecast = json_decode(
+    $runtimeSolar->GetPowerForecastJson(1735714800, 1735725601),
+    true,
+    64,
+    JSON_THROW_ON_ERROR
+);
+foreach ($harvestForecast['data']['system'] ?? [] as $harvestPoint) {
+    scaffoldCheck(
+        is_array($harvestPoint)
+        && ($harvestPoint['unit'] ?? null) === 'kW'
+        && (float) ($harvestPoint['value'] ?? -1.0) >= 0.0
+        && (float) ($harvestPoint['value'] ?? 2.0) <= 1.0,
+        'PV harvest cache did not preserve the kW contract or PV-input limit.'
+    );
+}
 
 $automaticSolar = new TestOpenMeteoSolarForecast();
 $automaticSolar->Create();
