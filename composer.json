@@ -82,14 +82,33 @@
         "test:control-light-core": [
             "@php tests/control-light/core.php"
         ],
+        "test:control-light-color-analysis": [
+            "@php tests/control-light/color-conversion-analysis.php"
+        ],
         "test:control-light-runtime": [
             "@php tests/control-light/runtime.php"
+        ],
+        "test:manual-on-pulse-off": [
+            "@php tests/control-light/manual-on-pulse-off-core.php",
+            "@php tests/control-light/manual-on-pulse-off-runtime.php"
+        ],
+        "test:control-light-group-runtime": [
+            "@php tests/control-light/group-runtime.php"
         ],
         "test:control-light-topology": [
             "@php tests/control-light/topology.php"
         ],
         "test:control-light-runtime-mirror": [
             "@php tests/control-light/runtime-mirror.php"
+        ],
+        "test:hue-wall-core": [
+            "@php tests/control-light/hue-wall-core.php"
+        ],
+        "test:hue-wall-runtime": [
+            "@php tests/control-light/hue-wall-runtime.php"
+        ],
+        "test:hue-wall-topology": [
+            "@php tests/control-light/hue-wall-topology.php"
         ],
         "test:navimow-rest-auth": [
             "@php case-studies/navimow/tests/rest-client-auth.php"
@@ -133,9 +152,15 @@
             "@test:mqtt-exporter-cleanup",
             "@test:mqtt-exporter-fixtures",
             "@test:control-light-core",
+            "@test:control-light-color-analysis",
             "@test:control-light-runtime",
+            "@test:manual-on-pulse-off",
+            "@test:control-light-group-runtime",
             "@test:control-light-topology",
             "@test:control-light-runtime-mirror",
+            "@test:hue-wall-core",
+            "@test:hue-wall-runtime",
+            "@test:hue-wall-topology",
             "@test:navimow-rest-auth",
             "@test:navimow-pilot",
             "@test:navimow-distribution",

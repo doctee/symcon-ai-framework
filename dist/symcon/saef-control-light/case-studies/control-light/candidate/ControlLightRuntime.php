@@ -89,6 +89,17 @@ final class ControlLightRuntime
                     return ['status' => 'feedback_synchronized', 'capability' => $targetCapability];
                 }
 
+                $memberCapability = self::capabilityForMemberVariable($sourceVariableID, $resources);
+                if ($memberCapability !== null) {
+                    self::syncAll($resources, $normalized);
+                    self::recordSuccess($diagnostics);
+
+                    return [
+                        'status' => 'member_feedback_synchronized',
+                        'capability' => $memberCapability,
+                    ];
+                }
+
                 $external = self::externalTriggerForVariable($sourceVariableID, $resources);
                 if ($external !== null) {
                     if ($external['respectAlarm'] === true && !self::userMayControl($normalized, 'External')) {
@@ -141,12 +152,17 @@ final class ControlLightRuntime
         array $sourceIPS,
         ControlLightCommandException $exception
     ): array {
-        return [
+        $result = [
             'status' => 'command_failed',
             'failureClass' => $exception->failureClass(),
             'capability' => $exception->capability(),
             'sender' => (string)($sourceIPS['SENDER'] ?? ''),
         ];
+        if ($exception->details() !== []) {
+            $result['details'] = $exception->details();
+        }
+
+        return $result;
     }
 
     /**
@@ -165,6 +181,7 @@ final class ControlLightRuntime
             'targetRootID' => $targetRootID,
             'localVariableIDs' => [],
             'targetVariableIDs' => [],
+            'groupMembers' => [],
             'externalTriggers' => [],
         ];
 
@@ -223,6 +240,8 @@ final class ControlLightRuntime
                 false
             );
         }
+
+        self::reconcileGroupMembers($ownerScriptID, $configuration, $resources);
 
         foreach ($configuration['externalTriggers'] as $index => $externalTrigger) {
             $sourceVariableID = self::resolveExternalTriggerVariable($externalTrigger);
@@ -289,8 +308,44 @@ final class ControlLightRuntime
         }
 
         try {
-            $currentTargetValue = \GetValue($targetVariableID);
             if (
+                $configuration['groupFeedback']['enabled'] === true
+                && in_array($capability, ['state', 'brightness', 'colorTemperature'], true)
+            ) {
+                return self::dispatchMemberConfirmedActionLocked(
+                    $capability,
+                    $expectedTargetValue,
+                    $targetVariableID,
+                    $resources,
+                    $configuration,
+                    $diagnostics
+                );
+            }
+
+            $currentTargetValue = \GetValue($targetVariableID);
+            $confirmationConfiguration = $configuration;
+            $requiresPowerOnConfirmation = false;
+            $stateTargetVariableID = $resources['targetVariableIDs']['state'] ?? null;
+            if (
+                $capability === 'color'
+                && $configuration['colorOffStateTransition']['mode'] === 'target-turns-on'
+                && is_int($stateTargetVariableID)
+                && (bool)\GetValue($stateTargetVariableID) === false
+            ) {
+                $requiresPowerOnConfirmation = true;
+                $confirmationConfiguration['colorHueToleranceDegrees'] =
+                    $configuration['colorOffStateTransition']['hueToleranceDegrees'];
+                $confirmationConfiguration['colorSaturationTolerancePercentagePoints'] =
+                    $configuration['colorOffStateTransition']['saturationTolerancePercentagePoints'];
+            }
+            if (
+                !$requiresPowerOnConfirmation
+                && !(
+                    $capability === 'state'
+                    && (bool)$expectedTargetValue === false
+                    && $configuration['stateCommandMode'] === ControlLightCore::STATE_COMMAND_OFF_ONLY
+                )
+                &&
                 ControlLightCore::targetValueMatches(
                     $capability,
                     $expectedTargetValue,
@@ -302,33 +357,69 @@ final class ControlLightRuntime
 
                 return ['status' => 'already_confirmed', 'capability' => $capability];
             }
+            if (
+                $capability === 'state'
+                && (bool)$expectedTargetValue === true
+                && $configuration['stateCommandMode'] === ControlLightCore::STATE_COMMAND_OFF_ONLY
+            ) {
+                throw new ControlLightCommandException(
+                    ControlLightCommandException::FAILURE_MANUAL_ACTIVATION_REQUIRED,
+                    $capability,
+                    ['requestedState' => true]
+                );
+            }
 
             if (!\RequestAction($targetVariableID, $expectedTargetValue)) {
                 throw new RuntimeException('Target action rejected the requested value: ' . $capability);
             }
             \SAEF_IncrementStatistic($diagnostics['statisticIDs']['COMMANDS']);
 
+            $timeoutMilliseconds = $configuration['confirmation']['timeoutMilliseconds'];
+            $deadline = microtime(true) + ($timeoutMilliseconds / 1000);
             $confirmed = ControlLightCore::targetValueMatches(
                 $capability,
                 $expectedTargetValue,
                 \GetValue($targetVariableID),
-                $configuration
+                $confirmationConfiguration
             );
-            if (!$confirmed && $configuration['confirmation']['timeoutMilliseconds'] > 0) {
+            $remainingMilliseconds = self::remainingMilliseconds($deadline);
+            if (!$confirmed && $remainingMilliseconds > 0) {
+                $pollIntervalMilliseconds = min(
+                    $configuration['confirmation']['pollIntervalMilliseconds'],
+                    $remainingMilliseconds
+                );
                 $confirmed = \SAEF_WaitForVariable(
                     $targetVariableID,
-                    $configuration['confirmation']['timeoutMilliseconds'],
-                    $configuration['confirmation']['pollIntervalMilliseconds'],
+                    $remainingMilliseconds,
+                    $pollIntervalMilliseconds,
                     null,
                     \SAEF_WAIT_UPDATED,
-                    $configuration['confirmation']['pollIntervalMilliseconds'],
+                    $pollIntervalMilliseconds,
                     static fn(mixed $actual): bool => ControlLightCore::targetValueMatches(
                         $capability,
                         $expectedTargetValue,
                         $actual,
-                        $configuration
+                        $confirmationConfiguration
                     )
                 );
+            }
+            if ($confirmed && $requiresPowerOnConfirmation) {
+                $confirmed = self::readTargetState((int)$stateTargetVariableID);
+                $remainingMilliseconds = self::remainingMilliseconds($deadline);
+                if (!$confirmed && $remainingMilliseconds > 0) {
+                    $pollIntervalMilliseconds = min(
+                        $configuration['confirmation']['pollIntervalMilliseconds'],
+                        $remainingMilliseconds
+                    );
+                    $confirmed = \SAEF_WaitForVariable(
+                        $stateTargetVariableID,
+                        $remainingMilliseconds,
+                        $pollIntervalMilliseconds,
+                        true,
+                        \SAEF_WAIT_UPDATED,
+                        $pollIntervalMilliseconds
+                    );
+                }
             }
 
             self::syncAll($resources, $configuration);
@@ -348,6 +439,257 @@ final class ControlLightRuntime
                 \IPS_LogMessage('SAEF ControlLight v2', 'Unable to release ControlLight semaphore.');
             }
         }
+    }
+
+    private static function remainingMilliseconds(float $deadline): int
+    {
+        return max(0, (int)ceil(($deadline - microtime(true)) * 1000));
+    }
+
+    private static function readTargetState(int $variableID): bool
+    {
+        return (bool)\GetValue($variableID);
+    }
+
+    /**
+     * Executes one group command and confirms the endpoint and every configured
+     * member inside one shared deadline.
+     *
+     * @param array<string, mixed> $resources
+     * @param array<string, mixed> $configuration
+     * @param array<string, mixed> $diagnostics
+     *
+     * @return array<string, mixed>
+     */
+    private static function dispatchMemberConfirmedActionLocked(
+        string $capability,
+        mixed $expectedTargetValue,
+        int $targetVariableID,
+        array $resources,
+        array $configuration,
+        array $diagnostics
+    ): array {
+        $preMatches = [];
+        foreach ($resources['groupMembers'] as $member) {
+            $preMatches[$member['key']] = self::groupMemberValueMatches(
+                $capability,
+                $expectedTargetValue,
+                $member,
+                $configuration
+            );
+        }
+        $initial = self::groupConfirmationSnapshot(
+            $capability,
+            $expectedTargetValue,
+            $targetVariableID,
+            $resources,
+            $configuration,
+            $preMatches
+        );
+        if ($initial['confirmed'] === true) {
+            self::syncAll($resources, $configuration);
+
+            return ['status' => 'already_confirmed', 'capability' => $capability];
+        }
+
+        $targetBaseline = \IPS_GetVariable($targetVariableID);
+        if (!\RequestAction($targetVariableID, $expectedTargetValue)) {
+            throw new RuntimeException('Target action rejected the requested value: ' . $capability);
+        }
+        \SAEF_IncrementStatistic($diagnostics['statisticIDs']['COMMANDS']);
+
+        $snapshot = self::groupConfirmationSnapshot(
+            $capability,
+            $expectedTargetValue,
+            $targetVariableID,
+            $resources,
+            $configuration,
+            $preMatches
+        );
+        $timeoutMilliseconds = $configuration['confirmation']['timeoutMilliseconds'];
+        $pollIntervalMilliseconds = $configuration['confirmation']['pollIntervalMilliseconds'];
+        $deadline = microtime(true) + ($timeoutMilliseconds / 1000);
+        while ($snapshot['confirmed'] !== true && microtime(true) < $deadline) {
+            $remainingMilliseconds = max(1, (int)ceil(($deadline - microtime(true)) * 1000));
+            \IPS_Sleep(min($pollIntervalMilliseconds, $remainingMilliseconds));
+            $snapshot = self::groupConfirmationSnapshot(
+                $capability,
+                $expectedTargetValue,
+                $targetVariableID,
+                $resources,
+                $configuration,
+                $preMatches
+            );
+        }
+
+        if ($snapshot['confirmed'] !== true) {
+            \SAEF_IncrementStatistic($diagnostics['statisticIDs']['CONFIRMATION_TIMEOUTS']);
+            [$failureClass, $details] = self::groupFailure(
+                $snapshot,
+                $targetVariableID,
+                $targetBaseline
+            );
+            throw new ControlLightCommandException($failureClass, $capability, $details);
+        }
+
+        self::syncAll($resources, $configuration);
+        \SAEF_SetStatisticTimestamp($diagnostics['statisticIDs']['LAST_FEEDBACK']);
+
+        return ['status' => 'confirmed', 'capability' => $capability];
+    }
+
+    /**
+     * @param array<string, mixed> $resources
+     * @param array<string, mixed> $configuration
+     * @param array<string, bool> $preMatches
+     *
+     * @return array<string, mixed>
+     */
+    private static function groupConfirmationSnapshot(
+        string $capability,
+        mixed $expectedTargetValue,
+        int $targetVariableID,
+        array $resources,
+        array $configuration,
+        array $preMatches
+    ): array {
+        $pendingKeys = [];
+        $staleKeys = [];
+        $offlineKeys = [];
+        foreach ($resources['groupMembers'] as $member) {
+            $matches = self::groupMemberValueMatches(
+                $capability,
+                $expectedTargetValue,
+                $member,
+                $configuration
+            );
+            $fresh = self::groupMemberIsFresh($member, $configuration, $capability);
+            $wasAlreadyMatching = $preMatches[$member['key']] ?? false;
+            if (!$matches || ($wasAlreadyMatching && !$fresh)) {
+                $pendingKeys[] = $member['key'];
+            }
+            if ($matches && $wasAlreadyMatching && !$fresh) {
+                $staleKeys[] = $member['key'];
+            }
+            if ((bool)\GetValue($member['availabilityVariableID']) !== true) {
+                $offlineKeys[] = $member['key'];
+            }
+        }
+
+        $endpointMatches = ControlLightCore::targetValueMatches(
+            $capability,
+            $expectedTargetValue,
+            \GetValue($targetVariableID),
+            $configuration
+        );
+
+        return [
+            'confirmed' => $endpointMatches && $pendingKeys === [],
+            'endpointMatches' => $endpointMatches,
+            'memberCount' => count($resources['groupMembers']),
+            'pendingKeys' => $pendingKeys,
+            'staleKeys' => $staleKeys,
+            'offlineKeys' => $offlineKeys,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $member
+     * @param array<string, mixed> $configuration
+     */
+    private static function groupMemberValueMatches(
+        string $capability,
+        mixed $expectedTargetValue,
+        array $member,
+        array $configuration
+    ): bool {
+        $variableID = match ($capability) {
+            'state' => $member['stateVariableID'],
+            'brightness' => $member['brightnessVariableID'],
+            'colorTemperature' => $member['colorTemperatureVariableID'],
+            default => throw new RuntimeException(
+                'Unsupported member-confirmed group capability: ' . $capability
+            ),
+        };
+        if ($capability === 'state') {
+            return (bool)\GetValue($variableID) === (bool)$expectedTargetValue;
+        }
+        if ($capability === 'brightness') {
+            return abs((int)\GetValue($variableID) - (int)$expectedTargetValue)
+                <= $configuration['groupFeedback']['brightnessTolerance'];
+        }
+
+        return ControlLightCore::targetValueMatches(
+            $capability,
+            $expectedTargetValue,
+            \GetValue($variableID),
+            $configuration
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $member
+     * @param array<string, mixed> $configuration
+     */
+    private static function groupMemberIsFresh(
+        array $member,
+        array $configuration,
+        string $capability
+    ): bool {
+        $minimumTimestamp = time() - $configuration['groupFeedback']['freshnessSeconds'];
+        $lastSeen = (int)\GetValue($member['lastSeenVariableID']);
+        $variableID = match ($capability) {
+            'state' => $member['stateVariableID'],
+            'brightness' => $member['brightnessVariableID'],
+            'colorTemperature' => $member['colorTemperatureVariableID'],
+            default => throw new RuntimeException(
+                'Unsupported group freshness capability: ' . $capability
+            ),
+        };
+        $capabilityUpdated = \IPS_GetVariable($variableID)['VariableUpdated'];
+
+        return max($lastSeen, $capabilityUpdated) >= $minimumTimestamp;
+    }
+
+    /**
+     * @param array<string, mixed> $snapshot
+     * @param array<string, mixed> $targetBaseline
+     *
+     * @return array{0: string, 1: array<string, mixed>}
+     */
+    private static function groupFailure(
+        array $snapshot,
+        int $targetVariableID,
+        array $targetBaseline
+    ): array {
+        $pendingKeys = array_slice($snapshot['pendingKeys'], 0, 32);
+        $details = [
+            'memberCount' => $snapshot['memberCount'],
+            'pendingCount' => count($snapshot['pendingKeys']),
+            'memberKeys' => $pendingKeys,
+        ];
+        if ($snapshot['offlineKeys'] !== []) {
+            $details['offlineCount'] = count($snapshot['offlineKeys']);
+            return [ControlLightCommandException::FAILURE_GROUP_MEMBER_OFFLINE, $details];
+        }
+        if (
+            $snapshot['pendingKeys'] !== []
+            && count($snapshot['staleKeys']) === count($snapshot['pendingKeys'])
+        ) {
+            $details['staleCount'] = count($snapshot['staleKeys']);
+            return [ControlLightCommandException::FAILURE_GROUP_MEMBER_STALE, $details];
+        }
+        if ($snapshot['pendingKeys'] !== []) {
+            return [ControlLightCommandException::FAILURE_GROUP_PARTIAL_FEEDBACK, $details];
+        }
+
+        $targetUpdated = \IPS_GetVariable($targetVariableID)['VariableUpdated'];
+        $baselineUpdated = (int)($targetBaseline['VariableUpdated'] ?? 0);
+        if ($targetUpdated > $baselineUpdated) {
+            return [ControlLightCommandException::FAILURE_GROUP_PROJECTION_MISMATCH, $details];
+        }
+
+        return [ControlLightCommandException::FAILURE_GROUP_ENDPOINT_TIMEOUT, $details];
     }
 
     /**
@@ -385,6 +727,7 @@ final class ControlLightRuntime
         $updatedRegistry['version'] = $configuration['version'];
         $updatedRegistry['configurationHash'] = $configurationHash;
         $updatedRegistry['brightnessSemantics'] = $configuration['brightnessSemantics'];
+        $updatedRegistry['feedbackAuthority'] = $configuration['groupFeedback']['mode'];
         if ($updatedRegistry !== $registry) {
             \SAEF_WriteRegistry($registryID, $updatedRegistry);
         }
@@ -446,18 +789,34 @@ final class ControlLightRuntime
             return;
         }
 
-        $targetState = null;
-        if (isset($resources['targetVariableIDs']['state'])) {
-            $targetState = (bool)\GetValue($resources['targetVariableIDs']['state']);
-        }
-        $localValue = ControlLightCore::targetToLocal(
-            $capability,
-            \GetValue($targetVariableID),
-            $configuration,
-            $targetState
-        );
-        if (\GetValue($localVariableID) !== $localValue) {
-            \SetValue($localVariableID, $localValue);
+        if ($capability === 'state' && $configuration['groupFeedback']['enabled'] === true) {
+            $derivedState = self::deriveFreshGroupState($resources, $configuration);
+            if ($derivedState === null) {
+                return;
+            }
+            if (\GetValue($localVariableID) !== $derivedState) {
+                \SetValue($localVariableID, $derivedState);
+            }
+            $localValue = $derivedState;
+        } else {
+            $targetState = null;
+            if ($configuration['groupFeedback']['enabled'] === true) {
+                $groupStateVariableID = $resources['localVariableIDs']['state'] ?? null;
+                if (is_int($groupStateVariableID)) {
+                    $targetState = (bool)\GetValue($groupStateVariableID);
+                }
+            } elseif (isset($resources['targetVariableIDs']['state'])) {
+                $targetState = (bool)\GetValue($resources['targetVariableIDs']['state']);
+            }
+            $localValue = ControlLightCore::targetToLocal(
+                $capability,
+                \GetValue($targetVariableID),
+                $configuration,
+                $targetState
+            );
+            if (\GetValue($localVariableID) !== $localValue) {
+                \SetValue($localVariableID, $localValue);
+            }
         }
 
         if ($capability === 'state' && $configuration['brightnessSemantics'] === ControlLightCore::BRIGHTNESS_EFFECTIVE) {
@@ -473,6 +832,131 @@ final class ControlLightRuntime
                 }
             }
         }
+    }
+
+    /**
+     * @param array<string, mixed> $configuration
+     * @param array<string, mixed> $resources
+     */
+    private static function reconcileGroupMembers(
+        int $ownerScriptID,
+        array $configuration,
+        array &$resources
+    ): void {
+        $desiredEventIdents = [];
+        if ($configuration['groupFeedback']['enabled'] === true) {
+            foreach ($configuration['groupFeedback']['members'] as $index => $member) {
+                self::assertFeedbackVariable($member['stateVariableID'], 0, $member['key'] . ' state');
+                self::assertFeedbackVariable(
+                    $member['brightnessVariableID'],
+                    1,
+                    $member['key'] . ' brightness'
+                );
+                if (isset($member['colorTemperatureVariableID'])) {
+                    self::assertFeedbackVariable(
+                        $member['colorTemperatureVariableID'],
+                        1,
+                        $member['key'] . ' color_temperature'
+                    );
+                }
+                self::assertFeedbackVariable(
+                    $member['availabilityVariableID'],
+                    0,
+                    $member['key'] . ' availability'
+                );
+                self::assertFeedbackVariable(
+                    $member['lastSeenVariableID'],
+                    1,
+                    $member['key'] . ' last_seen'
+                );
+                $resources['groupMembers'][] = $member;
+
+                $memberCapabilities = [
+                    'state' => $member['stateVariableID'],
+                    'brightness' => $member['brightnessVariableID'],
+                ];
+                if (isset($member['colorTemperatureVariableID'])) {
+                    $memberCapabilities['colorTemperature'] =
+                        $member['colorTemperatureVariableID'];
+                }
+                foreach ($memberCapabilities as $capability => $variableID) {
+                    $eventIdent = self::memberEventIdent($index, $capability);
+                    $desiredEventIdents[$eventIdent] = true;
+                    \SAEF_EnsureTriggeredScriptEvent(
+                        $ownerScriptID,
+                        $eventIdent,
+                        $eventIdent,
+                        $ownerScriptID,
+                        $variableID,
+                        $capability === 'state' ? 0 : 1,
+                        true,
+                        null,
+                        true,
+                        false
+                    );
+                }
+            }
+        }
+
+        foreach (\IPS_GetChildrenIDs($ownerScriptID) as $childID) {
+            $object = \IPS_GetObject($childID);
+            $ident = (string)($object['ObjectIdent'] ?? '');
+            if (
+                $object['ObjectType'] === 4
+                && str_starts_with($ident, 'EV_MEMBER_')
+                && !isset($desiredEventIdents[$ident])
+            ) {
+                \IPS_SetEventActive($childID, false);
+            }
+        }
+    }
+
+    private static function assertFeedbackVariable(int $variableID, int $expectedType, string $label): void
+    {
+        if (!\IPS_VariableExists($variableID)) {
+            throw new RuntimeException('Group feedback variable does not exist: ' . $label);
+        }
+        if (\IPS_GetVariable($variableID)['VariableType'] !== $expectedType) {
+            throw new RuntimeException('Group feedback variable type mismatch: ' . $label);
+        }
+    }
+
+    private static function memberEventIdent(int $index, string $capability): string
+    {
+        return sprintf(
+            'EV_MEMBER_%02d_%s',
+            $index,
+            match ($capability) {
+                'state' => 'STATE',
+                'brightness' => 'DIM',
+                'colorTemperature' => 'TEMP',
+                default => throw new InvalidArgumentException(
+                    'Unsupported member event capability: ' . $capability
+                ),
+            }
+        );
+    }
+
+    /**
+     * Returns null only when every observed member is off but at least one
+     * member lacks fresh evidence. A reported on value is retained fail-safe.
+     *
+     * @param array<string, mixed> $resources
+     * @param array<string, mixed> $configuration
+     */
+    private static function deriveFreshGroupState(array $resources, array $configuration): ?bool
+    {
+        $allFresh = true;
+        foreach ($resources['groupMembers'] as $member) {
+            if ((bool)\GetValue($member['stateVariableID'])) {
+                return true;
+            }
+            if (!self::groupMemberIsFresh($member, $configuration, 'state')) {
+                $allFresh = false;
+            }
+        }
+
+        return $allFresh ? false : null;
     }
 
     private static function resolveTargetRoot(int $parentID): ?int
@@ -584,6 +1068,27 @@ final class ControlLightRuntime
                 return $capability;
             }
         }
+        return null;
+    }
+
+    /** @param array<string, mixed> $resources */
+    private static function capabilityForMemberVariable(int $variableID, array $resources): ?string
+    {
+        foreach ($resources['groupMembers'] ?? [] as $member) {
+            if ($member['stateVariableID'] === $variableID) {
+                return 'state';
+            }
+            if ($member['brightnessVariableID'] === $variableID) {
+                return 'brightness';
+            }
+            if (
+                isset($member['colorTemperatureVariableID'])
+                && $member['colorTemperatureVariableID'] === $variableID
+            ) {
+                return 'colorTemperature';
+            }
+        }
+
         return null;
     }
 
@@ -765,6 +1270,9 @@ final class ControlLightRuntime
             if ($exception instanceof ControlLightCommandException) {
                 $context['failureClass'] = $exception->failureClass();
                 $context['capability'] = $exception->capability();
+                if ($exception->details() !== []) {
+                    $context['details'] = $exception->details();
+                }
             }
             \SAEF_AppendErrorRingBufferEntry(
                 $diagnostics['errorRingBufferID'],

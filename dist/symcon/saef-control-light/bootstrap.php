@@ -50,6 +50,10 @@ foreach ([
     'SAEF\CaseStudy\ControlLight\ControlLightCommandException',
     'SAEF\CaseStudy\ControlLight\ControlLightCore',
     'SAEF\CaseStudy\ControlLight\ControlLightRuntime',
+    'SAEF\CaseStudy\ControlLight\HueWallSwitchCore',
+    'SAEF\CaseStudy\ControlLight\HueWallSwitchRuntime',
+    'SAEF\CaseStudy\ControlLight\ManualOnPulseOffCore',
+    'SAEF\CaseStudy\ControlLight\ManualOnPulseOffRuntime',
 ] as $saefFilesetClass) {
     if (class_exists($saefFilesetClass, false)) {
         $saefFilesetConflicts[] = 'class ' . $saefFilesetClass;

@@ -31,7 +31,7 @@
         },
         {
             "path": "helpers/diagnostics/Statistics.php",
-            "sha256": "c1ba9553649556c904118c3757c52b75f54cb3b3ce1356ff6d3d6794a58ee40d"
+            "sha256": "6db23cabc1bd8109b7987ef6742d0f705476d52e2ff9d5ae85168f1d0f931dbb"
         },
         {
             "path": "helpers/object/EnsureCategory.php",
@@ -63,7 +63,7 @@
         }
     ],
     "bootstrapSha256": "dd9ffc5d3dabaf4e0e467a5eb8f6b815bed97854cf0c1f6cbca0369cd4555674",
-    "filesetSha256": "e087e077292f0b639f4188979f2ca1d382879bd01f9b1db96b096b4764a90061",
+    "filesetSha256": "f7af7417bab359260f2557f0cdf4331f0af493e5b6a433eaa53b43bb9f9f15dc",
     "functionExports": [
         "SAEF_AppendErrorRingBufferEntry",
         "SAEF_ClearErrorRingBuffer",

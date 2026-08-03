@@ -14,6 +14,14 @@ final class DiagnosticsHelperFakeRuntime
     /** @var array<int, mixed> */
     public static array $values = [];
 
+    public static bool $semaphoreAvailable = true;
+
+    /** @var list<string> */
+    public static array $semaphoreEnters = [];
+
+    /** @var list<string> */
+    public static array $semaphoreLeaves = [];
+
     public static function reset(): void
     {
         self::$nextID = 1000;
@@ -29,6 +37,9 @@ final class DiagnosticsHelperFakeRuntime
         ];
         self::$variables = [];
         self::$values = [];
+        self::$semaphoreAvailable = true;
+        self::$semaphoreEnters = [];
+        self::$semaphoreLeaves = [];
     }
 
     public static function addVariable(int $type, mixed $value, string $ident = ''): int
@@ -160,6 +171,20 @@ function SetValue(int $id, mixed $value): void
     DiagnosticsHelperFakeRuntime::$values[$id] = $value;
 }
 
+function IPS_SemaphoreEnter(string $name, int $milliseconds): bool
+{
+    DiagnosticsHelperFakeRuntime::$semaphoreEnters[] = $name . ':' . $milliseconds;
+
+    return DiagnosticsHelperFakeRuntime::$semaphoreAvailable;
+}
+
+function IPS_SemaphoreLeave(string $name): bool
+{
+    DiagnosticsHelperFakeRuntime::$semaphoreLeaves[] = $name;
+
+    return true;
+}
+
 require_once __DIR__ . '/../../helpers/diagnostics/ConfigurationHash.php';
 require_once __DIR__ . '/../../helpers/diagnostics/Registry.php';
 require_once __DIR__ . '/../../helpers/diagnostics/Statistics.php';
@@ -288,6 +313,16 @@ $tests['increments finite integer and float statistics'] = static function (): v
 
     assertDiagnosticsSame(5, SAEF_IncrementStatistic($integerID, 2.0), 'Integer increment differs.');
     assertDiagnosticsSame(2.0, SAEF_IncrementStatistic($floatID, 0.5), 'Float increment differs.');
+    assertDiagnosticsSame(
+        ['SAEF_STATISTIC_' . $integerID . ':1000', 'SAEF_STATISTIC_' . $floatID . ':1000'],
+        DiagnosticsHelperFakeRuntime::$semaphoreEnters,
+        'Statistic increments did not use variable-specific serialization.'
+    );
+    assertDiagnosticsSame(
+        ['SAEF_STATISTIC_' . $integerID, 'SAEF_STATISTIC_' . $floatID],
+        DiagnosticsHelperFakeRuntime::$semaphoreLeaves,
+        'Statistic increment semaphores were not released.'
+    );
 
     assertDiagnosticsThrows(
         InvalidArgumentException::class,
@@ -308,6 +343,15 @@ $tests['increments finite integer and float statistics'] = static function (): v
         static fn(): int|float => SAEF_IncrementStatistic($floatID, INF),
         'Infinite float result was accepted.'
     );
+
+    DiagnosticsHelperFakeRuntime::$values[$integerID] = 5;
+    DiagnosticsHelperFakeRuntime::$semaphoreAvailable = false;
+    assertDiagnosticsThrows(
+        RuntimeException::class,
+        static fn(): int|float => SAEF_IncrementStatistic($integerID),
+        'Busy statistic increment was accepted.'
+    );
+    assertDiagnosticsSame(5, GetValue($integerID), 'Busy statistic increment changed the value.');
 };
 
 $tests['sets timestamps and rejects incompatible statistic types'] = static function (): void {

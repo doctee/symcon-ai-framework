@@ -7,11 +7,11 @@
     "orderedSources": [
         {
             "path": "case-studies/control-light/candidate/ControlLightCommandException.php",
-            "sha256": "b5357a30e60b6a22b494264463a2361f7cef8d6d6b8bdf84f6cf67d0ddd25d20"
+            "sha256": "9c58b6fad43d953341e7d047ac47f5cc23b087c93ecb8884a71225d33450cc17"
         },
         {
             "path": "case-studies/control-light/candidate/ControlLightCore.php",
-            "sha256": "5a430cb529b26a7b45f7c982f1f80d667ff604eb8e4e3e4ed3e59363b72892a3"
+            "sha256": "aceac0652a1c774f0bbbbfcc2d37cef4fc708c1ed9e9b728008c080acdc9207c"
         },
         {
             "path": "helpers/diagnostics/ConfigurationHash.php",
@@ -35,7 +35,7 @@
         },
         {
             "path": "helpers/diagnostics/Statistics.php",
-            "sha256": "c1ba9553649556c904118c3757c52b75f54cb3b3ce1356ff6d3d6794a58ee40d"
+            "sha256": "6db23cabc1bd8109b7987ef6742d0f705476d52e2ff9d5ae85168f1d0f931dbb"
         },
         {
             "path": "helpers/object/EnsureEvent.php",
@@ -51,7 +51,23 @@
         },
         {
             "path": "case-studies/control-light/candidate/ControlLightRuntime.php",
-            "sha256": "ce2a20e31a36833647e76b6b5ced0d3d47e93e017252dec29347ba0d9a3d0d91"
+            "sha256": "8019978dbb6508e43831c7613275d3fd3a0f5b313d3b740865cd7ec891ff557a"
+        },
+        {
+            "path": "case-studies/control-light/candidate/HueWallSwitchCore.php",
+            "sha256": "8f5e5c09361c310b44b2ce7766d7e96b2c97ceb87ae8e2538a5d0c32e9a58c3e"
+        },
+        {
+            "path": "case-studies/control-light/candidate/HueWallSwitchRuntime.php",
+            "sha256": "30d50a7ee2d30eb769bb47b5f021e2abcb1f32568c954e61459b00711bd878ea"
+        },
+        {
+            "path": "case-studies/control-light/candidate/ManualOnPulseOffCore.php",
+            "sha256": "5b62c98a4d60750f3afcb2d4f66ee17ae194ab27727b0c4f2959f88cad1a44cd"
+        },
+        {
+            "path": "case-studies/control-light/candidate/ManualOnPulseOffRuntime.php",
+            "sha256": "bac40454d00f7807685fd9e71cac008f49d5803075cd3cfbd46750d6fec1dd1f"
         },
         {
             "path": "helpers/object/EnsureScript.php",
@@ -59,11 +75,11 @@
         },
         {
             "path": "case-studies/control-light/candidate/ControlLightFileset.php",
-            "sha256": "409da93fb016f2e18e5994502215b8bf862c08ce1ea8468284d7b37b90a8f7d9"
+            "sha256": "3f26cae8b90da5c0611e86d2921fcf27063c4ff215bcc9aa2eadac300648eb6c"
         }
     ],
-    "bootstrapSha256": "93a3dd2520d445d6ff6a007a0ab64069387ba006227197c5c8d3bce853f29fec",
-    "filesetSha256": "466ec7ea9c16c8cfad2bdbb3fc7c0cf70460c306fee98a20e9c907dce59bb4b2",
+    "bootstrapSha256": "deca67e7f408f05c7a46be6495b3f165f80b7143d096eb3ea23964ad411b0b66",
+    "filesetSha256": "3e3636337b9e1f841b304d895effe1f813b82c8acb9b69f9b547436d538b9583",
     "functionExports": [
         "SAEF_AppendErrorRingBufferEntry",
         "SAEF_ClearErrorRingBuffer",
@@ -105,7 +121,11 @@
     "classExports": [
         "SAEF\\CaseStudy\\ControlLight\\ControlLightCommandException",
         "SAEF\\CaseStudy\\ControlLight\\ControlLightCore",
-        "SAEF\\CaseStudy\\ControlLight\\ControlLightRuntime"
+        "SAEF\\CaseStudy\\ControlLight\\ControlLightRuntime",
+        "SAEF\\CaseStudy\\ControlLight\\HueWallSwitchCore",
+        "SAEF\\CaseStudy\\ControlLight\\HueWallSwitchRuntime",
+        "SAEF\\CaseStudy\\ControlLight\\ManualOnPulseOffCore",
+        "SAEF\\CaseStudy\\ControlLight\\ManualOnPulseOffRuntime"
     ],
     "guardConstants": [
         "SAEF_ERROR_RING_BUFFER_MAX_CAPACITY",

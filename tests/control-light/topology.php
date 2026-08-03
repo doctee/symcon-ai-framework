@@ -359,4 +359,82 @@ assertTopologySame(
     'Unchanged diagnostics initialization rewrote the Registry.'
 );
 
+ControlLightTopologyFake::variable(301, 200, 'member_1_state', 'Member 1 State', 0, '', 0);
+ControlLightTopologyFake::variable(302, 200, 'member_1_brightness', 'Member 1 Brightness', 1, '', 0);
+ControlLightTopologyFake::variable(303, 200, 'member_1_availability', 'Member 1 Availability', 0, '', 0);
+ControlLightTopologyFake::variable(304, 200, 'member_1_last_seen', 'Member 1 Last Seen', 1, '', 0);
+ControlLightTopologyFake::variable(311, 200, 'member_2_state', 'Member 2 State', 0, '', 0);
+ControlLightTopologyFake::variable(312, 200, 'member_2_brightness', 'Member 2 Brightness', 1, '', 0);
+ControlLightTopologyFake::variable(313, 200, 'member_2_availability', 'Member 2 Availability', 0, '', 0);
+ControlLightTopologyFake::variable(314, 200, 'member_2_last_seen', 'Member 2 Last Seen', 1, '', 0);
+ControlLightTopologyFake::event(350, 200, 'FOREIGN_MEMBER_WARNING', 'Foreign Warning', 1, false, true, 1, 301);
+
+$groupConfiguration = ControlLightCore::normalizeConfiguration([
+    'preset' => 'Z2M',
+    'identTemp' => '',
+    'identColor' => '',
+    'brightnessSemantics' => ControlLightCore::BRIGHTNESS_REPORTED,
+    'groupFeedback' => [
+        'mode' => ControlLightCore::FEEDBACK_MEMBER_CONFIRMED,
+        'members' => [
+            [
+                'key' => 'member-1',
+                'stateVariableID' => 301,
+                'brightnessVariableID' => 302,
+                'availabilityVariableID' => 303,
+                'lastSeenVariableID' => 304,
+            ],
+            [
+                'key' => 'member-2',
+                'stateVariableID' => 311,
+                'brightnessVariableID' => 312,
+                'availabilityVariableID' => 313,
+                'lastSeenVariableID' => 314,
+            ],
+        ],
+    ],
+]);
+$groupFirst = ControlLightRuntime::reconcileResources(101, $groupConfiguration);
+$groupObjectCount = count(ControlLightTopologyFake::$objects);
+$groupEventCount = count(ControlLightTopologyFake::$events);
+$groupSecond = ControlLightRuntime::reconcileResources(101, $groupConfiguration);
+assertTopologySame($groupFirst, $groupSecond, 'Repeated group reconciliation changed resource IDs.');
+assertTopologySame(
+    $groupObjectCount,
+    count(ControlLightTopologyFake::$objects),
+    'Repeated group reconciliation created objects.'
+);
+assertTopologySame(
+    $groupEventCount,
+    count(ControlLightTopologyFake::$events),
+    'Repeated group reconciliation created events.'
+);
+foreach (
+    [
+        'EV_MEMBER_00_STATE' => [301, 0],
+        'EV_MEMBER_00_DIM' => [302, 1],
+        'EV_MEMBER_01_STATE' => [311, 0],
+        'EV_MEMBER_01_DIM' => [312, 1],
+    ] as $ident => [$variableID, $triggerType]
+) {
+    $eventID = IPS_GetObjectIDByIdent($ident, 101);
+    if (!is_int($eventID)) {
+        throw new RuntimeException('Managed member event is missing: ' . $ident);
+    }
+    assertTopologySame($variableID, ControlLightTopologyFake::$events[$eventID]['TriggerVariableID'], $ident . ' target differs.');
+    assertTopologySame($triggerType, ControlLightTopologyFake::$events[$eventID]['TriggerType'], $ident . ' trigger differs.');
+    assertTopologySame(true, ControlLightTopologyFake::$events[$eventID]['EventActive'], $ident . ' is inactive.');
+}
+assertTopologySame('Foreign Warning', ControlLightTopologyFake::$objects[350]['ObjectName'], 'Foreign member event changed.');
+assertTopologySame(true, ControlLightTopologyFake::$events[350]['EventActive'], 'Foreign member event was disabled.');
+
+ControlLightRuntime::reconcileResources(101, $configuration);
+foreach (['EV_MEMBER_00_STATE', 'EV_MEMBER_00_DIM', 'EV_MEMBER_01_STATE', 'EV_MEMBER_01_DIM'] as $ident) {
+    $eventID = IPS_GetObjectIDByIdent($ident, 101);
+    if (!is_int($eventID)) {
+        throw new RuntimeException('Obsolete member event disappeared: ' . $ident);
+    }
+    assertTopologySame(false, ControlLightTopologyFake::$events[$eventID]['EventActive'], $ident . ' remained active.');
+}
+
 fwrite(STDOUT, 'PASS: ControlLight topology ownership, presentation and idempotency contract.' . PHP_EOL);
