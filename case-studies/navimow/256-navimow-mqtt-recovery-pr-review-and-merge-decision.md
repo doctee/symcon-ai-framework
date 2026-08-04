@@ -232,10 +232,10 @@ Neither this report nor its publication authorizes changing canonical `main`.
 | productive-delta review | PASS, no blocking findings |
 | privacy and receive-only review | PASS |
 | reviewed-head GitHub checks | PASS, 2 of 2 |
-| report-only final-head verification | PENDING CLOSURE PUSH |
+| report-only final-head verification | PASS |
 | PR merge recommendation | CONDITIONAL YES |
-| PR ready-state change | CLOSED |
-| PR merge | CLOSED |
+| PR ready-state change | AUTHORIZED IN STEP 257 |
+| PR merge | AUTHORIZED IN STEP 257 |
 | canonical-main verification | CLOSED |
 | standalone publication | CLOSED |
 | metadata validation | CLOSED |
