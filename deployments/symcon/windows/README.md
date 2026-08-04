@@ -277,6 +277,24 @@ The default local policy permits at most 16 staged deployments and 512 MiB of
 managed files. Reaching either limit fails closed and requires deliberate local
 retention cleanup; no remote delete operation exists.
 
+Retention cleanup must preserve the one-deployment-to-one-fileset invariant.
+Create a private plan from `deployment-retention-plan.example.json` and run the
+cleanup script without `-Apply` first. The preflight reads every retained
+`deployment.json`, rejects missing, duplicate or cross-paired mappings, scans
+runtime files for candidate-fileset references, simulates removal of the exact
+pairs and writes a machine-readable status. A later, separately authorized
+`-Apply` run requires a local administrator, creates and SHA-256-verifies a
+private backup, removes only the declared pairs and revalidates the complete
+mapping. Deployment-only or fileset-only cleanup is intentionally unsupported.
+
+```powershell
+& .\Invoke-SaefDeploymentRetentionCleanup.ps1 `
+    -PlanPath '.\deployment-retention-plan.local.json'
+
+$LASTEXITCODE
+Get-Content .\deployment-retention-cleanup-status.local.json -Raw
+```
+
 ### One-time Windows boundary
 
 Use a dedicated local Windows account and a dedicated Ed25519 SSH key. Deny

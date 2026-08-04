@@ -1,0 +1,17 @@
+{
+    "formatVersion": 1,
+    "expectedDeploymentCount": 2,
+    "expectedFilesetCount": 2,
+    "candidates": [
+        {
+            "deployment": "saef-obsolete-deployment",
+            "fileset": "saef-obsolete-fileset"
+        }
+    ],
+    "protectedDeployments": [
+        "saef-active-deployment"
+    ],
+    "protectedFilesets": [
+        "saef-active-fileset"
+    ]
+}

@@ -131,6 +131,7 @@ function Assert-SourceChecksums {
     }
     $required = @(
         'Invoke-SaefDeploymentGateway.ps1',
+        'Invoke-SaefDeploymentRetentionCleanup.ps1',
         'Invoke-SaefRuntimeMirror.ps1',
         'Invoke-SaefSymconRestart.ps1',
         'SaefRuntimeHealthProbe.php',
@@ -159,6 +160,7 @@ function Assert-PowerShellSourceSyntax {
     foreach ($name in @(
         'Initialize-SaefDeploymentChannel.ps1',
         'Invoke-SaefDeploymentGateway.ps1',
+        'Invoke-SaefDeploymentRetentionCleanup.ps1',
         'Invoke-SaefRuntimeMirror.ps1',
         'Invoke-SaefSymconRestart.ps1'
     )) {
@@ -417,6 +419,7 @@ try {
     $failedStep = 'runtime_artifacts'
     foreach ($name in @(
         'Invoke-SaefDeploymentGateway.ps1',
+        'Invoke-SaefDeploymentRetentionCleanup.ps1',
         'Invoke-SaefRuntimeMirror.ps1',
         'Invoke-SaefSymconRestart.ps1',
         'SaefRuntimeHealthProbe.php',

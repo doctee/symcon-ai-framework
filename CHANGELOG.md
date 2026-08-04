@@ -11,6 +11,9 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added a guarded Windows deployment-retention tool with exact manifest-pair
+  plans, runtime-reference protection, verified private backups and enforced
+  one-deployment-to-one-fileset checks before simulation and after cleanup.
 - Consolidated the post-v0.3 ControlLight evolution on a clean `origin/main`
   boundary: member-confirmed groups, Hue Wall and Manual-On/Pulse-Off adapters,
   HS/off-state color contracts, per-variable Statistics serialization, the
