@@ -290,7 +290,7 @@ The prior PR merge authorization did not include the standalone repository.
 | private pilot harness | PASS |
 | repository-wide final check | PASS |
 | Gate-A publication readiness | CONDITIONAL GO |
-| Gate-A publication authorization | CLOSED |
+| Gate-A publication authorization | PASS IN STEP 259 |
 | metadata validation | CLOSED |
 | Symcon update | CLOSED |
 | MQTT staging or activation | CLOSED |
