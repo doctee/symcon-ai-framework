@@ -74,9 +74,16 @@ runtime reported a new success and feedback timestamp, and neither its error
 nor confirmation-timeout counter changed. This closes the functional gate that
 the earlier local same-state observation intentionally left open.
 
-## Remaining maintenance
+## Retention closure
 
 The deployment store reached its configured retention capacity during the
-corrected activation. A reviewed retention plan is required before another
-fileset can be staged. Exact installation identities, hashes, timestamps,
-topics, counters and backups remain in private machine-readable evidence.
+corrected activation. A subsequent ownership-exact retention gate identified
+the superseded pre-owner-decoupling candidate as inactive and unreferenced by
+both Symcon scripts and runtime files. The candidate deployment/fileset pair
+was backed up with file-level hash verification and then removed leaf-first.
+
+An independent postflight confirmed a consistent store below capacity, absence
+of the candidate, unchanged active bootstrap and owner sources, availability of
+the active and rollback deployments, and a healthy MQTT gateway. Exact
+installation identities, hashes, timestamps and backup locations remain in
+private machine-readable evidence.
