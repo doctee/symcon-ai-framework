@@ -386,10 +386,10 @@ explicit engineering decision.
 |---|---|
 | recovery inventory | PASS |
 | current-main path-overlap review | PASS, zero overlap |
-| Gate I local mainline integration | CLOSED |
-| post-merge 207-path review | CLOSED |
-| complete post-merge tests | CLOSED |
-| candidate refreeze | CLOSED |
+| Gate I local mainline integration | PASS |
+| post-merge scope review | PASS, 209 paths including steps 253 and 254 |
+| complete post-merge tests | PASS |
+| candidate refreeze | PASS |
 | Gate II branch push and PR | CLOSED |
 | Gate III canonical-main verification | CLOSED |
 | standalone publication | CLOSED |
@@ -400,12 +400,13 @@ explicit engineering decision.
 
 ## 18. Next Step
 
-After explicit Gate-I authorization, proceed with:
+Gate I was completed in step 254. After separate Gate-II authorization,
+proceed with:
 
 ```text
-254-navimow-mqtt-recovery-mainline-integration-and-refreeze.md
+255-navimow-mqtt-recovery-branch-publication-and-pr.md
 ```
 
-That step may perform only the local merge, complete scope review, tests and
-candidate refreeze. It must not push, open a pull request, publish the
-standalone module or access Symcon.
+That step may push only the reviewed recovery branch and open one pull request
+against SAEF `main`. It must not merge the pull request, publish the standalone
+module or access Symcon.

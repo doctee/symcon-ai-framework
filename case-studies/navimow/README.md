@@ -279,6 +279,7 @@ template or a general SAEF reference implementation.
 | `251-native-mqtt-episode-accounting-and-bounded-projection-implementation.md` | Implements the 16-KiB operational summary, switches private pilot policy to cumulative distinct episodes and proves accounting, compatibility and privacy offline. |
 | `252-native-mqtt-episode-accounting-publication-and-symcon-test-plan.md` | Freezes the one-file publication candidate and separates publication, metadata validation and a disabled credential-free summary compatibility update into explicit gates. |
 | `253-navimow-mqtt-recovery-mainline-integration-plan.md` | Supersedes direct publication until the clean recovered 207-path Navimow workstream is integrated with current main, fully reviewed, retested and refrozen. |
+| `254-navimow-mqtt-recovery-mainline-integration-and-refreeze.md` | Integrates current main without conflict, reviews the complete Navimow scope, passes focused and repository-wide checks and reproduces the one-file standalone candidate. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
