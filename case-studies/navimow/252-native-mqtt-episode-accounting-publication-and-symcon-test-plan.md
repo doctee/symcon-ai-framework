@@ -11,6 +11,10 @@ and MQTT activation remain separately closed
 credential-free Symcon update for cumulative episode accounting and the bounded
 pilot summary
 
+**Mainline integration note (2026-08-04):** The recovered workstream predates
+the current canonical SAEF `main`. Direct publication is superseded by step 253
+until mainline integration, complete scope review and candidate refreeze pass.
+
 ## 1. Purpose
 
 Step 251 locally implemented and validated:
@@ -502,11 +506,12 @@ restart testing or another private pilot.
 
 ## 15. Next Step
 
-After explicit Gate-A authorization, proceed with:
+The previously planned direct publication is superseded by the recovered
+workstream's mainline-integration requirement. Proceed first with:
 
 ```text
-253-native-mqtt-episode-accounting-publication.md
+253-navimow-mqtt-recovery-mainline-integration-plan.md
 ```
 
-That step must execute only the frozen one-file publication and remote
-verification. It must not access Symcon or authorize a later gate.
+That step plans current-main integration, the complete 207-path review and
+candidate refreeze. It does not merge, push, publish or access Symcon.
