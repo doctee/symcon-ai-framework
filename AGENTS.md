@@ -70,6 +70,13 @@ Private data belongs in:
 Follow `project/SYMCON_MCP_SCRIPT_READBACK.md` when inspecting an authorized live
 IP-Symcon installation.
 
+- Treat Symcon MCP as the mandatory default live channel. Before any live
+  read or mutation, confirm that the required Symcon MCP tools are callable.
+- If the expected MCP tools are not visible, repeat a complete tool discovery
+  once. If they are still unavailable, stop and report the missing MCP binding.
+- Do not silently fall back to Computer Use, a browser, SSH, PowerShell or a
+  temporary Symcon object. Any such fallback requires separate explicit user
+  authorization after the MCP failure has been reported.
 - Prefer `symcon_get_script_content` for authorized source reads. Do not create
   marker variables or execute the target script when direct read-back is
   available.
@@ -88,6 +95,23 @@ IP-Symcon installation.
   `IPS_SetIdent()` or another mutator until the returned ID passes those checks.
   Failed lookups, missing array entries and false-like results must stop the
   operation; they must never be coerced into an ObjectID.
+
+## Workstream Isolation
+
+Follow `project/WORKSTREAM_COORDINATION.md` for concurrent or cross-cutting
+repository work.
+
+- Start each workstream from a current, clean `origin/main` in a dedicated Git
+  worktree and branch.
+- Never build, package, publish or deploy from a mixed or unexplained dirty
+  checkout.
+- Treat an existing dirty checkout as user-owned recovery input. Do not reset,
+  delete or normalize it while extracting another workstream.
+- Before changing a shared helper, bundle, deployment channel or restart
+  boundary, inventory every exporting artifact, the effective live owner, all
+  known consumers and active observation constraints.
+- Close evidence, rollback and retention decisions before removing a worktree
+  or immutable live artifact.
 
 ## Commit Style
 

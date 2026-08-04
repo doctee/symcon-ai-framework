@@ -188,7 +188,9 @@ $tests['validates and prepares complete reconcile resources'] = static function 
 $tests['prepares command resources through an MQTT Client gateway'] = static function (): void {
     DiagnosticsFakeSymconRuntime::reset();
     $ownerScriptID = DiagnosticsFakeSymconRuntime::createScript();
-    $clientID = DiagnosticsFakeSymconRuntime::createClientInstance();
+    $clientID = DiagnosticsFakeSymconRuntime::createClientInstance(
+        subscriptions: [['Topic' => 'saef/export/test_site/#', 'QoS' => 0]]
+    );
     $fixture = reconcileConfiguration($clientID, true, true, 'client');
     $result = MqttDiscoveryExporterRuntime::prepareReconcile($ownerScriptID, $fixture['configuration']);
 
@@ -213,6 +215,109 @@ $tests['prepares command resources through an MQTT Client gateway'] = static fun
         $entry['adapterModuleID'],
         'Managed client adapter module differs.'
     );
+};
+
+$tests['rejects uncovered MQTT Client command topics before adapters are created'] = static function (): void {
+    DiagnosticsFakeSymconRuntime::reset();
+    $ownerScriptID = DiagnosticsFakeSymconRuntime::createScript();
+    $clientID = DiagnosticsFakeSymconRuntime::createClientInstance(
+        subscriptions: [['Topic' => 'saef/other_site/#', 'QoS' => 0]]
+    );
+    $fixture = reconcileConfiguration($clientID, true, true, 'client');
+
+    assertReconcileThrows(
+        RuntimeException::class,
+        static fn (): array => MqttDiscoveryExporterRuntime::prepareReconcile(
+            $ownerScriptID,
+            $fixture['configuration']
+        ),
+        'Uncovered MQTT Client command topics were accepted.'
+    );
+
+    assertReconcileSame(1, DiagnosticsFakeSymconRuntime::instanceCount(), 'Coverage failure created adapters.');
+    assertReconcileSame(0, DiagnosticsFakeSymconRuntime::eventCount(), 'Coverage failure created events.');
+};
+
+$tests['accepts single-level MQTT Client subscription wildcards'] = static function (): void {
+    DiagnosticsFakeSymconRuntime::reset();
+    $ownerScriptID = DiagnosticsFakeSymconRuntime::createScript();
+    $clientID = DiagnosticsFakeSymconRuntime::createClientInstance(
+        subscriptions: [
+            ['Topic' => 'saef/+/test_site/light/example_lamp/set', 'QoS' => 0],
+            ['Topic' => 'saef/+/test_site/light/example_lamp/+/set', 'QoS' => 0],
+        ]
+    );
+    $fixture = reconcileConfiguration($clientID, true, true, 'client');
+    $result = MqttDiscoveryExporterRuntime::prepareReconcile($ownerScriptID, $fixture['configuration']);
+
+    assertReconcileSame(4, $result['summary']['commandAdapters'], 'Wildcard coverage was not accepted.');
+};
+
+$tests['updates MQTT runtime namespaces in place while cleanup is disabled'] = static function (): void {
+    DiagnosticsFakeSymconRuntime::reset();
+    $ownerScriptID = DiagnosticsFakeSymconRuntime::createScript();
+    $clientID = DiagnosticsFakeSymconRuntime::createClientInstance(
+        subscriptions: [['Topic' => 'saef/#', 'QoS' => 0]]
+    );
+    $fixture = reconcileConfiguration($clientID, true, true, 'client');
+    $first = MqttDiscoveryExporterRuntime::prepareReconcile($ownerScriptID, $fixture['configuration']);
+    $firstEntry = $first['diagnostics']['registry']['managedEntities']['example_lamp.main_light'];
+
+    $migratedConfiguration = $fixture['configuration'];
+    $migratedConfiguration['mqtt']['baseTopic'] = 'saef/migrated';
+    $second = MqttDiscoveryExporterRuntime::prepareReconcile($ownerScriptID, $migratedConfiguration);
+    $secondEntry = $second['diagnostics']['registry']['managedEntities']['example_lamp.main_light'];
+
+    assertReconcileSame(5, DiagnosticsFakeSymconRuntime::instanceCount(), 'Namespace migration recreated adapters.');
+    assertReconcileSame(8, DiagnosticsFakeSymconRuntime::eventCount(), 'Namespace migration recreated events.');
+    assertReconcileSame(
+        $firstEntry['commandInstanceIDs'],
+        $secondEntry['commandInstanceIDs'],
+        'Namespace migration changed command adapter identities.'
+    );
+    assertReconcileSame(
+        $firstEntry['commandEventIDs'],
+        $secondEntry['commandEventIDs'],
+        'Namespace migration changed command event identities.'
+    );
+    foreach ($secondEntry['commandInstanceIDs'] as $commandType => $instanceID) {
+        $adapterConfiguration = json_decode(
+            IPS_GetConfiguration($instanceID),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+        assertReconcileSame(
+            $secondEntry['commandTopics'][$commandType],
+            $adapterConfiguration['Topic'] ?? null,
+            'Namespace migration did not update an adapter topic.'
+        );
+        assertReconcileTrue(
+            str_starts_with($adapterConfiguration['Topic'], 'saef/migrated/'),
+            'Namespace migration retained an old adapter topic.'
+        );
+    }
+};
+
+$tests['rejects malformed MQTT Client subscription wildcards'] = static function (): void {
+    DiagnosticsFakeSymconRuntime::reset();
+    $ownerScriptID = DiagnosticsFakeSymconRuntime::createScript();
+    $clientID = DiagnosticsFakeSymconRuntime::createClientInstance(
+        subscriptions: [['Topic' => 'saef/export/#/set', 'QoS' => 0]]
+    );
+    $fixture = reconcileConfiguration($clientID, true, true, 'client');
+
+    assertReconcileThrows(
+        RuntimeException::class,
+        static fn (): array => MqttDiscoveryExporterRuntime::prepareReconcile(
+            $ownerScriptID,
+            $fixture['configuration']
+        ),
+        'Malformed MQTT Client subscription wildcard was accepted.'
+    );
+
+    assertReconcileSame(1, DiagnosticsFakeSymconRuntime::instanceCount(), 'Wildcard failure created adapters.');
+    assertReconcileSame(0, DiagnosticsFakeSymconRuntime::eventCount(), 'Wildcard failure created events.');
 };
 
 $tests['repeated preparation is object-idempotent'] = static function (): void {

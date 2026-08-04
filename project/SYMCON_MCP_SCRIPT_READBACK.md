@@ -13,10 +13,15 @@ script content or installation metadata in public artifacts.
 ## Preferred read-back workflow
 
 1. Obtain authorization for the target and purpose.
-2. Read authorized source directly with `symcon_get_script_content`.
-3. Inspect the result only in transient working context.
-4. Do not execute or modify the target merely to read it.
-5. Do not reproduce source or installation metadata in public SAEF artifacts.
+2. Confirm that the required Symcon MCP tools are callable before selecting any
+   other live-system tool.
+3. If the expected tools are not visible, repeat complete tool discovery once.
+4. If they remain unavailable, stop and report that the Symcon MCP binding is
+   missing. Do not silently change channels.
+5. Read authorized source directly with `symcon_get_script_content`.
+6. Inspect the result only in transient working context.
+7. Do not execute or modify the target merely to read it.
+8. Do not reproduce source or installation metadata in public SAEF artifacts.
 
 For small authorized probes that require captured output or a structured return
 value, use `symcon_run_script_text_ex` only after reviewing the supplied PHP for
@@ -51,6 +56,23 @@ If direct read-back is temporarily unavailable, do not silently recreate the
 former marker-variable workflow. Creating temporary variables or scripts is a
 live-system mutation and requires explicit user authorization, immediate
 cleanup and verification that no temporary object remains.
+
+Computer Use, browser access, SSH and PowerShell are likewise separate live
+channels, not implicit MCP substitutes. Report the MCP failure first and use
+one of those channels only after the user has explicitly authorized the named
+fallback and its scope.
+
+## Required result validation
+
+For every `symcon_run_script_text_ex` result, record or explicitly verify all
+three independent conditions:
+
+- `transportError` is empty;
+- `executionError` is empty; and
+- `truncated` is `false`.
+
+A transport success with a PHP execution error is a failed probe. Correct the
+probe or stop; never interpret it as valid live evidence.
 
 ## Longer read-only probes
 

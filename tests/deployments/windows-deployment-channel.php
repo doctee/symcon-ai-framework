@@ -414,12 +414,14 @@ assertDeploymentChannel(is_array($checksumLines), 'Windows deployment checksums 
 $expectedChecksumFiles = [
     'Initialize-SaefDeploymentChannel.ps1',
     'Invoke-SaefDeploymentGateway.ps1',
+    'Invoke-SaefDeploymentRetentionCleanup.ps1',
     'Invoke-SaefRuntimeMirror.ps1',
     'Invoke-SaefSymconRestart.ps1',
     'SaefRuntimeHealthProbe.php',
     'SaefRuntimeSourceMirror.php',
     'deployment-channel-policy.example.json',
     'deployment-package-plan.example.json',
+    'deployment-retention-plan.example.json',
     'restart-policy.json',
     'saef-deploy',
 ];
