@@ -61,6 +61,7 @@ become an SAEF reference implementation.
 | `34-shared-wait-helper-activation-and-runtime-verification-report.md` | Atomic owner-fileset selection, supervised restart, effective Reflection identity and post-restart regression evidence. |
 | `35-second-state-only-light-pilot-and-recovery-report.md` | Cleanup-disabled second light publication, rejected-command observability during an external transport outage and successful post-reconnect state restoration. |
 | `36-client-subscription-coverage-and-runtime-namespace-report.md` | Client-subscription coverage validation, controlled runtime-namespace correction and complete Home Assistant/Apple Home functional evidence. |
+| `37-owner-decoupling-and-subscription-runtime-activation-report.md` | Physical owner-path decoupling, corrected subscription-runtime activation, idempotent three-entity reconciliation and alarm-bounded live evidence. |
 | `candidate/MqttDiscoveryExporterCore.php` | Side-effect-free normalization, payload, parsing, hashing and cleanup-planning core. |
 | `candidate/MqttDiscoveryExporterRuntime.php` | Runtime adapter for diagnostics, reconcile, MQTT execution, indexed dispatch and exact cleanup. |
 | `../../tests/mqtt-discovery-exporter/fixtures/discovery-capabilities.json` | Sanitized deterministic discovery fixtures for every supported capability combination. |
