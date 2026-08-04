@@ -283,6 +283,7 @@ template or a general SAEF reference implementation.
 | `255-navimow-mqtt-recovery-branch-publication-and-pr.md` | Publishes only the reviewed recovery branch, opens draft PR #22 against SAEF main and preserves standalone and live gates for separate authorization. |
 | `256-navimow-mqtt-recovery-pr-review-and-merge-decision.md` | Reviews draft PR #22 and its productive receive-only delta, records no blocking findings and recommends a separately authorized SAEF-main merge. |
 | `257-navimow-mqtt-recovery-pr-merge-and-canonical-verification.md` | Executes the explicitly authorized PR #22 merge contract, verifies canonical SAEF main and keeps standalone and live gates closed. |
+| `258-navimow-standalone-mqtt-publication-readiness-review.md` | Revalidates the exact one-file episode-summary delta against current standalone main and issues a conditional publication GO without mutating either remote. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

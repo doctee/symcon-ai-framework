@@ -200,10 +200,10 @@ evidence after execution.
 | Gate | Result |
 |---|---|
 | explicit PR merge authorization | PASS |
-| final report-only head checks | REQUIRED BEFORE MERGE |
-| PR ready-state change | AUTHORIZED |
-| PR 22 merge | AUTHORIZED |
-| canonical remote-main verification | REQUIRED AFTER MERGE |
+| final report-only head checks | PASS, 2 of 2 |
+| PR ready-state change | PASS |
+| PR 22 merge | PASS, merge commit `2ef7a22a` |
+| canonical remote-main verification | PASS |
 | recovery branch cleanup | DEFERRED |
 | standalone publication | CLOSED |
 | metadata validation | CLOSED |
