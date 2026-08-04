@@ -82,9 +82,22 @@ final class DiagnosticsFakeSymconRuntime
         return self::createInstance('{C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850}', $name);
     }
 
-    public static function createClientInstance(string $name = 'MQTT Client'): int
-    {
-        return self::createInstance('{F7A0DD2E-7684-95C0-64C2-D2A9DC47577B}', $name);
+    /**
+     * @param list<array{Topic: string, QoS: int}> $subscriptions
+     */
+    public static function createClientInstance(
+        string $name = 'MQTT Client',
+        array $subscriptions = [['Topic' => '#', 'QoS' => 0]]
+    ): int {
+        $instanceID = self::createInstance('{F7A0DD2E-7684-95C0-64C2-D2A9DC47577B}', $name);
+        self::setConfiguration($instanceID, json_encode([
+            'Subscriptions' => json_encode(
+                $subscriptions,
+                JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES
+            ),
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+
+        return $instanceID;
     }
 
     public static function createStateVariable(

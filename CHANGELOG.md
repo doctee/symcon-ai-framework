@@ -11,6 +11,11 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added reconciliation-time MQTT Client subscription coverage for every
+  exporter command topic and retained owned adapter/event identities across
+  runtime namespace changes. The state-only Home Assistant and Apple Home
+  migration is documented with bounded authoritative feedback; live activation
+  of the improved in-place candidate remains a separate gate.
 - Added a guarded Windows deployment-retention tool with exact manifest-pair
   plans, runtime-reference protection, verified private backups and enforced
   one-deployment-to-one-fileset checks before simulation and after cleanup.
