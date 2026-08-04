@@ -244,7 +244,7 @@ $tests['normalizes every installed instance contract'] = static function (): voi
         'CL-002 activation gate differs.'
     );
     assertControlLightSame(
-        'active-all-enabled-capabilities-direct-tested-hard-cycle-and-immediate-recovery-passed-color-disabled-native-color-retained-shutdown-consumer-facade-aligned-links-native-observer-preserved-offline-mired-matcher-ready-pending-fileset-activation-and-temperature-retest',
+        'active-all-enabled-capabilities-direct-tested-hard-cycle-and-immediate-recovery-passed-color-disabled-native-color-retained-shutdown-consumer-facade-aligned-links-native-observer-preserved-mired-matcher-live-3900-to-3906-kelvin-authoritative-feedback-passed',
         $cl003['dependencies'] ?? null,
         'CL-003 activation and remaining gates differ.'
     );
