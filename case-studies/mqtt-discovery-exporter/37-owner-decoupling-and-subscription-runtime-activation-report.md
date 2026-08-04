@@ -2,7 +2,7 @@
 
 **Case study:** IP-Symcon MQTT Discovery Exporter
 **Gate:** Physical fileset-path decoupling, corrected activation and bounded live regression
-**Outcome:** Runtime and reconciliation PASS; external state-transition test deferred by active alarm policy
+**Outcome:** PASS — runtime, reconciliation and external Home Assistant state transition verified
 
 ## Activation finding
 
@@ -60,12 +60,21 @@ second test message was sent. This local double-delivery pattern is not the
 normal external Home Assistant path and is retained as diagnostic evidence,
 not classified as successful functional command confirmation.
 
-## Remaining functional gate
+## External Home Assistant state transition
 
-The site alarm was active during the test. A deliberate `ON` transition would
-have violated the ControlLight alarm boundary and was not attempted. The final
-external Home Assistant `ON`/`OFF` confirmation therefore remains deferred
-until the alarm is inactive and supervised presence is confirmed.
+After the site alarm was deactivated, a supervised Home Assistant `ON`/`OFF`
+sequence completed through the normal external broker path. Exactly two new
+commands were confirmed. Each command produced one command dispatch and one
+authoritative state dispatch, with four corresponding runtime publications.
+The failure counter did not change.
+
+The final MQTT command, ControlLight facade and retained runtime state were all
+off. The command and state events ran at the final transition, the ControlLight
+runtime reported a new success and feedback timestamp, and neither its error
+nor confirmation-timeout counter changed. This closes the functional gate that
+the earlier local same-state observation intentionally left open.
+
+## Remaining maintenance
 
 The deployment store reached its configured retention capacity during the
 corrected activation. A reviewed retention plan is required before another
