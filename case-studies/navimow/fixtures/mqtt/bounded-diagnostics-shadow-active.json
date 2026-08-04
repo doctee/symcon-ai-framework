@@ -1,0 +1,81 @@
+{
+  "metadata": {
+    "synthetic": true,
+    "purpose": "Bounded privacy-safe diagnostics contract",
+    "sourceEvidence": "215-native-mqtt-private-pilot-shadow-diagnostics-implementation.md"
+  },
+  "diagnostics": {
+    "formatVersion": 2,
+    "featureEnabled": true,
+    "configurationStatus": "ready",
+    "lifecycle": {
+      "state": "ShadowActive",
+      "stateChangedAt": 1700000000,
+      "lastResult": "accepted",
+      "lastResultAt": 1700000000,
+      "lastCoreStatus": 0,
+      "observedAt": 0,
+      "lastTransitionReason": "connection-attempt",
+      "healthySince": 0,
+      "nextAttemptAt": 1700000060,
+      "reconnectAttempt": 0,
+      "kernelStartObservedAt": 1700000000,
+      "kernelStartReconciledAt": 1700000000,
+      "kernelStartTime": 1700000000,
+      "lastKernelCoreClassification": "none",
+      "lastKernelCoreClassificationAt": 0,
+      "kernelCoreObservationCount": 0,
+      "kernelCoreObservationDeadlineAt": 0,
+      "lastKernelCoreFailedPredicates": [],
+      "kernelCoreObservations": []
+    },
+    "statistics": {
+      "connectionAttempts": 1,
+      "connectionSuccesses": 0,
+      "connectionFailures": 0,
+      "unexpectedDisconnects": 0,
+      "reconnectAttempts": 0,
+      "reconnectExhausted": 0,
+      "credentialRotations": 0,
+      "coreResumeObservations": 0,
+      "received": 1,
+      "accepted": 1,
+      "rejected": 0,
+      "reconciliationAttempts": 0,
+      "comparisonMatches": 0,
+      "comparisonMismatches": 0,
+      "comparisonStale": 0,
+      "lastConnectionAttemptAt": 1700000000,
+      "lastConnectionTrigger": "manual",
+      "lastConnectionTriggerAt": 1700000000,
+      "lastReceivedAt": 1700000000,
+      "lastReconciliationAt": 0,
+      "lastComparisonAt": 0,
+      "lastReconciliationResult": "none",
+      "lastComparisonResult": "none"
+    },
+    "errors": {
+      "count": 0,
+      "latestReason": "none",
+      "latestAt": 0
+    },
+    "shadow": {
+      "trackedDeviceCount": 1,
+      "pendingReconciliationCount": 1,
+      "observation": {
+        "status": "available",
+        "authority": "mqtt-hint",
+        "lastSourceTimestamp": 1700000000000,
+        "lastReceivedAt": 1700000000,
+        "ageSeconds": 0,
+        "fields": {
+          "vehicleState": 1,
+          "batteryLevel": 43,
+          "mowingPercentage": null,
+          "locationType": null,
+          "locationVehicleStateCode": null
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "formatVersion": 1,
+  "unexpectedDisconnectDelta": 12,
+  "episodeSequenceDelta": 8,
+  "duplicateObservationDelta": 4,
+  "reconnectAttemptsDelta": 10,
+  "evidenceGap": false,
+  "classification": "FAIL",
+  "stopReason": "multiple-transport-episodes"
+}

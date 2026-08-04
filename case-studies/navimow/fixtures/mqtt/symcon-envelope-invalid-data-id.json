@@ -1,0 +1,18 @@
+{
+  "metadata": {
+    "synthetic": true,
+    "sourceEvidence": "94-native-mqtt-wss-symcon-live-spike-report.md",
+    "channel": "location",
+    "retained": false,
+    "expectedResult": "reject-invalid-data-id",
+    "packetTypeEvidence": "Synthetic bounded test value; no observed-value claim."
+  },
+  "envelope": {
+    "DataID": "{00000000-0000-0000-0000-000000000000}",
+    "PacketType": 3,
+    "Payload": "[{\"time\":1700000000000,\"type\":3}]",
+    "QualityOfService": 0,
+    "Retain": false,
+    "Topic": "/downlink/vehicle/DEVICE_001/realtimeDate/location"
+  }
+}

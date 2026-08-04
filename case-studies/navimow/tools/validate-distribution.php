@@ -57,6 +57,7 @@ $expectedModules = [
     'NavimowAccount',
     'NavimowConfigurator',
     'NavimowDevice',
+    'NavimowMqttReceiver',
 ];
 
 if ($moduleDirectories !== $expectedModules) {

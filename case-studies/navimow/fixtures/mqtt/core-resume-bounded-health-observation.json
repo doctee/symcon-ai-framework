@@ -1,0 +1,93 @@
+{
+  "metadata": {
+    "synthetic": true,
+    "payloadIncluded": false,
+    "deviceIdentityIncluded": false,
+    "credentialValuesIncluded": false
+  },
+  "schedule": {
+    "absoluteOffsetsSeconds": [
+      15,
+      30,
+      60,
+      90,
+      120,
+      180
+    ],
+    "deadlineSeconds": 180,
+    "maximumObservations": 6
+  },
+  "cases": {
+    "delayed30": {
+      "timeline": [
+        {
+          "offsetSeconds": 15,
+          "mqttStatus": 104,
+          "webSocketStatus": 104,
+          "webSocketActive": true
+        },
+        {
+          "offsetSeconds": 30,
+          "mqttStatus": 102,
+          "webSocketStatus": 102,
+          "webSocketActive": true
+        }
+      ],
+      "expectedState": "ShadowActive",
+      "expectedReason": "core-resumed",
+      "expectedClassification": "healthy",
+      "expectedCoreResumeObservationDelta": 1,
+      "expectedConnectionOperationDelta": 0,
+      "expectedCoreMutationCount": 0
+    },
+    "neverReady": {
+      "timeline": [
+        {
+          "offsetSeconds": 15,
+          "mqttStatus": 104,
+          "webSocketStatus": 104,
+          "webSocketActive": true
+        },
+        {
+          "offsetSeconds": 30,
+          "mqttStatus": 104,
+          "webSocketStatus": 104,
+          "webSocketActive": true
+        },
+        {
+          "offsetSeconds": 60,
+          "mqttStatus": 104,
+          "webSocketStatus": 104,
+          "webSocketActive": true
+        },
+        {
+          "offsetSeconds": 90,
+          "mqttStatus": 104,
+          "webSocketStatus": 104,
+          "webSocketActive": true
+        },
+        {
+          "offsetSeconds": 120,
+          "mqttStatus": 104,
+          "webSocketStatus": 104,
+          "webSocketActive": true
+        },
+        {
+          "offsetSeconds": 180,
+          "mqttStatus": 104,
+          "webSocketStatus": 104,
+          "webSocketActive": true
+        }
+      ],
+      "expectedPendingState": "CoreResumeObserving",
+      "expectedPendingReason": "core-readiness-pending",
+      "expectedPendingClassification": "pending-with-credentials",
+      "expectedFinalState": "ReconnectScheduled",
+      "expectedFinalReason": "core-disconnected",
+      "expectedFinalClassification": "unhealthy-with-credentials",
+      "expectedUnexpectedDisconnectDelta": 1,
+      "expectedConnectionOperationDelta": 0,
+      "expectedFinalCoreMutationCount": 7
+    }
+  }
+}
