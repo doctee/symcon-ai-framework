@@ -312,7 +312,7 @@ credential retrieval, MQTT activation, restart or mower command.
 | post-merge scope review | PASS |
 | post-merge tests | PASS |
 | candidate refreeze | PASS |
-| Gate II branch push and PR | READY, AUTHORIZATION REQUIRED |
+| Gate II branch push and PR | PASS, DRAFT PR #22 |
 | Gate III canonical-main verification | CLOSED |
 | standalone publication | CLOSED |
 | metadata validation | CLOSED |
@@ -322,12 +322,12 @@ credential retrieval, MQTT activation, restart or mower command.
 
 ## 14. Next Step
 
-After explicit Gate-II authorization, proceed with:
+Gate II was completed in step 255. Proceed with:
 
 ```text
-255-navimow-mqtt-recovery-branch-publication-and-pr.md
+256-navimow-mqtt-recovery-pr-review-and-merge-decision.md
 ```
 
-That step may push only `codex/navimow-mqtt-recovery-clean` and open one pull
-request against SAEF `main`. It must not merge the pull request, publish the
-standalone module or access Symcon.
+That step may inspect the PR diff and checks and recommend a merge decision. It
+must not merge the pull request without separate explicit authorization,
+publish the standalone module or access Symcon.
