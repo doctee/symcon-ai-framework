@@ -1,7 +1,7 @@
 # 36 Client Subscription Coverage and Runtime Namespace Report
 
-**Case study:** IP-Symcon MQTT Discovery Exporter  
-**Gate:** Client-subscription validation and state-only light namespace correction  
+**Case study:** IP-Symcon MQTT Discovery Exporter
+**Gate:** Client-subscription validation and state-only light namespace correction
 **Outcome:** Live functional path passed; improved in-place migration candidate awaits fileset retention maintenance
 
 ## Finding

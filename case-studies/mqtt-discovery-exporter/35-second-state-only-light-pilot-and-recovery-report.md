@@ -1,8 +1,8 @@
 # Second State-Only Light Pilot and Recovery Report
 
-**Gate:** Supervised multi-entity client-transport extension  
-**Result:** PASS — EXTERNAL TRANSIENT FAILURE OBSERVED AND RECOVERED  
-**Date:** 2026-07-23  
+**Gate:** Supervised multi-entity client-transport extension
+**Result:** PASS — EXTERNAL TRANSIENT FAILURE OBSERVED AND RECOVERED
+**Date:** 2026-07-23
 **Live impact:** One additional retained MQTT light; final physical state restored
 
 ## Scope
