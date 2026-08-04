@@ -27,11 +27,20 @@ This project adheres to Semantic Versioning.
   the per-variable Statistics helper through the earliest global owner while
   preserving the proven MQTT runtime, then verified the Mired matcher on one
   minimal CL-003 fileset with authoritative 3900-to-3906 K feedback.
+- Added a bounded Open-Meteo solar calibration collector with immutable
+  forecast snapshots, change-based archive alignment, deterministic private
+  source generation and offline metric tests.
 - Added a guarded one-way Open-Meteo module publisher. SAEF remains the
   editable source of truth while check and prepare stay local and
   deterministic; publication requires exact fileset and remote-commit pins,
   an explicit repository confirmation, allowlisted staging, fast-forward push
   protection and an independent post-push clone verification.
+
+### Changed
+
+- Recorded the guarded, idempotent creation and hourly timer activation of a
+  second storage-aware Open-Meteo Solar instance without provider traffic,
+  device actions or changes to the existing Weather and Solar controls.
 
 ## [0.3.0] - 2026-07-23
 

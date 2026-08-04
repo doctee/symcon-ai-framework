@@ -86,6 +86,7 @@ function HasAction(int $variableID): bool {}
 
 function IPS_GetModuleList(): array {}
 function IPS_GetInstanceListByModuleID(string $moduleID): array {}
+function IPS_GetKernelDir(): string {}
 function IPS_GetObjectIDByIdent(string $ident, int $parentID): int|false {}
 function IPS_GetObject(int $id): array {}
 function IPS_GetParent(int $id): int {}
@@ -160,8 +161,13 @@ function IPS_LogMessage(string $sender, string $message): void {}
 function Sys_GetURLContentEx(string $url, array $parameters): string|false {}
 function IPS_SemaphoreEnter(string $name, int $milliseconds): bool {}
 function IPS_SemaphoreLeave(string $name): bool {}
+function AC_GetLoggingStatus(int $archiveID, int $variableID): bool {}
+/** @return array<int, array{TimeStamp: int, Value: int|float}>|false */
+function AC_GetLoggedValues(int $archiveID, int $variableID, int $startTime, int $endTime, int $limit): array|false {}
 function SAEFLOCATION_GetDescriptor(int $instanceId): string {}
 function OMWEATHER_GetLocationDescriptor(int $instanceId): string {}
+function OMSOLAR_GetPowerForecastJson(int $instanceId, int $from, int $to, string $scope): string {}
+function OMSOLAR_GetDailyEnergyForecastJson(int $instanceId, int $from, int $to, string $scope): string {}
 
 function GetValue(int $id): mixed {}
 function SetValue(int $id, mixed $value): void {}
