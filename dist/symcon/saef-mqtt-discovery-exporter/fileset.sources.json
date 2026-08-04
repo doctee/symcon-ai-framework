@@ -51,7 +51,7 @@
         },
         {
             "path": "case-studies/mqtt-discovery-exporter/candidate/MqttDiscoveryExporterRuntime.php",
-            "sha256": "fbd779f7fcd13378a4161d90c2b3069b4a8392d76a15dffc197371114a7b6b11"
+            "sha256": "3f39b2d67eed1ccbdc83ec52d323c9d945e3ecf85a1b6a5845de2abe6397e1ba"
         },
         {
             "path": "helpers/object/EnsureScript.php",
@@ -63,7 +63,7 @@
         }
     ],
     "bootstrapSha256": "dd9ffc5d3dabaf4e0e467a5eb8f6b815bed97854cf0c1f6cbca0369cd4555674",
-    "filesetSha256": "f7af7417bab359260f2557f0cdf4331f0af493e5b6a433eaa53b43bb9f9f15dc",
+    "filesetSha256": "21b96591c7256e6ab8e9224bc9faa89b6fd51ef2bba7bea19c2078ff9d3fbe7c",
     "functionExports": [
         "SAEF_AppendErrorRingBufferEntry",
         "SAEF_ClearErrorRingBuffer",

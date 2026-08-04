@@ -77,6 +77,7 @@ final class MqttDiscoveryExporterRuntime
         try {
             $preparedEntities = self::validateAndPrepareEntities($configuration);
             $transport = self::mqttTransportContract($configuration);
+            self::assertClientCommandSubscriptionCoverage($transport, $preparedEntities);
             self::assertCleanupNotRequired(
                 $diagnostics['registry']['managedEntities'],
                 $preparedEntities,
@@ -1785,6 +1786,121 @@ final class MqttDiscoveryExporterRuntime
     }
 
     /**
+     * @param array{transport: 'client'|'server', gatewayID: int, gatewayModuleID: string, deviceModuleID: string} $transport
+     * @param array<string, array{commandTopics: array<string, string>}> $preparedEntities
+     */
+    private static function assertClientCommandSubscriptionCoverage(
+        array $transport,
+        array $preparedEntities
+    ): void {
+        if ($transport['transport'] !== 'client') {
+            return;
+        }
+
+        try {
+            $gatewayConfiguration = json_decode(
+                \IPS_GetConfiguration($transport['gatewayID']),
+                true,
+                512,
+                JSON_THROW_ON_ERROR
+            );
+        } catch (\JsonException $exception) {
+            throw new RuntimeException(
+                'MQTT Client configuration is not valid JSON.',
+                0,
+                $exception
+            );
+        }
+        if (!is_array($gatewayConfiguration)) {
+            throw new RuntimeException('MQTT Client configuration must be an object.');
+        }
+
+        $subscriptions = $gatewayConfiguration['Subscriptions'] ?? null;
+        if (is_string($subscriptions)) {
+            try {
+                $subscriptions = json_decode($subscriptions, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $exception) {
+                throw new RuntimeException(
+                    'MQTT Client subscriptions are not valid JSON.',
+                    0,
+                    $exception
+                );
+            }
+        }
+        if (!is_array($subscriptions)) {
+            throw new RuntimeException('MQTT Client subscriptions are missing.');
+        }
+
+        $filters = [];
+        foreach ($subscriptions as $subscription) {
+            if (!is_array($subscription)) {
+                throw new RuntimeException('MQTT Client subscription contract is invalid.');
+            }
+            $filter = $subscription['Topic'] ?? null;
+            if (!is_string($filter) || $filter === '') {
+                throw new RuntimeException('MQTT Client subscription topic is invalid.');
+            }
+            self::assertValidMqttSubscriptionFilter($filter);
+            $filters[] = $filter;
+        }
+        if ($filters === []) {
+            throw new RuntimeException('MQTT Client has no subscriptions.');
+        }
+
+        foreach ($preparedEntities as $prepared) {
+            foreach ($prepared['commandTopics'] as $topic) {
+                foreach ($filters as $filter) {
+                    if (self::mqttSubscriptionFilterMatches($filter, $topic)) {
+                        continue 2;
+                    }
+                }
+
+                throw new RuntimeException(
+                    'MQTT Client subscriptions do not cover command topic: ' . $topic
+                );
+            }
+        }
+    }
+
+    private static function assertValidMqttSubscriptionFilter(string $filter): void
+    {
+        $levels = explode('/', $filter);
+        foreach ($levels as $index => $level) {
+            if ($level === '+') {
+                continue;
+            }
+            if ($level === '#') {
+                if ($index !== count($levels) - 1) {
+                    throw new RuntimeException('MQTT Client multi-level wildcard must be final.');
+                }
+                continue;
+            }
+            if (str_contains($level, '+') || str_contains($level, '#')) {
+                throw new RuntimeException('MQTT Client subscription wildcard must occupy a complete level.');
+            }
+        }
+    }
+
+    private static function mqttSubscriptionFilterMatches(string $filter, string $topic): bool
+    {
+        $filterLevels = explode('/', $filter);
+        $topicLevels = explode('/', $topic);
+        foreach ($filterLevels as $index => $filterLevel) {
+            if ($filterLevel === '#') {
+                return true;
+            }
+            if (!array_key_exists($index, $topicLevels)) {
+                return false;
+            }
+            if ($filterLevel !== '+' && $filterLevel !== $topicLevels[$index]) {
+                return false;
+            }
+        }
+
+        return count($filterLevels) === count($topicLevels);
+    }
+
+    /**
      * @param array<string, mixed> $configuration
      *
      * @return array<string, array{
@@ -2037,13 +2153,12 @@ final class MqttDiscoveryExporterRuntime
                 throw new RuntimeException('Discovery topic change requires cleanup: ' . $entityKey);
             }
 
-            self::assertNoRemovedValues(
+            self::assertNoRemovedKeys(
                 $previous,
-                'runtimeTopics',
-                array_keys($prepared['runtimeTopics']),
+                'commandTopics',
+                $prepared['commandTopics'],
                 $entityKey
             );
-            self::assertNoRemovedValues($previous, 'commandTopics', $prepared['commandTopics'], $entityKey);
             self::assertNoRemovedValues(
                 $previous,
                 'commandInstanceIdents',
@@ -2062,6 +2177,30 @@ final class MqttDiscoveryExporterRuntime
                 $prepared['stateEventIdents'],
                 $entityKey
             );
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $previous
+     * @param array<string, mixed> $desired
+     */
+    private static function assertNoRemovedKeys(
+        array $previous,
+        string $field,
+        array $desired,
+        string $entityKey
+    ): void {
+        if (!array_key_exists($field, $previous)) {
+            return;
+        }
+        if (!is_array($previous[$field])) {
+            throw new RuntimeException('Managed entity field is invalid: ' . $entityKey . '.' . $field);
+        }
+
+        foreach (array_keys($previous[$field]) as $previousKey) {
+            if (!is_string($previousKey) || !array_key_exists($previousKey, $desired)) {
+                throw new RuntimeException('Managed resource change requires cleanup: ' . $entityKey . '.' . $field);
+            }
         }
     }
 

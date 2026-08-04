@@ -2,7 +2,7 @@
 
 **Status:** Completed SAEF engineering case study
 **Scope:** Bidirectional export of IP-Symcon variables to Home Assistant through MQTT Discovery
-**Implementation state:** G5/G6 passed; corrected shared wait helper active and independently verified
+**Implementation state:** G5/G6 passed; two-entity supervised pilot active and independently verified
 
 ## Purpose
 
@@ -59,6 +59,8 @@ become an SAEF reference implementation.
 | `32-shared-wait-helper-inactive-staging-report.md` | Private Gate-A package, bounded chunk transfer, atomic inactive staging and independent non-selection readback. |
 | `33-shared-wait-helper-maintenance-preflight-report.md` | Fresh byte-exact rollback, topology/diagnostics snapshot and the remaining external Windows service-preflight boundary. |
 | `34-shared-wait-helper-activation-and-runtime-verification-report.md` | Atomic owner-fileset selection, supervised restart, effective Reflection identity and post-restart regression evidence. |
+| `35-second-state-only-light-pilot-and-recovery-report.md` | Cleanup-disabled second light publication, rejected-command observability during an external transport outage and successful post-reconnect state restoration. |
+| `36-client-subscription-coverage-and-runtime-namespace-report.md` | Client-subscription coverage validation, controlled runtime-namespace correction and complete Home Assistant/Apple Home functional evidence. |
 | `candidate/MqttDiscoveryExporterCore.php` | Side-effect-free normalization, payload, parsing, hashing and cleanup-planning core. |
 | `candidate/MqttDiscoveryExporterRuntime.php` | Runtime adapter for diagnostics, reconcile, MQTT execution, indexed dispatch and exact cleanup. |
 | `../../tests/mqtt-discovery-exporter/fixtures/discovery-capabilities.json` | Sanitized deterministic discovery fixtures for every supported capability combination. |
@@ -96,7 +98,20 @@ The completed implementation demonstrates:
 - observable command failure semantics;
 - deterministic cleanup of every owned object and retained topic;
 - bounded state confirmation instead of a fixed sleep;
+- reconciliation-time MQTT Client subscription coverage without mutating the
+  shared gateway;
 - repeatable offline tests and supervised live integration evidence.
+
+The current supervised client-transport pilot manages two light entities. The
+second state-only entity has additionally demonstrated fail-closed handling
+during a temporary target-transport outage and successful operation after
+automatic transport recovery.
+
+An additional state-only migration has demonstrated namespace-fail-closed
+diagnosis, authoritative manual-on projection and complete Home Assistant plus
+Apple Home command operation. The repository candidate can retain owned
+adapter/event identities across a runtime-topic namespace change; its live
+activation remains a separate retention-maintenance gate.
 
 ## Related SAEF Artifacts
 
