@@ -305,7 +305,7 @@ operator's responsibility.
 Start with the 30-minute default:
 
 ```sh
-cd /Users/carsten/IT/Projekte/symcon-ai-framework
+cd /path/to/symcon-ai-framework
 ./private/navimow-capture/capture-mqtt-rest-comparison.sh
 ```
 

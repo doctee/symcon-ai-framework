@@ -1,0 +1,27 @@
+{
+  "fixtureVersion": 1,
+  "source": "Sanitized aggregate from supervised receive-only V3 live evidence",
+  "capturedAt": "2026-07-28",
+  "payloadIncluded": false,
+  "subscriptions": {
+    "count": 4,
+    "canonicalQosCount": 4,
+    "legacyQualityOfServiceCount": 0,
+    "invalidCount": 0,
+    "wildcardPresent": false
+  },
+  "delivery": {
+    "coreHealthy": true,
+    "productiveReceiverDelta": 1,
+    "siblingProbeDelta": 1,
+    "siblingAcceptedMessages": 1,
+    "classification": "both-received"
+  },
+  "cleanup": {
+    "mqttDisabled": true,
+    "webSocketInactive": true,
+    "credentialsEmpty": true,
+    "probeAbsent": true,
+    "productiveReceiverRetained": true
+  }
+}

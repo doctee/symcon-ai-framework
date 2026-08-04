@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../distribution/libs/Navimow/ApiClient.php';
 require_once __DIR__ . '/../distribution/libs/Navimow/CommandContract.php';
+require_once __DIR__
+    . '/../distribution/libs/Navimow/MqttCredentialMapper.php';
 require_once __DIR__ . '/../distribution/libs/Navimow/OAuthHelper.php';
 require_once __DIR__ . '/../distribution/libs/Navimow/PayloadMapper.php';
 
 use Navimow\ApiClient;
 use Navimow\ApiException;
 use Navimow\CommandContract;
+use Navimow\MqttCredentialMapper;
 use Navimow\OAuthHelper;
 use Navimow\PayloadMapper;
 
@@ -100,6 +103,244 @@ assertSameValue(
     '{"devices":[{"id":"DEVICE_001"}]}',
     $statusRequests[0]['body'],
     'Status request body should match the fixture-backed contract.'
+);
+
+$mqttRequests = [];
+$mqttClient = new ApiClient(
+    'https://navimow.example.test',
+    static function (array $request) use (&$mqttRequests): array {
+        $mqttRequests[] = $request;
+
+        return [
+            'status' => 200,
+            'body' => file_get_contents(
+                __DIR__
+                    . '/../fixtures/mqtt/mqtt-credential-success.json'
+            ),
+        ];
+    }
+);
+$mqttPayload = $mqttClient->getMqttUserInfo(
+    'SYNTHETIC_MQTT_ACCESS'
+);
+$mqttCredentials = MqttCredentialMapper::map($mqttPayload);
+assertSameValue(
+    'GET',
+    $mqttRequests[0]['method'],
+    'MQTT credential request must use GET.'
+);
+assertSameValue(
+    '/openapi/mqtt/userInfo/get/v2',
+    parse_url($mqttRequests[0]['url'], PHP_URL_PATH),
+    'MQTT credential request used an unexpected endpoint.'
+);
+assertSameValue(
+    null,
+    $mqttRequests[0]['body'],
+    'MQTT credential request must not have a body.'
+);
+$mqttHeaders = implode("\n", $mqttRequests[0]['headers']);
+assertContainsValue(
+    'Accept: application/json',
+    $mqttHeaders,
+    'MQTT credential request must accept JSON.'
+);
+assertContainsValue(
+    'Authorization: Bearer SYNTHETIC_MQTT_ACCESS',
+    $mqttHeaders,
+    'MQTT credential request must carry the access token.'
+);
+assertMatchesValue(
+    '/requestId: [0-9a-f-]{36}/',
+    $mqttHeaders,
+    'MQTT credential request must contain a request ID.'
+);
+assertSameValue(
+    'wss://mqtt.example.test/mqtt?ticket=SYNTHETIC_WSS_TICKET',
+    $mqttCredentials['wssUrl'],
+    'Relative MQTT path was not combined with the WSS host.'
+);
+assertSameValue(
+    'SYNTHETIC_MQTT_USER',
+    $mqttCredentials['mqttUsername'],
+    'MQTT username was not mapped.'
+);
+assertSameValue(
+    'SYNTHETIC_MQTT_PASSWORD',
+    $mqttCredentials['mqttPassword'],
+    'MQTT password was not mapped.'
+);
+
+$absoluteCredentials = MqttCredentialMapper::map([
+    'code' => 1,
+    'data' => [
+        'mqttHost' => 'wss://ignored.example.test',
+        'mqttUrl' => 'wss://mqtt.example.test/mqtt?ticket=ABSOLUTE',
+        'userName' => 'SYNTHETIC_USER',
+        'pwdInfo' => 'SYNTHETIC_PASSWORD',
+    ],
+]);
+assertSameValue(
+    'wss://mqtt.example.test/mqtt?ticket=ABSOLUTE',
+    $absoluteCredentials['wssUrl'],
+    'Absolute WSS endpoint was not preserved.'
+);
+
+$completeCredentialData = [
+    'mqttHost' => 'wss://mqtt.example.test',
+    'mqttUrl' => '/mqtt?ticket=SYNTHETIC',
+    'userName' => 'SYNTHETIC_USER',
+    'pwdInfo' => 'SYNTHETIC_PASSWORD',
+];
+foreach (array_keys($completeCredentialData) as $missingField) {
+    $missingData = $completeCredentialData;
+    unset($missingData[$missingField]);
+    assertThrows(
+        static fn () => MqttCredentialMapper::map([
+            'code' => 1,
+            'data' => $missingData,
+        ]),
+        UnexpectedValueException::class,
+        'Every required MQTT credential field must fail when missing.'
+    );
+}
+
+$invalidCredentialPayloads = [
+    [
+        'code' => 1,
+        'data' => [
+            'mqttHost' => 'wss://mqtt.example.test',
+            'mqttUrl' => '/mqtt',
+            'userName' => '',
+            'pwdInfo' => 'SECRET_PASSWORD',
+        ],
+    ],
+    [
+        'code' => 1,
+        'data' => [
+            'mqttHost' => 'wss://mqtt.example.test',
+            'mqttUrl' => 'ws://mqtt.example.test/mqtt',
+            'userName' => 'SECRET_USER',
+            'pwdInfo' => 'SECRET_PASSWORD',
+        ],
+    ],
+    [
+        'code' => 1,
+        'data' => [
+            'mqttHost' => 'wss://mqtt.example.test:8443',
+            'mqttUrl' => '/mqtt',
+            'userName' => 'SECRET_USER',
+            'pwdInfo' => 'SECRET_PASSWORD',
+        ],
+    ],
+    [
+        'code' => 1,
+        'data' => [
+            'mqttHost' => 'wss://mqtt.example.test',
+            'mqttUrl' => '/mqtt#SECRET_FRAGMENT',
+            'userName' => 'SECRET_USER',
+            'pwdInfo' => 'SECRET_PASSWORD',
+        ],
+    ],
+    [
+        'code' => 1,
+        'data' => [
+            'mqttHost' => 'wss://mqtt.example.test',
+            'mqttUrl' => "/mqtt\nSECRET_CONTROL",
+            'userName' => 'SECRET_USER',
+            'pwdInfo' => 'SECRET_PASSWORD',
+        ],
+    ],
+];
+foreach ($invalidCredentialPayloads as $invalidCredentialPayload) {
+    $credentialException = captureException(
+        static fn () => MqttCredentialMapper::map(
+            $invalidCredentialPayload
+        )
+    );
+    assertSameValue(
+        UnexpectedValueException::class,
+        get_class($credentialException),
+        'Invalid MQTT credentials must fail closed.'
+    );
+    foreach (
+        [
+            'SECRET_PASSWORD',
+            'SECRET_USER',
+            'SECRET_FRAGMENT',
+            'SECRET_CONTROL',
+        ] as $secret
+    ) {
+        assertNotContainsValue(
+            $secret,
+            $credentialException->getMessage(),
+            'MQTT mapper exception exposed a credential value.'
+        );
+    }
+}
+
+$businessPayload = json_decode(
+    (string) file_get_contents(
+        __DIR__
+            . '/../fixtures/mqtt/mqtt-credential-business-error.json'
+    ),
+    true,
+    32,
+    JSON_THROW_ON_ERROR
+);
+$businessException = captureException(
+    static fn () => MqttCredentialMapper::map($businessPayload)
+);
+assertNotContainsValue(
+    'SYNTHETIC_SECRET_MUST_NOT_APPEAR',
+    $businessException->getMessage(),
+    'MQTT business error exposed the server description.'
+);
+
+$mqttInvalidJsonClient = new ApiClient(
+    'https://navimow.example.test',
+    static fn (array $request): array => [
+        'status' => 200,
+        'body' => '{"pwdInfo":"TRANSPORT_SECRET"',
+    ]
+);
+$mqttInvalidJsonException = captureException(
+    static fn () => $mqttInvalidJsonClient->getMqttUserInfo(
+        'BEARER_SECRET'
+    )
+);
+assertNotContainsValue(
+    'TRANSPORT_SECRET',
+    $mqttInvalidJsonException->getMessage(),
+    'Malformed MQTT response exposed its body.'
+);
+assertNotContainsValue(
+    'BEARER_SECRET',
+    $mqttInvalidJsonException->getMessage(),
+    'Malformed MQTT response exposed its bearer token.'
+);
+
+$mqttHttpFailureClient = new ApiClient(
+    'https://navimow.example.test',
+    static fn (array $request): array => [
+        'status' => 503,
+        'body' => '{"pwdInfo":"HTTP_SECRET"}',
+    ]
+);
+$mqttHttpException = captureException(
+    static fn () => $mqttHttpFailureClient->getMqttUserInfo(
+        'HTTP_BEARER_SECRET'
+    )
+);
+assertNotContainsValue(
+    'HTTP_SECRET',
+    $mqttHttpException->getMessage(),
+    'MQTT HTTP error exposed its body.'
+);
+assertNotContainsValue(
+    'HTTP_BEARER_SECRET',
+    $mqttHttpException->getMessage(),
+    'MQTT HTTP error exposed its bearer token.'
 );
 
 $state = OAuthHelper::createState();

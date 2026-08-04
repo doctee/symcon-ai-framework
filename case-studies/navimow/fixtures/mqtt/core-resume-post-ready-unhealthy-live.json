@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "sanitized": true,
+    "sourceStep": 181,
+    "payloadIncluded": false,
+    "deviceIdentityIncluded": false,
+    "credentialValuesIncluded": false
+  },
+  "preRestart": {
+    "lifecycleState": "ShadowActive",
+    "transitionReason": "healthy",
+    "coreHealthy": true,
+    "credentialFieldsPresent": true,
+    "connectionAttempts": 12,
+    "connectionSuccesses": 4,
+    "connectionFailures": 0,
+    "coreResumeObservations": 0,
+    "received": 309,
+    "accepted": 309,
+    "rejected": 0
+  },
+  "firstReconciledProjection": {
+    "newKernelEpoch": true,
+    "kernelObservationDelaySeconds": 197,
+    "reconciliationDelaySeconds": 15,
+    "lifecycleState": "ReconnectScheduled",
+    "transitionReason": "core-disconnected",
+    "classification": "unhealthy-with-credentials",
+    "coreHealthy": false,
+    "credentialFieldsPresentAfterClassification": false,
+    "connectionAttemptDelta": 0,
+    "connectionSuccessDelta": 0,
+    "connectionFailureDelta": 0,
+    "coreResumeObservationDelta": 0,
+    "receivedDeltaSinceFinalBaseline": 2,
+    "acceptedDeltaSinceFinalBaseline": 2,
+    "rejectedDelta": 0,
+    "receiveDeltaWindow": "final-pre-restart-baseline-to-first-reconciled-projection",
+    "receiveTimingRelativeToRestart": "unresolved",
+    "topologyHashUnchanged": true,
+    "coreConfigurationHashesUnchanged": false
+  },
+  "cleanup": {
+    "normalDisableCalls": 1,
+    "normalApplyChangesCalls": 1,
+    "explicitDisconnectCalls": 0,
+    "featureDisabled": true,
+    "lifecycleDisabled": true,
+    "nextAttemptAt": 0,
+    "webSocketInactive": true,
+    "credentialFieldsEmpty": true,
+    "compatibilityPass": true,
+    "observationSeconds": 73
+  }
+}

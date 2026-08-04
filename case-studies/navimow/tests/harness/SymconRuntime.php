@@ -11,6 +11,7 @@ if (!class_exists('IPSModule')) {
         private array $attributes = [];
         private array $variables = [];
         private array $timers = [];
+        private array $registeredMessages = [];
         private array $debugEntries = [];
         private array $childMessages = [];
         private ?Closure $parentHandler = null;
@@ -173,6 +174,39 @@ if (!class_exists('IPSModule')) {
             $this->timers[$ident] = $timer;
         }
 
+        protected function RegisterMessage(int $senderId, int $messageId): bool
+        {
+            $key = $senderId . ':' . $messageId;
+            $this->registeredMessages[$key] = [
+                'senderId' => $senderId,
+                'messageId' => $messageId,
+            ];
+
+            return true;
+        }
+
+        protected function UnregisterMessage(
+            int $senderId,
+            int $messageId
+        ): bool {
+            unset($this->registeredMessages[
+                $senderId . ':' . $messageId
+            ]);
+
+            return true;
+        }
+
+        protected function GetMessageList(): array
+        {
+            $result = [];
+            foreach ($this->registeredMessages as $registration) {
+                $result[$registration['senderId']][] =
+                    $registration['messageId'];
+            }
+
+            return $result;
+        }
+
         protected function SendDataToParent(string $json): string
         {
             if ($this->parentHandler === null) {
@@ -222,10 +256,21 @@ if (!class_exists('IPSModule')) {
             return $this->requireEntry($this->variables, $ident, 'variable');
         }
 
+        public function testSetVariable(string $ident, mixed $value): void
+        {
+            $this->requireEntry($this->variables, $ident, 'variable');
+            $this->variables[$ident] = $value;
+        }
+
         public function testTimerInterval(string $ident): int
         {
             $timer = $this->requireEntry($this->timers, $ident, 'timer');
             return (int) $timer['interval'];
+        }
+
+        public function testRegisteredMessages(): array
+        {
+            return array_values($this->registeredMessages);
         }
 
         public function testSetParentHandler(Closure $handler): void
@@ -276,6 +321,14 @@ if (!class_exists('IPSModule')) {
             return $store[$ident];
         }
     }
+}
+
+if (!defined('IPS_KERNELSTARTED')) {
+    define('IPS_KERNELSTARTED', 10001);
+}
+
+if (!defined('IM_CHANGESTATUS')) {
+    define('IM_CHANGESTATUS', 10505);
 }
 
 if (!function_exists('IPS_VariableProfileExists')) {

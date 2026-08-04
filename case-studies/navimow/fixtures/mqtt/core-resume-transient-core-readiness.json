@@ -1,0 +1,27 @@
+{
+  "metadata": {
+    "synthetic": true,
+    "purpose": "Reproduce transient native Core configuration unreadiness before KR_READY",
+    "sourceEvidence": "172-native-mqtt-core-resume-ordering-correction-live-restart-and-cleanup.md"
+  },
+  "preReady": {
+    "changedKernelEpoch": true,
+    "mqttConfigurationUnavailableReads": 3,
+    "coreTransportAlreadyActive": true,
+    "expectedConfigurationReads": 0,
+    "expectedCoreOperations": 0,
+    "expectedLifecycleState": "kernel-start-awaiting-ready",
+    "expectedTimerMilliseconds": 0,
+    "expectedReconciledAt": 0
+  },
+  "postReady": {
+    "restoreCoreReadinessBeforeMessage": true,
+    "reconciliationDelaySeconds": 15,
+    "expectedLifecycleState": "ShadowActive",
+    "expectedTransitionReason": "core-resumed",
+    "expectedClassification": "healthy",
+    "expectedCoreResumeObservationDelta": 1,
+    "expectedConnectionAttemptDelta": 0,
+    "expectedCoreOperations": 0
+  }
+}

@@ -174,6 +174,234 @@ assertMqttFixture(
     'Timestamp-less type-4 fixture changed shape.'
 );
 
+$transportEvidence = loadMqttFixture(
+    $fixtureDirectory . '/transport-subscription-schema-live-v3.json'
+);
+assertMqttFixture(
+    ($transportEvidence['payloadIncluded'] ?? null) === false,
+    'Transport evidence must remain payload-free.'
+);
+$transportSubscriptions = $transportEvidence['subscriptions'] ?? null;
+$transportDelivery = $transportEvidence['delivery'] ?? null;
+$transportCleanup = $transportEvidence['cleanup'] ?? null;
+assertMqttFixture(
+    is_array($transportSubscriptions)
+        && ($transportSubscriptions['count'] ?? null) === 4
+        && ($transportSubscriptions['canonicalQosCount'] ?? null) === 4
+        && (
+            $transportSubscriptions['legacyQualityOfServiceCount'] ?? null
+        ) === 0
+        && ($transportSubscriptions['invalidCount'] ?? null) === 0
+        && ($transportSubscriptions['wildcardPresent'] ?? null) === false,
+    'Corrected live subscription evidence changed.'
+);
+assertMqttFixture(
+    is_array($transportDelivery)
+        && ($transportDelivery['coreHealthy'] ?? null) === true
+        && ($transportDelivery['productiveReceiverDelta'] ?? null) === 1
+        && ($transportDelivery['siblingProbeDelta'] ?? null) === 1
+        && ($transportDelivery['siblingAcceptedMessages'] ?? null) === 1
+        && ($transportDelivery['classification'] ?? null) === 'both-received',
+    'Corrected live delivery evidence changed.'
+);
+assertMqttFixture(
+    is_array($transportCleanup)
+        && !in_array(false, array_values($transportCleanup), true),
+    'Corrected live cleanup evidence changed.'
+);
+
+$transientReadiness = loadMqttFixture(
+    $fixtureDirectory . '/core-resume-transient-core-readiness.json'
+);
+$transientMetadata = $transientReadiness['metadata'] ?? null;
+$transientPreReady = $transientReadiness['preReady'] ?? null;
+$transientPostReady = $transientReadiness['postReady'] ?? null;
+assertMqttFixture(
+    is_array($transientMetadata)
+        && ($transientMetadata['synthetic'] ?? null) === true
+        && is_array($transientPreReady)
+        && is_array($transientPostReady),
+    'Transient Core-readiness fixture metadata changed.'
+);
+assertMqttFixture(
+    ($transientPreReady['changedKernelEpoch'] ?? null) === true
+        && (
+            $transientPreReady['mqttConfigurationUnavailableReads']
+                ?? null
+        ) === 3
+        && ($transientPreReady['coreTransportAlreadyActive'] ?? null)
+            === true
+        && ($transientPreReady['expectedConfigurationReads'] ?? null)
+            === 0
+        && ($transientPreReady['expectedCoreOperations'] ?? null) === 0
+        && ($transientPreReady['expectedLifecycleState'] ?? null)
+            === 'kernel-start-awaiting-ready'
+        && ($transientPreReady['expectedTimerMilliseconds'] ?? null)
+            === 0
+        && ($transientPreReady['expectedReconciledAt'] ?? null) === 0,
+    'Transient Core-readiness pre-ready contract changed.'
+);
+assertMqttFixture(
+    ($transientPostReady['restoreCoreReadinessBeforeMessage'] ?? null)
+        === true
+        && ($transientPostReady['reconciliationDelaySeconds'] ?? null)
+            === 15
+        && ($transientPostReady['expectedLifecycleState'] ?? null)
+            === 'ShadowActive'
+        && ($transientPostReady['expectedTransitionReason'] ?? null)
+            === 'core-resumed'
+        && ($transientPostReady['expectedClassification'] ?? null)
+            === 'healthy'
+        && (
+            $transientPostReady['expectedCoreResumeObservationDelta']
+                ?? null
+        ) === 1
+        && (
+            $transientPostReady['expectedConnectionAttemptDelta']
+                ?? null
+        ) === 0
+        && ($transientPostReady['expectedCoreOperations'] ?? null) === 0,
+    'Transient Core-readiness post-ready contract changed.'
+);
+
+$postReadyUnhealthy = loadMqttFixture(
+    $fixtureDirectory . '/core-resume-post-ready-unhealthy-live.json'
+);
+$postReadyMetadata = $postReadyUnhealthy['metadata'] ?? null;
+$postReadyBefore = $postReadyUnhealthy['preRestart'] ?? null;
+$postReadyProjection =
+    $postReadyUnhealthy['firstReconciledProjection'] ?? null;
+$postReadyCleanup = $postReadyUnhealthy['cleanup'] ?? null;
+assertMqttFixture(
+    is_array($postReadyMetadata)
+        && ($postReadyMetadata['sanitized'] ?? null) === true
+        && ($postReadyMetadata['sourceStep'] ?? null) === 181
+        && ($postReadyMetadata['payloadIncluded'] ?? null) === false
+        && (
+            $postReadyMetadata['credentialValuesIncluded'] ?? null
+        ) === false
+        && is_array($postReadyBefore)
+        && is_array($postReadyProjection)
+        && is_array($postReadyCleanup),
+    'Post-ready unhealthy live metadata changed.'
+);
+assertMqttFixture(
+    ($postReadyBefore['lifecycleState'] ?? null) === 'ShadowActive'
+        && ($postReadyBefore['coreHealthy'] ?? null) === true
+        && (
+            $postReadyBefore['credentialFieldsPresent'] ?? null
+        ) === true
+        && ($postReadyBefore['connectionAttempts'] ?? null) === 12
+        && ($postReadyBefore['connectionSuccesses'] ?? null) === 4
+        && ($postReadyBefore['connectionFailures'] ?? null) === 0
+        && ($postReadyBefore['coreResumeObservations'] ?? null) === 0,
+    'Post-ready unhealthy pre-restart contract changed.'
+);
+assertMqttFixture(
+    ($postReadyProjection['newKernelEpoch'] ?? null) === true
+        && (
+            $postReadyProjection['reconciliationDelaySeconds'] ?? null
+        ) === 15
+        && ($postReadyProjection['lifecycleState'] ?? null)
+            === 'ReconnectScheduled'
+        && ($postReadyProjection['transitionReason'] ?? null)
+            === 'core-disconnected'
+        && ($postReadyProjection['classification'] ?? null)
+            === 'unhealthy-with-credentials'
+        && ($postReadyProjection['coreHealthy'] ?? null) === false
+        && (
+            $postReadyProjection['credentialFieldsPresentAfterClassification']
+                ?? null
+        ) === false
+        && ($postReadyProjection['connectionAttemptDelta'] ?? null) === 0
+        && ($postReadyProjection['connectionSuccessDelta'] ?? null) === 0
+        && ($postReadyProjection['connectionFailureDelta'] ?? null) === 0
+        && (
+            $postReadyProjection['coreResumeObservationDelta'] ?? null
+        ) === 0
+        && (
+            $postReadyProjection['receivedDeltaSinceFinalBaseline'] ?? null
+        ) === 2
+        && (
+            $postReadyProjection['acceptedDeltaSinceFinalBaseline'] ?? null
+        ) === 2
+        && ($postReadyProjection['rejectedDelta'] ?? null) === 0
+        && ($postReadyProjection['receiveDeltaWindow'] ?? null)
+            === 'final-pre-restart-baseline-to-first-reconciled-projection'
+        && ($postReadyProjection['receiveTimingRelativeToRestart'] ?? null)
+            === 'unresolved'
+        && ($postReadyProjection['topologyHashUnchanged'] ?? null)
+            === true,
+    'Post-ready unhealthy first projection changed.'
+);
+assertMqttFixture(
+    ($postReadyCleanup['normalDisableCalls'] ?? null) === 1
+        && ($postReadyCleanup['normalApplyChangesCalls'] ?? null) === 1
+        && ($postReadyCleanup['explicitDisconnectCalls'] ?? null) === 0
+        && ($postReadyCleanup['featureDisabled'] ?? null) === true
+        && ($postReadyCleanup['lifecycleDisabled'] ?? null) === true
+        && ($postReadyCleanup['nextAttemptAt'] ?? null) === 0
+        && ($postReadyCleanup['webSocketInactive'] ?? null) === true
+        && ($postReadyCleanup['credentialFieldsEmpty'] ?? null) === true
+        && ($postReadyCleanup['compatibilityPass'] ?? null) === true
+        && ($postReadyCleanup['observationSeconds'] ?? null) >= 60,
+    'Post-ready unhealthy cleanup contract changed.'
+);
+
+$boundedObservation = loadMqttFixture(
+    $fixtureDirectory . '/core-resume-bounded-health-observation.json'
+);
+$boundedMetadata = $boundedObservation['metadata'] ?? null;
+$boundedSchedule = $boundedObservation['schedule'] ?? null;
+$boundedCases = $boundedObservation['cases'] ?? null;
+assertMqttFixture(
+    is_array($boundedMetadata)
+        && ($boundedMetadata['synthetic'] ?? null) === true
+        && ($boundedMetadata['payloadIncluded'] ?? null) === false
+        && ($boundedMetadata['deviceIdentityIncluded'] ?? null) === false
+        && ($boundedMetadata['credentialValuesIncluded'] ?? null) === false
+        && is_array($boundedSchedule)
+        && ($boundedSchedule['absoluteOffsetsSeconds'] ?? null)
+            === [15, 30, 60, 90, 120, 180]
+        && ($boundedSchedule['deadlineSeconds'] ?? null) === 180
+        && ($boundedSchedule['maximumObservations'] ?? null) === 6
+        && is_array($boundedCases),
+    'Bounded Core-resume observation metadata changed.'
+);
+$delayed30 = $boundedCases['delayed30'] ?? null;
+$neverReady = $boundedCases['neverReady'] ?? null;
+assertMqttFixture(
+    is_array($delayed30)
+        && count($delayed30['timeline'] ?? []) === 2
+        && ($delayed30['expectedState'] ?? null) === 'ShadowActive'
+        && ($delayed30['expectedReason'] ?? null) === 'core-resumed'
+        && ($delayed30['expectedClassification'] ?? null) === 'healthy'
+        && ($delayed30['expectedCoreResumeObservationDelta'] ?? null) === 1
+        && ($delayed30['expectedConnectionOperationDelta'] ?? null) === 0
+        && ($delayed30['expectedCoreMutationCount'] ?? null) === 0,
+    'Delayed-30 Core-resume observation contract changed.'
+);
+assertMqttFixture(
+    is_array($neverReady)
+        && count($neverReady['timeline'] ?? []) === 6
+        && ($neverReady['expectedPendingState'] ?? null)
+            === 'CoreResumeObserving'
+        && ($neverReady['expectedPendingReason'] ?? null)
+            === 'core-readiness-pending'
+        && ($neverReady['expectedPendingClassification'] ?? null)
+            === 'pending-with-credentials'
+        && ($neverReady['expectedFinalState'] ?? null)
+            === 'ReconnectScheduled'
+        && ($neverReady['expectedFinalReason'] ?? null)
+            === 'core-disconnected'
+        && ($neverReady['expectedFinalClassification'] ?? null)
+            === 'unhealthy-with-credentials'
+        && ($neverReady['expectedUnexpectedDisconnectDelta'] ?? null) === 1
+        && ($neverReady['expectedConnectionOperationDelta'] ?? null) === 0
+        && ($neverReady['expectedFinalCoreMutationCount'] ?? null) === 7,
+    'Never-ready Core-resume observation contract changed.'
+);
+
 $publicText = '';
 foreach (glob($fixtureDirectory . '/*.json') ?: [] as $path) {
     $contents = file_get_contents($path);
