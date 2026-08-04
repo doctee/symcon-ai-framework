@@ -428,6 +428,15 @@ same brightness semantics are safe for every existing consumer.
 - `129-mired-aware-kelvin-feedback-matcher.md` records the shared offline
   Z2M-only integer-Mired comparison contract, complete 2000–6500 K matrix and
   unchanged Matter behavior.
+- `130-source-consolidation-and-release-boundary.md` records the clean
+  `origin/main` source recovery, cross-workstream isolation and repository/live
+  release boundary.
+- `131-shared-statistics-owner-activation.md` records the corrected earliest
+  helper owner, bounded broad-candidate rollback, minimal Statistics-only
+  activation and command-free cross-consumer regression.
+- `132-cl003-mired-live-activation-and-functional-test.md` records the minimal
+  wrapper activation and the successful 3900 K request with authoritative
+  3906 K feedback in the same 256-Mired quantization step.
 - `../mqtt-discovery-exporter/36-client-subscription-coverage-and-runtime-namespace-report.md`
   records the later CL-030 MQTT namespace correction and complete Home
   Assistant/Apple Home functional closure.
@@ -671,9 +680,9 @@ capability remains disabled pending the Zigbee2MQTT V6 module contract. No
 device action was performed while presence was unconfirmed. By explicit owner
 decision, both shutdown consumers were subsequently aligned command-free with
 the CL-011 STATE facade; their real shutdown effect remains presence-bound.
-The current structural baseline after the later CL-003 Kürbis activation is
-therefore 26 v2 wrappers, 20 fully device-tested wrappers and three retained legacy wrappers across
-29 tracked ControlLight instances. CL-030 passed its direct off-pulse and
+The current structural baseline after the later CL-003 Mired regression is
+therefore 26 v2 wrappers, 21 fully device-tested wrappers and three retained
+legacy wrappers across 29 tracked ControlLight instances. CL-030 passed its direct off-pulse and
 manual-on/immediate-Alexa-off sequences with one physical pulse per effective
 shutdown, restored supply and authoritative power feedback.
 

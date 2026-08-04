@@ -16,13 +16,17 @@ This project adheres to Semantic Versioning.
   runtime namespace changes. The state-only Home Assistant and Apple Home
   migration is documented with bounded authoritative feedback; live activation
   of the improved in-place candidate remains a separate gate.
+- Added a guarded Windows deployment-retention tool with exact manifest-pair
+  plans, runtime-reference protection, verified private backups and enforced
+  one-deployment-to-one-fileset checks before simulation and after cleanup.
 - Consolidated the post-v0.3 ControlLight evolution on a clean `origin/main`
   boundary: member-confirmed groups, Hue Wall and Manual-On/Pulse-Off adapters,
   HS/off-state color contracts, per-variable Statistics serialization, the
   Z2M Mired-aware Kelvin matcher, installed-instance fixtures, executable
-  regressions and sanitized live-gate reports. The consolidation changes no
-  live runtime; shared-helper activation and Mired functional verification
-  remain explicit later gates.
+  regressions and sanitized live-gate reports. The later live gates activated
+  the per-variable Statistics helper through the earliest global owner while
+  preserving the proven MQTT runtime, then verified the Mired matcher on one
+  minimal CL-003 fileset with authoritative 3900-to-3906 K feedback.
 - Added a guarded one-way Open-Meteo module publisher. SAEF remains the
   editable source of truth while check and prepare stay local and
   deterministic; publication requires exact fileset and remote-commit pins,
