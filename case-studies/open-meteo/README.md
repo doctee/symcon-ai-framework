@@ -6,8 +6,11 @@ photovoltaic forecasts.
 
 The current case-study state includes the published provider-neutral shared
 location, weather and solar runtimes. Two shared locations and weather runtimes
-are active, and the storage-aware solar path has passed manual and automatic
-update observation without disabling an existing provider.
+are active. One storage-aware Solar runtime has passed manual and automatic
+update observation, and a second has passed guarded creation with its first
+scheduled cycle pending. A read-only calibration collector now preserves
+prospective forecast snapshots for both systems. Existing providers remain
+enabled.
 
 ## Scope
 
@@ -43,6 +46,11 @@ and consumer mappings belong in `private/` or an ignored `*.local.*` file.
 | `13-soil-variable-visibility-live-activation.md` | Records the controlled soil-variable presentation activation and module-update reconciliation. |
 | `14-solar-pilot-and-automatic-observation.md` | Records the sanitized storage-coupled solar pilot, scheduled-cycle observation and calibration boundary. |
 | `15-live-object-presentation-cleanup.md` | Records the guarded live rename and reparent cleanup without changing runtime configuration or provider traffic. |
+| `16-second-storage-solar-instance.md` | Records the idempotent creation and timer activation of a second storage-aware Solar instance. |
+| `17-forecast-calibration-collector.md` | Defines and records immutable forecast snapshotting plus bounded read-only alignment with logged PV actuals. |
+| `candidate/SolarCalibrationCore.php` | Pure snapshot normalization, archive-event alignment and calibration metrics. |
+| `candidate/SolarCalibrationCollectorRuntime.php` | Bounded cache and archive adapter with immutable private evidence files. |
+| `tools/build-calibration-collector.php` | Deterministically combines public runtime code with ignored installation-local configuration. |
 | `distribution/libs/OpenMeteo/` | Pure request, parsing, interval, PV and runtime-state domain classes. |
 | `distribution/` | Canonical candidate IP-Symcon library source with shared-location, weather and solar modules. |
 | `../../dist/symcon/saef-open-meteo-module/` | Generated standalone module fileset; never edit it directly. |
@@ -67,7 +75,13 @@ controlled live pilots and scheduled-cycle observation:
 7. the solar module has an atomic multi-orientation, storage-aware runtime; and
 8. one storage-coupled `pv_harvest` pilot and a later scheduled cycle produced
    bounded current caches while configuration, references and the
-   provider-parallel boundary remained unchanged.
+   provider-parallel boundary remained unchanged; and
+9. a second storage-aware Solar instance is active with an hourly timer, an
+   unchanged Weather dependency and no provider request during creation; its
+   first regular cycle remains an observation checkpoint; and
+10. a five-minute read-only calibration collector is active, stores immutable
+    forecast snapshots and waits for complete horizons before calculating
+    forecast-to-actual metrics.
 
 The generated fileset contains the shared profile and configuration-hash
 helpers required by the modules without duplicating their canonical sources.
@@ -76,8 +90,8 @@ SAEF remains the editable source of truth. The public module repository is a
 generated release mirror and must not be edited independently. The controlled
 workflow is documented in `07-controlled-publication-workflow.md`.
 
-Provider deactivation, consumer migration, shading and forecast-to-measurement
-calibration remain separate later gates.
+Provider deactivation, consumer migration, shading and any change to calibrated
+model parameters remain separate later gates.
 
 The authorized inactive live preflight found no candidate collision, but the
 installation stopped before mutation because Module Control requires an
@@ -93,6 +107,10 @@ Soil-variable visibility and module-update reconciliation are recorded in
 request and scheduled-cycle evidence are recorded in
 `14-solar-pilot-and-automatic-observation.md`. The later object-tree presentation
 cleanup is recorded in `15-live-object-presentation-cleanup.md`.
+The guarded second Solar creation is recorded in
+`16-second-storage-solar-instance.md`.
+The prospective snapshot and actual-value calibration path is recorded in
+`17-forecast-calibration-collector.md`.
 
 Run the focused gate from the repository root:
 

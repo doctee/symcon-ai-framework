@@ -5,13 +5,16 @@ parameters:
         maximumNumberOfProcesses: 1
 
     paths:
+        - candidate
         - distribution
         - tests
+        - tools/build-calibration-collector.php
 
     scanFiles:
         - ../../tools/publish-open-meteo-module.php
 
     bootstrapFiles:
+        - ../../stubs/symcon.php
         - ../../helpers/object/EnsureProfile.php
         - ../../helpers/diagnostics/ConfigurationHash.php
 
