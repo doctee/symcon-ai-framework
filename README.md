@@ -62,6 +62,7 @@ Important current artifacts include:
 - `ARCHITECTURE.md`
 - `project/AI_PROJECT.md`
 - `project/SYMCON_MCP_SCRIPT_READBACK.md`
+- `project/WORKSTREAM_COORDINATION.md`
 - `project/SYSTEM_FUNCTIONS_CANDIDATE_INVENTORY.md`
 - `project/SYSTEM_FUNCTIONS_MIGRATION_WAVE_1.md`
 - `project/SYSTEM_FUNCTIONS_PILOT_DEPLOYMENT_PLAN.md`
