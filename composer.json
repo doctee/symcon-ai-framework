@@ -42,7 +42,8 @@
             "@php tests/deployments/windows-restart-coordinator.php"
         ],
         "test:deployment-channel": [
-            "@php tests/deployments/windows-deployment-channel.php"
+            "@php tests/deployments/windows-deployment-channel.php",
+            "@php tests/deployments/windows-retention.php"
         ],
         "test:runtime-source-mirror": [
             "@php tests/deployments/runtime-source-mirror.php"
