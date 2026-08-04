@@ -437,6 +437,9 @@ same brightness semantics are safe for every existing consumer.
 - `132-cl003-mired-live-activation-and-functional-test.md` records the minimal
   wrapper activation and the successful 3900 K request with authoritative
   3906 K feedback in the same 256-Mired quantization step.
+- `133-cl022-pilot-identity-consolidation.md` records the command-free
+  conversion of the original Munich hallway pilot to its stable keyed CL-022
+  identity while preserving runtime, events and exporter identities.
 - `../mqtt-discovery-exporter/36-client-subscription-coverage-and-runtime-namespace-report.md`
   records the later CL-030 MQTT namespace correction and complete Home
   Assistant/Apple Home functional closure.
