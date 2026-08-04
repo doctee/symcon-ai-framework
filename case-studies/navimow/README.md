@@ -285,6 +285,7 @@ template or a general SAEF reference implementation.
 | `257-navimow-mqtt-recovery-pr-merge-and-canonical-verification.md` | Executes the explicitly authorized PR #22 merge contract, verifies canonical SAEF main and keeps standalone and live gates closed. |
 | `258-navimow-standalone-mqtt-publication-readiness-review.md` | Revalidates the exact one-file episode-summary delta against current standalone main and issues a conditional publication GO without mutating either remote. |
 | `259-native-mqtt-episode-accounting-standalone-publication.md` | Publishes and remotely verifies the exact one-file episode-summary candidate while preserving metadata, Symcon and MQTT activation as separate gates. |
+| `260-native-mqtt-episode-accounting-metadata-conformance.md` | Reproduces the official validator runtime defect and passes all 13 exact published inputs through freshly downloaded official schemas and AJV 6.10.2. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

@@ -232,7 +232,7 @@ and its own explicit gate.
 | remote commit verification | PASS |
 | remote blob verification | PASS |
 | tag or release creation | NOT PERFORMED |
-| metadata conformance | CLOSED |
+| metadata conformance | PASS IN STEP 260 |
 | Symcon disabled update | CLOSED |
 | MQTT staging or activation | CLOSED |
 | mower command | NOT PLANNED |
