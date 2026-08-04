@@ -214,9 +214,9 @@ credential retrieval, MQTT activation, restart or mower command.
 |---|---|
 | Gate II branch push | PASS |
 | pull request creation | PASS, draft PR #22 |
-| final remote-head verification | PENDING CLOSURE PUSH |
-| PR checks | PENDING CLOSURE PUSH |
-| PR review and merge decision | CLOSED |
+| final remote-head verification | PASS |
+| PR checks | PASS, 2 of 2 successful |
+| PR review and merge decision | PASS IN STEP 256 |
 | canonical-main verification | CLOSED |
 | standalone publication | CLOSED |
 | metadata validation | CLOSED |
@@ -226,7 +226,8 @@ credential retrieval, MQTT activation, restart or mower command.
 
 ## 11. Next Step
 
-After the closure push and check verification, proceed with:
+The closure push and its checks were verified. Step 256 now records the
+pull-request review and conditional merge recommendation:
 
 ```text
 256-navimow-mqtt-recovery-pr-review-and-merge-decision.md

@@ -281,6 +281,7 @@ template or a general SAEF reference implementation.
 | `253-navimow-mqtt-recovery-mainline-integration-plan.md` | Supersedes direct publication until the clean recovered 207-path Navimow workstream is integrated with current main, fully reviewed, retested and refrozen. |
 | `254-navimow-mqtt-recovery-mainline-integration-and-refreeze.md` | Integrates current main without conflict, reviews the complete Navimow scope, passes focused and repository-wide checks and reproduces the one-file standalone candidate. |
 | `255-navimow-mqtt-recovery-branch-publication-and-pr.md` | Publishes only the reviewed recovery branch, opens draft PR #22 against SAEF main and preserves standalone and live gates for separate authorization. |
+| `256-navimow-mqtt-recovery-pr-review-and-merge-decision.md` | Reviews draft PR #22 and its productive receive-only delta, records no blocking findings and recommends a separately authorized SAEF-main merge. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
