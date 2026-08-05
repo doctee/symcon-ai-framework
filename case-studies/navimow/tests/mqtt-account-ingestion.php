@@ -80,9 +80,50 @@ function mqttAccountEnvelope(): string
     return json_encode($fixture['envelope'], JSON_THROW_ON_ERROR);
 }
 
+function mqttAccountLocationEnvelope(): string
+{
+    return json_encode([
+        'DataID' => '{7F7632D9-FA40-4F38-8DEA-C83CD4325A32}',
+        'PacketType' => 3,
+        'Payload' => json_encode([[
+            'postureTheta' => '0.5',
+            'postureX' => '12.5',
+            'postureY' => '-8.25',
+            'time' => 1700000002000,
+            'type' => 1,
+            'vehicleState' => 4,
+        ]], JSON_THROW_ON_ERROR),
+        'QualityOfService' => 0,
+        'Retain' => false,
+        'Topic' => '/downlink/vehicle/DEVICE_001/realtimeDate/location',
+    ], JSON_THROW_ON_ERROR);
+}
+
 $account = new NavimowAccount(MQTT_TEST_ACCOUNT_ID);
 $account->Create();
 $account->ApplyChanges();
+
+$positionDisabled = decodeMqttAccount(
+    $account->GetMqttPositionDiagnostics()
+);
+assertMqttAccount(
+    $positionDisabled['status'] === 'disabled'
+        && $positionDisabled['featureEnabled'] === false
+        && $positionDisabled['transportEnabled'] === false
+        && $positionDisabled['observation'] === null,
+    'MQTT position diagnostics are not disabled by default.'
+);
+$account->testSetProperty('EnableMqttPositionDiagnostics', true);
+$positionInactive = decodeMqttAccount(
+    $account->GetMqttPositionDiagnostics()
+);
+assertMqttAccount(
+    $positionInactive['status'] === 'inactive'
+        && $positionInactive['featureEnabled'] === true
+        && $positionInactive['transportEnabled'] === false
+        && $positionInactive['observation'] === null,
+    'Position diagnostics did not remain inactive without MQTT transport.'
+);
 
 $disabled = decodeMqttAccount(
     $account->ValidateMqttShadowConfiguration()
@@ -98,6 +139,7 @@ assertMqttAccount(
 );
 
 $account->testSetProperty('EnableMqttShadow', true);
+$account->testSetProperty('EnableMqttPositionDiagnostics', true);
 $account->testSetProperty(
     'MqttReceiverInstanceId',
     MQTT_TEST_RECEIVER_ID
@@ -195,6 +237,66 @@ assertMqttAccount(
     'MQTT ingestion changed a public Account variable.'
 );
 
+$positionResult = $account->IngestMqttEnvelope(
+    MQTT_TEST_RECEIVER_ID,
+    mqttAccountLocationEnvelope()
+);
+$position = decodeMqttAccount(
+    $account->GetMqttPositionDiagnostics()
+);
+assertMqttAccount(
+    $positionResult === 'accepted'
+        && $position['status'] === 'available'
+        && $position['authority'] === 'diagnostic-only'
+        && $position['coordinateSystem'] === 'local-map'
+        && $position['trackedDeviceCount'] === 1
+        && $position['observation']['latest']['localX'] === 12.5
+        && $position['observation']['latest']['localY'] === -8.25
+        && $position['observation']['latest']['orientation'] === 0.5
+        && $position['observation']['counters']['retainedSampleCount'] === 1
+        && $account->testSnapshotPersistentState()['variables']
+            === $afterVariables,
+    'Position ingestion changed public state or lost bounded local pose.'
+);
+$positionJson = $account->GetMqttPositionDiagnostics();
+assertMqttAccount(
+    !str_contains($positionJson, 'DEVICE_001')
+        && !str_contains($positionJson, '/downlink/')
+        && !str_contains($positionJson, 'posture'),
+    'Position diagnostics exposed an identity, topic or raw field name.'
+);
+$positionRoot = decodeMqttAccount(
+    $account->testReadAttribute('MqttPositionDiagnostic')
+);
+$positionRoot['conflictingDeviceCount'] = 1;
+$account->testSetAttribute(
+    'MqttPositionDiagnostic',
+    json_encode($positionRoot, JSON_THROW_ON_ERROR)
+);
+$ambiguousPosition = decodeMqttAccount(
+    $account->GetMqttPositionDiagnostics()
+);
+assertMqttAccount(
+    $ambiguousPosition['status'] === 'ambiguous'
+        && $ambiguousPosition['trackedDeviceCount'] === 1
+        && $ambiguousPosition['observation'] === null,
+    'Cross-device position evidence did not fail closed.'
+);
+$account->testSetAttribute('MqttPositionDiagnostic', '{');
+$invalidPosition = decodeMqttAccount(
+    $account->GetMqttPositionDiagnostics()
+);
+assertMqttAccount(
+    $invalidPosition['status'] === 'invalid'
+        && $invalidPosition['observation'] === null,
+    'Malformed position diagnostics did not fail closed.'
+);
+$positionRoot['conflictingDeviceCount'] = 0;
+$account->testSetAttribute(
+    'MqttPositionDiagnostic',
+    json_encode($positionRoot, JSON_THROW_ON_ERROR)
+);
+
 $shadow = decodeMqttAccount(
     $account->testReadAttribute('MqttShadowState')
 );
@@ -248,9 +350,14 @@ $clearedShadow = decodeMqttAccount(
 $clearedPending = decodeMqttAccount(
     $account->testReadAttribute('MqttPendingReconciliation')
 );
+$clearedPosition = decodeMqttAccount(
+    $account->GetMqttPositionDiagnostics()
+);
 assertMqttAccount(
     $clearedShadow['devices'] === []
-        && $clearedPending['entries'] === [],
+        && $clearedPending['entries'] === []
+        && $clearedPosition['status'] === 'unavailable'
+        && $clearedPosition['trackedDeviceCount'] === 0,
     'ApplyChanges did not clear ephemeral MQTT state.'
 );
 

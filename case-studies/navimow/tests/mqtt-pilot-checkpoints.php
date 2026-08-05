@@ -126,6 +126,43 @@ assertPilotCheckpoint(
     'Enabled pilot did not start an absolute five-hour schedule.'
 );
 
+$account->testSetProperty('EnableMqttPositionDiagnostics', true);
+$positionState = Navimow\MqttPositionDiagnostic::reduce(
+    Navimow\MqttPositionDiagnostic::initialState(),
+    [
+        'localX' => 12.5,
+        'localY' => -8.25,
+        'orientation' => 0.5,
+        'sourceTimestamp' => 1700000000000,
+        'vehicleStateCode' => 4,
+    ],
+    $clock->now()
+);
+$account->testSetAttribute(
+    'MqttPositionDiagnostic',
+    json_encode([
+        'formatVersion' => 1,
+        'deviceKey' => hash('sha256', 'SYNTHETIC_DEVICE'),
+        'conflictingDeviceCount' => 0,
+        'state' => $positionState,
+    ], JSON_THROW_ON_ERROR)
+);
+$positionCheckpoint = invokePilotPrivate(
+    $account,
+    'mqttPositionCheckpointProjection'
+);
+assertPilotCheckpoint(
+    $positionCheckpoint === [
+        'available' => true,
+        'receivedSamples' => 1,
+        'coordinateChanges' => 0,
+        'outOfOrderTimestamps' => 0,
+        'retainedSamples' => 1,
+    ],
+    'Native pilot checkpoint did not project bounded position evidence.'
+);
+$account->testSetProperty('EnableMqttPositionDiagnostics', false);
+
 invokePilotPrivate(
     $account,
     'replaceMqttPilotCoreStatusMessages',
@@ -495,6 +532,11 @@ assertPilotCheckpoint(
             'sessionSequence',
             'recordedAt',
             'delaySeconds',
+            'positionAvailable',
+            'positionReceivedSamples',
+            'positionCoordinateChanges',
+            'positionOutOfOrderTimestamps',
+            'positionRetainedSamples',
         ]
         && ($summary['checkpoints'][0]['delaySeconds'] ?? null) === 1
         && strlen($summaryJson) <= 16384

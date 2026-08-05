@@ -309,6 +309,11 @@ template or a general SAEF reference implementation.
 | `281-navimow-account-status-correction-post-merge-closure-canonicalization.md` | Canonicalizes the post-merge retention decision and its own closure evidence as one exact local three-file documentation commit while keeping publication, cleanup and live gates closed. |
 | `282-navimow-account-status-correction-post-merge-closure-publication-plan.md` | Freezes the documentation-only post-merge closure and separates plan canonicalization, branch push, PR review, merge and source cleanup into explicit gates without changing any remote or live state. |
 | `283-navimow-account-status-correction-post-merge-closure-plan-canonicalization.md` | Canonicalizes the post-merge closure publication plan as the exact second local documentation commit and proves the final two-commit, five-path candidate while leaving every remote, cleanup and live gate closed. |
+| `284-native-mqtt-position-evidence-and-pilot-plan.md` | Derives a privacy-preserving local-pose contract from existing private MQTT location evidence and separates position diagnostics from REST-authoritative state before another combined transport pilot. |
+| `285-native-mqtt-position-diagnostics-implementation.md` | Implements and offline-validates an opt-in, bounded local-pose diagnostic with receive-order sequencing, privacy controls and unchanged REST authority. |
+| `286-combined-mqtt-transport-and-position-pilot-readiness.md` | Combines transport stability and local-position evidence in one receive-only 48-to-72-hour pilot with native coordinate-free checkpoints. |
+| `287-combined-mqtt-transport-and-position-harness-implementation.md` | Extends the proven private harness with snapshot format 3, position-covered cycle evidence and unattended native-checkpoint reconstruction. |
+| `288-combined-mqtt-position-candidate-review-and-publication-plan.md` | Freezes the exact five-file productive candidate and groups SAEF, standalone, disabled-rollout and live-pilot operations into four bounded authorization gates. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
