@@ -138,10 +138,15 @@ assertShadow(
         'locationVehicleStateCode' => 1,
     ]
         && $posePatch['geometryPresent'] === true
-        && !str_contains($poseJson, 'posture')
-        && !str_contains($poseJson, '9876.54321')
-        && !str_contains($poseJson, '-8765.4321'),
-    'Geometry escaped the parser reduction boundary.'
+        && $posePatch['pose'] === [
+            'localX' => 9876.54321,
+            'localY' => -8765.4321,
+            'orientation' => 0.387,
+            'sourceTimestamp' => 1700000000000,
+            'vehicleStateCode' => 1,
+        ]
+        && !str_contains($poseJson, 'posture'),
+    'Geometry was not reduced to the bounded local-pose contract.'
 );
 
 $locationState = MqttPartialStateAccumulator::initialState();
@@ -163,7 +168,8 @@ $secondLocation = MqttPartialStateAccumulator::reduce(
 );
 assertShadow(
     $secondLocation['state']['fields']['locationType'] === 3
-        && $secondLocation['state']['fields']['locationVehicleStateCode'] === 1,
+        && $secondLocation['state']['fields']['locationVehicleStateCode'] === 1
+        && $partial['patches'][0]['pose'] === null,
     'Partial location update cleared an absent field.'
 );
 
@@ -251,6 +257,16 @@ assertShadowThrows(
         SHADOW_RECEIVED_AT
     ),
     'Invalid geometry was accepted.'
+);
+assertShadowThrows(
+    static fn (): array => MqttPayloadParser::parse(
+        SHADOW_LOCATION_TOPIC,
+        '[{"postureTheta":3.2,"postureX":0,"postureY":0,'
+            . '"time":1700000000000,"vehicleState":4}]',
+        SHADOW_DEVICE_ID,
+        SHADOW_RECEIVED_AT
+    ),
+    'Out-of-range orientation was accepted.'
 );
 
 echo "Navimow MQTT shadow payload checks passed.\n";
