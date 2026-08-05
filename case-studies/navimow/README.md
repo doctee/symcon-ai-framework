@@ -303,6 +303,7 @@ template or a general SAEF reference implementation.
 | `275-navimow-account-status-correction-saef-branch-publication.md` | Publishes the exact six-commit Gate-P0 candidate once, proves remote branch identity and preserves publication-evidence canonicalization, PR, merge and all live operations as separate gates. |
 | `276-navimow-account-status-correction-saef-branch-publication-evidence-canonicalization.md` | Canonicalizes and fast-forward publishes the initial branch-publication evidence as one documentation-only commit, proves final remote equality and leaves pull-request creation plus merge separately gated. |
 | `277-navimow-account-status-correction-saef-pull-request-publication.md` | Opens and verifies ready-for-review PR #23, publishes one bounded documentation-only closure commit and leaves review, checks decision, merge and all live gates separately closed. |
+| `278-navimow-account-status-correction-saef-pull-request-review-and-checks.md` | Reviews PR #23 without blocking findings, verifies focused and GitHub checks, publishes one report-only closure commit and recommends a separately authorized SAEF-main merge. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
