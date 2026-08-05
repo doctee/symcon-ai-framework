@@ -300,6 +300,8 @@ template or a general SAEF reference implementation.
 | `272-navimow-account-status-correction-saef-publication-plan.md` | Freezes the complete five-commit Navimow branch and separates final readiness, branch push, pull request, review, merge and cleanup into explicit publication gates without changing any remote or live state. |
 | `273-navimow-account-status-correction-saef-push-readiness.md` | Stops Gate P0 because the publication plan is not yet canonicalized, preserves the clean-worktree rule and redirects final readiness to one self-contained local canonicalization step without pushing. |
 | `274-navimow-account-status-correction-saef-push-candidate-canonicalization.md` | Canonicalizes the publication plan and stopped readiness gate, passes focused plus repository-wide validation against the final clean six-commit candidate and leaves branch push separately gated. |
+| `275-navimow-account-status-correction-saef-branch-publication.md` | Publishes the exact six-commit Gate-P0 candidate once, proves remote branch identity and preserves publication-evidence canonicalization, PR, merge and all live operations as separate gates. |
+| `276-navimow-account-status-correction-saef-branch-publication-evidence-canonicalization.md` | Canonicalizes and fast-forward publishes the initial branch-publication evidence as one documentation-only commit, proves final remote equality and leaves pull-request creation plus merge separately gated. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
