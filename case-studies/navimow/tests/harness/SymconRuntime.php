@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+if (!defined('IS_CREATING')) {
+    define('IS_CREATING', 101);
+}
+
+if (!defined('IS_ACTIVE')) {
+    define('IS_ACTIVE', 102);
+}
+
 if (!class_exists('IPSModule')) {
     class IPSModule
     {
@@ -15,6 +23,7 @@ if (!class_exists('IPSModule')) {
         private array $debugEntries = [];
         private array $childMessages = [];
         private ?Closure $parentHandler = null;
+        private int $status = IS_CREATING;
 
         public function __construct(int $InstanceID = 1)
         {
@@ -27,6 +36,12 @@ if (!class_exists('IPSModule')) {
 
         public function ApplyChanges()
         {
+            $this->status = IS_CREATING;
+        }
+
+        protected function SetStatus(int $status): void
+        {
+            $this->status = $status;
         }
 
         protected function RegisterPropertyString(string $ident, string $default): void
@@ -266,6 +281,11 @@ if (!class_exists('IPSModule')) {
         {
             $timer = $this->requireEntry($this->timers, $ident, 'timer');
             return (int) $timer['interval'];
+        }
+
+        public function testStatus(): int
+        {
+            return $this->status;
         }
 
         public function testRegisteredMessages(): array

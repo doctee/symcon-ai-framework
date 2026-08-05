@@ -328,7 +328,8 @@ $account = new MqttLifecycleAccount(
 $account->Create();
 $account->ApplyChanges();
 assertLifecycle(
-    $lifecycleOperations === []
+    $account->testStatus() === IS_ACTIVE
+        && $lifecycleOperations === []
         && $account->testRegisteredMessages() === [[
             'senderId' => 0,
             'messageId' => IPS_KERNELSTARTED,
@@ -336,6 +337,12 @@ assertLifecycle(
     'Default-disabled ApplyChanges touched a Core instance.'
 );
 $account->testSetProperty('ClientSecret', 'SYNTHETIC_CLIENT_SECRET');
+$account->ApplyChanges();
+assertLifecycle(
+    $account->testStatus() === IS_ACTIVE
+        && $lifecycleOperations === [],
+    'Authorization-pending ApplyChanges did not finalize active status.'
+);
 $account->testSetProperty('EnableMqttShadow', true);
 $account->testSetProperty('MqttReceiverInstanceId', $receiverId);
 $account->testSetAttribute('AccessToken', 'SYNTHETIC_ACCESS_TOKEN');
@@ -344,6 +351,12 @@ $account->testSetAttribute('TokenExpiresAtInternal', 1700003600);
 $account->testSetAttribute(
     'DiscoveryCache',
     json_encode([['id' => 'DEVICE_001']], JSON_THROW_ON_ERROR)
+);
+$account->ApplyChanges();
+assertLifecycle(
+    $account->testStatus() === IS_ACTIVE
+        && $lifecycleOperations === [],
+    'Authenticated ApplyChanges did not finalize active status.'
 );
 
 $candidate = decodeLifecycle(
@@ -896,6 +909,7 @@ $lifecycleInstances = $nativeActiveInstances;
 $lifecycleOperations = [];
 $credentialCallsBeforeApplyFirstExpired = $credentialCalls;
 $applyFirstExpiredTokenAccount->ApplyChanges();
+$applyFirstExpiredStatus = $applyFirstExpiredTokenAccount->testStatus();
 $applyFirstExpiredLifecycle = json_decode(
     (string) $applyFirstExpiredTokenAccount->testReadAttribute(
         'MqttLifecycleRegistry'
@@ -905,7 +919,8 @@ $applyFirstExpiredLifecycle = json_decode(
     JSON_THROW_ON_ERROR
 );
 assertLifecycle(
-    $lifecycleOperations === []
+    $applyFirstExpiredStatus === IS_ACTIVE
+        && $lifecycleOperations === []
         && ($lifecycleConfigurations[$webSocketId]['Active'] ?? null)
             === true
         && (
@@ -970,6 +985,8 @@ $lifecycleConfigurations = $nativeActiveConfigurations;
 $lifecycleInstances = $nativeActiveInstances;
 $lifecycleOperations = [];
 $applyFirstInvalidConfigurationAccount->ApplyChanges();
+$applyFirstInvalidStatus =
+    $applyFirstInvalidConfigurationAccount->testStatus();
 $applyFirstInvalidLifecycle = json_decode(
     (string) $applyFirstInvalidConfigurationAccount->testReadAttribute(
         'MqttLifecycleRegistry'
@@ -979,7 +996,8 @@ $applyFirstInvalidLifecycle = json_decode(
     JSON_THROW_ON_ERROR
 );
 assertLifecycle(
-    $lifecycleOperations === []
+    $applyFirstInvalidStatus === IS_ACTIVE
+        && $lifecycleOperations === []
         && ($lifecycleConfigurations[$webSocketId]['Active'] ?? null)
             === true
         && (
@@ -1038,11 +1056,13 @@ $lifecycleConfigurations = $nativeActiveConfigurations;
 $lifecycleInstances = $nativeActiveInstances;
 $lifecycleOperations = [];
 $applyFirstAccount->ApplyChanges();
+$applyFirstStatus = $applyFirstAccount->testStatus();
 $applyFirstAwaitingDiagnostics = decodeLifecycle(
     $applyFirstAccount->GetMqttDiagnostics()
 );
 assertLifecycle(
-    $lifecycleOperations === []
+    $applyFirstStatus === IS_ACTIVE
+        && $lifecycleOperations === []
         && $credentialCalls === $credentialCallsBeforeNativeRestart
         && $applyFirstAccount->testTimerInterval('MqttLifecycle')
             === 0
@@ -1552,7 +1572,8 @@ $variablesBeforeDisable =
 $account->testSetProperty('EnableMqttShadow', false);
 $account->ApplyChanges();
 assertLifecycle(
-    $account->testTimerInterval('MqttLifecycle') === 0
+    $account->testStatus() === IS_ACTIVE
+        && $account->testTimerInterval('MqttLifecycle') === 0
         && $account->testTimerInterval('MqttReconcile') === 0
         && ($lifecycleConfigurations[$webSocketId]['Active'] ?? true)
             === false
@@ -1566,7 +1587,8 @@ assertLifecycle(
 );
 $account->ApplyChanges();
 assertLifecycle(
-    $account->testTimerInterval('MqttLifecycle') === 0
+    $account->testStatus() === IS_ACTIVE
+        && $account->testTimerInterval('MqttLifecycle') === 0
         && $account->testSnapshotPersistentState()['variables']
             === $variablesBeforeDisable,
     'Repeated disabled ApplyChanges was not idempotent.'

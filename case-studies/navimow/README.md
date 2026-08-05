@@ -286,6 +286,12 @@ template or a general SAEF reference implementation.
 | `258-navimow-standalone-mqtt-publication-readiness-review.md` | Revalidates the exact one-file episode-summary delta against current standalone main and issues a conditional publication GO without mutating either remote. |
 | `259-native-mqtt-episode-accounting-standalone-publication.md` | Publishes and remotely verifies the exact one-file episode-summary candidate while preserving metadata, Symcon and MQTT activation as separate gates. |
 | `260-native-mqtt-episode-accounting-metadata-conformance.md` | Reproduces the official validator runtime defect and passes all 13 exact published inputs through freshly downloaded official schemas and AJV 6.10.2. |
+| `261-native-mqtt-episode-accounting-disabled-symcon-update.md` | Stops the authorized disabled update before mutation because three bounded preflights observe the Account at status 101 instead of the required 102. |
+| `262-navimow-account-status-101-readonly-analysis.md` | Correlates the stale Account status 101 exactly with the step-248 cleanup ApplyChanges call while proving that polling, refresh, REST and disabled MQTT remain operational. |
+| `263-navimow-account-status-recovery-and-update-gate-design.md` | Rejects a one-off ApplyChanges repair and designs explicit Account status finalization plus a separately gated corrective publication and 101-to-102 update. |
+| `264-navimow-account-status-finalization-implementation.md` | Adds explicit successful Account status finalization, closes the missing Core-status harness coverage and passes the complete offline gate. |
+| `265-navimow-account-status-correction-publication-plan.md` | Freezes the five-line Account correction and separates local candidate canonicalization, one-file standalone publication, metadata conformance and the controlled `101`-to-`102` Symcon recovery update into explicit gates. |
+| `266-navimow-account-status-correction-candidate-canonicalization.md` | Canonicalizes the complete status-recovery narrative, five-line Account correction and status-aware lifecycle tests as one clean local SAEF candidate while leaving publication and all live gates closed. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
