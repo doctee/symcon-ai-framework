@@ -77,6 +77,10 @@
             "target": "libs/DwdNowcast/ForecastProjector.php"
         },
         {
+            "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/NowcastHtmlRenderer.php",
+            "target": "libs/DwdNowcast/NowcastHtmlRenderer.php"
+        },
+        {
             "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/Profiles.php",
             "target": "libs/DwdNowcast/Profiles.php"
         },

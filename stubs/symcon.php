@@ -74,6 +74,7 @@ class IPSModule
     protected function SendDataToParent(string $json): string {}
     protected function SendDataToChildren(string $json): void {}
     protected function SendDebug(string $message, mixed $data, int $format): void {}
+    protected function Translate(string $text): string {}
 }
 
 function IPS_ObjectExists(int $id): bool {}

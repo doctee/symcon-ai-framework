@@ -9,6 +9,12 @@
       "Polling interval in minutes": "Abfrageintervall in Minuten",
       "HTTP timeout in seconds": "HTTP-Timeout in Sekunden",
       "Stale threshold in minutes": "Veraltet-Schwelle in Minuten",
+      "Rain forecast": "Regen",
+      "Rain in %d min": "Regen in %d min",
+      "No rain in %d min": "Kein Regen in %d min",
+      "now": "jetzt",
+      "Minute +%d: %.3f mm/h": "Minute +%d: %.3f mm/h",
+      "No nowcast data": "Keine Nowcast-Daten",
       "Update DWD nowcast now": "DWD-Nowcast jetzt aktualisieren",
       "The DWD radar product has a native resolution of five minutes and a maximum horizon of 120 minutes.": "Das DWD-Radarprodukt besitzt eine native Aufloesung von fuenf Minuten und einen maximalen Horizont von 120 Minuten."
     }

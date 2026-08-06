@@ -288,7 +288,7 @@ function buildOpenMeteoPublicationCandidate(string $projectRoot, array $contract
         throw new RuntimeException('Generated fileset hash is invalid.');
     }
     $sourceEntries = $sourceMap['files'] ?? null;
-    if (!is_array($sourceEntries) || !array_is_list($sourceEntries) || count($sourceEntries) !== 38) {
+    if (!is_array($sourceEntries) || !array_is_list($sourceEntries) || count($sourceEntries) !== 39) {
         throw new RuntimeException('Generated publication payload count differs.');
     }
 
@@ -328,7 +328,7 @@ function buildOpenMeteoPublicationCandidate(string $projectRoot, array $contract
         );
     }
     ksort($files, SORT_STRING);
-    if (count($files) !== 42) {
+    if (count($files) !== 43) {
         throw new RuntimeException('Complete publication file count differs.');
     }
 

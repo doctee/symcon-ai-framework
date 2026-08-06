@@ -7,6 +7,7 @@ require_once __DIR__ . '/../libs/OpenMeteo/LocationDefinition.php';
 require_once __DIR__ . '/../libs/DwdNowcast/RequestBuilder.php';
 require_once __DIR__ . '/../libs/DwdNowcast/ResponseParser.php';
 require_once __DIR__ . '/../libs/DwdNowcast/ForecastProjector.php';
+require_once __DIR__ . '/../libs/DwdNowcast/NowcastHtmlRenderer.php';
 if (!function_exists('SAEF_EnsureProfile')) {
     require_once __DIR__ . '/../libs/SAEF/helpers/object/EnsureProfile.php';
 }
@@ -16,6 +17,7 @@ if (!function_exists('SAEF_CreateConfigurationHash')) {
 require_once __DIR__ . '/../libs/DwdNowcast/Profiles.php';
 
 use SAEF\CaseStudy\DwdNowcast\ForecastProjector;
+use SAEF\CaseStudy\DwdNowcast\NowcastHtmlRenderer;
 use SAEF\CaseStudy\DwdNowcast\Profiles;
 use SAEF\CaseStudy\DwdNowcast\RequestBuilder;
 use SAEF\CaseStudy\DwdNowcast\ResponseParser;
@@ -111,8 +113,11 @@ class DwdPrecipitationNowcast extends IPSModule
             $this->reconcileLocationReference($locationInstanceId);
             $state = $this->runtimeState();
             $this->writeRuntimeState($state);
-            if ($this->readCache() === null) {
+            $cache = $this->readCache();
+            if ($cache === null) {
                 $this->resetDomainValues();
+            } else {
+                $this->publishNowcastChart($cache);
             }
             $this->publishOperationalState($state, $this->currentTimestamp());
             $this->scheduleNormalPolling();
@@ -320,6 +325,7 @@ class DwdPrecipitationNowcast extends IPSModule
         $this->SetValue('WindowMinutes', $cache['evaluationWindowMinutes']);
         $this->SetValue('ForecastPointCount', $summary['forecastPointCount']);
         $this->SetValue('NativeResolutionMinutes', $cache['nativeResolutionMinutes']);
+        $this->publishNowcastChart($cache);
     }
 
     private function scheduleNormalPolling(): void
@@ -451,6 +457,7 @@ class DwdPrecipitationNowcast extends IPSModule
         $this->RegisterVariableInteger('WindowMinutes', 'Evaluation Window', 'DWDNOWCAST.Minutes', 160);
         $this->RegisterVariableInteger('ForecastPointCount', 'Forecast Point Count', '', 170);
         $this->RegisterVariableInteger('NativeResolutionMinutes', 'Native Resolution', 'DWDNOWCAST.Minutes', 180);
+        $this->RegisterVariableString('NowcastChart', 'Rain forecast', '~HTMLBox', 190);
     }
 
     private function resetDomainValues(): void
@@ -465,6 +472,37 @@ class DwdPrecipitationNowcast extends IPSModule
         $this->SetValue('WindowMinutes', $this->ReadPropertyInteger('ForecastWindowMinutes'));
         $this->SetValue('ForecastPointCount', 0);
         $this->SetValue('NativeResolutionMinutes', RequestBuilder::NATIVE_RESOLUTION_MINUTES);
+        $this->SetValue('NowcastChart', NowcastHtmlRenderer::renderEmpty($this->chartLabels()));
+    }
+
+    /** @param array<string, mixed> $cache */
+    private function publishNowcastChart(array $cache): void
+    {
+        $location = $this->requestConfiguration();
+        $this->SetValue(
+            'NowcastChart',
+            NowcastHtmlRenderer::render($cache, $location['timezone'], $this->chartLabels())
+        );
+    }
+
+    /**
+     * @return array{
+     *     rainIn: string,
+     *     noRain: string,
+     *     now: string,
+     *     minuteTooltip: string,
+     *     noData: string
+     * }
+     */
+    private function chartLabels(): array
+    {
+        return [
+            'rainIn' => $this->Translate('Rain in %d min'),
+            'noRain' => $this->Translate('No rain in %d min'),
+            'now' => $this->Translate('now'),
+            'minuteTooltip' => $this->Translate('Minute +%d: %.3f mm/h'),
+            'noData' => $this->Translate('No nowcast data'),
+        ];
     }
 
     /** @return null|array<string, mixed> */

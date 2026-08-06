@@ -30,7 +30,9 @@ The target design covers:
 - a pure-PHP forecast core that can be verified without IP-Symcon or network
   access; and
 - a native five-minute DWD radar nowcast with a configurable 5-to-120-minute
-  evaluation window and no Home Assistant, Python or HDF5 dependency.
+  evaluation window and no Home Assistant, Python or HDF5 dependency; and
+- a cache-only responsive DWD nowcast `~HTMLBox` with one presentation segment
+  per minute, tooltips and a deterministic absolute intensity scale.
 
 Private coordinates, ObjectIDs, local sensor names, PV installation details
 and consumer mappings belong in `private/` or an ignored `*.local.*` file.
@@ -55,11 +57,12 @@ and consumer mappings belong in `private/` or an ignored `*.local.*` file.
 | `16-second-storage-solar-instance.md` | Records the idempotent creation and timer activation of a second storage-aware Solar instance. |
 | `17-forecast-calibration-collector.md` | Defines and records immutable forecast snapshotting plus bounded read-only alignment with logged PV actuals. |
 | `18-dwd-precipitation-nowcast.md` | Defines the direct DWD WMS contract, native five-minute semantics, configurable evaluation window and runtime safety boundary. |
+| `19-nowcast-html-chart.md` | Defines the cache-only minute presentation, absolute colors, HTMLBox ownership and lifecycle behavior. |
 | `candidate/SolarCalibrationCore.php` | Pure snapshot normalization, archive-event alignment and calibration metrics. |
 | `candidate/SolarCalibrationCollectorRuntime.php` | Bounded cache and archive adapter with immutable private evidence files. |
 | `tools/build-calibration-collector.php` | Deterministically combines public runtime code with ignored installation-local configuration. |
 | `distribution/libs/OpenMeteo/` | Pure request, parsing, interval, PV and runtime-state domain classes. |
-| `distribution/libs/DwdNowcast/` | Pure DWD WMS request, response and window-projection classes. |
+| `distribution/libs/DwdNowcast/` | Pure DWD WMS request, response, window-projection and HTML-rendering classes. |
 | `distribution/` | Canonical candidate IP-Symcon library source with shared-location, weather, solar and DWD-nowcast modules. |
 | `../../dist/symcon/saef-open-meteo-module/` | Generated standalone module fileset; never edit it directly. |
 | `../../tools/publish-open-meteo-module.php` | Guarded one-way publisher; check and prepare are local, apply requires explicit immutable gates. |
@@ -101,9 +104,9 @@ workflow is documented in `07-controlled-publication-workflow.md`.
 Provider deactivation, consumer migration, shading and any change to calibrated
 model parameters remain separate later gates.
 
-The DWD nowcast implementation is currently offline-only. Publication, a live
-library update, instance creation, HTTP activation and timer activation are not
-part of this workstream.
+The DWD nowcast runtime was published separately. The HTML chart introduced by
+this workstream remains an offline candidate; publication, a live library
+update and live chart validation are not part of the implementation gate.
 
 The authorized inactive live preflight found no candidate collision, but the
 installation stopped before mutation because Module Control requires an
