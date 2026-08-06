@@ -60,7 +60,7 @@ $chartLabels = [
     'rainIn' => 'Rain in %d min',
     'noRain' => 'No rain in %d min',
     'now' => 'now',
-    'minuteTooltip' => 'Minute +%d: %.3f mm/h',
+    'minuteTooltip' => '+%d min: %.2f mm/h',
     'noData' => 'No nowcast data',
 ];
 $chart = NowcastHtmlRenderer::render($projected60, 'Europe/Berlin', $chartLabels);
@@ -69,6 +69,10 @@ same(true, str_contains($chart, '09:00'), 'DWD chart local product time differs.
 same(true, str_contains($chart, 'Rain in 15 min'), 'DWD chart headline differs.');
 same(true, str_contains($chart, '+30 min'), 'DWD chart midpoint differs.');
 same(true, str_contains($chart, '+60 min'), 'DWD chart endpoint differs.');
+same(true, str_contains($chart, 'title="+0 min: 0.00 mm/h"'), 'DWD chart tooltip differs.');
+same(true, str_contains($chart, 'font:11px/1.35'), 'DWD chart base font is not compact.');
+same(true, str_contains($chart, 'height:14px'), 'DWD chart bars are not compact.');
+same(true, str_contains($chart, 'font-size:9px'), 'DWD chart axis is not compact.');
 same(true, str_contains($chart, '#00c853'), 'DWD chart absolute green band is missing.');
 same('#4b5563', NowcastHtmlRenderer::colorForIntensity(0.0), 'DWD dry color differs.');
 same('#e00000', NowcastHtmlRenderer::colorForIntensity(8.0), 'DWD heavy-rain color differs.');

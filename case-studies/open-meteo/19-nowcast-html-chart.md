@@ -20,6 +20,10 @@ The presentation follows the handed-over operator contract:
 - `now`, midpoint and window-end axis labels; and
 - a native tooltip with minute offset and intensity in `mm/h`.
 
+The compact presentation follows the established Symcon reference dimensions:
+11-pixel base text, 14-pixel bars and 9-pixel axis labels. Every minute segment
+retains a native hover tooltip with the minute offset and two decimal places.
+
 ## Resolution Semantics
 
 The native DWD points remain authoritative five-minute values. The HTML chart

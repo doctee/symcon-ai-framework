@@ -529,7 +529,7 @@ class DwdPrecipitationNowcast extends IPSModule
             'rainIn' => $this->Translate('Rain in %d min'),
             'noRain' => $this->Translate('No rain in %d min'),
             'now' => $this->Translate('now'),
-            'minuteTooltip' => $this->Translate('Minute +%d: %.3f mm/h'),
+            'minuteTooltip' => $this->Translate('+%d min: %.2f mm/h'),
             'noData' => $this->Translate('No nowcast data'),
         ];
     }
