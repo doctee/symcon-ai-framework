@@ -17,7 +17,7 @@ try {
     openMeteoPublicationTestSame(0, $check['status'], 'Publication check failed.');
     openMeteoPublicationTestSame('checked', $checkResult['outcome'] ?? null, 'Check outcome differs.');
     openMeteoPublicationTestSame(false, $checkResult['mutationAttempted'] ?? null, 'Check attempted mutation.');
-    openMeteoPublicationTestSame(34, $checkResult['fileCount'] ?? null, 'Publication file count differs.');
+    openMeteoPublicationTestSame(42, $checkResult['fileCount'] ?? null, 'Publication file count differs.');
     openMeteoPublicationTestHash($checkResult['filesetSha256'] ?? null, 'Fileset hash is invalid.');
     openMeteoPublicationTestHash($checkResult['publicationSha256'] ?? null, 'Publication hash is invalid.');
 
@@ -39,7 +39,7 @@ try {
     );
 
     $preparedFiles = openMeteoPublicationTestHashes($preparedRoot);
-    openMeteoPublicationTestSame(34, count($preparedFiles), 'Prepared file inventory differs.');
+    openMeteoPublicationTestSame(42, count($preparedFiles), 'Prepared file inventory differs.');
     foreach (['LICENSE', 'README.md', 'library.json', 'fileset.sources.json', 'fileset.sha256'] as $required) {
         if (!isset($preparedFiles[$required])) {
             throw new RuntimeException('Prepared publication is missing ' . $required . '.');
@@ -62,7 +62,7 @@ try {
         512,
         JSON_THROW_ON_ERROR
     );
-    openMeteoPublicationTestSame(30, count($sourceMap['files'] ?? []), 'Prepared payload count differs.');
+    openMeteoPublicationTestSame(38, count($sourceMap['files'] ?? []), 'Prepared payload count differs.');
     foreach ($sourceMap['files'] ?? [] as $entry) {
         if (!is_array($entry) || !is_string($entry['target'] ?? null) || !is_string($entry['sha256'] ?? null)) {
             throw new RuntimeException('Prepared source-map entry is invalid.');

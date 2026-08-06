@@ -1,0 +1,16 @@
+{
+  "translations": {
+    "de": {
+      "DWD Precipitation Nowcast": "DWD-Niederschlags-Nowcast",
+      "Shared location instance": "Gemeinsame Standortinstanz",
+      "Evaluation window in minutes": "Auswertungsfenster in Minuten",
+      "Rain threshold in millimetres per hour": "Regenschwelle in Millimetern pro Stunde",
+      "Enable automatic updates": "Automatische Aktualisierungen aktivieren",
+      "Polling interval in minutes": "Abfrageintervall in Minuten",
+      "HTTP timeout in seconds": "HTTP-Timeout in Sekunden",
+      "Stale threshold in minutes": "Veraltet-Schwelle in Minuten",
+      "Update DWD nowcast now": "DWD-Nowcast jetzt aktualisieren",
+      "The DWD radar product has a native resolution of five minutes and a maximum horizon of 120 minutes.": "Das DWD-Radarprodukt besitzt eine native Aufloesung von fuenf Minuten und einen maximalen Horizont von 120 Minuten."
+    }
+  }
+}

@@ -519,8 +519,10 @@ require_once dirname(__DIR__, 3) . '/helpers/common/Validation.php';
 require_once __DIR__ . '/../distribution/SharedLocation/module.php';
 require_once __DIR__ . '/../distribution/OpenMeteoWeather/module.php';
 require_once __DIR__ . '/../distribution/OpenMeteoSolarForecast/module.php';
+require_once __DIR__ . '/../distribution/DwdPrecipitationNowcast/module.php';
 require_once __DIR__ . '/TestOpenMeteoWeather.php';
 require_once __DIR__ . '/TestOpenMeteoSolarForecast.php';
+require_once __DIR__ . '/TestDwdPrecipitationNowcast.php';
 
 function scaffoldCheck(bool $condition, string $message): void
 {
@@ -542,7 +544,14 @@ scaffoldCheck(
 );
 
 $moduleIds = [];
-foreach (['SharedLocation', 'OpenMeteoWeather', 'OpenMeteoSolarForecast'] as $moduleName) {
+foreach (
+    [
+        'SharedLocation',
+        'OpenMeteoWeather',
+        'OpenMeteoSolarForecast',
+        'DwdPrecipitationNowcast',
+    ] as $moduleName
+) {
     $moduleRoot = $root . '/' . $moduleName;
     foreach (['module.json', 'form.json', 'locale.json'] as $jsonFile) {
         $decoded = json_decode(
@@ -1299,4 +1308,82 @@ scaffoldCheck(
     'Solar first retry interval differs.'
 );
 
+$dwdNowcast = new TestDwdPrecipitationNowcast();
+$dwdNowcast->Create();
+$dwdNowcast->ApplyChanges();
+scaffoldCheck($dwdNowcast->testStatus() === 104, 'Unconfigured DWD nowcast must be inactive.');
+scaffoldCheck(count($dwdNowcast->testVariables()) === 17, 'DWD nowcast variable contract differs.');
+scaffoldCheck($dwdNowcast->testTimerInterval('UpdateData') === 0, 'Inactive DWD timer is enabled.');
+$dwdVariables = $dwdNowcast->testVariables();
+$dwdNowcast->testSetProperty('LocationInstanceId', 2001);
+$dwdNowcast->ApplyChanges();
+scaffoldCheck($dwdNowcast->testStatus() === 102, 'Configured DWD nowcast must be active.');
+scaffoldCheck($dwdNowcast->testReferences() === [2001], 'DWD location reference is missing.');
+scaffoldCheck(
+    $dwdNowcast->testTimerInterval('UpdateData') === 300000,
+    'DWD polling interval differs.'
+);
+$dwdNowcast->ApplyChanges();
+scaffoldCheck(
+    $dwdNowcast->testVariables() === $dwdVariables,
+    'Repeated DWD ApplyChanges changed variable identity.'
+);
+$dwdNowcast->testQueueResponse(scaffoldDwdResponse(1735718400));
+$dwdSuccess = json_decode($dwdNowcast->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($dwdSuccess['success'] ?? null) === true, 'DWD nowcast update did not succeed.');
+scaffoldCheck($dwdNowcast->testReadValue('DataState') === 2, 'DWD nowcast data is not current.');
+scaffoldCheck($dwdNowcast->testReadValue('RainExpected') === true, 'DWD rain was not detected.');
+scaffoldCheck(
+    $dwdNowcast->testReadValue('RainStartsInMinutes') === 15,
+    'DWD rain start differs.'
+);
+scaffoldCheck(
+    abs((float) $dwdNowcast->testReadValue('PrecipitationSum') - 0.3) < 0.000001,
+    'DWD window precipitation sum differs.'
+);
+$dwdForecast = json_decode($dwdNowcast->GetForecastJson(), true, 64, JSON_THROW_ON_ERROR);
+scaffoldCheck(
+    count($dwdForecast['data']['points'] ?? []) === 24,
+    'DWD full native horizon differs.'
+);
+$dwdNowcast->testQueueResponse(false);
+$dwdFailure = json_decode($dwdNowcast->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($dwdFailure['code'] ?? null) === 'transport_error', 'DWD failure differs.');
+scaffoldCheck($dwdNowcast->testReadValue('DataState') === 4, 'DWD last-good failure must warn.');
+scaffoldCheck(
+    $dwdNowcast->testTimerInterval('UpdateData') === 60000,
+    'DWD first retry interval differs.'
+);
+$dwdNowcast->testSetProperty('ForecastWindowMinutes', 30);
+$dwdNowcast->ApplyChanges();
+scaffoldCheck(
+    $dwdNowcast->testReadValue('ForecastPointCount') === 0,
+    'Changed DWD window retained an incompatible cache.'
+);
+$dwdNowcast->testSetProperty('ForecastWindowMinutes', 61);
+$dwdNowcast->ApplyChanges();
+scaffoldCheck($dwdNowcast->testStatus() === 200, 'Invalid DWD window did not fail closed.');
+scaffoldCheck($dwdNowcast->testTimerInterval('UpdateData') === 0, 'Invalid DWD timer is enabled.');
+
 echo "module-scaffold: ok\n";
+
+function scaffoldDwdResponse(int $productTime): string
+{
+    $features = [];
+    for ($lead = 5; $lead <= 120; $lead += 5) {
+        $features[] = [
+            'type' => 'Feature',
+            'geometry' => null,
+            'properties' => [
+                'RV_ANALYSIS' => $lead >= 20 && $lead <= 30 ? 1.2 : -0.001,
+                'TIME' => gmdate('Y-m-d\TH:i:s\Z', $productTime + ($lead * 60)),
+                'REFERENCE_TIME' => gmdate('Y-m-d\TH:i:s\Z', $productTime),
+            ],
+        ];
+    }
+
+    return json_encode(
+        ['type' => 'FeatureCollection', 'features' => $features],
+        JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES
+    );
+}

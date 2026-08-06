@@ -5,6 +5,22 @@
     "outputDirectory": "dist/symcon/saef-open-meteo-module",
     "files": [
         {
+            "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/form.json",
+            "target": "DwdPrecipitationNowcast/form.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/locale.json",
+            "target": "DwdPrecipitationNowcast/locale.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/module.json",
+            "target": "DwdPrecipitationNowcast/module.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/module.php",
+            "target": "DwdPrecipitationNowcast/module.php"
+        },
+        {
             "source": "case-studies/open-meteo/distribution/OpenMeteoSolarForecast/form.json",
             "target": "OpenMeteoSolarForecast/form.json"
         },
@@ -55,6 +71,22 @@
         {
             "source": "case-studies/open-meteo/distribution/library.json",
             "target": "library.json"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/ForecastProjector.php",
+            "target": "libs/DwdNowcast/ForecastProjector.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/Profiles.php",
+            "target": "libs/DwdNowcast/Profiles.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/RequestBuilder.php",
+            "target": "libs/DwdNowcast/RequestBuilder.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/ResponseParser.php",
+            "target": "libs/DwdNowcast/ResponseParser.php"
         },
         {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/FieldCatalog.php",
