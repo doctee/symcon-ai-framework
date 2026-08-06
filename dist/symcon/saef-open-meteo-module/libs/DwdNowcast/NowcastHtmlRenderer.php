@@ -177,15 +177,15 @@ final class NowcastHtmlRenderer
     private static function style(int $barCount): string
     {
         return '<style>'
-            . '.saef-nowcast{box-sizing:border-box;width:100%;padding:8px 4px;color:inherit;'
-            . 'font:14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}'
+            . '.saef-nowcast{box-sizing:border-box;width:100%;padding:6px;color:inherit;'
+            . 'font:11px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}'
             . '.saef-nowcast *{box-sizing:border-box}'
-            . '.saef-nowcast__headline{display:flex;align-items:baseline;gap:8px;margin:0 0 4px}'
+            . '.saef-nowcast__headline{display:flex;align-items:baseline;gap:8px;margin:0 0 2px}'
             . '.saef-nowcast__time,.saef-nowcast__axis{opacity:.62}'
             . '.saef-nowcast__bars{display:grid;grid-template-columns:repeat(' . $barCount
-            . ',minmax(1px,1fr));gap:1px;height:24px;overflow:hidden;border-radius:5px}'
+            . ',minmax(1px,1fr));gap:1px;height:14px;overflow:hidden;border-radius:4px}'
             . '.saef-nowcast__bar{display:block;min-width:0}'
-            . '.saef-nowcast__axis{display:grid;grid-template-columns:1fr auto 1fr;margin-top:3px;font-size:12px}'
+            . '.saef-nowcast__axis{display:grid;grid-template-columns:1fr auto 1fr;margin-top:3px;font-size:9px}'
             . '.saef-nowcast__axis span:nth-child(2){text-align:center}'
             . '.saef-nowcast__axis span:last-child{text-align:right}'
             . '.saef-nowcast__empty{padding:18px 8px;text-align:center;opacity:.62}'

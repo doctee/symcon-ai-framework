@@ -13,8 +13,8 @@
         {
             "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/locale.json",
             "target": "DwdPrecipitationNowcast/locale.json",
-            "sha256": "7fea0fb21adde47d2ee6c856168cf5b90cb248b1dfe9d0ab434257020bd40faa",
-            "bytes": 1157
+            "sha256": "6cd949fb5c3634e413d6c1ed3c6ffa4b3e37a436d25a6db37029993c47bc0801",
+            "bytes": 1151
         },
         {
             "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/module.json",
@@ -25,8 +25,8 @@
         {
             "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/module.php",
             "target": "DwdPrecipitationNowcast/module.php",
-            "sha256": "39500d58b3c5c071ae7c01cb2eae56a7f0a1bb5d38810ab3ab7c73b39e51c7e3",
-            "bytes": 22998
+            "sha256": "700d48d9a7c6b8c73b4a60b0e0f183c67fc9730ccecf760b46c4345a8080cfd4",
+            "bytes": 22995
         },
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoSolarForecast/form.json",
@@ -103,7 +103,7 @@
         {
             "source": "case-studies/open-meteo/distribution/library.json",
             "target": "library.json",
-            "sha256": "0eed6e48475e458e9e50850c3d57dd3c11b54f63ea76b115a49e54e680505ce6",
+            "sha256": "115a27f6dbc7342a3d96412c8b6bb859353e6433932e1938c40a7297a24a3e7c",
             "bytes": 256
         },
         {
@@ -115,8 +115,8 @@
         {
             "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/NowcastHtmlRenderer.php",
             "target": "libs/DwdNowcast/NowcastHtmlRenderer.php",
-            "sha256": "6c8c609a599b8e1b365871bfb1d07a65da95f01e1e8153fdd61fd911b9928e2e",
-            "bytes": 7977
+            "sha256": "6efcbdc6b65c9d327e5b2816e257532363ed229931e81e709d1c994efba3c122",
+            "bytes": 7972
         },
         {
             "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/Profiles.php",
@@ -239,7 +239,7 @@
             "bytes": 3308
         }
     ],
-    "filesetSha256": "0f5888745930bbb64cfad19ac1d7dc87371e3227f1e5a854984b5ef22252275d",
+    "filesetSha256": "29755d30add24f430303268cc7a4dd9c4fdf0518ec11b1f12545d327c3c82eeb",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",
