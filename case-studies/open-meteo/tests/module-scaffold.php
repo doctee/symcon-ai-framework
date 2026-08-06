@@ -38,6 +38,9 @@ class IPSModule
     private int $status = 0;
     /** @var array<string, array{interval: int, script: string}> */
     private array $timers = [];
+
+    /** @var list<string> */
+    private array $translationCalls = [];
     private int $parentLifecycleCalls = 0;
 
     /** @var array<string, mixed> */
@@ -174,6 +177,8 @@ class IPSModule
 
     protected function Translate(string $text): string
     {
+        $this->translationCalls[] = $text;
+
         return $text;
     }
 
@@ -243,6 +248,12 @@ class IPSModule
     public function testTimerRegistrations(): int
     {
         return count($this->timers);
+    }
+
+    /** @return list<string> */
+    public function testTranslationCalls(): array
+    {
+        return $this->translationCalls;
     }
 
     public function testTimerInterval(string $ident): int
@@ -1321,6 +1332,10 @@ scaffoldCheck(count($dwdNowcast->testVariables()) === 18, 'DWD nowcast variable 
 scaffoldCheck(
     ($dwdNowcast->testVariables()['NowcastChart']['profile'] ?? null) === '~HTMLBox',
     'DWD nowcast chart profile differs.'
+);
+scaffoldCheck(
+    in_array('Rain forecast', $dwdNowcast->testTranslationCalls(), true),
+    'DWD nowcast chart title bypassed module translation.'
 );
 scaffoldCheck($dwdNowcast->testTimerInterval('UpdateData') === 0, 'Inactive DWD timer is enabled.');
 $dwdVariables = $dwdNowcast->testVariables();
