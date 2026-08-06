@@ -15,6 +15,7 @@ done < <(find \
     -type f -name '*.php' -print | sort)
 
 for test in \
+    dwd-nowcast \
     request-builder \
     response-parser \
     interval-alignment \
