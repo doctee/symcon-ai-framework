@@ -95,6 +95,7 @@ class DwdPrecipitationNowcast extends IPSModule
 
         Profiles::ensure();
         $this->registerVariables();
+        $this->migrateNowcastChartName();
 
         $locationInstanceId = $this->ReadPropertyInteger('LocationInstanceId');
         if ($locationInstanceId <= 0) {
@@ -463,6 +464,29 @@ class DwdPrecipitationNowcast extends IPSModule
             '~HTMLBox',
             190
         );
+    }
+
+    private function migrateNowcastChartName(): void
+    {
+        $variableId = $this->GetIDForIdent('NowcastChart');
+        if ($variableId <= 0 || !IPS_VariableExists($variableId)) {
+            throw new RuntimeException('Nowcast chart variable is missing.');
+        }
+
+        $object = IPS_GetObject($variableId);
+        if (
+            ($object['ObjectType'] ?? null) !== 2
+            || ($object['ParentID'] ?? null) !== $this->InstanceID
+            || ($object['ObjectIdent'] ?? null) !== 'NowcastChart'
+        ) {
+            throw new RuntimeException('Nowcast chart variable ownership differs.');
+        }
+
+        $legacyName = 'Rain forecast';
+        $translatedName = $this->Translate($legacyName);
+        if (IPS_GetName($variableId) === $legacyName && $translatedName !== $legacyName) {
+            IPS_SetName($variableId, $translatedName);
+        }
     }
 
     private function resetDomainValues(): void
