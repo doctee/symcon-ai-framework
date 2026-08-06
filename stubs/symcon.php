@@ -90,6 +90,7 @@ function IPS_GetInstanceListByModuleID(string $moduleID): array {}
 function IPS_GetKernelDir(): string {}
 function IPS_GetObjectIDByIdent(string $ident, int $parentID): int|false {}
 function IPS_GetObject(int $id): array {}
+function IPS_GetName(int $id): string {}
 function IPS_GetParent(int $id): int {}
 function IPS_GetChildrenIDs(int $id): array {}
 /**

@@ -14,7 +14,7 @@ $scaffoldLocationModules = [];
 /** @var array<int, OpenMeteoWeather> $scaffoldWeatherModules */
 $scaffoldWeatherModules = [];
 
-/** @var array<int, array{ObjectType: int, ParentID: int, ObjectIsHidden: bool}> $scaffoldObjects */
+/** @var array<int, array{ObjectType: int, ParentID: int, ObjectIsHidden: bool, ObjectIdent: string, ObjectName: string}> $scaffoldObjects */
 $scaffoldObjects = [];
 
 /** @var list<array{id: int, hidden: bool}> $scaffoldHiddenMutations */
@@ -41,6 +41,9 @@ class IPSModule
 
     /** @var list<string> */
     private array $translationCalls = [];
+
+    /** @var array<string, string> */
+    private array $translations = [];
     private int $parentLifecycleCalls = 0;
 
     /** @var array<string, mixed> */
@@ -145,7 +148,7 @@ class IPSModule
         string $profile,
         int $position
     ): void {
-        $this->registerVariable($ident, 'boolean', $profile, $position);
+        $this->registerVariable($ident, $name, 'boolean', $profile, $position);
     }
 
     protected function RegisterVariableFloat(
@@ -154,7 +157,7 @@ class IPSModule
         string $profile,
         int $position
     ): void {
-        $this->registerVariable($ident, 'float', $profile, $position);
+        $this->registerVariable($ident, $name, 'float', $profile, $position);
     }
 
     protected function RegisterVariableInteger(
@@ -163,7 +166,7 @@ class IPSModule
         string $profile,
         int $position
     ): void {
-        $this->registerVariable($ident, 'integer', $profile, $position);
+        $this->registerVariable($ident, $name, 'integer', $profile, $position);
     }
 
     protected function RegisterVariableString(
@@ -172,14 +175,14 @@ class IPSModule
         string $profile,
         int $position
     ): void {
-        $this->registerVariable($ident, 'string', $profile, $position);
+        $this->registerVariable($ident, $name, 'string', $profile, $position);
     }
 
     protected function Translate(string $text): string
     {
         $this->translationCalls[] = $text;
 
-        return $text;
+        return $this->translations[$text] ?? $text;
     }
 
     protected function RegisterTimer(string $ident, int $interval, string $script): void
@@ -256,6 +259,31 @@ class IPSModule
         return $this->translationCalls;
     }
 
+    public function testSetTranslation(string $source, string $target): void
+    {
+        $this->translations[$source] = $target;
+    }
+
+    public function testVariableName(string $ident): string
+    {
+        $id = $this->variables[$ident]['id'] ?? 0;
+        if ($id <= 0) {
+            throw new RuntimeException('Unknown test variable name.');
+        }
+
+        return IPS_GetName($id);
+    }
+
+    public function testSetVariableName(string $ident, string $name): void
+    {
+        $id = $this->variables[$ident]['id'] ?? 0;
+        if ($id <= 0) {
+            throw new RuntimeException('Unknown test variable name mutation.');
+        }
+
+        IPS_SetName($id, $name);
+    }
+
     public function testTimerInterval(string $ident): int
     {
         return $this->timers[$ident]['interval'] ?? -1;
@@ -330,6 +358,7 @@ class IPSModule
 
     private function registerVariable(
         string $ident,
+        string $name,
         string $type,
         string $profile,
         int $position
@@ -359,6 +388,8 @@ class IPSModule
             'ObjectType' => 2,
             'ParentID' => $this->InstanceID,
             'ObjectIsHidden' => false,
+            'ObjectIdent' => $ident,
+            'ObjectName' => $name,
         ];
     }
 }
@@ -370,7 +401,31 @@ function IPS_ObjectExists(int $id): bool
     return isset($scaffoldObjects[$id]);
 }
 
-/** @return array<string, int|bool> */
+function IPS_VariableExists(int $id): bool
+{
+    global $scaffoldObjects;
+
+    return ($scaffoldObjects[$id]['ObjectType'] ?? null) === 2;
+}
+
+function IPS_GetName(int $id): string
+{
+    global $scaffoldObjects;
+
+    return (string) ($scaffoldObjects[$id]['ObjectName'] ?? '');
+}
+
+function IPS_SetName(int $id, string $name): void
+{
+    global $scaffoldObjects;
+
+    if (!isset($scaffoldObjects[$id])) {
+        throw new RuntimeException('Unknown name mutation target.');
+    }
+    $scaffoldObjects[$id]['ObjectName'] = $name;
+}
+
+/** @return array<string, int|bool|string> */
 function IPS_GetObject(int $id): array
 {
     global $scaffoldObjects;
@@ -1336,6 +1391,18 @@ scaffoldCheck(
 scaffoldCheck(
     in_array('Rain forecast', $dwdNowcast->testTranslationCalls(), true),
     'DWD nowcast chart title bypassed module translation.'
+);
+$dwdNowcast->testSetTranslation('Rain forecast', 'Regen');
+$dwdNowcast->ApplyChanges();
+scaffoldCheck(
+    $dwdNowcast->testVariableName('NowcastChart') === 'Regen',
+    'DWD nowcast legacy chart title was not translated.'
+);
+$dwdNowcast->testSetVariableName('NowcastChart', 'Custom rain chart');
+$dwdNowcast->ApplyChanges();
+scaffoldCheck(
+    $dwdNowcast->testVariableName('NowcastChart') === 'Custom rain chart',
+    'DWD nowcast custom chart title was overwritten.'
 );
 scaffoldCheck($dwdNowcast->testTimerInterval('UpdateData') === 0, 'Inactive DWD timer is enabled.');
 $dwdVariables = $dwdNowcast->testVariables();
