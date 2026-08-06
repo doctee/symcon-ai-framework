@@ -172,6 +172,11 @@ class IPSModule
         $this->registerVariable($ident, 'string', $profile, $position);
     }
 
+    protected function Translate(string $text): string
+    {
+        return $text;
+    }
+
     protected function RegisterTimer(string $ident, int $interval, string $script): void
     {
         $this->timers[$ident] ??= ['interval' => $interval, 'script' => $script];
@@ -1312,7 +1317,11 @@ $dwdNowcast = new TestDwdPrecipitationNowcast();
 $dwdNowcast->Create();
 $dwdNowcast->ApplyChanges();
 scaffoldCheck($dwdNowcast->testStatus() === 104, 'Unconfigured DWD nowcast must be inactive.');
-scaffoldCheck(count($dwdNowcast->testVariables()) === 17, 'DWD nowcast variable contract differs.');
+scaffoldCheck(count($dwdNowcast->testVariables()) === 18, 'DWD nowcast variable contract differs.');
+scaffoldCheck(
+    ($dwdNowcast->testVariables()['NowcastChart']['profile'] ?? null) === '~HTMLBox',
+    'DWD nowcast chart profile differs.'
+);
 scaffoldCheck($dwdNowcast->testTimerInterval('UpdateData') === 0, 'Inactive DWD timer is enabled.');
 $dwdVariables = $dwdNowcast->testVariables();
 $dwdNowcast->testSetProperty('LocationInstanceId', 2001);
@@ -1340,6 +1349,18 @@ scaffoldCheck(
 scaffoldCheck(
     abs((float) $dwdNowcast->testReadValue('PrecipitationSum') - 0.3) < 0.000001,
     'DWD window precipitation sum differs.'
+);
+$dwdChart = (string) $dwdNowcast->testReadValue('NowcastChart');
+scaffoldCheck(
+    substr_count($dwdChart, 'class="saef-nowcast__bar"') === 60,
+    'DWD nowcast chart minute count differs.'
+);
+scaffoldCheck(str_contains($dwdChart, '+30 min'), 'DWD nowcast chart midpoint is missing.');
+scaffoldCheck(str_contains($dwdChart, '+60 min'), 'DWD nowcast chart endpoint is missing.');
+$dwdNowcast->ApplyChanges();
+scaffoldCheck(
+    $dwdNowcast->testReadValue('NowcastChart') === $dwdChart,
+    'DWD ApplyChanges did not republish the compatible cached chart.'
 );
 $dwdForecast = json_decode($dwdNowcast->GetForecastJson(), true, 64, JSON_THROW_ON_ERROR);
 scaffoldCheck(

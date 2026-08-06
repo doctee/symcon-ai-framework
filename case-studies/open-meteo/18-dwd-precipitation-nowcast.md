@@ -45,9 +45,10 @@ The native five-minute points remain authoritative. The WMS value is an
 intensity in `mm/h`; the corresponding five-minute amount is calculated as
 `intensity / 12` and stored separately in `mm`.
 
-The module deliberately does not claim native one-minute accuracy. A future
-visual interpolation may be added only as an explicitly marked presentation
-series while the native points remain available unchanged.
+The module deliberately does not claim native one-minute accuracy. The HTML
+chart described in `19-nowcast-html-chart.md` adds an explicitly marked,
+presentation-only minute interpolation while the native points remain
+available unchanged.
 
 `ForecastWindowMinutes` controls evaluation, not provider resolution. Valid
 values are multiples of five from 5 through 120 minutes. The complete

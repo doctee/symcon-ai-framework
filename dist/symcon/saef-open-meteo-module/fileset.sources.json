@@ -13,8 +13,8 @@
         {
             "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/locale.json",
             "target": "DwdPrecipitationNowcast/locale.json",
-            "sha256": "2a826d682e93709707f54ad5fb5dcfd8df695265e3a6302c60e63225015fb5e6",
-            "bytes": 905
+            "sha256": "7fea0fb21adde47d2ee6c856168cf5b90cb248b1dfe9d0ab434257020bd40faa",
+            "bytes": 1157
         },
         {
             "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/module.json",
@@ -25,8 +25,8 @@
         {
             "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/module.php",
             "target": "DwdPrecipitationNowcast/module.php",
-            "sha256": "4cffebf9661b3f350eb7bff1f4897970d7a23e0c2f54356cee468510613847f8",
-            "bytes": 20641
+            "sha256": "ac96b7cfefd0cb4935dc2aaa2909a2a8a953b3c12c79e4334128c6534557e65d",
+            "bytes": 21994
         },
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoSolarForecast/form.json",
@@ -103,7 +103,7 @@
         {
             "source": "case-studies/open-meteo/distribution/library.json",
             "target": "library.json",
-            "sha256": "228481c0682a806ff93042e32ea0f87cb8b170362b79f365133535c4d778af41",
+            "sha256": "9be8d5a69531823470ed99184102434f17cf410ec5106137e39a326b82de192b",
             "bytes": 256
         },
         {
@@ -111,6 +111,12 @@
             "target": "libs/DwdNowcast/ForecastProjector.php",
             "sha256": "1862e02de66d8a9f88fc6c579a73aca6f3dd5f2cc16fa5626f139b99d3908cb7",
             "bytes": 3738
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/NowcastHtmlRenderer.php",
+            "target": "libs/DwdNowcast/NowcastHtmlRenderer.php",
+            "sha256": "6c8c609a599b8e1b365871bfb1d07a65da95f01e1e8153fdd61fd911b9928e2e",
+            "bytes": 7977
         },
         {
             "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/Profiles.php",
@@ -233,7 +239,7 @@
             "bytes": 3308
         }
     ],
-    "filesetSha256": "7f8a1f8c98ec1ba1b58526ebce6cd1c50d21272babd36bbb55fc4aaf86383e33",
+    "filesetSha256": "0508b1e4840915fbd5e61a834196c27d290f67b2348fb64d683480d4495a68a0",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

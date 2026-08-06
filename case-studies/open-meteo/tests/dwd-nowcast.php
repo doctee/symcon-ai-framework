@@ -6,8 +6,10 @@ require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../distribution/libs/DwdNowcast/RequestBuilder.php';
 require_once __DIR__ . '/../distribution/libs/DwdNowcast/ResponseParser.php';
 require_once __DIR__ . '/../distribution/libs/DwdNowcast/ForecastProjector.php';
+require_once __DIR__ . '/../distribution/libs/DwdNowcast/NowcastHtmlRenderer.php';
 
 use SAEF\CaseStudy\DwdNowcast\ForecastProjector;
+use SAEF\CaseStudy\DwdNowcast\NowcastHtmlRenderer;
 use SAEF\CaseStudy\DwdNowcast\RequestBuilder;
 use SAEF\CaseStudy\DwdNowcast\ResponseParser;
 
@@ -52,6 +54,39 @@ same(15, $projected['summary']['rainStartsInMinutes'], 'DWD rain start differs.'
 same(30, $projected['summary']['rainEndsInMinutes'], 'DWD rain end differs.');
 near(0.3, $projected['summary']['precipitationSumMm'], 0.000001, 'DWD window sum differs.');
 near(1.2, $projected['summary']['maximumIntensityMmPerHour'], 0.000001, 'DWD maximum differs.');
+
+$projected60 = ForecastProjector::project($parsed, 60, 0.1, $productTime + 8 * 60);
+$chartLabels = [
+    'rainIn' => 'Rain in %d min',
+    'noRain' => 'No rain in %d min',
+    'now' => 'now',
+    'minuteTooltip' => 'Minute +%d: %.3f mm/h',
+    'noData' => 'No nowcast data',
+];
+$chart = NowcastHtmlRenderer::render($projected60, 'Europe/Berlin', $chartLabels);
+same(60, substr_count($chart, 'class="saef-nowcast__bar"'), 'DWD chart minute count differs.');
+same(true, str_contains($chart, '09:00'), 'DWD chart local product time differs.');
+same(true, str_contains($chart, 'Rain in 15 min'), 'DWD chart headline differs.');
+same(true, str_contains($chart, '+30 min'), 'DWD chart midpoint differs.');
+same(true, str_contains($chart, '+60 min'), 'DWD chart endpoint differs.');
+same(true, str_contains($chart, '#00c853'), 'DWD chart absolute green band is missing.');
+same('#4b5563', NowcastHtmlRenderer::colorForIntensity(0.0), 'DWD dry color differs.');
+same('#e00000', NowcastHtmlRenderer::colorForIntensity(8.0), 'DWD heavy-rain color differs.');
+
+$dry = $projected60;
+foreach ($dry['windowPoints'] as &$point) {
+    $point['intensityMmPerHour'] = 0.0;
+}
+unset($point);
+$dry['summary']['rainExpected'] = false;
+$dry['summary']['rainStartsInMinutes'] = -1;
+$dryChart = NowcastHtmlRenderer::render($dry, 'Europe/Berlin', $chartLabels);
+same(true, str_contains($dryChart, 'No rain in 60 min'), 'DWD dry chart headline differs.');
+same(
+    true,
+    str_contains(NowcastHtmlRenderer::renderEmpty($chartLabels), 'No nowcast data'),
+    'DWD empty chart differs.'
+);
 
 $incomplete = $features;
 array_pop($incomplete);
