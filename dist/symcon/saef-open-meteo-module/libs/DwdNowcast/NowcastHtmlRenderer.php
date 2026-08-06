@@ -58,8 +58,14 @@ final class NowcastHtmlRenderer
         $bars = [];
         foreach ($minuteValues as $minute => $intensity) {
             $tooltip = sprintf($labels['minuteTooltip'], $minute, $intensity);
-            $bars[] = '<div class="saef-nowcast__bar" title="' . self::escape($tooltip)
-                . '" style="box-sizing:border-box;height:14px;min-width:2px;background:'
+            $edgeClass = match (true) {
+                $minute < 10 => ' saef-nowcast__bar--start',
+                $minute >= $windowMinutes - 10 => ' saef-nowcast__bar--end',
+                default => '',
+            };
+            $bars[] = '<div class="saef-nowcast__bar' . $edgeClass . '" data-tip="'
+                . self::escape($tooltip) . '" style="box-sizing:border-box;position:relative;'
+                . 'height:14px;min-width:2px;background:'
                 . self::colorForIntensity($intensity)
                 . '"></div>';
         }
@@ -68,12 +74,13 @@ final class NowcastHtmlRenderer
 
         return '<div class="saef-nowcast" style="box-sizing:border-box;width:100%;padding:6px;color:#ddd;'
             . 'font:11px/1.35 -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif">'
+            . self::tooltipStyle()
             . '<div class="saef-nowcast__headline" style="display:flex;align-items:baseline;gap:8px;'
             . 'margin:0 0 2px"><span class="saef-nowcast__time" style="color:#999;white-space:nowrap">'
             . self::escape($time) . '</span><strong style="color:#fff">'
             . self::escape($status) . '</strong></div>'
             . '<div class="saef-nowcast__bars" style="display:grid;grid-template-columns:repeat('
-            . $windowMinutes . ',minmax(1px,1fr));gap:1px;height:14px;overflow:hidden;'
+            . $windowMinutes . ',minmax(1px,1fr));gap:1px;height:14px;overflow:visible;'
             . 'border-radius:4px">' . implode('', $bars) . '</div>'
             . '<div class="saef-nowcast__axis" style="display:grid;grid-template-columns:1fr auto 1fr;'
             . 'margin-top:3px;font-size:9px;color:#888"><span>'
@@ -180,6 +187,22 @@ final class NowcastHtmlRenderer
         }
 
         return $value;
+    }
+
+    private static function tooltipStyle(): string
+    {
+        return '<style>'
+            . '.saef-nowcast .saef-nowcast__bar::after{content:attr(data-tip);position:absolute;'
+            . 'left:50%;top:50%;transform:translate(-50%,-50%);display:none;z-index:1000;'
+            . 'pointer-events:none;white-space:nowrap;width:max-content;max-width:220px;'
+            . 'padding:4px 6px;border-radius:5px;background:rgba(0,0,0,.88);color:#fff;'
+            . 'font:11px/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'
+            . 'text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}'
+            . '.saef-nowcast .saef-nowcast__bar:hover{z-index:1001}'
+            . '.saef-nowcast .saef-nowcast__bar:hover::after{display:block}'
+            . '.saef-nowcast .saef-nowcast__bar--start::after{left:0;transform:translate(0,-50%)}'
+            . '.saef-nowcast .saef-nowcast__bar--end::after{left:auto;right:0;transform:translate(0,-50%)}'
+            . '</style>';
     }
 
     private static function escape(string $value): string

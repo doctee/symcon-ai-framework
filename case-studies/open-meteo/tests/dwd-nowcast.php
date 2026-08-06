@@ -64,14 +64,14 @@ $chartLabels = [
     'noData' => 'No nowcast data',
 ];
 $chart = NowcastHtmlRenderer::render($projected60, 'Europe/Berlin', $chartLabels);
-same(60, substr_count($chart, 'class="saef-nowcast__bar"'), 'DWD chart minute count differs.');
+same(60, substr_count($chart, ' data-tip="'), 'DWD chart minute count differs.');
 same(true, str_contains($chart, '09:00'), 'DWD chart local product time differs.');
 same(true, str_contains($chart, 'Rain in 15 min'), 'DWD chart headline differs.');
 same(true, str_contains($chart, '+30 min'), 'DWD chart midpoint differs.');
 same(true, str_contains($chart, '+60 min'), 'DWD chart endpoint differs.');
-same(true, str_contains($chart, 'title="+0 min: 0.00 mm/h"'), 'DWD chart tooltip differs.');
-same(60, substr_count($chart, '<div class="saef-nowcast__bar"'), 'DWD chart tooltip elements differ.');
-same(false, str_contains($chart, '<style>'), 'DWD chart still depends on embedded styles.');
+same(true, str_contains($chart, 'data-tip="+0 min: 0.00 mm/h"'), 'DWD chart tooltip differs.');
+same(true, str_contains($chart, ':hover::after'), 'DWD chart tooltip CSS is missing.');
+same(true, str_contains($chart, 'pointer-events:none'), 'DWD chart tooltip captures the pointer.');
 same(
     true,
     str_contains($chart, 'style="box-sizing:border-box;width:100%;padding:6px'),

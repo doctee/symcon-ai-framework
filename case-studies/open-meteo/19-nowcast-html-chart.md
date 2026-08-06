@@ -7,6 +7,9 @@ NowCast instances. The two existing `~HTMLBox` variables retained their object
 identities during the update and use the translated default name `Regen`.
 Version `0.8.4` replaces the embedded compact-chart stylesheet with the proven
 inline HTMLBox presentation for normal and maximized tiles.
+Version `0.8.5` uses the native Web Content presentation on Symcon 8 and newer,
+removes tile padding and restores the proven CSS tooltip contract. Older Symcon
+versions retain the `~HTMLBox` fallback.
 
 ## Purpose
 
@@ -24,10 +27,10 @@ The presentation follows the handed-over operator contract:
 
 The compact presentation follows the established Symcon reference dimensions:
 11-pixel base text, 14-pixel bars and 9-pixel axis labels. Every minute segment
-retains a native hover tooltip with the minute offset and two decimal places.
-The renderer deliberately applies these dimensions inline and uses one titled
-`div` per minute. This matches the proven Symcon HTMLBox behavior in both a
-normal tile and its maximized view without depending on an embedded stylesheet.
+stores the minute offset and intensity in a `data-tip` attribute. A namespaced
+CSS `::after` pseudo-element exposes that immutable text on `:hover`, with no
+JavaScript or DOM mutation. Inline layout dimensions remain the fallback for
+legacy HTMLBox rendering.
 
 ## Resolution Semantics
 

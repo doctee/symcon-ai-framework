@@ -35,10 +35,11 @@ class IPSModule
     protected function WriteAttributeInteger(string $ident, int $value): void {}
     protected function WriteAttributeBoolean(string $ident, bool $value): void {}
 
+    /** @param string|array<string, mixed> $profile */
     protected function RegisterVariableString(
         string $ident,
         string $name,
-        string $profile,
+        string|array $profile,
         int $position
     ): void {}
 
