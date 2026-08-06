@@ -2,8 +2,9 @@
 
 ## Status
 
-Offline implementation candidate. Publication, module-library update and live
-chart activation remain separate explicit gates.
+Published as part of Open-Meteo module `0.8.2` and live-validated for both DWD
+NowCast instances. The two existing `~HTMLBox` variables retained their object
+identities during the update and use the translated default name `Regen`.
 
 ## Purpose
 
@@ -78,3 +79,8 @@ Offline checks cover:
 The rendered candidate was also reviewed at desktop width on a dark Symcon-like
 background. Text, axis labels, segment boundaries and color transitions were
 visible without clipping or external resources.
+
+Live verification confirmed 60 segments for the configured 60-minute window,
+the midpoint and endpoint labels, cache-only republishing without an extra DWD
+request, and owner-safe migration of the legacy English default title. A
+user-defined variable name is deliberately preserved.

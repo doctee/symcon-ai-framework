@@ -2,8 +2,9 @@
 
 ## Status
 
-Offline implementation candidate. No public publication, module update, live
-instance creation or timer activation is authorized by this artifact.
+Published as part of Open-Meteo module `0.8.2` and validated with two active
+live instances. Both instances use shared locations, automatic updates and the
+bounded DWD provider path described below.
 
 ## Purpose
 
@@ -87,8 +88,9 @@ The module owns only its registered variables, timer, attributes and reference
 to the selected `SharedLocation`. It performs no device action and changes no
 OpenWeather, SolCast, Open-Meteo or Home Assistant consumer.
 
-Publication, module-library update, live instance creation, live HTTP testing,
-timer activation and later consumer migration remain separate explicit gates.
+Publication, module-library update, live instance creation, live HTTP testing
+and timer activation were completed through their separate explicit gates.
+Any later consumer migration remains a separate decision.
 
 ## Verification
 
@@ -101,6 +103,10 @@ The offline contract covers:
 - module lifecycle, reference reconciliation and idempotent variables;
 - last-good behavior and bounded retry scheduling; and
 - deterministic generated fileset reproduction.
+
+Live verification additionally confirmed two active instances, stable shared
+location references, complete forecast data and unchanged existing weather and
+solar providers during module updates.
 
 Relevant provider documentation:
 
