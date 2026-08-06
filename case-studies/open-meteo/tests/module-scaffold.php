@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+if (!defined('VARIABLE_PRESENTATION_WEB_CONTENT')) {
+    define('VARIABLE_PRESENTATION_WEB_CONTENT', '{9DE1D610-5106-97FB-714D-1AADEDF8377A}');
+}
+
 /** @var array<string, array<string, mixed>> $scaffoldProfiles */
 $scaffoldProfiles = [];
 
@@ -32,7 +36,7 @@ class IPSModule
     /** @var array<string, int|string> */
     private array $attributes = [];
 
-    /** @var array<string, array{id: int, type: string, profile: string, position: int}> */
+    /** @var array<string, array{id: int, type: string, profile: string|array<string, mixed>, position: int}> */
     private array $variables = [];
 
     private int $status = 0;
@@ -169,10 +173,11 @@ class IPSModule
         $this->registerVariable($ident, $name, 'integer', $profile, $position);
     }
 
+    /** @param string|array<string, mixed> $profile */
     protected function RegisterVariableString(
         string $ident,
         string $name,
-        string $profile,
+        string|array $profile,
         int $position
     ): void {
         $this->registerVariable($ident, $name, 'string', $profile, $position);
@@ -237,7 +242,7 @@ class IPSModule
         $this->properties[$ident] = $value;
     }
 
-    /** @return array<string, array{id: int, type: string, profile: string, position: int}> */
+    /** @return array<string, array{id: int, type: string, profile: string|array<string, mixed>, position: int}> */
     public function testVariables(): array
     {
         return $this->variables;
@@ -356,11 +361,12 @@ class IPSModule
         return $this->properties[$ident];
     }
 
+    /** @param string|array<string, mixed> $profile */
     private function registerVariable(
         string $ident,
         string $name,
         string $type,
-        string $profile,
+        string|array $profile,
         int $position
     ): void {
         global $scaffoldNextVariableId, $scaffoldObjects;
@@ -1385,8 +1391,12 @@ $dwdNowcast->ApplyChanges();
 scaffoldCheck($dwdNowcast->testStatus() === 104, 'Unconfigured DWD nowcast must be inactive.');
 scaffoldCheck(count($dwdNowcast->testVariables()) === 18, 'DWD nowcast variable contract differs.');
 scaffoldCheck(
-    ($dwdNowcast->testVariables()['NowcastChart']['profile'] ?? null) === '~HTMLBox',
-    'DWD nowcast chart profile differs.'
+    ($dwdNowcast->testVariables()['NowcastChart']['profile'] ?? null) === [
+        'PRESENTATION' => VARIABLE_PRESENTATION_WEB_CONTENT,
+        'HTML_TYPE' => 0,
+        'PADDING' => true,
+    ],
+    'DWD nowcast chart presentation differs.'
 );
 scaffoldCheck(
     in_array('Rain forecast', $dwdNowcast->testTranslationCalls(), true),
@@ -1434,9 +1444,10 @@ scaffoldCheck(
 );
 $dwdChart = (string) $dwdNowcast->testReadValue('NowcastChart');
 scaffoldCheck(
-    substr_count($dwdChart, 'class="saef-nowcast__bar"') === 60,
+    substr_count($dwdChart, ' data-tip="') === 60,
     'DWD nowcast chart minute count differs.'
 );
+scaffoldCheck(str_contains($dwdChart, ':hover::after'), 'DWD nowcast CSS tooltip is missing.');
 scaffoldCheck(str_contains($dwdChart, '+30 min'), 'DWD nowcast chart midpoint is missing.');
 scaffoldCheck(str_contains($dwdChart, '+60 min'), 'DWD nowcast chart endpoint is missing.');
 $dwdNowcast->ApplyChanges();

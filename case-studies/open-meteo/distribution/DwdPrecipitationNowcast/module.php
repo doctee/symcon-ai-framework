@@ -461,9 +461,23 @@ class DwdPrecipitationNowcast extends IPSModule
         $this->RegisterVariableString(
             'NowcastChart',
             $this->Translate('Rain forecast'),
-            '~HTMLBox',
+            $this->chartPresentation(),
             190
         );
+    }
+
+    /** @return string|array{PRESENTATION: string, HTML_TYPE: int, PADDING: bool} */
+    private function chartPresentation(): string|array
+    {
+        if (!defined('VARIABLE_PRESENTATION_WEB_CONTENT')) {
+            return '~HTMLBox';
+        }
+
+        return [
+            'PRESENTATION' => VARIABLE_PRESENTATION_WEB_CONTENT,
+            'HTML_TYPE' => 0,
+            'PADDING' => true,
+        ];
     }
 
     private function migrateNowcastChartName(): void
