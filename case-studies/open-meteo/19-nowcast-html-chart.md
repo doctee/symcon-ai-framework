@@ -2,9 +2,11 @@
 
 ## Status
 
-Published as part of Open-Meteo module `0.8.2` and live-validated for both DWD
+Published as part of Open-Meteo module `0.8.3` and live-validated for both DWD
 NowCast instances. The two existing `~HTMLBox` variables retained their object
 identities during the update and use the translated default name `Regen`.
+Version `0.8.4` replaces the embedded compact-chart stylesheet with the proven
+inline HTMLBox presentation for normal and maximized tiles.
 
 ## Purpose
 
@@ -23,6 +25,9 @@ The presentation follows the handed-over operator contract:
 The compact presentation follows the established Symcon reference dimensions:
 11-pixel base text, 14-pixel bars and 9-pixel axis labels. Every minute segment
 retains a native hover tooltip with the minute offset and two decimal places.
+The renderer deliberately applies these dimensions inline and uses one titled
+`div` per minute. This matches the proven Symcon HTMLBox behavior in both a
+normal tile and its maximized view without depending on an embedded stylesheet.
 
 ## Resolution Semantics
 

@@ -58,21 +58,27 @@ final class NowcastHtmlRenderer
         $bars = [];
         foreach ($minuteValues as $minute => $intensity) {
             $tooltip = sprintf($labels['minuteTooltip'], $minute, $intensity);
-            $bars[] = '<span class="saef-nowcast__bar" style="background:'
+            $bars[] = '<div class="saef-nowcast__bar" title="' . self::escape($tooltip)
+                . '" style="box-sizing:border-box;height:14px;min-width:2px;background:'
                 . self::colorForIntensity($intensity)
-                . '" title="' . self::escape($tooltip) . '" aria-hidden="true"></span>';
+                . '"></div>';
         }
 
         $middle = intdiv($windowMinutes, 2);
-        $aria = $time . ' - ' . $status;
 
-        return '<div class="saef-nowcast" role="img" aria-label="' . self::escape($aria) . '">'
-            . self::style($windowMinutes)
-            . '<div class="saef-nowcast__headline"><span class="saef-nowcast__time">'
-            . self::escape($time) . '</span><strong>' . self::escape($status) . '</strong></div>'
-            . '<div class="saef-nowcast__bars">' . implode('', $bars) . '</div>'
-            . '<div class="saef-nowcast__axis"><span>' . self::escape($labels['now']) . '</span>'
-            . '<span>+' . $middle . ' min</span><span>+' . $windowMinutes . ' min</span></div>'
+        return '<div class="saef-nowcast" style="box-sizing:border-box;width:100%;padding:6px;color:#ddd;'
+            . 'font:11px/1.35 -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif">'
+            . '<div class="saef-nowcast__headline" style="display:flex;align-items:baseline;gap:8px;'
+            . 'margin:0 0 2px"><span class="saef-nowcast__time" style="color:#999;white-space:nowrap">'
+            . self::escape($time) . '</span><strong style="color:#fff">'
+            . self::escape($status) . '</strong></div>'
+            . '<div class="saef-nowcast__bars" style="display:grid;grid-template-columns:repeat('
+            . $windowMinutes . ',minmax(1px,1fr));gap:1px;height:14px;overflow:hidden;'
+            . 'border-radius:4px">' . implode('', $bars) . '</div>'
+            . '<div class="saef-nowcast__axis" style="display:grid;grid-template-columns:1fr auto 1fr;'
+            . 'margin-top:3px;font-size:9px;color:#888"><span>'
+            . self::escape($labels['now']) . '</span><span style="text-align:center">+'
+            . $middle . ' min</span><span style="text-align:right">+' . $windowMinutes . ' min</span></div>'
             . '</div>';
     }
 
@@ -85,9 +91,11 @@ final class NowcastHtmlRenderer
             throw new InvalidArgumentException('Nowcast empty-chart label is invalid.');
         }
 
-        return '<div class="saef-nowcast saef-nowcast--empty">'
-            . self::style(1)
-            . '<div class="saef-nowcast__empty">' . self::escape($labels['noData']) . '</div>'
+        return '<div class="saef-nowcast saef-nowcast--empty" '
+            . 'style="box-sizing:border-box;width:100%;padding:6px;color:#ddd;'
+            . 'font:11px/1.35 -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif">'
+            . '<div class="saef-nowcast__empty" style="padding:18px 8px;text-align:center;opacity:.62">'
+            . self::escape($labels['noData']) . '</div>'
             . '</div>';
     }
 
@@ -172,24 +180,6 @@ final class NowcastHtmlRenderer
         }
 
         return $value;
-    }
-
-    private static function style(int $barCount): string
-    {
-        return '<style>'
-            . '.saef-nowcast{box-sizing:border-box;width:100%;padding:6px;color:inherit;'
-            . 'font:11px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}'
-            . '.saef-nowcast *{box-sizing:border-box}'
-            . '.saef-nowcast__headline{display:flex;align-items:baseline;gap:8px;margin:0 0 2px}'
-            . '.saef-nowcast__time,.saef-nowcast__axis{opacity:.62}'
-            . '.saef-nowcast__bars{display:grid;grid-template-columns:repeat(' . $barCount
-            . ',minmax(1px,1fr));gap:1px;height:14px;overflow:hidden;border-radius:4px}'
-            . '.saef-nowcast__bar{display:block;min-width:0}'
-            . '.saef-nowcast__axis{display:grid;grid-template-columns:1fr auto 1fr;margin-top:3px;font-size:9px}'
-            . '.saef-nowcast__axis span:nth-child(2){text-align:center}'
-            . '.saef-nowcast__axis span:last-child{text-align:right}'
-            . '.saef-nowcast__empty{padding:18px 8px;text-align:center;opacity:.62}'
-            . '</style>';
     }
 
     private static function escape(string $value): string
