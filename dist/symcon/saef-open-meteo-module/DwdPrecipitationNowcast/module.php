@@ -457,7 +457,12 @@ class DwdPrecipitationNowcast extends IPSModule
         $this->RegisterVariableInteger('WindowMinutes', 'Evaluation Window', 'DWDNOWCAST.Minutes', 160);
         $this->RegisterVariableInteger('ForecastPointCount', 'Forecast Point Count', '', 170);
         $this->RegisterVariableInteger('NativeResolutionMinutes', 'Native Resolution', 'DWDNOWCAST.Minutes', 180);
-        $this->RegisterVariableString('NowcastChart', 'Rain forecast', '~HTMLBox', 190);
+        $this->RegisterVariableString(
+            'NowcastChart',
+            $this->Translate('Rain forecast'),
+            '~HTMLBox',
+            190
+        );
     }
 
     private function resetDomainValues(): void
