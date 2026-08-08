@@ -20,10 +20,12 @@ candidate contains no local identifiers.
 
 ## Calibration Contract
 
-The collector deliberately compares the forecast with PV harvest before
-storage dispatch. Inverter output, battery charge/discharge and grid exchange
-remain separate later calibration dimensions because a storage system can
-retain PV surplus instead of exporting it.
+The collector deliberately preserves PV-harvest actuals independently of
+storage dispatch. Its initial analysis contract treated every sufficiently
+covered interval alike. That is not sufficient for a zero-export installation:
+when storage is full and house demand is absent, deliberate PV curtailment is
+not a weather-model error. The versioned classification extension is defined
+in `20-curtailment-aware-calibration.md`.
 
 Each forecast issue creates at most one immutable JSON snapshot and one SHA-256
 marker. Repeated execution with the same issue time and configuration is a
@@ -54,8 +56,10 @@ The generated script was then deployed and read back byte for byte. Its hidden
 five-minute cyclic event was created with the canonical Run Automation action
 and kept inactive for the first execution. The first run created only one
 forecast snapshot and its valid hash marker; the second run preserved both
-files byte for byte. The second Solar target correctly remained in
+files byte for byte. The second Solar target initially remained in
 `waiting_for_forecast` because its first scheduled forecast was still pending.
+It later produced a successful forecast and now accumulates snapshots
+independently of the first target.
 
 Only after those checks passed was the cyclic event activated. No provider
 request, device command, archive write, service restart, module reload,
@@ -80,7 +84,6 @@ The complete repository gate remains the final hand-off check.
 ## Next Observation
 
 The collector must accumulate at least one complete forecast horizon before a
-calibration factor can be assessed. The second Solar runtime must also complete
-its first forecast fetch before its snapshots can begin. Calibration parameters
-remain unchanged until both measurement coverage and forecast error have been
-reviewed explicitly.
+calibration factor can be assessed. Calibration parameters remain unchanged
+until measurement coverage, classification evidence and forecast error have
+been reviewed explicitly.

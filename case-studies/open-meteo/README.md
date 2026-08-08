@@ -10,11 +10,10 @@ only the provider-neutral shared-location contract is reused.
 
 The current case-study state includes the published provider-neutral shared
 location, weather and solar runtimes. Two shared locations and weather runtimes
-are active. One storage-aware Solar runtime has passed manual and automatic
-update observation, and a second has passed guarded creation with its first
-scheduled cycle pending. A read-only calibration collector now preserves
-prospective forecast snapshots for both systems. Existing providers remain
-enabled.
+are active. Both storage-aware Solar runtimes are healthy and preserve
+prospective forecast snapshots. The read-only calibration path distinguishes
+realized harvest from physically unconstrained samples where a zero-export
+storage policy can curtail PV generation. Existing providers remain enabled.
 
 ## Scope
 
@@ -58,6 +57,7 @@ and consumer mappings belong in `private/` or an ignored `*.local.*` file.
 | `17-forecast-calibration-collector.md` | Defines and records immutable forecast snapshotting plus bounded read-only alignment with logged PV actuals. |
 | `18-dwd-precipitation-nowcast.md` | Defines the direct DWD WMS contract, native five-minute semantics, configurable evaluation window and runtime safety boundary. |
 | `19-nowcast-html-chart.md` | Defines the cache-only minute presentation, absolute colors, HTMLBox ownership and lifecycle behavior. |
+| `20-curtailment-aware-calibration.md` | Defines policy-versioned, zero-export-aware classification without rewriting raw snapshots. |
 | `candidate/SolarCalibrationCore.php` | Pure snapshot normalization, archive-event alignment and calibration metrics. |
 | `candidate/SolarCalibrationCollectorRuntime.php` | Bounded cache and archive adapter with immutable private evidence files. |
 | `tools/build-calibration-collector.php` | Deterministically combines public runtime code with ignored installation-local configuration. |
@@ -87,12 +87,13 @@ controlled live pilots and scheduled-cycle observation:
 8. one storage-coupled `pv_harvest` pilot and a later scheduled cycle produced
    bounded current caches while configuration, references and the
    provider-parallel boundary remained unchanged; and
-9. a second storage-aware Solar instance is active with an hourly timer, an
-   unchanged Weather dependency and no provider request during creation; its
-   first regular cycle remains an observation checkpoint; and
+9. a second storage-aware Solar instance is active with an hourly timer and an
+   unchanged Weather dependency; its first successful forecast is preserved;
+   and
 10. a five-minute read-only calibration collector is active, stores immutable
     forecast snapshots and waits for complete horizons before calculating
-    forecast-to-actual metrics.
+    forecast-to-actual metrics; zero-export/storage constraints are classified
+    separately from unconstrained calibration samples.
 
 The generated fileset contains the shared profile and configuration-hash
 helpers required by the modules without duplicating their canonical sources.
@@ -126,6 +127,8 @@ The guarded second Solar creation is recorded in
 `16-second-storage-solar-instance.md`.
 The prospective snapshot and actual-value calibration path is recorded in
 `17-forecast-calibration-collector.md`.
+The curtailment-aware analysis contract is recorded in
+`20-curtailment-aware-calibration.md`.
 
 Run the focused gate from the repository root:
 
