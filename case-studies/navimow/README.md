@@ -327,6 +327,9 @@ template or a general SAEF reference implementation.
 | `299-combined-mqtt-position-accounting-stabilization-implementation.md` | Implements monotonic pilot-wide position accounting and deadline-capable checkpoint sequences while preserving coordinate cleanup, REST authority and recovery policy. |
 | `300-combined-mqtt-position-private-harness-stabilization.md` | Makes the private pilot harness consume additive pilot-wide position accounting with legacy fallback while retaining fail-closed post-deadline behavior. |
 | `301-combined-mqtt-position-stabilization-offline-verification.md` | Verifies the isolated stabilization candidate, including monotonic position accounting, cleanup safety and unchanged transport policy, while retaining all publication and live gates. |
+| `302-position-accounting-stabilization-publication.md` | Records the CI-backed SAEF merge and exact one-file standalone publication with complete-tree equality. |
+| `303-position-accounting-stabilization-metadata-conformance.md` | Passes the exact published metadata gate through fresh official-asset and input byte equivalence to the prior executed 13/13 result. |
+| `304-position-accounting-stabilization-disabled-symcon-rollout.md` | Records the single supported disabled Symcon update and immediate plus delayed credential-free read-only verification. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
