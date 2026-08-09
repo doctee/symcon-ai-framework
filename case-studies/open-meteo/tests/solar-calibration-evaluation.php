@@ -47,6 +47,9 @@ $analyses = [
     [
         'schemaVersion' => 2,
         'targetKey' => 'solar_a',
+        'configurationHash' => str_repeat('a', 64),
+        'analysisVersion' => '2.0.0',
+        'analysisPolicyHash' => str_repeat('b', 64),
         'issuedAt' => $interval - 30 * 3600,
         'powerSamples' => [
             evaluationSample($interval, 1.0, 0.5),
@@ -56,6 +59,9 @@ $analyses = [
     [
         'schemaVersion' => 2,
         'targetKey' => 'solar_a',
+        'configurationHash' => str_repeat('a', 64),
+        'analysisVersion' => '2.0.0',
+        'analysisPolicyHash' => str_repeat('b', 64),
         'issuedAt' => $interval - 2 * 3600,
         'powerSamples' => [
             evaluationSample($interval, 0.8, 0.5),
@@ -102,5 +108,25 @@ try {
     $mixedTargetsRejected = true;
 }
 evaluationCheck($mixedTargetsRejected, 'Mixed target identities were accepted.');
+
+$mixedPoliciesRejected = false;
+try {
+    $mixed = $analyses;
+    $mixed[1]['analysisPolicyHash'] = str_repeat('c', 64);
+    SolarCalibrationEvaluationCore::evaluate($mixed);
+} catch (InvalidArgumentException) {
+    $mixedPoliciesRejected = true;
+}
+evaluationCheck($mixedPoliciesRejected, 'Mixed analysis policies were accepted.');
+
+$invalidDiscardedSampleRejected = false;
+try {
+    $invalid = $analyses;
+    $invalid[0]['powerSamples'][0]['coverage'] = 2.0;
+    SolarCalibrationEvaluationCore::evaluate($invalid);
+} catch (InvalidArgumentException) {
+    $invalidDiscardedSampleRejected = true;
+}
+evaluationCheck($invalidDiscardedSampleRejected, 'Invalid discarded sample was accepted.');
 
 echo "solar-calibration-evaluation: ok\n";

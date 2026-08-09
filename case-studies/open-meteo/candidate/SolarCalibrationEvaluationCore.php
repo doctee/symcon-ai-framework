@@ -31,6 +31,9 @@ final class SolarCalibrationEvaluationCore
         }
 
         $targetKey = null;
+        $configurationHash = null;
+        $analysisVersion = null;
+        $analysisPolicyHash = null;
         $inputSampleCount = 0;
         $operational = [];
         $bucketSelections = [];
@@ -39,11 +42,20 @@ final class SolarCalibrationEvaluationCore
                 throw new InvalidArgumentException('Evaluation requires schema-v2 analyses.');
             }
             $analysisTarget = $analysis['targetKey'] ?? null;
+            $candidateConfigurationHash = $analysis['configurationHash'] ?? null;
+            $candidateAnalysisVersion = $analysis['analysisVersion'] ?? null;
+            $candidateAnalysisPolicyHash = $analysis['analysisPolicyHash'] ?? null;
             $issuedAt = $analysis['issuedAt'] ?? null;
             $samples = $analysis['powerSamples'] ?? null;
             if (
                 !is_string($analysisTarget)
                 || preg_match('/^[a-z][a-z0-9_]{0,63}$/', $analysisTarget) !== 1
+                || !is_string($candidateConfigurationHash)
+                || preg_match('/^[a-f0-9]{64}$/', $candidateConfigurationHash) !== 1
+                || !is_string($candidateAnalysisVersion)
+                || preg_match('/^[0-9]+\.[0-9]+\.[0-9]+$/', $candidateAnalysisVersion) !== 1
+                || !is_string($candidateAnalysisPolicyHash)
+                || preg_match('/^[a-f0-9]{64}$/', $candidateAnalysisPolicyHash) !== 1
                 || !is_int($issuedAt)
                 || $issuedAt <= 0
                 || !is_array($samples)
@@ -53,7 +65,17 @@ final class SolarCalibrationEvaluationCore
             if ($targetKey !== null && $targetKey !== $analysisTarget) {
                 throw new InvalidArgumentException('Evaluation analyses mix target identities.');
             }
+            if (
+                ($configurationHash !== null && $configurationHash !== $candidateConfigurationHash)
+                || ($analysisVersion !== null && $analysisVersion !== $candidateAnalysisVersion)
+                || ($analysisPolicyHash !== null && $analysisPolicyHash !== $candidateAnalysisPolicyHash)
+            ) {
+                throw new InvalidArgumentException('Evaluation analyses mix incompatible policies or configurations.');
+            }
             $targetKey = $analysisTarget;
+            $configurationHash = $candidateConfigurationHash;
+            $analysisVersion = $candidateAnalysisVersion;
+            $analysisPolicyHash = $candidateAnalysisPolicyHash;
 
             foreach ($samples as $sample) {
                 if (!is_array($sample)) {
@@ -64,6 +86,7 @@ final class SolarCalibrationEvaluationCore
                 if (!is_int($from) || !is_int($to) || $to <= $from || $from < $issuedAt) {
                     throw new InvalidArgumentException('Evaluation sample interval is invalid.');
                 }
+                self::validateSample($sample, $to - $from);
                 $inputSampleCount++;
                 if ($inputSampleCount > self::MAX_INPUT_SAMPLES) {
                     throw new InvalidArgumentException('Evaluation sample count is unbounded.');
@@ -98,6 +121,9 @@ final class SolarCalibrationEvaluationCore
         return [
             'schemaVersion' => 1,
             'targetKey' => $targetKey,
+            'configurationHash' => $configurationHash,
+            'analysisVersion' => $analysisVersion,
+            'analysisPolicyHash' => $analysisPolicyHash,
             'method' => [
                 'operational' => 'shortest_non_negative_lead_per_interval',
                 'leadBuckets' => 'shortest_lead_per_interval_inside_bucket',
@@ -142,6 +168,38 @@ final class SolarCalibrationEvaluationCore
         }
 
         throw new LogicException('Evaluation lead time has no bucket.');
+    }
+
+    /** @param array<string, mixed> $sample */
+    private static function validateSample(array $sample, int $intervalDuration): void
+    {
+        $forecast = $sample['forecastKw'] ?? null;
+        $measured = $sample['measuredKw'] ?? null;
+        $duration = $sample['durationSeconds'] ?? null;
+        $coverage = $sample['coverage'] ?? null;
+        $classification = $sample['classification'] ?? null;
+        $eligible = $sample['calibrationEligible'] ?? null;
+        if (
+            (!is_int($forecast) && !is_float($forecast))
+            || (!is_int($measured) && !is_float($measured))
+            || !is_finite((float)$forecast)
+            || !is_finite((float)$measured)
+            || $forecast < 0
+            || $measured < 0
+            || !is_int($duration)
+            || $duration <= 0
+            || $duration > 86400
+            || $duration !== $intervalDuration
+            || (!is_int($coverage) && !is_float($coverage))
+            || !is_finite((float)$coverage)
+            || $coverage < 0
+            || $coverage > 1
+            || !is_string($classification)
+            || !in_array($classification, ['unconstrained', 'curtailed', 'uncertain', 'data_gap'], true)
+            || !is_bool($eligible)
+        ) {
+            throw new InvalidArgumentException('Evaluation sample content is invalid.');
+        }
     }
 
     /**

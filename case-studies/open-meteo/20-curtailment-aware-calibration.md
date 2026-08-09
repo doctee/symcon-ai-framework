@@ -118,7 +118,10 @@ physical loss factor toward periods with more collector runs.
 Realized metrics retain every selected classification. Calibration metrics use
 only samples explicitly marked `calibrationEligible`. The evaluator rejects
 mixed target identities, negative lead times, unsupported schemas and
-unbounded input. It remains a pure candidate component: reading immutable
+unbounded input. It also rejects mixed configuration hashes, analysis versions
+or policy hashes so that incompatible evidence cannot silently share a factor.
+Every input sample is validated before selection, including samples that a
+shorter-lead forecast later supersedes. It remains a pure candidate component: reading immutable
 files, choosing a retention window and publishing or applying a correction
 factor stay outside the collector and require a separate installation-specific
 workflow and decision.
