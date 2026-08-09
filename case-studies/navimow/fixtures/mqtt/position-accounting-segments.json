@@ -1,0 +1,26 @@
+{
+  "formatVersion": 1,
+  "sessionSequence": 3,
+  "segments": [
+    {
+      "segmentSequence": 1,
+      "receivedSamples": 801,
+      "coordinateChanges": 800,
+      "outOfOrderTimestamps": 2
+    },
+    {
+      "segmentSequence": 2,
+      "receivedSamples": 11,
+      "coordinateChanges": 10,
+      "outOfOrderTimestamps": 0
+    }
+  ],
+  "expected": {
+    "receivedSamples": 812,
+    "coordinateChanges": 810,
+    "outOfOrderTimestamps": 2,
+    "segmentSequence": 2,
+    "counterResetCount": 1,
+    "monotonic": true
+  }
+}

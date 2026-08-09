@@ -149,7 +149,7 @@ $account->testSetAttribute(
 );
 $positionCheckpoint = invokePilotPrivate(
     $account,
-    'mqttPositionCheckpointProjection'
+    'mqttPositionSegmentProjection'
 );
 assertPilotCheckpoint(
     $positionCheckpoint === [
@@ -229,6 +229,47 @@ $restarted = new MqttPilotCheckpointAccount(
 $restarted->Create();
 $restarted->testRestorePersistentState($snapshot);
 $restarted->ApplyChanges();
+$clearedPosition = decodePilotCheckpoint(
+    $restarted->GetMqttPositionDiagnostics()
+);
+assertPilotCheckpoint(
+    ($clearedPosition['status'] ?? null) === 'disabled'
+        && ($clearedPosition['observation'] ?? null) === null,
+    'ApplyChanges retained ephemeral position coordinates.'
+);
+$restarted->testSetProperty('EnableMqttPositionDiagnostics', true);
+$secondPositionSegment = Navimow\MqttPositionDiagnostic::initialState();
+$secondPositionSegment = Navimow\MqttPositionDiagnostic::reduce(
+    $secondPositionSegment,
+    [
+        'localX' => 1.0,
+        'localY' => 2.0,
+        'orientation' => 0.1,
+        'sourceTimestamp' => 1700018110000,
+        'vehicleStateCode' => 1,
+    ],
+    $clock->now() - 10
+);
+$secondPositionSegment = Navimow\MqttPositionDiagnostic::reduce(
+    $secondPositionSegment,
+    [
+        'localX' => 2.0,
+        'localY' => 2.0,
+        'orientation' => 0.2,
+        'sourceTimestamp' => 1700018120000,
+        'vehicleStateCode' => 1,
+    ],
+    $clock->now()
+);
+$restarted->testSetAttribute(
+    'MqttPositionDiagnostic',
+    json_encode([
+        'formatVersion' => 1,
+        'deviceKey' => hash('sha256', 'SYNTHETIC_DEVICE'),
+        'conflictingDeviceCount' => 0,
+        'state' => $secondPositionSegment,
+    ], JSON_THROW_ON_ERROR)
+);
 assertPilotCheckpoint(
     $restarted->testTimerInterval('MqttPilotCheckpoint') === 1000,
     'Overdue restart did not schedule one immediate checkpoint.'
@@ -243,6 +284,14 @@ assertPilotCheckpoint(
         && ($checkpoint['scheduledAt'] ?? null) === 1700018000
         && ($checkpoint['recordedAt'] ?? null) === 1700018120
         && ($checkpoint['delaySeconds'] ?? null) === 120
+        && ($checkpoint['episodeSequence'] ?? null) === 0
+        && ($checkpoint['rotationSequence'] ?? null) === 0
+        && ($checkpoint['positionReceivedSamples'] ?? null) === 3
+        && ($checkpoint['positionCoordinateChanges'] ?? null) === 1
+        && ($checkpoint['positionSegmentSequence'] ?? null) === 2
+        && ($checkpoint['positionCounterResetCount'] ?? null) === 1
+        && ($afterRestart['positionAccounting']['receivedSamples']
+            ?? null) === 3
         && ($afterRestart['nextCheckpointAt'] ?? null) === 1700036000
         && $restarted->testTimerInterval('MqttPilotCheckpoint')
             === 17880000,
@@ -390,7 +439,7 @@ assertPilotCheckpoint(
         . json_encode(
             ['episode' => $episode, 'rotation' => $rotation],
             JSON_THROW_ON_ERROR
-    )
+        )
 );
 assertPilotCheckpoint(
     ($episodeResult['checkpointSequence'] ?? null) === 1
@@ -532,11 +581,15 @@ assertPilotCheckpoint(
             'sessionSequence',
             'recordedAt',
             'delaySeconds',
+            'episodeSequence',
+            'rotationSequence',
             'positionAvailable',
             'positionReceivedSamples',
             'positionCoordinateChanges',
             'positionOutOfOrderTimestamps',
             'positionRetainedSamples',
+            'positionSegmentSequence',
+            'positionCounterResetCount',
         ]
         && ($summary['checkpoints'][0]['delaySeconds'] ?? null) === 1
         && strlen($summaryJson) <= 16384
@@ -572,6 +625,36 @@ assertPilotCheckpoint(
     'Reconciled pilot evidence fixture changed unexpectedly.'
 );
 
+$positionAccountingFixture = decodePilotCheckpoint(
+    (string) file_get_contents(
+        __DIR__ . '/../fixtures/mqtt/position-accounting-segments.json'
+    )
+);
+$positionTotals = [
+    'receivedSamples' => 0,
+    'coordinateChanges' => 0,
+    'outOfOrderTimestamps' => 0,
+];
+foreach ($positionAccountingFixture['segments'] ?? [] as $segment) {
+    foreach (array_keys($positionTotals) as $field) {
+        $positionTotals[$field] += $segment[$field] ?? 0;
+    }
+}
+assertPilotCheckpoint(
+    $positionTotals['receivedSamples']
+        === ($positionAccountingFixture['expected']['receivedSamples']
+            ?? null)
+        && $positionTotals['coordinateChanges']
+            === ($positionAccountingFixture['expected']['coordinateChanges']
+                ?? null)
+        && $positionTotals['outOfOrderTimestamps']
+            === ($positionAccountingFixture['expected']
+                ['outOfOrderTimestamps'] ?? null)
+        && ($positionAccountingFixture['expected']['monotonic'] ?? null)
+            === true,
+    'Position segment accounting fixture changed unexpectedly.'
+);
+
 $restarted->testSetProperty('EnableMqttShadow', false);
 $restarted->ApplyChanges();
 $closed = decodePilotCheckpoint(
@@ -595,6 +678,40 @@ assertPilotCheckpoint(
         'SYNTHETIC_PRIVATE_VALUE'
     ),
     'Version-1 migration retained unsupported nested fields.'
+);
+
+$malformedCleanupAccount = new MqttPilotCheckpointAccount(
+    7103,
+    $clock,
+    1699999900
+);
+$malformedCleanupAccount->Create();
+$malformedCleanupAccount->testSetAttribute(
+    'MqttPilotObservationRegistry',
+    '{malformed-json'
+);
+$malformedCleanupAccount->testSetAttribute(
+    'MqttPositionDiagnostic',
+    json_encode([
+        'formatVersion' => 1,
+        'deviceKey' => hash('sha256', 'SYNTHETIC_DEVICE'),
+        'state' => $positionState,
+    ], JSON_THROW_ON_ERROR)
+);
+$malformedCleanupAccount->ApplyChanges();
+$malformedCleanupPosition = decodePilotCheckpoint(
+    $malformedCleanupAccount->GetMqttPositionDiagnostics()
+);
+assertPilotCheckpoint(
+    ($malformedCleanupPosition['status'] ?? null) === 'disabled'
+        && ($malformedCleanupPosition['observation'] ?? null) === null
+        && !str_contains(
+            (string) $malformedCleanupAccount->testReadAttribute(
+                'MqttPositionDiagnostic'
+            ),
+            hash('sha256', 'SYNTHETIC_DEVICE')
+        ),
+    'Malformed pilot registry blocked ephemeral position cleanup.'
 );
 
 echo "Navimow MQTT pilot checkpoint tests passed.\n";
