@@ -39,6 +39,7 @@ The mower remained docked. The client:
 | `symcon-envelope-invalid-data-id.json` | Synthetic negative case for exact native receive-interface validation. |
 | `bounded-diagnostics-shadow-active.json` | Synthetic exact version-2 contract for the privacy-safe `ShadowActive` diagnostic projection, including one identity-free semantic hint. |
 | `episode-accounting-reconciled.json` | Sanitized aggregate regression evidence separating 12 disconnect observations from 8 distinct transport episodes and 4 duplicates. |
+| `position-accounting-segments.json` | Synthetic coordinate-free proof that pilot-wide position counters remain monotonic across ephemeral transport-segment cleanup. |
 | `core-resume-transient-core-readiness.json` | Synthetic runtime contract for an active Core whose configuration is temporarily unreadable before `KR_READY`. |
 | `core-resume-bounded-health-observation.json` | Synthetic absolute `+15/+30/+60/+90/+120/+180 s` contract for delayed native Core readiness and one final bounded recovery. |
 | `core-resume-post-ready-unhealthy-live.json` | Sanitized payload-free signature of the step-181 restart: correct 15-second barrier, receive-counter advancement with unresolved timing, unhealthy Core classification and completed cleanup. |
