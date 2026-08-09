@@ -30,6 +30,11 @@ This project adheres to Semantic Versioning.
 - Added a bounded Open-Meteo solar calibration collector with immutable
   forecast snapshots, change-based archive alignment, deterministic private
   source generation and offline metric tests.
+- Added policy-versioned curtailment classification for zero-export storage
+  systems. Realized harvest remains visible while only unequivocally
+  unconstrained intervals contribute to physical forecast calibration.
+- Kept successful scheduled calibration cycles quiet while retaining
+  structured results for interactive runs and generic failure logging.
 - Added a guarded one-way Open-Meteo module publisher. SAEF remains the
   editable source of truth while check and prepare stay local and
   deterministic; publication requires exact fileset and remote-commit pins,

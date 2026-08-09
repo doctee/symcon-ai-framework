@@ -60,6 +60,7 @@ foreach ($targets as $target) {
         'measurementVariableId' => $target['measurementVariableId'],
         'dailyEnergyVariableId' => $target['dailyEnergyVariableId'],
         'maxNonZeroCarrySeconds' => $carry,
+        'curtailmentPolicy' => calibrationCurtailmentPolicy($target['curtailmentPolicy'] ?? ['mode' => 'none']),
     ];
 }
 
@@ -89,19 +90,25 @@ $collectorConfiguration = [
         . str_replace('/', DIRECTORY_SEPARATOR, $embeddedConfiguration['relativeDirectory']),
     'targets' => $embeddedConfiguration['targets'],
 ];
+$sender = $GLOBALS['_IPS']['SENDER'] ?? null;
+$emitResult = $sender !== 'TimerEvent';
 
 try {
     $result = (new SolarCalibrationCollectorRuntime($collectorConfiguration))->run();
-    echo json_encode(
-        $result,
-        JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
-    );
+    if ($emitResult) {
+        echo json_encode(
+            $result,
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+        );
+    }
 } catch (Throwable $throwable) {
     IPS_LogMessage('OpenMeteoCalibration', 'Collector failed: ' . get_class($throwable));
-    echo json_encode(
-        ['success' => false, 'code' => 'collector_failed', 'exception' => get_class($throwable)],
-        JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES
-    );
+    if ($emitResult) {
+        echo json_encode(
+            ['success' => false, 'code' => 'collector_failed', 'exception' => get_class($throwable)],
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES
+        );
+    }
 }
 PHP;
 $runner = str_replace('__CONFIGURATION__', $embeddedConfiguration, $runner);
@@ -134,4 +141,97 @@ function calibrationBody(string $path): string
     }
 
     return rtrim($source);
+}
+
+/**
+ * @param mixed $policy
+ * @return array<string, mixed>
+ */
+function calibrationCurtailmentPolicy(mixed $policy): array
+{
+    if (!is_array($policy)) {
+        throw new InvalidArgumentException('Curtailment policy must be an object.');
+    }
+    $mode = $policy['mode'] ?? null;
+    if ($mode === 'none') {
+        return ['mode' => 'none'];
+    }
+    if ($mode !== 'zero_export_storage') {
+        throw new InvalidArgumentException('Curtailment policy mode is invalid.');
+    }
+
+    $requiredSignals = [
+        'stateOfChargePercent',
+        'chargePowerW',
+        'outputPowerW',
+        'homeLoadW',
+        'gridExportW',
+        'gridImportW',
+        'statusCode',
+    ];
+    $signals = $policy['signalVariableIds'] ?? null;
+    if (!is_array($signals)) {
+        throw new InvalidArgumentException('Curtailment signal mapping is invalid.');
+    }
+    $actualSignalKeys = array_keys($signals);
+    sort($actualSignalKeys, SORT_STRING);
+    $expectedSignalKeys = $requiredSignals;
+    sort($expectedSignalKeys, SORT_STRING);
+    if ($actualSignalKeys !== $expectedSignalKeys) {
+        throw new InvalidArgumentException('Curtailment signal mapping is incomplete.');
+    }
+    $normalizedSignals = [];
+    foreach ($requiredSignals as $signal) {
+        $variableId = $signals[$signal];
+        if (!is_int($variableId) || $variableId <= 0) {
+            throw new InvalidArgumentException('Curtailment signal ID is invalid.');
+        }
+        $normalizedSignals[$signal] = $variableId;
+    }
+
+    $ranges = [
+        'minimumForecastKw' => [0.0, 10.0],
+        'maximumRealizedToForecastRatio' => [0.0, 1.0],
+        'minimumMeasurementCoverage' => [0.0, 1.0],
+        'minimumAuxiliaryCoverage' => [0.0, 1.0],
+        'minimumHeartbeatCoverage' => [0.0, 1.0],
+        'fullSocPercent' => [0.0, 100.0],
+        'minimumPossibleFullSocFraction' => [0.0, 1.0],
+        'minimumFullSocFraction' => [0.0, 1.0],
+        'maximumChargeAbsoluteAverageW' => [0.0, 10 * 1000.0],
+        'maximumGridExportAverageW' => [0.0, 10 * 1000.0],
+        'maximumGridImportAverageW' => [0.0, 10 * 1000.0],
+    ];
+    $normalized = [
+        'mode' => $mode,
+        'signalVariableIds' => $normalizedSignals,
+    ];
+    foreach ($ranges as $key => [$minimum, $maximum]) {
+        $value = $policy[$key] ?? null;
+        if (!is_int($value) && !is_float($value)) {
+            throw new InvalidArgumentException('Curtailment threshold is not numeric.');
+        }
+        $number = (float)$value;
+        if (!is_finite($number) || $number < $minimum || $number > $maximum) {
+            throw new InvalidArgumentException('Curtailment threshold is out of range.');
+        }
+        $normalized[$key] = $number;
+    }
+    $possibleFullSocFraction = $normalized['minimumPossibleFullSocFraction'] ?? null;
+    $confirmedFullSocFraction = $normalized['minimumFullSocFraction'] ?? null;
+    if (!is_float($possibleFullSocFraction) || !is_float($confirmedFullSocFraction)) {
+        throw new LogicException('Full-SOC thresholds were not normalized.');
+    }
+    if ($possibleFullSocFraction > $confirmedFullSocFraction) {
+        throw new InvalidArgumentException('Possible full-SOC fraction exceeds the confirmed threshold.');
+    }
+    foreach (['signalCarrySeconds', 'heartbeatMaxGapSeconds'] as $key) {
+        $value = $policy[$key] ?? null;
+        if (!is_int($value) || $value <= 0 || $value > 3600) {
+            throw new InvalidArgumentException('Curtailment duration is invalid.');
+        }
+        $normalized[$key] = $value;
+    }
+
+    return $normalized;
 }

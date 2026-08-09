@@ -8,6 +8,7 @@ if (!class_exists('SolarCalibrationCore')) {
 
 final class SolarCalibrationCollectorRuntime
 {
+    private const ANALYSIS_VERSION = '2.0.0';
     private const SOLAR_MODULE_GUID = '{C86E5442-13CF-4145-B23C-EF2B7635D79E}';
     private const ARCHIVE_MODULE_GUID = '{43192F0B-135B-4CE7-A0A7-1475603F3060}';
     private const MAX_SNAPSHOTS_PER_TARGET = 1000;
@@ -71,7 +72,7 @@ final class SolarCalibrationCollectorRuntime
 
         $targetDirectory = $configuration['snapshotDirectory'] . DIRECTORY_SEPARATOR . $target['key'];
         $this->ensureDirectory($targetDirectory);
-        $snapshotCount = count(glob($targetDirectory . DIRECTORY_SEPARATOR . 'forecast-*.json') ?: []);
+        $snapshotCount = count($this->baseSnapshotPaths($targetDirectory));
         if ($snapshotCount >= self::MAX_SNAPSHOTS_PER_TARGET) {
             throw new RuntimeException('Snapshot retention limit reached.');
         }
@@ -124,13 +125,11 @@ final class SolarCalibrationCollectorRuntime
     private function analyzeOne(array $configuration, array $target): array
     {
         $targetDirectory = $configuration['snapshotDirectory'] . DIRECTORY_SEPARATOR . $target['key'];
-        $snapshotPaths = glob($targetDirectory . DIRECTORY_SEPARATOR . 'forecast-*.json') ?: [];
-        sort($snapshotPaths, SORT_STRING);
+        $snapshotPaths = $this->baseSnapshotPaths($targetDirectory);
+        $analysisPolicyHash = $this->analysisPolicyHash($target['curtailmentPolicy']);
         foreach ($snapshotPaths as $snapshotPath) {
-            if (str_ends_with($snapshotPath, '.analysis.json')) {
-                continue;
-            }
-            $analysisPath = substr($snapshotPath, 0, -5) . '.analysis.json';
+            $analysisPath = substr($snapshotPath, 0, -5)
+                . '.analysis-v2-' . $analysisPolicyHash . '.json';
             if ($this->verifiedImmutableFileExists($analysisPath)) {
                 continue;
             }
@@ -145,36 +144,92 @@ final class SolarCalibrationCollectorRuntime
                 return ['outcome' => 'waiting_for_complete_horizon'];
             }
 
+            $issuedAt = $snapshot['issuedAt'] ?? null;
+            if (!is_int($issuedAt) || $issuedAt <= 0) {
+                throw new RuntimeException('Forecast snapshot issue time is invalid.');
+            }
+            $forecastPoints = array_values(array_filter(
+                is_array($snapshot['power'] ?? null) ? $snapshot['power'] : [],
+                static fn(mixed $point): bool => is_array($point)
+                    && is_int($point['validFrom'] ?? null)
+                    && $point['validFrom'] >= $issuedAt
+            ));
+            if ($forecastPoints === []) {
+                throw new RuntimeException('Forecast snapshot has no post-issue power intervals.');
+            }
+            $analysisFrom = $forecastPoints[0]['validFrom'];
+            $lastPoint = $forecastPoints[count($forecastPoints) - 1];
+            $analysisTo = $lastPoint['validTo'] ?? null;
+            if (!is_int($analysisTo) || $analysisTo <= $analysisFrom) {
+                throw new RuntimeException('Forecast analysis range is invalid.');
+            }
+
             $events = $this->readMeasurementEvents(
                 $configuration['archiveId'],
                 $target['measurementVariableId'],
-                (int)$snapshot['forecastValidFrom'],
-                (int)$snapshot['forecastValidTo']
+                $analysisFrom,
+                $analysisTo
             );
             $samples = SolarCalibrationCore::alignPowerMeasurements(
-                $snapshot['power'] ?? [],
+                $forecastPoints,
                 $events,
                 $target['maxNonZeroCarrySeconds']
             );
             if ($samples === []) {
                 return ['outcome' => 'waiting_for_measurements'];
             }
-            $metrics = SolarCalibrationCore::calculatePowerMetrics($samples);
+
+            $signalEvents = [];
+            if ($target['curtailmentPolicy']['mode'] === 'zero_export_storage') {
+                $signalEvents['solarPowerW'] = array_map(
+                    static fn(array $event): array => [
+                        'timestamp' => $event['timestamp'],
+                        'value' => $event['valueW'],
+                    ],
+                    $events
+                );
+                foreach ($target['curtailmentPolicy']['signalVariableIds'] as $signal => $variableId) {
+                    $signalEvents[$signal] = $this->readArchiveEvents(
+                        $configuration['archiveId'],
+                        $variableId,
+                        $analysisFrom,
+                        $analysisTo
+                    );
+                }
+            }
+            $classifiedSamples = SolarCalibrationCore::classifyPowerSamples(
+                $samples,
+                $signalEvents,
+                $target['curtailmentPolicy']
+            );
+            $classificationSummary = SolarCalibrationCore::summarizeClassifications($classifiedSamples);
+            $realizedMetrics = SolarCalibrationCore::calculatePowerMetrics($classifiedSamples);
             $daily = $this->dailyEnergyComparison(
                 $configuration['archiveId'],
                 $target['dailyEnergyVariableId'],
                 $snapshot['dailyEnergy'] ?? [],
-                (int)$snapshot['issuedAt']
+                $issuedAt
             );
+            $daily = $this->annotateDailyClassifications($daily, $classifiedSamples);
             $analysis = [
-                'schemaVersion' => 1,
+                'schemaVersion' => 2,
+                'analysisVersion' => self::ANALYSIS_VERSION,
+                'analysisPolicyHash' => $analysisPolicyHash,
                 'targetKey' => $target['key'],
                 'issuedAt' => $snapshot['issuedAt'],
                 'configurationHash' => $snapshot['configurationHash'],
                 'snapshotSha256' => hash_file('sha256', $snapshotPath),
                 'analyzedAt' => time(),
-                'powerMetrics' => $metrics,
-                'powerSamples' => $samples,
+                'analysisValidFrom' => $analysisFrom,
+                'analysisValidTo' => $analysisTo,
+                'realizedPowerMetrics' => $realizedMetrics,
+                'calibrationPowerMetrics' => $classificationSummary['calibrationMetrics'],
+                'classificationSummary' => [
+                    'counts' => $classificationSummary['counts'],
+                    'durationSeconds' => $classificationSummary['durationSeconds'],
+                    'calibrationEligibleCount' => $classificationSummary['calibrationEligibleCount'],
+                ],
+                'powerSamples' => $classifiedSamples,
                 'dailyEnergy' => $daily,
             ];
             $this->writeImmutable($analysisPath, SolarCalibrationCore::encode($analysis));
@@ -182,8 +237,10 @@ final class SolarCalibrationCollectorRuntime
             return [
                 'outcome' => 'created',
                 'issuedAt' => $snapshot['issuedAt'],
-                'sampleCount' => count($samples),
-                'coverage' => $metrics['coverage'],
+                'sampleCount' => count($classifiedSamples),
+                'coverage' => $realizedMetrics['coverage'],
+                'classificationCounts' => $classificationSummary['counts'],
+                'calibrationEligibleCount' => $classificationSummary['calibrationEligibleCount'],
             ];
         }
 
@@ -233,12 +290,17 @@ final class SolarCalibrationCollectorRuntime
                     throw new RuntimeException('Calibration measurement variable is missing or not logged.');
                 }
             }
+            $curtailmentPolicy = $this->validatedCurtailmentPolicy(
+                $target['curtailmentPolicy'] ?? ['mode' => 'none'],
+                $archiveIds[0]
+            );
             $validatedTargets[] = [
                 'key' => $key,
                 'solarInstanceId' => $solarInstanceId,
                 'measurementVariableId' => $measurementVariableId,
                 'dailyEnergyVariableId' => $dailyEnergyVariableId,
                 'maxNonZeroCarrySeconds' => $carry,
+                'curtailmentPolicy' => $curtailmentPolicy,
             ];
         }
 
@@ -247,6 +309,117 @@ final class SolarCalibrationCollectorRuntime
             'archiveId' => $archiveIds[0],
             'targets' => $validatedTargets,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $policy
+     * @return array<string, mixed>
+     */
+    private function validatedCurtailmentPolicy(array $policy, int $archiveId): array
+    {
+        $mode = $policy['mode'] ?? null;
+        if ($mode === 'none') {
+            return ['mode' => 'none'];
+        }
+        if ($mode !== 'zero_export_storage') {
+            throw new InvalidArgumentException('Curtailment policy mode is invalid.');
+        }
+
+        $signalVariableIds = $policy['signalVariableIds'] ?? null;
+        $requiredSignals = [
+            'stateOfChargePercent',
+            'chargePowerW',
+            'outputPowerW',
+            'homeLoadW',
+            'gridExportW',
+            'gridImportW',
+            'statusCode',
+        ];
+        if (!is_array($signalVariableIds) || array_keys($signalVariableIds) !== $requiredSignals) {
+            throw new InvalidArgumentException('Curtailment signal mapping is invalid.');
+        }
+        $validatedSignals = [];
+        foreach ($signalVariableIds as $signal => $variableId) {
+            $validatedId = $this->positiveId($variableId, 'curtailment signal');
+            if (!IPS_VariableExists($validatedId) || !AC_GetLoggingStatus($archiveId, $validatedId)) {
+                throw new RuntimeException('Curtailment signal variable is missing or not logged.');
+            }
+            $variable = IPS_GetVariable($validatedId);
+            if (!in_array($variable['VariableType'], [1, 2], true)) {
+                throw new RuntimeException('Curtailment signal variable is not numeric.');
+            }
+            $validatedSignals[$signal] = $validatedId;
+        }
+
+        $floatThresholds = [
+            'minimumForecastKw' => [0.0, 10.0],
+            'maximumRealizedToForecastRatio' => [0.0, 1.0],
+            'minimumMeasurementCoverage' => [0.0, 1.0],
+            'minimumAuxiliaryCoverage' => [0.0, 1.0],
+            'minimumHeartbeatCoverage' => [0.0, 1.0],
+            'fullSocPercent' => [0.0, 100.0],
+            'minimumPossibleFullSocFraction' => [0.0, 1.0],
+            'minimumFullSocFraction' => [0.0, 1.0],
+            'maximumChargeAbsoluteAverageW' => [0.0, 10 * 1000.0],
+            'maximumGridExportAverageW' => [0.0, 10 * 1000.0],
+            'maximumGridImportAverageW' => [0.0, 10 * 1000.0],
+        ];
+        $validated = [
+            'mode' => $mode,
+            'signalVariableIds' => $validatedSignals,
+        ];
+        foreach ($floatThresholds as $key => [$minimum, $maximum]) {
+            $value = $policy[$key] ?? null;
+            if (!is_int($value) && !is_float($value)) {
+                throw new InvalidArgumentException('Curtailment threshold is not numeric: ' . $key);
+            }
+            $number = (float)$value;
+            if (!is_finite($number) || $number < $minimum || $number > $maximum) {
+                throw new InvalidArgumentException('Curtailment threshold is out of range: ' . $key);
+            }
+            $validated[$key] = $number;
+        }
+        $possibleFullSocFraction = $validated['minimumPossibleFullSocFraction'] ?? null;
+        $confirmedFullSocFraction = $validated['minimumFullSocFraction'] ?? null;
+        if (!is_float($possibleFullSocFraction) || !is_float($confirmedFullSocFraction)) {
+            throw new LogicException('Full-SOC thresholds were not normalized.');
+        }
+        if ($possibleFullSocFraction > $confirmedFullSocFraction) {
+            throw new InvalidArgumentException('Possible full-SOC fraction exceeds the confirmed threshold.');
+        }
+        foreach (['signalCarrySeconds', 'heartbeatMaxGapSeconds'] as $key) {
+            $value = $policy[$key] ?? null;
+            if (!is_int($value) || $value <= 0 || $value > 3600) {
+                throw new InvalidArgumentException('Curtailment duration is invalid: ' . $key);
+            }
+            $validated[$key] = $value;
+        }
+
+        return $validated;
+    }
+
+    /** @param array<string, mixed> $policy */
+    private function analysisPolicyHash(array $policy): string
+    {
+        return hash('sha256', self::ANALYSIS_VERSION . "\n" . json_encode(
+            $policy,
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+        ));
+    }
+
+    /** @return array<int, string> */
+    private function baseSnapshotPaths(string $targetDirectory): array
+    {
+        $paths = array_values(array_filter(
+            glob($targetDirectory . DIRECTORY_SEPARATOR . 'forecast-*.json') ?: [],
+            static fn(string $path): bool => preg_match(
+                '/forecast-[0-9]+-[a-f0-9]{64}\.json$/',
+                $path
+            ) === 1
+        ));
+        sort($paths, SORT_STRING);
+
+        return $paths;
     }
 
     /** @return array<string, mixed> */
@@ -265,6 +438,18 @@ final class SolarCalibrationCollectorRuntime
 
     /** @return array<int, array{timestamp: int, valueW: float}> */
     private function readMeasurementEvents(int $archiveId, int $variableId, int $from, int $to): array
+    {
+        return array_map(
+            static fn(array $event): array => [
+                'timestamp' => $event['timestamp'],
+                'valueW' => $event['value'],
+            ],
+            $this->readArchiveEvents($archiveId, $variableId, $from, $to)
+        );
+    }
+
+    /** @return array<int, array{timestamp: int, value: float}> */
+    private function readArchiveEvents(int $archiveId, int $variableId, int $from, int $to): array
     {
         $values = [];
         $preceding = AC_GetLoggedValues($archiveId, $variableId, 0, $from, 1);
@@ -299,11 +484,47 @@ final class SolarCalibrationCollectorRuntime
         ksort($values, SORT_NUMERIC);
 
         $events = [];
-        foreach ($values as $timestamp => $valueW) {
-            $events[] = ['timestamp' => $timestamp, 'valueW' => $valueW];
+        foreach ($values as $timestamp => $value) {
+            $events[] = ['timestamp' => $timestamp, 'value' => $value];
         }
 
         return $events;
+    }
+
+    /**
+     * @param array<int, array<string, int|float|null>> $daily
+     * @param array<int, array<string, mixed>> $samples
+     * @return array<int, array<string, mixed>>
+     */
+    private function annotateDailyClassifications(array $daily, array $samples): array
+    {
+        foreach ($daily as &$day) {
+            $counts = [
+                'unconstrained' => 0,
+                'curtailed' => 0,
+                'uncertain' => 0,
+                'data_gap' => 0,
+            ];
+            foreach ($samples as $sample) {
+                if (
+                    ($sample['validFrom'] ?? PHP_INT_MAX) < ($day['validTo'] ?? 0)
+                    && ($sample['validTo'] ?? 0) > ($day['validFrom'] ?? PHP_INT_MAX)
+                ) {
+                    $classification = $sample['classification'] ?? null;
+                    if (is_string($classification) && array_key_exists($classification, $counts)) {
+                        $counts[$classification]++;
+                    }
+                }
+            }
+            $day['classificationCounts'] = $counts;
+            $day['calibrationEligible'] = array_sum($counts) > 0
+                && $counts['curtailed'] === 0
+                && $counts['uncertain'] === 0
+                && $counts['data_gap'] === 0;
+        }
+        unset($day);
+
+        return $daily;
     }
 
     /**

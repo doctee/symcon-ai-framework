@@ -21,6 +21,7 @@ for test in \
     interval-alignment \
     solar-calculator \
     solar-calibration-core \
+    solar-calibration-evaluation \
     solar-calibration-builder \
     state-reducer \
     module-scaffold \
@@ -33,7 +34,6 @@ done
 "${repository_dir}/vendor/bin/phpstan" analyse \
     --memory-limit=512M \
     --debug \
-    --memory-limit=512M \
     --no-progress \
     --configuration="${case_study_dir}/phpstan.neon"
 

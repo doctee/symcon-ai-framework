@@ -18,6 +18,31 @@ try {
             'measurementVariableId' => 102,
             'dailyEnergyVariableId' => 103,
             'maxNonZeroCarrySeconds' => 300,
+            'curtailmentPolicy' => [
+                'mode' => 'zero_export_storage',
+                'signalVariableIds' => [
+                    'stateOfChargePercent' => 104,
+                    'chargePowerW' => 105,
+                    'outputPowerW' => 106,
+                    'homeLoadW' => 107,
+                    'gridExportW' => 108,
+                    'gridImportW' => 109,
+                    'statusCode' => 110,
+                ],
+                'minimumForecastKw' => 0.2,
+                'maximumRealizedToForecastRatio' => 0.6,
+                'minimumMeasurementCoverage' => 0.8,
+                'minimumAuxiliaryCoverage' => 0.8,
+                'minimumHeartbeatCoverage' => 0.8,
+                'fullSocPercent' => 98.0,
+                'minimumPossibleFullSocFraction' => 0.1,
+                'minimumFullSocFraction' => 0.5,
+                'maximumChargeAbsoluteAverageW' => 50.0,
+                'maximumGridExportAverageW' => 25.0,
+                'maximumGridImportAverageW' => 25.0,
+                'signalCarrySeconds' => 900,
+                'heartbeatMaxGapSeconds' => 900,
+            ],
         ]],
     ];
     file_put_contents($configurationPath, json_encode($configuration, JSON_THROW_ON_ERROR));
@@ -36,7 +61,17 @@ try {
     if (substr_count($source, '<?php') !== 1 || substr_count($source, 'declare(strict_types=1);') !== 1) {
         throw new RuntimeException('Generated collector header differs.');
     }
-    foreach (['SolarCalibrationCore', 'SolarCalibrationCollectorRuntime', "'solar_test'", 'IPS_GetKernelDir'] as $needle) {
+    foreach (
+        [
+            'SolarCalibrationCore',
+            'SolarCalibrationCollectorRuntime',
+            "'solar_test'",
+            "'zero_export_storage'",
+            "'analysisVersion'",
+            '$sender !== \'TimerEvent\'',
+            'IPS_GetKernelDir',
+        ] as $needle
+    ) {
         if (!str_contains($source, $needle)) {
             throw new RuntimeException('Generated collector source is incomplete.');
         }
