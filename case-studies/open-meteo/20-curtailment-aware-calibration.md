@@ -101,3 +101,24 @@ The generated runner suppresses successful JSON output for `TimerEvent`
 executions so routine cycles do not create a `Result for Event` message.
 Interactive and `RunScript` executions retain their structured result, while
 failures remain visible through the bounded generic Symcon log entry.
+
+## Deduplicated Evaluation
+
+Frequent forecast snapshots intentionally overlap. Summing every schema-v2
+analysis would therefore count the same realized interval many times and bias a
+physical loss factor toward periods with more collector runs.
+
+`SolarCalibrationEvaluationCore` provides two deterministic offline views:
+
+- the operational view selects exactly one forecast per realized interval,
+  choosing the shortest non-negative lead time; and
+- the lead-time view selects at most one forecast per realized interval inside
+  each of `00-06h`, `06-24h`, `24-48h`, `48-72h` and `72h+`.
+
+Realized metrics retain every selected classification. Calibration metrics use
+only samples explicitly marked `calibrationEligible`. The evaluator rejects
+mixed target identities, negative lead times, unsupported schemas and
+unbounded input. It remains a pure candidate component: reading immutable
+files, choosing a retention window and publishing or applying a correction
+factor stay outside the collector and require a separate installation-specific
+workflow and decision.

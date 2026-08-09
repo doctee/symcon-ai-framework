@@ -21,6 +21,7 @@ for test in \
     interval-alignment \
     solar-calculator \
     solar-calibration-core \
+    solar-calibration-evaluation \
     solar-calibration-builder \
     state-reducer \
     module-scaffold \

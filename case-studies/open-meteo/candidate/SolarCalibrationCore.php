@@ -6,6 +6,7 @@ final class SolarCalibrationCore
 {
     private const MAX_POINTS = 256;
     private const MAX_SAMPLES = 512;
+    private const MAX_METRIC_SAMPLES = 10000;
     private const MAX_SIGNAL_EVENTS = 100000;
 
     /**
@@ -53,7 +54,7 @@ final class SolarCalibrationCore
      */
     public static function calculatePowerMetrics(array $samples): array
     {
-        if ($samples === [] || count($samples) > self::MAX_SAMPLES) {
+        if ($samples === [] || count($samples) > self::MAX_METRIC_SAMPLES) {
             throw new InvalidArgumentException('Calibration sample count is invalid.');
         }
 
