@@ -331,6 +331,7 @@ template or a general SAEF reference implementation.
 | `303-position-accounting-stabilization-metadata-conformance.md` | Passes the exact published metadata gate through fresh official-asset and input byte equivalence to the prior executed 13/13 result. |
 | `304-position-accounting-stabilization-disabled-symcon-rollout.md` | Records the single supported disabled Symcon update and immediate plus delayed credential-free read-only verification. |
 | `305-position-accounting-pilot-readiness-abort.md` | Stops the first new-pilot readiness attempt before mutation because the passive token horizon was below 2400 seconds while all other contracts passed. |
+| `306-position-accounting-pilot-retry-readiness.md` | Passes exactly one read-only retry with a 3329-second token horizon and empty corrected accounting baseline while retaining separate attribution, persistence and activation gates. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
