@@ -22,6 +22,21 @@ Automatic polling is a later explicit configuration choice. When enabled, the
 normal interval is at least 30 minutes and failures use the same bounded
 5/15/30-minute retry sequence as the weather runtime.
 
+## Kernel-Start Recovery
+
+The solar module observes the documented `IPS_KERNELSTARTED` message and uses a
+separate initially stopped one-shot timer to reconcile its Weather dependency
+five seconds after the kernel reaches `KR_READY`. This closes a startup-ordering
+gap in which an early `ApplyChanges()` could classify a valid Solar instance as
+permanently invalid before the Weather module exposed its location descriptor.
+
+The recovery path disables its own timer before doing any work and reuses the
+same configuration, reference, cache-state and normal-polling reconciliation as
+`ApplyChanges()`. It never calls `UpdateData()` and therefore performs no HTTP
+request. A dependency that is still invalid after this single post-ready attempt
+remains status `200`, schedules no further startup retry and emits one stable
+final diagnostic without configuration or location details.
+
 ## Atomic Forecast Run
 
 Each update:
@@ -89,7 +104,8 @@ separate contract and evidence gate.
 
 The synthetic module harness verifies default-manual migration safety,
 idempotent lifecycle behavior, weather-reference validation and restoration
-after runtime registry drift, two serialized orientation requests, separate
+after runtime registry drift, post-kernel recovery from a temporarily missing
+Weather descriptor, bounded fail-closed recovery, two serialized orientation requests, separate
 direct-AC and PV-input clipping, storage-coupled PV harvest, bounded cache
 access, last-good
 retention, manual-mode retry suppression, automatic polling and the first retry
