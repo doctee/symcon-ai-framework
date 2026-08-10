@@ -43,6 +43,9 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Added one bounded, request-free Solar dependency reconciliation after
+  `IPS_KERNELSTARTED`, preventing a transient Weather startup-ordering gap from
+  leaving an otherwise valid Solar instance permanently in configuration error.
 - Recorded the guarded, idempotent creation and hourly timer activation of a
   second storage-aware Open-Meteo Solar instance without provider traffic,
   device actions or changes to the existing Weather and Solar controls.

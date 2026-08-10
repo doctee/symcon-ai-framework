@@ -36,6 +36,7 @@ class OpenMeteoSolarForecast extends IPSModule
     private const STATUS_CONFIGURATION_ERROR = 200;
     private const MAX_RETRY_STEP = 4;
     private const SEMAPHORE_TIMEOUT_MILLISECONDS = 1000;
+    private const STARTUP_RECOVERY_DELAY_MILLISECONDS = 5 * 1000;
     private const MAXIMUM_CACHE_QUERY_SECONDS = 864000;
     private const MAXIMUM_LOCATION_DESCRIPTOR_BYTES = 4096;
     private const WEATHER_MODULE_ID = '{B52FE951-7FBE-4882-B0E6-E143E5B5F31A}';
@@ -77,10 +78,16 @@ class OpenMeteoSolarForecast extends IPSModule
         $this->RegisterAttributeString('ForecastCache', '');
         $this->RegisterAttributeInteger('RegisteredWeatherReferenceId', 0);
 
+        $this->registerKernelStartMessage();
         $this->RegisterTimer(
             'UpdateData',
             0,
             'OMSOLAR_UpdateData($_IPS["TARGET"]);'
+        );
+        $this->RegisterTimer(
+            'StartupRecovery',
+            0,
+            'OMSOLAR_ProcessStartupRecovery($_IPS["TARGET"]);'
         );
     }
 
@@ -91,13 +98,53 @@ class OpenMeteoSolarForecast extends IPSModule
         Profiles::ensure();
         $this->registerVariables();
 
+        $this->reconcileConfiguration();
+    }
+
+    /**
+     * @param int $TimeStamp
+     * @param int $SenderID
+     * @param int $Message
+     * @param array<int, mixed> $Data
+     */
+    public function MessageSink($TimeStamp, $SenderID, $Message, $Data): void
+    {
+        if ($SenderID !== 0 || $Message !== $this->kernelStartedMessageId()) {
+            return;
+        }
+
+        $this->SetTimerInterval(
+            'StartupRecovery',
+            self::STARTUP_RECOVERY_DELAY_MILLISECONDS
+        );
+    }
+
+    public function ProcessStartupRecovery(): string
+    {
+        $this->SetTimerInterval('StartupRecovery', 0);
+        $outcome = $this->reconcileConfiguration();
+        if ($outcome === 'configuration_invalid') {
+            IPS_LogMessage(
+                'OpenMeteoSolarForecast',
+                'Startup reconciliation failed: configuration_invalid'
+            );
+        }
+
+        return $this->result(
+            $outcome === 'ok',
+            $outcome === 'ok' ? 'startup_reconciled' : $outcome
+        );
+    }
+
+    private function reconcileConfiguration(): string
+    {
         if ($this->ReadPropertyInteger('WeatherInstanceId') <= 0) {
             $this->reconcileWeatherReference(0);
             $this->SetTimerInterval('UpdateData', 0);
             $this->SetValue('DataState', 0);
             $this->SetStatus(self::STATUS_INACTIVE);
 
-            return;
+            return 'configuration_missing';
         }
 
         try {
@@ -114,10 +161,14 @@ class OpenMeteoSolarForecast extends IPSModule
             $this->publishOperationalState($state, $this->currentTimestamp());
             $this->scheduleNormalPolling();
             $this->SetStatus(self::STATUS_ACTIVE);
+
+            return 'ok';
         } catch (Throwable) {
             $this->SetTimerInterval('UpdateData', 0);
             $this->SetValue('DataState', 5);
             $this->SetStatus(self::STATUS_CONFIGURATION_ERROR);
+
+            return 'configuration_invalid';
         }
     }
 
@@ -581,6 +632,20 @@ class OpenMeteoSolarForecast extends IPSModule
             $this->RegisterReference($desiredInstanceId);
         }
         $this->WriteAttributeInteger('RegisteredWeatherReferenceId', $desiredInstanceId);
+    }
+
+    private function kernelStartedMessageId(): int
+    {
+        if (!defined('IPS_KERNELSTARTED')) {
+            return 10001;
+        }
+        return constant('IPS_KERNELSTARTED');
+    }
+
+    private function registerKernelStartMessage(): void
+    {
+        $registerMessage = [$this, 'Register' . 'Message'];
+        $registerMessage(0, $this->kernelStartedMessageId());
     }
 
     private function registerVariables(): void

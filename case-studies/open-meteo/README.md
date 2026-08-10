@@ -58,6 +58,7 @@ and consumer mappings belong in `private/` or an ignored `*.local.*` file.
 | `18-dwd-precipitation-nowcast.md` | Defines the direct DWD WMS contract, native five-minute semantics, configurable evaluation window and runtime safety boundary. |
 | `19-nowcast-html-chart.md` | Defines the cache-only minute presentation, absolute colors, HTMLBox ownership and lifecycle behavior. |
 | `20-curtailment-aware-calibration.md` | Defines policy-versioned, zero-export-aware classification without rewriting raw snapshots. |
+| `21-solar-kernel-start-recovery.md` | Defines the bounded, request-free Solar dependency reconciliation after `IPS_KERNELSTARTED`. |
 | `candidate/SolarCalibrationCore.php` | Pure snapshot normalization, archive-event alignment and calibration metrics. |
 | `candidate/SolarCalibrationCollectorRuntime.php` | Bounded cache and archive adapter with immutable private evidence files. |
 | `tools/build-calibration-collector.php` | Deterministically combines public runtime code with ignored installation-local configuration. |
@@ -93,7 +94,9 @@ controlled live pilots and scheduled-cycle observation:
 10. a five-minute read-only calibration collector is active, stores immutable
     forecast snapshots and waits for complete horizons before calculating
     forecast-to-actual metrics; zero-export/storage constraints are classified
-    separately from unconstrained calibration samples.
+    separately from unconstrained calibration samples; and
+11. the Solar runtime has an offline-verified one-shot post-kernel dependency
+    reconciliation that cannot issue a provider request or retry indefinitely.
 
 The generated fileset contains the shared profile and configuration-hash
 helpers required by the modules without duplicating their canonical sources.
@@ -129,6 +132,8 @@ The prospective snapshot and actual-value calibration path is recorded in
 `17-forecast-calibration-collector.md`.
 The curtailment-aware analysis contract is recorded in
 `20-curtailment-aware-calibration.md`.
+The bounded Solar startup-ordering recovery is recorded in
+`21-solar-kernel-start-recovery.md`.
 
 Run the focused gate from the repository root:
 

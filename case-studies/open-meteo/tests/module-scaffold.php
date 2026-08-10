@@ -5,6 +5,9 @@ declare(strict_types=1);
 if (!defined('VARIABLE_PRESENTATION_WEB_CONTENT')) {
     define('VARIABLE_PRESENTATION_WEB_CONTENT', '{9DE1D610-5106-97FB-714D-1AADEDF8377A}');
 }
+if (!defined('IPS_KERNELSTARTED')) {
+    define('IPS_KERNELSTARTED', 10001);
+}
 
 /** @var array<string, array<string, mixed>> $scaffoldProfiles */
 $scaffoldProfiles = [];
@@ -23,6 +26,9 @@ $scaffoldObjects = [];
 
 /** @var list<array{id: int, hidden: bool}> $scaffoldHiddenMutations */
 $scaffoldHiddenMutations = [];
+
+/** @var list<array{sender: string, message: string}> $scaffoldLogMessages */
+$scaffoldLogMessages = [];
 
 $scaffoldNextVariableId = 1000;
 
@@ -55,6 +61,9 @@ class IPSModule
 
     /** @var array<int, true> */
     private array $references = [];
+
+    /** @var array<string, array{senderId: int, messageId: int}> */
+    private array $messages = [];
 
     public function Create(): void
     {
@@ -203,6 +212,14 @@ class IPSModule
         $this->timers[$ident]['interval'] = $interval;
     }
 
+    protected function RegisterMessage(int $senderId, int $messageId): void
+    {
+        $this->messages[$senderId . ':' . $messageId] = [
+            'senderId' => $senderId,
+            'messageId' => $messageId,
+        ];
+    }
+
     protected function RegisterReference(int $objectId): void
     {
         $this->references[$objectId] = true;
@@ -292,6 +309,12 @@ class IPSModule
     public function testTimerInterval(string $ident): int
     {
         return $this->timers[$ident]['interval'] ?? -1;
+    }
+
+    /** @return list<array{senderId: int, messageId: int}> */
+    public function testMessages(): array
+    {
+        return array_values($this->messages);
     }
 
     /** @return list<int> */
@@ -560,6 +583,9 @@ function IPS_SemaphoreLeave(string $name): bool
 
 function IPS_LogMessage(string $sender, string $message): void
 {
+    global $scaffoldLogMessages;
+
+    $scaffoldLogMessages[] = ['sender' => $sender, 'message' => $message];
 }
 
 function SAEFLOCATION_GetDescriptor(int $instanceId): string
@@ -1202,8 +1228,16 @@ $solar->Create();
 $solar->ApplyChanges();
 scaffoldCheck($solar->testStatus() === 104, 'Unconfigured solar module must be inactive.');
 scaffoldCheck(count($solar->testVariables()) === 10, 'Solar variable contract differs.');
-scaffoldCheck($solar->testTimerRegistrations() === 1, 'Solar update timer is missing.');
+scaffoldCheck($solar->testTimerRegistrations() === 2, 'Solar timer contract differs.');
 scaffoldCheck($solar->testTimerInterval('UpdateData') === 0, 'Solar timer must start disabled.');
+scaffoldCheck(
+    $solar->testTimerInterval('StartupRecovery') === 0,
+    'Solar startup recovery timer must start disabled.'
+);
+scaffoldCheck(
+    $solar->testMessages() === [['senderId' => 0, 'messageId' => IPS_KERNELSTARTED]],
+    'Solar kernel-start message registration differs.'
+);
 $solarVariables = $solar->testVariables();
 
 scaffoldConfigureSolar($solar, 1001);
@@ -1383,6 +1417,82 @@ $automaticSolar->UpdateData();
 scaffoldCheck(
     $automaticSolar->testTimerInterval('UpdateData') === 300000,
     'Solar first retry interval differs.'
+);
+
+$startupSolar = new TestOpenMeteoSolarForecast();
+$startupSolar->Create();
+$scaffoldInstances[1003] = [
+    'ModuleInfo' => [
+        'ModuleID' => '{B52FE951-7FBE-4882-B0E6-E143E5B5F31A}',
+    ],
+];
+scaffoldConfigureSolar($startupSolar, 1003);
+$startupSolar->ApplyChanges();
+scaffoldCheck($startupSolar->testStatus() === 200, 'Startup dependency failure must fail closed.');
+$startupSolar->MessageSink(1, 0, 99999, []);
+scaffoldCheck(
+    $startupSolar->testTimerInterval('StartupRecovery') === 0,
+    'Unrelated message scheduled solar startup recovery.'
+);
+$startupSolar->MessageSink(2, 0, IPS_KERNELSTARTED, []);
+$startupSolar->MessageSink(3, 0, IPS_KERNELSTARTED, []);
+scaffoldCheck(
+    $startupSolar->testTimerInterval('StartupRecovery') === 5000,
+    'Kernel start did not schedule bounded solar startup recovery.'
+);
+$scaffoldWeatherModules[1003] = $weather;
+$startupResult = json_decode(
+    $startupSolar->ProcessStartupRecovery(),
+    true,
+    16,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    ($startupResult['success'] ?? null) === true
+    && ($startupResult['code'] ?? null) === 'startup_reconciled',
+    'Solar startup recovery did not reconcile the ready dependency.'
+);
+scaffoldCheck($startupSolar->testStatus() === 102, 'Solar startup recovery did not restore active status.');
+scaffoldCheck($startupSolar->testReferences() === [1003], 'Solar startup recovery did not restore reference.');
+scaffoldCheck(
+    $startupSolar->testTimerInterval('StartupRecovery') === 0,
+    'Solar startup recovery timer remained active.'
+);
+scaffoldCheck(
+    $startupSolar->testRequestedUrls() === [],
+    'Solar startup recovery performed a provider request.'
+);
+
+$failedStartupSolar = new TestOpenMeteoSolarForecast();
+$failedStartupSolar->Create();
+$scaffoldInstances[1004] = [
+    'ModuleInfo' => [
+        'ModuleID' => '{B52FE951-7FBE-4882-B0E6-E143E5B5F31A}',
+    ],
+];
+scaffoldConfigureSolar($failedStartupSolar, 1004);
+$failedStartupSolar->ApplyChanges();
+$failedStartupSolar->MessageSink(4, 0, IPS_KERNELSTARTED, []);
+$logCountBeforeFailedRecovery = count($scaffoldLogMessages);
+$failedStartupResult = json_decode(
+    $failedStartupSolar->ProcessStartupRecovery(),
+    true,
+    16,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    ($failedStartupResult['success'] ?? null) === false
+    && ($failedStartupResult['code'] ?? null) === 'configuration_invalid',
+    'Persistent solar startup failure was not classified.'
+);
+scaffoldCheck($failedStartupSolar->testStatus() === 200, 'Persistent solar startup failure did not fail closed.');
+scaffoldCheck(
+    $failedStartupSolar->testTimerInterval('StartupRecovery') === 0,
+    'Persistent solar startup failure scheduled another retry.'
+);
+scaffoldCheck(
+    count($scaffoldLogMessages) === $logCountBeforeFailedRecovery + 1,
+    'Persistent solar startup failure did not emit one final diagnostic.'
 );
 
 $dwdNowcast = new TestDwdPrecipitationNowcast();

@@ -49,8 +49,8 @@
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoSolarForecast/module.php",
             "target": "OpenMeteoSolarForecast/module.php",
-            "sha256": "97d0b36853b323bc63c719d5b6f6e81af00d3fc1094e32e1b3603a340d4eb280",
-            "bytes": 22674
+            "sha256": "ebc29bf463a6588056291ea0d8e5e4679f811255f00cd34b6e5383aa15230c19",
+            "bytes": 24516
         },
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/form.json",
@@ -103,7 +103,7 @@
         {
             "source": "case-studies/open-meteo/distribution/library.json",
             "target": "library.json",
-            "sha256": "6e34597cedca5f1f30273a32041cad8627d8709b83e6485bf43d22593473d00d",
+            "sha256": "4f275e9044710f053fe7c88ac36b901b3833259469d644e39f2a7ebee8ca1a5a",
             "bytes": 256
         },
         {
@@ -239,7 +239,7 @@
             "bytes": 3308
         }
     ],
-    "filesetSha256": "38c71c57e7af90922f1fff3f37f25715e30f48a27b1b2163720c02e07ff4d3f9",
+    "filesetSha256": "58488a394180a354d7a8f0017ae1b7472ff7f8f009fb3bcc240f3051dd5ca257",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",
