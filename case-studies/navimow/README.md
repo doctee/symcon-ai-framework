@@ -1,9 +1,11 @@
 # Navimow Native IP-Symcon Module Case Study
 
-**Status:** Private pilot `pilot-0.1.0.4`; receive-only MQTT shadow lifecycle
-published; the first native-diagnostic 72-hour pilot stopped after two
-recovered transport episodes and completed immediate plus delayed
-credential-free cleanup
+**Status:** Private pilot `pilot-0.1.0.4`; receive-only MQTT and local-position
+diagnostics remain disabled by default after the corrected 88-hour observation
+proved monotonic position accounting, failed to stop on repeated episodes and
+the hard deadline, recorded one post-deadline exhausted recovery sequence and
+completed immediate plus delayed credential-free cleanup; automatic closure is
+now implemented and offline-tested but not published or installed
 **Scope:** Native IP-Symcon module for Segway Navimow robotic mowers
 **Implementation state:** The canonical case-study distribution implements
 OAuth, discovery, adaptive read-only status polling and bounded Dock, Pause and
@@ -334,6 +336,10 @@ template or a general SAEF reference implementation.
 | `306-position-accounting-pilot-retry-readiness.md` | Passes exactly one read-only retry with a 3329-second token horizon and empty corrected accounting baseline while retaining separate attribution, persistence and activation gates. |
 | `307-position-accounting-pilot-activation-safe-abort.md` | Records the single activation attempt stopping fail-closed on an overstrict private synchronous session-start check, proves immediate and delayed credential-free cleanup, and keeps any corrected retry separately gated. |
 | `308-position-accounting-pilot-corrected-readiness-abort.md` | Reviews the corrected asynchronous activation contract and stops the fresh read-only readiness gate on a 1599-second token horizon before credentials, mutation or activation. |
+| `309-position-accounting-pilot-closure-and-recovery-review.md` | Closes the corrected receive-only observation, accepts monotonic position accounting and cleanup, fails repeated-episode and hard-deadline enforcement, and retains the later exhausted recovery as post-deadline evidence. |
+| `310-final-reconnect-exhaustion-and-automatic-closure-design.md` | Places the final exhaustion after the hard deadline, designs module-owned automatic closure for repeated episodes and deadline expiry, and defers permanent half-open recovery timing pending stronger evidence. |
+| `311-automatic-pilot-closure-implementation.md` | Implements and offline-tests an absolute 72-hour deadline, second-episode and reconnect-exhaustion closure plus restart-resumable credential-first cleanup without publication or live activation. |
+| `312-automatic-pilot-closure-publication-readiness.md` | Freezes the exact one-file productive candidate and groups SAEF publication, standalone publication with metadata, disabled rollout and bounded live validation into four explicit trust-boundary gates. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

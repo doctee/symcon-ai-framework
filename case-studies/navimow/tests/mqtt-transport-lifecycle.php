@@ -121,6 +121,16 @@ final class MqttLifecycleAccount extends NavimowAccount
             $this->transport
         );
     }
+
+    protected function setOwnProperty(string $name, mixed $value): void
+    {
+        $this->testSetProperty($name, $value);
+    }
+
+    protected function applyOwnChanges(): void
+    {
+        $this->ApplyChanges();
+    }
 }
 
 function assertLifecycle(bool $condition, string $message): void
@@ -1489,6 +1499,25 @@ assertLifecycle(
         && $account->testTimerInterval('MqttLifecycle') === 0,
     'Exhausted reconnect sequence performed an unbounded fourth attempt.'
 );
+$account->ProcessMqttPilotClosure();
+$exhaustedPilot = decodeLifecycle($account->GetMqttPilotDiagnostics());
+assertLifecycle(
+    ($exhaustedPilot['featureEnabled'] ?? null) === false
+        && ($exhaustedPilot['active'] ?? null) === false
+        && ($exhaustedPilot['closureState'] ?? null) === 'Closed'
+        && ($exhaustedPilot['closureReason'] ?? null)
+            === 'reconnect-exhausted'
+        && ($lifecycleConfigurations[$webSocketId]['Active'] ?? true)
+            === false
+        && ($lifecycleConfigurations[$webSocketId]['Headers'] ?? null)
+            === '[]'
+        && ($lifecycleConfigurations[$mqttId]['UserName'] ?? null) === ''
+        && ($lifecycleConfigurations[$mqttId]['Password'] ?? null) === ''
+        && $account->testTimerInterval('MqttPilotClosure') === 0,
+    'Reconnect exhaustion did not complete automatic pilot closure.'
+);
+$account->testSetProperty('EnableMqttShadow', true);
+$account->ApplyChanges();
 
 $credentialFailureKind = 'authentication';
 assertLifecycle(
@@ -1515,6 +1544,14 @@ assertLifecycle(
     'Configuration failure incorrectly entered transport retry.'
 );
 
+$postClosureLifecycle = decodeLifecycle(
+    (string) $account->testReadAttribute('MqttLifecycleRegistry')
+);
+$postClosureLifecycle['reconnectAttempt'] = 3;
+$account->testSetAttribute(
+    'MqttLifecycleRegistry',
+    json_encode($postClosureLifecycle, JSON_THROW_ON_ERROR)
+);
 $credentialFailureKind = '';
 assertLifecycle(
     $account->ConnectMqttShadow()

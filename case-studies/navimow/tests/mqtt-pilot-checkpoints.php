@@ -9,6 +9,8 @@ require_once __DIR__
 
 final class MqttPilotCheckpointAccount extends NavimowAccount
 {
+    private int $ownApplyChangesCount = 0;
+
     public function __construct(
         int $instanceId,
         private NavimowTestFakeClock $clock,
@@ -30,6 +32,22 @@ final class MqttPilotCheckpointAccount extends NavimowAccount
     public function testSetKernelStartTime(int $timestamp): void
     {
         $this->kernelStartTime = $timestamp;
+    }
+
+    public function testOwnApplyChangesCount(): int
+    {
+        return $this->ownApplyChangesCount;
+    }
+
+    protected function setOwnProperty(string $name, mixed $value): void
+    {
+        $this->testSetProperty($name, $value);
+    }
+
+    protected function applyOwnChanges(): void
+    {
+        $this->ownApplyChangesCount++;
+        $this->ApplyChanges();
     }
 }
 
@@ -460,6 +478,17 @@ assertPilotCheckpoint(
     'Bounded summary did not preserve cumulative accounting.'
 );
 
+invokePilotPrivate(
+    $restarted,
+    'stopMqttPilotObservation',
+    'disabled',
+    $clock->now()
+);
+invokePilotPrivate(
+    $restarted,
+    'startMqttPilotObservationIfNeeded'
+);
+
 for ($index = 0; $index < 35; $index++) {
     $clock->advance(1);
     invokePilotPrivate(
@@ -712,6 +741,325 @@ assertPilotCheckpoint(
             hash('sha256', 'SYNTHETIC_DEVICE')
         ),
     'Malformed pilot registry blocked ephemeral position cleanup.'
+);
+
+$deadlineClock = new NavimowTestFakeClock(1800000000);
+$deadlineAccount = new MqttPilotCheckpointAccount(
+    7201,
+    $deadlineClock,
+    1799999900
+);
+$deadlineAccount->Create();
+$deadlineAccount->ApplyChanges();
+$deadlineAccount->testSetProperty('EnableMqttShadow', true);
+$deadlineAccount->testSetProperty(
+    'EnableMqttPositionDiagnostics',
+    true
+);
+invokePilotPrivate(
+    $deadlineAccount,
+    'startMqttPilotObservationIfNeeded'
+);
+$deadlineStarted = decodePilotCheckpoint(
+    $deadlineAccount->GetMqttPilotDiagnostics()
+);
+$deadlineVariables =
+    $deadlineAccount->testSnapshotPersistentState()['variables'];
+assertPilotCheckpoint(
+    ($deadlineStarted['hardStopAt'] ?? null) === 1800259200
+        && ($deadlineStarted['closureState'] ?? null) === 'Active'
+        && $deadlineAccount->testTimerInterval('MqttPilotDeadline')
+            === 259200000,
+    'Pilot start did not establish the absolute 72-hour deadline.'
+);
+$deadlineClock->advance(259200);
+$deadlineAccount->ProcessMqttPilotDeadline();
+$deadlineRequested = decodePilotCheckpoint(
+    $deadlineAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($deadlineRequested['closureState'] ?? null)
+            === 'ClosureRequested'
+        && ($deadlineRequested['closureReason'] ?? null)
+            === 'deadline-reached'
+        && ($deadlineRequested['closureRequestedAt'] ?? null)
+            === 1800259200
+        && ($deadlineRequested['active'] ?? null) === false
+        && $deadlineAccount->testTimerInterval('MqttLifecycle') === 0,
+    'Exact deadline did not request immediate pilot closure.'
+);
+$deadlineAccount->ProcessMqttPilotClosure();
+$deadlineClosed = decodePilotCheckpoint(
+    $deadlineAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($deadlineClosed['featureEnabled'] ?? null) === false
+        && ($deadlineClosed['closureState'] ?? null) === 'Closed'
+        && ($deadlineClosed['closureReason'] ?? null)
+            === 'deadline-reached'
+        && ($deadlineClosed['credentialsClearedAt'] ?? null)
+            === 1800259200
+        && ($deadlineClosed['propertiesDisabledAt'] ?? null)
+            === 1800259200
+        && ($deadlineClosed['closureCompletedAt'] ?? null)
+            === 1800259200
+        && $deadlineAccount->testOwnApplyChangesCount() === 1
+        && $deadlineAccount->testTimerInterval('MqttPilotDeadline') === 0
+        && $deadlineAccount->testTimerInterval('MqttPilotClosure') === 0
+        && $deadlineAccount->testSnapshotPersistentState()['variables']
+            === $deadlineVariables
+        && (
+            decodePilotCheckpoint(
+                $deadlineAccount->GetMqttPositionDiagnostics()
+            )['status'] ?? null
+        ) === 'disabled',
+    'Deadline closure did not finish once without public-variable churn.'
+);
+
+$restartClock = new NavimowTestFakeClock(1810000000);
+$restartBefore = new MqttPilotCheckpointAccount(
+    7202,
+    $restartClock,
+    1809999900
+);
+$restartBefore->Create();
+$restartBefore->ApplyChanges();
+$restartBefore->testSetProperty('EnableMqttShadow', true);
+invokePilotPrivate(
+    $restartBefore,
+    'startMqttPilotObservationIfNeeded'
+);
+$restartSnapshot = $restartBefore->testSnapshotPersistentState();
+$restartClock->advance(3600);
+$resumedBefore = new MqttPilotCheckpointAccount(
+    7202,
+    $restartClock,
+    1810003500
+);
+$resumedBefore->Create();
+$resumedBefore->testRestorePersistentState($restartSnapshot);
+$resumedBefore->ApplyChanges();
+$beforeDeadline = decodePilotCheckpoint(
+    $resumedBefore->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($beforeDeadline['hardStopAt'] ?? null) === 1810259200
+        && ($beforeDeadline['closureState'] ?? null) === 'Active'
+        && $resumedBefore->testTimerInterval('MqttPilotDeadline')
+            === 255600000,
+    'Restart before the deadline shifted or lost the safety clock.'
+);
+
+$restartClock->advance(255601);
+$resumedAfter = new MqttPilotCheckpointAccount(
+    7202,
+    $restartClock,
+    1810259201
+);
+$resumedAfter->Create();
+$resumedAfter->testRestorePersistentState(
+    $resumedBefore->testSnapshotPersistentState()
+);
+$resumedAfter->ApplyChanges();
+$afterDeadline = decodePilotCheckpoint(
+    $resumedAfter->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($afterDeadline['closureState'] ?? null) === 'ClosureRequested'
+        && ($afterDeadline['closureReason'] ?? null)
+            === 'deadline-reached'
+        && $resumedAfter->testTimerInterval('MqttLifecycle') === 0
+        && $resumedAfter->testTimerInterval('MqttPilotClosure') === 1000,
+    'Restart after the deadline did not prioritize closure.'
+);
+$resumedAfterSnapshot = $resumedAfter->testSnapshotPersistentState();
+$resumedAfterCrash = new MqttPilotCheckpointAccount(
+    7202,
+    $restartClock,
+    1810259201
+);
+$resumedAfterCrash->Create();
+$resumedAfterCrash->testRestorePersistentState($resumedAfterSnapshot);
+$resumedAfterCrash->ApplyChanges();
+$resumedAfterCrash->ProcessMqttPilotClosure();
+assertPilotCheckpoint(
+    (
+        decodePilotCheckpoint(
+            $resumedAfterCrash->GetMqttPilotDiagnostics()
+        )['closureState'] ?? null
+    ) === 'Closed'
+        && $resumedAfterCrash->testOwnApplyChangesCount() === 1,
+    'Persisted closure request did not resume idempotently after restart.'
+);
+
+$credentialsClearedSnapshot = $resumedAfterSnapshot;
+$credentialsClearedRegistry = json_decode(
+    (string) $credentialsClearedSnapshot['attributes'][
+        'MqttPilotObservationRegistry'
+    ],
+    true,
+    32,
+    JSON_THROW_ON_ERROR
+);
+$credentialsClearedRegistry['closureState'] = 'CredentialsCleared';
+$credentialsClearedRegistry['credentialsClearedAt'] =
+    $restartClock->now();
+$credentialsClearedSnapshot['attributes'][
+    'MqttPilotObservationRegistry'
+] = json_encode($credentialsClearedRegistry, JSON_THROW_ON_ERROR);
+$credentialsClearedResume = new MqttPilotCheckpointAccount(
+    7204,
+    $restartClock,
+    1810259201
+);
+$credentialsClearedResume->Create();
+$credentialsClearedResume->testRestorePersistentState(
+    $credentialsClearedSnapshot
+);
+$credentialsClearedResume->ApplyChanges();
+$credentialsClearedResume->ProcessMqttPilotClosure();
+assertPilotCheckpoint(
+    (
+        decodePilotCheckpoint(
+            $credentialsClearedResume->GetMqttPilotDiagnostics()
+        )['closureState'] ?? null
+    ) === 'Closed'
+        && $credentialsClearedResume->testOwnApplyChangesCount() === 1,
+    'CredentialsCleared phase did not resume at property finalization.'
+);
+
+$propertiesDisabledSnapshot =
+    $credentialsClearedResume->testSnapshotPersistentState();
+$propertiesDisabledRegistry = json_decode(
+    (string) $propertiesDisabledSnapshot['attributes'][
+        'MqttPilotObservationRegistry'
+    ],
+    true,
+    32,
+    JSON_THROW_ON_ERROR
+);
+$propertiesDisabledRegistry['closureState'] = 'PropertiesDisabled';
+$propertiesDisabledRegistry['closureCompletedAt'] = 0;
+$propertiesDisabledSnapshot['attributes'][
+    'MqttPilotObservationRegistry'
+] = json_encode($propertiesDisabledRegistry, JSON_THROW_ON_ERROR);
+$propertiesDisabledResume = new MqttPilotCheckpointAccount(
+    7205,
+    $restartClock,
+    1810259201
+);
+$propertiesDisabledResume->Create();
+$propertiesDisabledResume->testRestorePersistentState(
+    $propertiesDisabledSnapshot
+);
+$propertiesDisabledResume->ApplyChanges();
+assertPilotCheckpoint(
+    (
+        decodePilotCheckpoint(
+            $propertiesDisabledResume->GetMqttPilotDiagnostics()
+        )['closureState'] ?? null
+    ) === 'Closed'
+        && $propertiesDisabledResume->testOwnApplyChangesCount() === 0,
+    'PropertiesDisabled phase did not close without another ApplyChanges.'
+);
+
+$episodeClock = new NavimowTestFakeClock(1820000000);
+$episodeAccount = new MqttPilotCheckpointAccount(
+    7203,
+    $episodeClock,
+    1819999900
+);
+$episodeAccount->Create();
+$episodeAccount->ApplyChanges();
+$episodeAccount->testSetProperty('EnableMqttShadow', true);
+invokePilotPrivate(
+    $episodeAccount,
+    'startMqttPilotObservationIfNeeded'
+);
+invokePilotPrivate(
+    $episodeAccount,
+    'recordMqttPilotEpisodeDetected',
+    'lifecycle-observation',
+    200,
+    200,
+    $episodeClock->now()
+);
+invokePilotPrivate(
+    $episodeAccount,
+    'recordMqttPilotEpisodeDetected',
+    'lifecycle-observation',
+    200,
+    200,
+    $episodeClock->now()
+);
+$oneEpisode = decodePilotCheckpoint(
+    $episodeAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($oneEpisode['episodeSequence'] ?? null) === 1
+        && ($oneEpisode['closureState'] ?? null) === 'Active',
+    'Repeated observations inside one episode requested closure.'
+);
+invokePilotPrivate(
+    $episodeAccount,
+    'closeMqttPilotEpisode',
+    'recovered',
+    $episodeClock->now()
+);
+$episodeClock->advance(60);
+invokePilotPrivate(
+    $episodeAccount,
+    'recordMqttPilotEpisodeDetected',
+    'lifecycle-observation',
+    200,
+    200,
+    $episodeClock->now()
+);
+$secondEpisode = decodePilotCheckpoint(
+    $episodeAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($secondEpisode['episodeSequence'] ?? null) === 2
+        && ($secondEpisode['closureState'] ?? null)
+            === 'ClosureRequested'
+        && ($secondEpisode['closureReason'] ?? null)
+            === 'second-transport-episode'
+        && ($secondEpisode['active'] ?? null) === false
+        && $episodeAccount->testTimerInterval('MqttLifecycle') === 0,
+    'Second distinct transport episode did not stop the pilot.'
+);
+invokePilotPrivate(
+    $episodeAccount,
+    'requestMqttPilotClosure',
+    'deadline-reached',
+    $episodeClock->now()
+);
+invokePilotPrivate(
+    $episodeAccount,
+    'scheduleMqttLifecycleAttempt',
+    'reconnect',
+    60,
+    'synthetic',
+    'reconnect'
+);
+assertPilotCheckpoint(
+    (
+        decodePilotCheckpoint(
+            $episodeAccount->GetMqttPilotDiagnostics()
+        )['closureReason'] ?? null
+    ) === 'second-transport-episode'
+        && $episodeAccount->testTimerInterval('MqttLifecycle') === 0,
+    'Concurrent closure signal replaced the first reason or rescheduled MQTT.'
+);
+$episodeAccount->ProcessMqttPilotClosure();
+assertPilotCheckpoint(
+    (
+        decodePilotCheckpoint(
+            $episodeAccount->GetMqttPilotDiagnostics()
+        )['closureState'] ?? null
+    ) === 'Closed'
+        && $episodeAccount->testOwnApplyChangesCount() === 1,
+    'Second-episode closure did not finalize exactly once.'
 );
 
 echo "Navimow MQTT pilot checkpoint tests passed.\n";
