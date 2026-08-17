@@ -1528,9 +1528,17 @@ assertLifecycle(
             decodeLifecycle($account->GetMqttDiagnostics())[
                 'lifecycle'
             ]['state'] ?? null
-        ) === 'ReauthenticationRequired',
+        ) === 'ReauthenticationRequired'
+        && (
+            decodeLifecycle($account->GetMqttPilotDiagnostics())[
+                'closureReason'
+            ] ?? null
+        ) === 'terminal-authentication',
     'Authentication failure incorrectly entered transport retry.'
 );
+$account->ProcessMqttPilotClosure();
+$account->testSetProperty('EnableMqttShadow', true);
+$account->ApplyChanges();
 $credentialFailureKind = 'configuration';
 assertLifecycle(
     $account->ConnectMqttShadow()
@@ -1540,9 +1548,17 @@ assertLifecycle(
             decodeLifecycle($account->GetMqttDiagnostics())[
                 'lifecycle'
             ]['state'] ?? null
-        ) === 'ConfigurationError',
+        ) === 'ConfigurationError'
+        && (
+            decodeLifecycle($account->GetMqttPilotDiagnostics())[
+                'closureReason'
+            ] ?? null
+        ) === 'terminal-configuration',
     'Configuration failure incorrectly entered transport retry.'
 );
+$account->ProcessMqttPilotClosure();
+$account->testSetProperty('EnableMqttShadow', true);
+$account->ApplyChanges();
 
 $postClosureLifecycle = decodeLifecycle(
     (string) $account->testReadAttribute('MqttLifecycleRegistry')

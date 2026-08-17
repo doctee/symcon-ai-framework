@@ -997,8 +997,23 @@ $oneEpisode = decodePilotCheckpoint(
 );
 assertPilotCheckpoint(
     ($oneEpisode['episodeSequence'] ?? null) === 1
+        && ($oneEpisode['incidentSequence'] ?? null) === 1
+        && ($oneEpisode['sessionIncidentCount'] ?? null) === 1
+        && ($oneEpisode['openIncident']['episodeCount'] ?? null) === 1
         && ($oneEpisode['closureState'] ?? null) === 'Active',
-    'Repeated observations inside one episode requested closure.'
+    'Repeated observations inside one episode changed incident state.'
+);
+
+$episodeLifecycle = json_decode(
+    (string) $episodeAccount->testReadAttribute('MqttLifecycleRegistry'),
+    true,
+    32,
+    JSON_THROW_ON_ERROR
+);
+$episodeLifecycle['reconnectAttempt'] = 1;
+$episodeAccount->testSetAttribute(
+    'MqttLifecycleRegistry',
+    json_encode($episodeLifecycle, JSON_THROW_ON_ERROR)
 );
 invokePilotPrivate(
     $episodeAccount,
@@ -1006,7 +1021,7 @@ invokePilotPrivate(
     'recovered',
     $episodeClock->now()
 );
-$episodeClock->advance(60);
+$episodeClock->advance(3);
 invokePilotPrivate(
     $episodeAccount,
     'recordMqttPilotEpisodeDetected',
@@ -1015,18 +1030,69 @@ invokePilotPrivate(
     200,
     $episodeClock->now()
 );
-$secondEpisode = decodePilotCheckpoint(
+$relapse = decodePilotCheckpoint(
     $episodeAccount->GetMqttPilotDiagnostics()
 );
 assertPilotCheckpoint(
-    ($secondEpisode['episodeSequence'] ?? null) === 2
-        && ($secondEpisode['closureState'] ?? null)
-            === 'ClosureRequested'
-        && ($secondEpisode['closureReason'] ?? null)
-            === 'second-transport-episode'
-        && ($secondEpisode['active'] ?? null) === false
-        && $episodeAccount->testTimerInterval('MqttLifecycle') === 0,
-    'Second distinct transport episode did not stop the pilot.'
+    ($relapse['episodeSequence'] ?? null) === 2
+        && ($relapse['incidentSequence'] ?? null) === 1
+        && ($relapse['openIncident']['episodeCount'] ?? null) === 2
+        && ($relapse['openIncident']['reconnectAttempts'] ?? null) === 1
+        && ($relapse['openIncident']['state'] ?? null) === 'open'
+        && ($relapse['closureState'] ?? null) === 'Active',
+    'Three-second relapse was not retained in the first incident.'
+);
+
+invokePilotPrivate(
+    $episodeAccount,
+    'closeMqttPilotEpisode',
+    'recovered',
+    $episodeClock->now()
+);
+$episodeClock->advance(3);
+invokePilotPrivate(
+    $episodeAccount,
+    'recordMqttPilotEpisodeDetected',
+    'lifecycle-observation',
+    200,
+    200,
+    $episodeClock->now()
+);
+$thirdEpisode = decodePilotCheckpoint(
+    $episodeAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($thirdEpisode['openIncident']['episodeCount'] ?? null) === 3
+        && ($thirdEpisode['openIncident']['reconnectAttempts'] ?? null) === 2
+        && ($thirdEpisode['closureState'] ?? null) === 'Active',
+    'Third episode exceeded the configured incident allowance.'
+);
+
+invokePilotPrivate(
+    $episodeAccount,
+    'closeMqttPilotEpisode',
+    'recovered',
+    $episodeClock->now()
+);
+$episodeClock->advance(3);
+invokePilotPrivate(
+    $episodeAccount,
+    'recordMqttPilotEpisodeDetected',
+    'lifecycle-observation',
+    200,
+    200,
+    $episodeClock->now()
+);
+$episodeLimit = decodePilotCheckpoint(
+    $episodeAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($episodeLimit['closureState'] ?? null) === 'ClosureRequested'
+        && ($episodeLimit['closureReason'] ?? null)
+            === 'incident-episode-limit'
+        && ($episodeLimit['active'] ?? null) === false
+        && ($episodeLimit['lastIncident']['episodeCount'] ?? null) === 4,
+    'Fourth episode did not request bounded incident closure.'
 );
 invokePilotPrivate(
     $episodeAccount,
@@ -1034,22 +1100,13 @@ invokePilotPrivate(
     'deadline-reached',
     $episodeClock->now()
 );
-invokePilotPrivate(
-    $episodeAccount,
-    'scheduleMqttLifecycleAttempt',
-    'reconnect',
-    60,
-    'synthetic',
-    'reconnect'
-);
 assertPilotCheckpoint(
     (
         decodePilotCheckpoint(
             $episodeAccount->GetMqttPilotDiagnostics()
         )['closureReason'] ?? null
-    ) === 'second-transport-episode'
-        && $episodeAccount->testTimerInterval('MqttLifecycle') === 0,
-    'Concurrent closure signal replaced the first reason or rescheduled MQTT.'
+    ) === 'incident-episode-limit',
+    'Concurrent closure signal replaced the first incident reason.'
 );
 $episodeAccount->ProcessMqttPilotClosure();
 assertPilotCheckpoint(
@@ -1059,7 +1116,199 @@ assertPilotCheckpoint(
         )['closureState'] ?? null
     ) === 'Closed'
         && $episodeAccount->testOwnApplyChangesCount() === 1,
-    'Second-episode closure did not finalize exactly once.'
+    'Incident episode-limit closure did not finalize exactly once.'
 );
+
+$stableClock = new NavimowTestFakeClock(1830000000);
+$stableAccount = new MqttPilotCheckpointAccount(
+    7205,
+    $stableClock,
+    1829999900
+);
+$stableAccount->Create();
+$stableAccount->ApplyChanges();
+$stableAccount->testSetProperty('EnableMqttShadow', true);
+invokePilotPrivate($stableAccount, 'startMqttPilotObservationIfNeeded');
+invokePilotPrivate(
+    $stableAccount,
+    'recordMqttPilotEpisodeDetected',
+    'lifecycle-observation',
+    200,
+    200,
+    $stableClock->now()
+);
+invokePilotPrivate(
+    $stableAccount,
+    'closeMqttPilotEpisode',
+    'recovered',
+    $stableClock->now()
+);
+$stableClock->advance(900);
+invokePilotPrivate(
+    $stableAccount,
+    'reconcileMqttPilotIncidentHealth',
+    $stableClock->now()
+);
+$stable = decodePilotCheckpoint(
+    $stableAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($stable['openIncident'] ?? null) === null
+        && ($stable['lastIncident']['outcome'] ?? null) === 'recovered'
+        && ($stable['lastIncident']['durationSeconds'] ?? null) === 900,
+    'Sustained health did not close the first incident.'
+);
+invokePilotPrivate(
+    $stableAccount,
+    'recordMqttPilotEpisodeDetected',
+    'lifecycle-observation',
+    200,
+    200,
+    $stableClock->now()
+);
+$secondIncident = decodePilotCheckpoint(
+    $stableAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($secondIncident['incidentSequence'] ?? null) === 2
+        && ($secondIncident['closureReason'] ?? null)
+            === 'second-transport-incident'
+        && ($secondIncident['active'] ?? null) === false,
+    'Second independent incident did not close the pilot.'
+);
+
+$durationClock = new NavimowTestFakeClock(1840000000);
+$durationAccount = new MqttPilotCheckpointAccount(
+    7206,
+    $durationClock,
+    1839999900
+);
+$durationAccount->Create();
+$durationAccount->ApplyChanges();
+$durationAccount->testSetProperty('EnableMqttShadow', true);
+invokePilotPrivate($durationAccount, 'startMqttPilotObservationIfNeeded');
+invokePilotPrivate(
+    $durationAccount,
+    'recordMqttPilotEpisodeDetected',
+    'lifecycle-observation',
+    200,
+    200,
+    $durationClock->now()
+);
+invokePilotPrivate(
+    $durationAccount,
+    'closeMqttPilotEpisode',
+    'recovered',
+    $durationClock->now()
+);
+$durationClock->advance(1800);
+assertPilotCheckpoint(
+    invokePilotPrivate(
+        $durationAccount,
+        'requestMqttPilotIncidentClosureIfDue'
+    ) === true
+        && (
+            decodePilotCheckpoint(
+                $durationAccount->GetMqttPilotDiagnostics()
+            )['closureReason'] ?? null
+        ) === 'incident-duration-exceeded',
+    'Absolute incident duration did not request closure.'
+);
+
+$restartClock = new NavimowTestFakeClock(1850000000);
+$restartIncident = new MqttPilotCheckpointAccount(
+    7207,
+    $restartClock,
+    1849999900
+);
+$restartIncident->Create();
+$restartIncident->ApplyChanges();
+$restartIncident->testSetProperty('EnableMqttShadow', true);
+invokePilotPrivate($restartIncident, 'startMqttPilotObservationIfNeeded');
+invokePilotPrivate(
+    $restartIncident,
+    'recordMqttPilotEpisodeDetected',
+    'lifecycle-observation',
+    200,
+    200,
+    $restartClock->now()
+);
+invokePilotPrivate(
+    $restartIncident,
+    'closeMqttPilotEpisode',
+    'recovered',
+    $restartClock->now()
+);
+$restartSnapshot = $restartIncident->testSnapshotPersistentState();
+$restartClock->advance(300);
+$resumedIncident = new MqttPilotCheckpointAccount(
+    7207,
+    $restartClock,
+    1850000300
+);
+$resumedIncident->Create();
+$resumedIncident->testRestorePersistentState($restartSnapshot);
+$resumedIncident->ApplyChanges();
+$resumed = decodePilotCheckpoint(
+    $resumedIncident->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($resumed['openIncident']['state'] ?? null) === 'stabilizing'
+        && ($resumed['openIncident']['healthyRemainingSeconds'] ?? null)
+            === 600
+        && ($resumed['openIncident']['remainingSeconds'] ?? null) === 1500,
+    'Restart shifted or discarded the incident boundaries.'
+);
+$restartClock->advance(600);
+invokePilotPrivate(
+    $resumedIncident,
+    'reconcileMqttPilotIncidentHealth',
+    $restartClock->now()
+);
+$resumedStable = decodePilotCheckpoint(
+    $resumedIncident->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($resumedStable['openIncident'] ?? null) === null
+        && ($resumedStable['lastIncident']['outcome'] ?? null)
+            === 'recovered'
+        && ($resumedStable['lastIncident']['durationSeconds'] ?? null)
+            === 900,
+    'Restarted incident did not retain its absolute healthy boundary.'
+);
+
+foreach (
+    [
+        'ReauthenticationRequired' => 'terminal-authentication',
+        'ConfigurationError' => 'terminal-configuration',
+    ] as $terminalState => $closureReason
+) {
+    $terminalClock = new NavimowTestFakeClock(1860000000);
+    $terminalAccount = new MqttPilotCheckpointAccount(
+        $terminalState === 'ReauthenticationRequired' ? 7208 : 7209,
+        $terminalClock,
+        1859999900
+    );
+    $terminalAccount->Create();
+    $terminalAccount->ApplyChanges();
+    $terminalAccount->testSetProperty('EnableMqttShadow', true);
+    invokePilotPrivate(
+        $terminalAccount,
+        'startMqttPilotObservationIfNeeded'
+    );
+    invokePilotPrivate(
+        $terminalAccount,
+        'setMqttLifecycleState',
+        $terminalState
+    );
+    $terminal = decodePilotCheckpoint(
+        $terminalAccount->GetMqttPilotDiagnostics()
+    );
+    assertPilotCheckpoint(
+        ($terminal['closureReason'] ?? null) === $closureReason
+            && ($terminal['active'] ?? null) === false,
+        'Terminal MQTT state did not request pilot closure.'
+    );
+}
 
 echo "Navimow MQTT pilot checkpoint tests passed.\n";
