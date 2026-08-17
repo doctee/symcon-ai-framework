@@ -7,6 +7,7 @@
       "Rain threshold in millimetres per hour": "Regenschwelle in Millimetern pro Stunde",
       "Enable automatic updates": "Automatische Aktualisierungen aktivieren",
       "Polling interval in minutes": "Abfrageintervall in Minuten",
+      "Polling offset in seconds (-1 = automatic)": "Abfrageversatz in Sekunden (-1 = automatisch)",
       "HTTP timeout in seconds": "HTTP-Timeout in Sekunden",
       "Stale threshold in minutes": "Veraltet-Schwelle in Minuten",
       "Rain forecast": "Regen",

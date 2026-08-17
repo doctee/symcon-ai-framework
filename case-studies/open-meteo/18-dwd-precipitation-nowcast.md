@@ -6,6 +6,13 @@ Published as part of Open-Meteo module `0.8.2` and validated with two active
 live instances. Both instances use shared locations, automatic updates and the
 bounded DWD provider path described below.
 
+Module version `0.8.7` adds transport diagnostics and deterministic request
+staggering. It captures only recognized cURL/OpenSSL network warnings around
+the single read-only provider call; unrelated PHP warnings remain visible.
+Transport failures are classified without retaining the URL or raw warning,
+successful recovery is logged once, and repeated failures no longer generate
+one generic log entry per retry while the operational state remains unchanged.
+
 ## Purpose
 
 `DwdPrecipitationNowcast` adds a genuine radar-based short-range precipitation
@@ -74,7 +81,12 @@ The runtime follows the existing forecast state reducer and last-good pattern:
 - one instance semaphore prevents overlapping updates;
 - HTTP timeout and response size are bounded;
 - malformed or incomplete candidates never replace the last-good cache;
-- retries are bounded at 1, 2 and 5 minutes before normal polling resumes;
+- retries are bounded at 1, 2 and 5 minutes plus a deterministic offset of at
+  most 44 seconds before normal polling resumes;
+- initial automatic polling is staggered by up to 120 seconds per instance,
+  with an explicit `PollingOffsetSeconds` override;
+- bounded transport diagnostics retain counters, the latest sanitized failure
+  class and the most recent recovery, but no URL or response body;
 - stale state is explicit; and
 - changing location, window or threshold invalidates the incompatible cache.
 

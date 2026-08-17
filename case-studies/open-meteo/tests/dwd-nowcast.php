@@ -7,11 +7,13 @@ require_once __DIR__ . '/../distribution/libs/DwdNowcast/RequestBuilder.php';
 require_once __DIR__ . '/../distribution/libs/DwdNowcast/ResponseParser.php';
 require_once __DIR__ . '/../distribution/libs/DwdNowcast/ForecastProjector.php';
 require_once __DIR__ . '/../distribution/libs/DwdNowcast/NowcastHtmlRenderer.php';
+require_once __DIR__ . '/../distribution/libs/DwdNowcast/TransportDiagnostics.php';
 
 use SAEF\CaseStudy\DwdNowcast\ForecastProjector;
 use SAEF\CaseStudy\DwdNowcast\NowcastHtmlRenderer;
 use SAEF\CaseStudy\DwdNowcast\RequestBuilder;
 use SAEF\CaseStudy\DwdNowcast\ResponseParser;
+use SAEF\CaseStudy\DwdNowcast\TransportDiagnostics;
 
 $productTime = 1735718400;
 $url = RequestBuilder::build(48.0, 11.0, $productTime + 8 * 60);
@@ -83,6 +85,41 @@ same(true, str_contains($chart, 'font-size:9px'), 'DWD chart axis is not compact
 same(true, str_contains($chart, '#00c853'), 'DWD chart absolute green band is missing.');
 same('#4b5563', NowcastHtmlRenderer::colorForIntensity(0.0), 'DWD dry color differs.');
 same('#e00000', NowcastHtmlRenderer::colorForIntensity(8.0), 'DWD heavy-rain color differs.');
+
+same(
+    TransportDiagnostics::CLASS_TLS_RECORD,
+    TransportDiagnostics::classifyWarning(
+        'Failure when receiving data from the peer: OpenSSL SSL_read: error:0A0001BB:SSL routines::bad record type'
+    ),
+    'DWD TLS record warning classification differs.'
+);
+same(
+    TransportDiagnostics::CLASS_DNS_TIMEOUT,
+    TransportDiagnostics::classifyWarning('Timeout was reached: Resolving timed out after 10010 milliseconds'),
+    'DWD DNS warning classification differs.'
+);
+same(
+    TransportDiagnostics::CLASS_TIMEOUT,
+    TransportDiagnostics::classifyWarning('Timeout was reached: Operation timed out with 0 bytes received'),
+    'DWD timeout warning classification differs.'
+);
+same(null, TransportDiagnostics::classifyWarning('Unrelated PHP warning'), 'Unknown warning was classified.');
+$transportDiagnostics = TransportDiagnostics::fromJson('');
+$transportDiagnostics = TransportDiagnostics::failure(
+    $transportDiagnostics,
+    $productTime,
+    TransportDiagnostics::CLASS_TLS_RECORD
+);
+same(1, $transportDiagnostics['failureCount'], 'DWD transport failure count differs.');
+same(1, $transportDiagnostics['consecutiveFailures'], 'DWD consecutive transport count differs.');
+$transportDiagnostics = TransportDiagnostics::success($transportDiagnostics, $productTime + 60);
+same(0, $transportDiagnostics['consecutiveFailures'], 'DWD transport recovery did not reset failures.');
+same(1, $transportDiagnostics['lastRecoveryAttempts'], 'DWD transport recovery count differs.');
+same(
+    $transportDiagnostics,
+    TransportDiagnostics::fromJson(TransportDiagnostics::toJson($transportDiagnostics)),
+    'DWD transport diagnostics round-trip differs.'
+);
 
 $dry = $projected60;
 foreach ($dry['windowPoints'] as &$point) {
