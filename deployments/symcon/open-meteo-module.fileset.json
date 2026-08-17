@@ -93,6 +93,10 @@
             "target": "libs/DwdNowcast/ResponseParser.php"
         },
         {
+            "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/TransportDiagnostics.php",
+            "target": "libs/DwdNowcast/TransportDiagnostics.php"
+        },
+        {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/FieldCatalog.php",
             "target": "libs/OpenMeteo/FieldCatalog.php"
         },

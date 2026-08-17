@@ -18,9 +18,9 @@ Its immutable publication contract is:
 deployments/symcon/open-meteo-publication.json
 ```
 
-The current public tree contains exactly 43 allowlisted files:
+The current public tree contains exactly 44 allowlisted files:
 
-- 39 byte-exact module payloads from the module-fileset source map;
+- 40 byte-exact module payloads from the module-fileset source map;
 - `fileset.sources.json` and `fileset.sha256`;
 - the repository-root `LICENSE`; and
 - `case-studies/open-meteo/publication/README.md` as the canonical public
@@ -70,7 +70,7 @@ Before any remote mutation the publisher:
 1. revalidates the complete local candidate;
 2. clones only the configured public repository and `main` branch;
 3. requires a clean clone at the explicitly expected full commit;
-4. rejects every remote path outside the 43-file allowlist;
+4. rejects every remote path outside the 44-file allowlist;
 5. stages only allowlisted changed paths;
 6. rechecks the remote branch immediately before push; and
 7. relies on a fast-forward push to reject a concurrent update.
@@ -80,7 +80,7 @@ the current allowlist. Any existing remote path outside that allowlist still
 stops publication before files are written or a mutation is attempted.
 
 After a push it performs a second independent shallow clone and verifies the
-new full commit and all 43 file hashes. A post-push verification failure is
+new full commit and all 44 file hashes. A post-push verification failure is
 reported as a mutation-attempted failure and must be investigated rather than
 retried automatically.
 
@@ -145,8 +145,8 @@ changed publication remains a separate explicit approval.
 
 `case-studies/open-meteo/tests/publication.php` proves:
 
-- deterministic 43-file preparation;
-- equality with the 39-payload source map;
+- deterministic 44-file preparation;
+- equality with the 40-payload source map;
 - canonical README and license copying;
 - stable publication identity across check and prepare;
 - rejection of existing prepare targets;

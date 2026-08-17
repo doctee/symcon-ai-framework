@@ -8,6 +8,7 @@ require_once __DIR__ . '/../libs/DwdNowcast/RequestBuilder.php';
 require_once __DIR__ . '/../libs/DwdNowcast/ResponseParser.php';
 require_once __DIR__ . '/../libs/DwdNowcast/ForecastProjector.php';
 require_once __DIR__ . '/../libs/DwdNowcast/NowcastHtmlRenderer.php';
+require_once __DIR__ . '/../libs/DwdNowcast/TransportDiagnostics.php';
 if (!function_exists('SAEF_EnsureProfile')) {
     require_once __DIR__ . '/../libs/SAEF/helpers/object/EnsureProfile.php';
 }
@@ -21,6 +22,7 @@ use SAEF\CaseStudy\DwdNowcast\NowcastHtmlRenderer;
 use SAEF\CaseStudy\DwdNowcast\Profiles;
 use SAEF\CaseStudy\DwdNowcast\RequestBuilder;
 use SAEF\CaseStudy\DwdNowcast\ResponseParser;
+use SAEF\CaseStudy\DwdNowcast\TransportDiagnostics;
 use SAEF\CaseStudy\OpenMeteo\ForecastStateReducer;
 use SAEF\CaseStudy\OpenMeteo\LocationDefinition;
 
@@ -48,6 +50,10 @@ class DwdPrecipitationNowcast extends IPSModule
     private const MAXIMUM_RESPONSE_BYTES = 262144;
     private const MAX_RETRY_STEP = 4;
     private const SEMAPHORE_TIMEOUT_MILLISECONDS = 1000;
+    private const MAXIMUM_POLLING_OFFSET_SECONDS = 120;
+    private const RETRY_JITTER_SECONDS = 45;
+
+    private ?string $capturedTransportWarningClass = null;
 
     /** @var array<string, int> */
     private const DATA_STATE_VALUES = [
@@ -75,11 +81,13 @@ class DwdPrecipitationNowcast extends IPSModule
         $this->RegisterPropertyFloat('RainThresholdMmPerHour', 0.1);
         $this->RegisterPropertyBoolean('EnableAutomaticUpdates', true);
         $this->RegisterPropertyInteger('PollingIntervalMinutes', 5);
+        $this->RegisterPropertyInteger('PollingOffsetSeconds', -1);
         $this->RegisterPropertyInteger('HttpTimeoutSeconds', 10);
         $this->RegisterPropertyInteger('StaleAfterMinutes', 15);
 
         $this->RegisterAttributeString('RuntimeState', '');
         $this->RegisterAttributeString('ForecastCache', '');
+        $this->RegisterAttributeString('TransportDiagnostics', '');
         $this->RegisterAttributeInteger('RegisteredLocationReferenceId', 0);
 
         $this->RegisterTimer(
@@ -121,7 +129,7 @@ class DwdPrecipitationNowcast extends IPSModule
                 $this->publishNowcastChart($cache);
             }
             $this->publishOperationalState($state, $this->currentTimestamp());
-            $this->scheduleNormalPolling();
+            $this->scheduleInitialPolling();
             $this->SetStatus(self::STATUS_ACTIVE);
         } catch (Throwable) {
             $this->SetTimerInterval('UpdateData', 0);
@@ -185,6 +193,18 @@ class DwdPrecipitationNowcast extends IPSModule
         }
     }
 
+    public function GetDiagnosticsJson(): string
+    {
+        return $this->encode([
+            'success' => true,
+            'transport' => $this->transportDiagnostics(),
+            'scheduling' => [
+                'pollingOffsetSeconds' => $this->resolvedPollingOffsetSeconds(),
+                'retryJitterSeconds' => $this->resolvedRetryJitterSeconds(),
+            ],
+        ]);
+    }
+
     /** @param array{key: string, latitude: float, longitude: float, timezone: string, elevation: ?float} $configuration */
     private function executeUpdate(array $configuration): string
     {
@@ -200,15 +220,31 @@ class DwdPrecipitationNowcast extends IPSModule
                 $attemptedAt
             );
             try {
+                $this->capturedTransportWarningClass = null;
                 $body = $this->fetchUrl(
                     $url,
                     $this->ReadPropertyInteger('HttpTimeoutSeconds') * 1000
                 );
             } catch (Throwable) {
-                return $this->recordFailure($state, $attemptedAt, 'transport_error', true);
+                return $this->recordTransportFailure(
+                    $state,
+                    $attemptedAt,
+                    $this->capturedTransportWarningClass ?? TransportDiagnostics::CLASS_EXCEPTION
+                );
             }
-            if ($body === false || strlen($body) > self::MAXIMUM_RESPONSE_BYTES) {
-                return $this->recordFailure($state, $attemptedAt, 'transport_error', true);
+            if ($body === false) {
+                return $this->recordTransportFailure(
+                    $state,
+                    $attemptedAt,
+                    $this->capturedTransportWarningClass ?? TransportDiagnostics::CLASS_NO_RESPONSE
+                );
+            }
+            if (strlen($body) > self::MAXIMUM_RESPONSE_BYTES) {
+                return $this->recordTransportFailure(
+                    $state,
+                    $attemptedAt,
+                    TransportDiagnostics::CLASS_RESPONSE_TOO_LARGE
+                );
             }
 
             $parsed = ResponseParser::parse($body);
@@ -218,6 +254,9 @@ class DwdPrecipitationNowcast extends IPSModule
                 $this->ReadPropertyFloat('RainThresholdMmPerHour'),
                 $attemptedAt
             );
+            $failedAttempts = $state['retryCount'];
+            $transportDiagnostics = $this->transportDiagnostics();
+            $transportFailures = $transportDiagnostics['consecutiveFailures'];
             $state = ForecastStateReducer::success(
                 $state,
                 $attemptedAt,
@@ -228,9 +267,23 @@ class DwdPrecipitationNowcast extends IPSModule
             $this->WriteAttributeString('ForecastCache', $this->encodeCache($cache));
             $this->publishForecast($cache);
             $this->writeRuntimeState($state);
+            $this->writeTransportDiagnostics(
+                TransportDiagnostics::success($transportDiagnostics, $attemptedAt)
+            );
             $this->publishOperationalState($state, $attemptedAt);
             $this->scheduleNormalPolling();
             $this->SetStatus(self::STATUS_ACTIVE);
+
+            if ($failedAttempts > 0) {
+                $message = sprintf(
+                    'Update recovered after %d failed attempt(s)',
+                    $failedAttempts
+                );
+                if ($transportFailures > 0) {
+                    $message .= sprintf(', including %d transport failure(s)', $transportFailures);
+                }
+                IPS_LogMessage('DwdPrecipitationNowcast', $message . '.');
+            }
 
             return $this->result(true, 'ok');
         } catch (InvalidArgumentException) {
@@ -245,6 +298,30 @@ class DwdPrecipitationNowcast extends IPSModule
      */
     protected function fetchUrl(string $url, int $timeoutMilliseconds): string|false
     {
+        set_error_handler(function (int $severity, string $message): bool {
+            if ($severity !== E_WARNING && $severity !== E_USER_WARNING) {
+                return false;
+            }
+            $failureClass = TransportDiagnostics::classifyWarning($message);
+            if ($failureClass === null) {
+                return false;
+            }
+            $this->capturedTransportWarningClass = $failureClass;
+
+            return true;
+        }, E_WARNING | E_USER_WARNING);
+        try {
+            return $this->performUrlRequest($url, $timeoutMilliseconds);
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    /**
+     * Kept protected so offline module tests can exercise the warning boundary without network access.
+     */
+    protected function performUrlRequest(string $url, int $timeoutMilliseconds): string|false
+    {
         return Sys_GetURLContentEx($url, [
             'Timeout' => $timeoutMilliseconds,
             'VerifyPeer' => true,
@@ -253,12 +330,27 @@ class DwdPrecipitationNowcast extends IPSModule
     }
 
     /** @param RuntimeState $state */
+    private function recordTransportFailure(array $state, int $attemptedAt, string $failureClass): string
+    {
+        $diagnostics = TransportDiagnostics::failure(
+            $this->transportDiagnostics(),
+            $attemptedAt,
+            $failureClass
+        );
+        $this->writeTransportDiagnostics($diagnostics);
+
+        return $this->recordFailure($state, $attemptedAt, 'transport_error', true, $failureClass);
+    }
+
+    /** @param RuntimeState $state */
     private function recordFailure(
         array $state,
         int $attemptedAt,
         string $errorCode,
-        bool $retryable
+        bool $retryable,
+        ?string $detailCode = null
     ): string {
+        $previousState = $state['state'];
         $state = ForecastStateReducer::failure($state, $attemptedAt, $errorCode, $retryable);
         $state = ForecastStateReducer::evaluateFreshness(
             $state,
@@ -270,7 +362,18 @@ class DwdPrecipitationNowcast extends IPSModule
         if ($retryable) {
             $this->scheduleAfterFailure($state['retryCount']);
         }
-        IPS_LogMessage('DwdPrecipitationNowcast', 'Update failed (' . $errorCode . ').');
+        if ($state['retryCount'] === 1 || $state['state'] !== $previousState) {
+            $context = $detailCode === null ? $errorCode : $errorCode . ', ' . $detailCode;
+            IPS_LogMessage(
+                'DwdPrecipitationNowcast',
+                sprintf(
+                    'Update failed (%s, retry %d/%d).',
+                    $context,
+                    $state['retryCount'],
+                    $state['maxRetries']
+                )
+            );
+        }
 
         return $this->result(false, $errorCode);
     }
@@ -289,6 +392,21 @@ class DwdPrecipitationNowcast extends IPSModule
     private function writeRuntimeState(array $state): void
     {
         $this->WriteAttributeString('RuntimeState', ForecastStateReducer::toJson($state));
+    }
+
+    /** @return array{schemaVersion: int, failureCount: int, consecutiveFailures: int, lastFailureAt: ?int, lastFailureClass: ?string, lastRecoveryAt: ?int, lastRecoveryAttempts: int} */
+    private function transportDiagnostics(): array
+    {
+        return TransportDiagnostics::fromJson($this->ReadAttributeString('TransportDiagnostics'));
+    }
+
+    /** @param array{schemaVersion: int, failureCount: int, consecutiveFailures: int, lastFailureAt: ?int, lastFailureClass: ?string, lastRecoveryAt: ?int, lastRecoveryAttempts: int} $diagnostics */
+    private function writeTransportDiagnostics(array $diagnostics): void
+    {
+        $this->WriteAttributeString(
+            'TransportDiagnostics',
+            TransportDiagnostics::toJson($diagnostics)
+        );
     }
 
     /** @param RuntimeState $state */
@@ -339,6 +457,18 @@ class DwdPrecipitationNowcast extends IPSModule
         );
     }
 
+    private function scheduleInitialPolling(): void
+    {
+        if (!$this->ReadPropertyBoolean('EnableAutomaticUpdates')) {
+            $this->SetTimerInterval('UpdateData', 0);
+
+            return;
+        }
+        $seconds = ($this->ReadPropertyInteger('PollingIntervalMinutes') * 60)
+            + $this->resolvedPollingOffsetSeconds();
+        $this->SetTimerInterval('UpdateData', $seconds * 1000);
+    }
+
     private function scheduleAfterFailure(int $retryCount): void
     {
         if (!$this->ReadPropertyBoolean('EnableAutomaticUpdates')) {
@@ -348,7 +478,35 @@ class DwdPrecipitationNowcast extends IPSModule
         }
         $minutes = self::RETRY_INTERVAL_MINUTES[$retryCount]
             ?? $this->ReadPropertyInteger('PollingIntervalMinutes');
-        $this->SetTimerInterval('UpdateData', $minutes * 60000);
+        $seconds = ($minutes * 60) + $this->resolvedRetryJitterSeconds();
+        $this->SetTimerInterval('UpdateData', $seconds * 1000);
+    }
+
+    private function resolvedPollingOffsetSeconds(): int
+    {
+        $configured = $this->ReadPropertyInteger('PollingOffsetSeconds');
+        if ($configured >= 0) {
+            return $configured;
+        }
+
+        return $this->stableInstanceOffset('polling', self::MAXIMUM_POLLING_OFFSET_SECONDS + 1);
+    }
+
+    private function resolvedRetryJitterSeconds(): int
+    {
+        $configured = $this->ReadPropertyInteger('PollingOffsetSeconds');
+        if ($configured >= 0) {
+            return $configured % self::RETRY_JITTER_SECONDS;
+        }
+
+        return $this->stableInstanceOffset('retry', self::RETRY_JITTER_SECONDS);
+    }
+
+    private function stableInstanceOffset(string $purpose, int $modulus): int
+    {
+        $hashPrefix = substr(hash('sha256', 'dwd-nowcast:' . $purpose . ':' . $this->InstanceID), 0, 7);
+
+        return (int) hexdec($hashPrefix) % $modulus;
     }
 
     /** @return array{key: string, latitude: float, longitude: float, timezone: string, elevation: ?float} */
@@ -420,6 +578,7 @@ class DwdPrecipitationNowcast extends IPSModule
         $window = $this->ReadPropertyInteger('ForecastWindowMinutes');
         $threshold = $this->ReadPropertyFloat('RainThresholdMmPerHour');
         $polling = $this->ReadPropertyInteger('PollingIntervalMinutes');
+        $pollingOffset = $this->ReadPropertyInteger('PollingOffsetSeconds');
         $timeout = $this->ReadPropertyInteger('HttpTimeoutSeconds');
         $staleAfter = $this->ReadPropertyInteger('StaleAfterMinutes');
         if (
@@ -431,6 +590,8 @@ class DwdPrecipitationNowcast extends IPSModule
             || $threshold > 1000.0
             || $polling < RequestBuilder::NATIVE_RESOLUTION_MINUTES
             || $polling % RequestBuilder::NATIVE_RESOLUTION_MINUTES !== 0
+            || $pollingOffset < -1
+            || $pollingOffset > self::MAXIMUM_POLLING_OFFSET_SECONDS
             || $timeout < 1
             || $timeout > 60
             || $staleAfter < $polling

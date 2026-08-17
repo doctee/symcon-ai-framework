@@ -7,14 +7,14 @@
         {
             "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/form.json",
             "target": "DwdPrecipitationNowcast/form.json",
-            "sha256": "009501973393ab9716eb06405174d5d991801b4e66effed8cf2067cfb9b53b27",
-            "bytes": 1518
+            "sha256": "14bf4d3149dcaed928ecc8ded8bb3851af2894f30fc8c5aafb7b034d2b085f9d",
+            "bytes": 1724
         },
         {
             "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/locale.json",
             "target": "DwdPrecipitationNowcast/locale.json",
-            "sha256": "6cd949fb5c3634e413d6c1ed3c6ffa4b3e37a436d25a6db37029993c47bc0801",
-            "bytes": 1151
+            "sha256": "a9be99bf0d8f93a97633ead742123f7d617248de5d1c2035e7b7081ab6064c26",
+            "bytes": 1252
         },
         {
             "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/module.json",
@@ -25,8 +25,8 @@
         {
             "source": "case-studies/open-meteo/distribution/DwdPrecipitationNowcast/module.php",
             "target": "DwdPrecipitationNowcast/module.php",
-            "sha256": "f47c4b7b663a8a5fefaf42e932e712a77e4fb006a8cf067fa28a4e5d835b1362",
-            "bytes": 23421
+            "sha256": "767b22300af3acd16933795691b2a9b334ea979c5f4a7d4ea9ad5e291572b622",
+            "bytes": 29757
         },
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoSolarForecast/form.json",
@@ -103,7 +103,7 @@
         {
             "source": "case-studies/open-meteo/distribution/library.json",
             "target": "library.json",
-            "sha256": "4f275e9044710f053fe7c88ac36b901b3833259469d644e39f2a7ebee8ca1a5a",
+            "sha256": "0e81909f569749d23ff077a9bcb563e89cb1e495518b7d298b2a196d82b438b9",
             "bytes": 256
         },
         {
@@ -135,6 +135,12 @@
             "target": "libs/DwdNowcast/ResponseParser.php",
             "sha256": "614e4f39bbc2133e2a24084a8f39c4fe7ddf349378c01525ed0ac506983037ac",
             "bytes": 5749
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/TransportDiagnostics.php",
+            "target": "libs/DwdNowcast/TransportDiagnostics.php",
+            "sha256": "34744f1c040146456a08530fff7b0be937c14ab0237d4f23a1cc7e5f01b4d14c",
+            "bytes": 6845
         },
         {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/FieldCatalog.php",
@@ -239,7 +245,7 @@
             "bytes": 3308
         }
     ],
-    "filesetSha256": "58488a394180a354d7a8f0017ae1b7472ff7f8f009fb3bcc240f3051dd5ca257",
+    "filesetSha256": "ae02f88dbb425c826241f1d4065d8b15807b0a208586c868c9e0a06709464cb1",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

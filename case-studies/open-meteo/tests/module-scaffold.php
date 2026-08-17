@@ -1527,6 +1527,7 @@ scaffoldCheck(
 scaffoldCheck($dwdNowcast->testTimerInterval('UpdateData') === 0, 'Inactive DWD timer is enabled.');
 $dwdVariables = $dwdNowcast->testVariables();
 $dwdNowcast->testSetProperty('LocationInstanceId', 2001);
+$dwdNowcast->testSetProperty('PollingOffsetSeconds', 0);
 $dwdNowcast->ApplyChanges();
 scaffoldCheck($dwdNowcast->testStatus() === 102, 'Configured DWD nowcast must be active.');
 scaffoldCheck($dwdNowcast->testReferences() === [2001], 'DWD location reference is missing.');
@@ -1570,14 +1571,60 @@ scaffoldCheck(
     count($dwdForecast['data']['points'] ?? []) === 24,
     'DWD full native horizon differs.'
 );
+$capturedOuterWarnings = 0;
+set_error_handler(static function () use (&$capturedOuterWarnings): bool {
+    $capturedOuterWarnings++;
+
+    return true;
+}, E_USER_WARNING);
+$dwdNowcast->testQueueTransportWarning(
+    'Failure when receiving data from the peer: OpenSSL SSL_read: error:0A0001BB:SSL routines::bad record type'
+);
 $dwdNowcast->testQueueResponse(false);
 $dwdFailure = json_decode($dwdNowcast->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+trigger_error('DWD warning-handler restoration probe', E_USER_WARNING);
+restore_error_handler();
+scaffoldCheck(
+    $capturedOuterWarnings === 1,
+    'DWD transport warning escaped or the previous warning handler was not restored.'
+);
 scaffoldCheck(($dwdFailure['code'] ?? null) === 'transport_error', 'DWD failure differs.');
 scaffoldCheck($dwdNowcast->testReadValue('DataState') === 4, 'DWD last-good failure must warn.');
 scaffoldCheck(
     $dwdNowcast->testTimerInterval('UpdateData') === 60000,
     'DWD first retry interval differs.'
 );
+$dwdDiagnostics = json_decode($dwdNowcast->GetDiagnosticsJson(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(
+    ($dwdDiagnostics['transport']['failureCount'] ?? null) === 1
+    && ($dwdDiagnostics['transport']['consecutiveFailures'] ?? null) === 1
+    && ($dwdDiagnostics['transport']['lastFailureClass'] ?? null) === 'tls_record',
+    'DWD transport diagnostics did not preserve the failure.'
+);
+scaffoldCheck(
+    ($dwdDiagnostics['scheduling']['pollingOffsetSeconds'] ?? null) === 0
+    && ($dwdDiagnostics['scheduling']['retryJitterSeconds'] ?? null) === 0,
+    'DWD explicit scheduling offset differs.'
+);
+$logCountBeforeRecovery = count($scaffoldLogMessages);
+$dwdNowcast->testQueueResponse(scaffoldDwdResponse(1735718400));
+$dwdRecovery = json_decode($dwdNowcast->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($dwdRecovery['success'] ?? null) === true, 'DWD retry did not recover.');
+$dwdDiagnostics = json_decode($dwdNowcast->GetDiagnosticsJson(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(
+    ($dwdDiagnostics['transport']['consecutiveFailures'] ?? null) === 0
+    && ($dwdDiagnostics['transport']['lastRecoveryAttempts'] ?? null) === 1,
+    'DWD transport recovery diagnostics differ.'
+);
+scaffoldCheck(
+    count($scaffoldLogMessages) === $logCountBeforeRecovery + 1
+    && str_contains($scaffoldLogMessages[array_key_last($scaffoldLogMessages)]['message'], 'recovered'),
+    'DWD successful retry did not emit one recovery diagnostic.'
+);
+$dwdNowcast->testSetProperty('PollingOffsetSeconds', 121);
+$dwdNowcast->ApplyChanges();
+scaffoldCheck($dwdNowcast->testStatus() === 200, 'Invalid DWD polling offset did not fail closed.');
+$dwdNowcast->testSetProperty('PollingOffsetSeconds', 0);
 $dwdNowcast->testSetProperty('ForecastWindowMinutes', 30);
 $dwdNowcast->ApplyChanges();
 scaffoldCheck(
