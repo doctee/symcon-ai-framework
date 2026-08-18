@@ -90,3 +90,13 @@ consumer or solar connection was changed.
 The existing visibility-gap fixture remains the regression proof for the
 provider response shape observed in both live attempts. No private coordinates,
 ObjectIDs or installation metadata are included in this report.
+
+## 2026-08-18 follow-up: general hourly model gaps
+
+After the module had run successfully for several days, DWD ICON began
+returning HTTP 200 responses whose hourly `temperature_2m` series contained
+individual `null` values. The strict parser rejected the otherwise valid
+response and both weather instances entered retry state. Version `0.8.8`
+generalizes the established visibility-gap rule to every hourly model field:
+individual unavailable points are omitted without shifting timestamps, while
+an entirely unavailable series, current values and daily values remain invalid.

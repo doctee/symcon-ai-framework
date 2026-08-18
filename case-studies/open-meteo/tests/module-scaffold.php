@@ -1024,6 +1024,32 @@ scaffoldCheck(
     'Bounded hourly forecast differs.'
 );
 
+$weatherWithGap = json_decode(scaffoldWeatherResponse(false), true, 64, JSON_THROW_ON_ERROR);
+$weatherWithGap['hourly']['temperature_2m'][1] = null;
+$runtimeWeather->testQueueResponse(json_encode(
+    $weatherWithGap,
+    JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES
+));
+$gapSuccess = json_decode($runtimeWeather->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(
+    ($gapSuccess['success'] ?? null) === true,
+    'Weather update with an hourly model gap did not succeed.'
+);
+$hourlyWithGap = json_decode(
+    $runtimeWeather->GetHourlyForecastJson(
+        1735718400,
+        1735725601,
+        '["temperature_2m"]'
+    ),
+    true,
+    64,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    count($hourlyWithGap['data']['temperature_2m'] ?? []) === 2,
+    'Hourly model gap was not omitted from the cached forecast.'
+);
+
 $runtimeWeather->testSetNow(1735718460);
 $runtimeWeather->testQueueResponse(false);
 $failure = json_decode($runtimeWeather->UpdateData(), true, 16, JSON_THROW_ON_ERROR);

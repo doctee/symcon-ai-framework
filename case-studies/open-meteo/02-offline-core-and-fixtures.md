@@ -77,9 +77,10 @@ metadata is invalid, a requested field or unit is absent, parallel arrays
 differ in length, timestamps are not strictly increasing, or a required value
 is null, non-numeric or non-finite.
 
-Individual null gaps are permitted only for hourly visibility and are omitted
-from that canonical field series; an entirely unavailable visibility series is
-still rejected.
+Individual provider `null` gaps are permitted for hourly model fields and are
+omitted from the affected canonical field series while source timestamps remain
+unchanged. An entirely unavailable hourly series is still rejected. Current and
+daily values remain strict because they feed direct state and local-day output.
 
 The parser ignores unknown extra response fields. This permits compatible
 provider additions without weakening the required-field contract.
