@@ -10,6 +10,8 @@ inline HTMLBox presentation for normal and maximized tiles.
 Version `0.8.5` uses the native Web Content presentation on Symcon 8 and newer,
 removes tile padding and restores the proven CSS tooltip contract. Older Symcon
 versions retain the `~HTMLBox` fallback.
+Version `0.8.10` aligns segment colors with the configured operational rain
+threshold so that a dry headline cannot be paired with colored trace echoes.
 
 ## Purpose
 
@@ -51,17 +53,20 @@ forecast independently:
 
 | Intensity in `mm/h` | Color |
 | --- | --- |
-| `0` | dark gray |
-| `> 0` and `< 0.1` | light blue |
+| Below the configured rain threshold | dark gray |
+| At or above the threshold and `< 0.1` | light blue |
 | `>= 0.1` and `< 0.5` | blue |
 | `>= 0.5` and `< 1.0` | green |
 | `>= 1.0` and `< 2.5` | yellow |
 | `>= 2.5` and `< 5.0` | orange |
 | `>= 5.0` | red |
 
-The operational rain threshold remains independently configurable. The chart
-can therefore show a trace echo below the threshold while the headline still
-states that no relevant rain is expected.
+The operational rain threshold is the common lower bound for both the headline
+and segment colors. Trace echoes below it stay dark gray, but their measured
+intensity remains available in the tooltip. Interpolation is not allowed to
+cross the threshold between native five-minute intervals; the first and last
+colored segments therefore retain the authoritative rain-start and rain-end
+boundaries.
 
 ## Module Lifecycle
 
@@ -84,6 +89,7 @@ Offline checks cover:
 - rain and dry-window headlines;
 - midpoint and endpoint labels;
 - deterministic absolute colors;
+- threshold-consistent dry traces and rain boundaries;
 - the `~HTMLBox` variable contract and idempotent registration;
 - cache-only republishing during module lifecycle; and
 - deterministic generated-fileset reproduction.

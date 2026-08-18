@@ -82,9 +82,34 @@ same(
 same(true, str_contains($chart, 'font:11px/1.35'), 'DWD chart base font is not compact.');
 same(true, str_contains($chart, 'height:14px'), 'DWD chart bars are not compact.');
 same(true, str_contains($chart, 'font-size:9px'), 'DWD chart axis is not compact.');
-same(true, str_contains($chart, '#00c853'), 'DWD chart absolute green band is missing.');
-same('#4b5563', NowcastHtmlRenderer::colorForIntensity(0.0), 'DWD dry color differs.');
-same('#e00000', NowcastHtmlRenderer::colorForIntensity(8.0), 'DWD heavy-rain color differs.');
+preg_match_all('/background:(#[0-9a-f]{6})/', $chart, $chartColors);
+same(60, count($chartColors[1]), 'DWD chart color count differs.');
+same(
+    array_fill(0, 15, '#4b5563'),
+    array_slice($chartColors[1], 0, 15),
+    'DWD chart color starts before the authoritative rain interval.'
+);
+same('#ffd600', $chartColors[1][15], 'DWD chart color does not start with the rain interval.');
+same(
+    '#4b5563',
+    NowcastHtmlRenderer::colorForIntensity(0.099, 0.1),
+    'DWD below-threshold color differs.'
+);
+same(
+    '#1677ff',
+    NowcastHtmlRenderer::colorForIntensity(0.1, 0.1),
+    'DWD threshold color differs.'
+);
+same(
+    '#00c853',
+    NowcastHtmlRenderer::colorForIntensity(0.5, 0.1),
+    'DWD green color band differs.'
+);
+same(
+    '#e00000',
+    NowcastHtmlRenderer::colorForIntensity(8.0, 0.1),
+    'DWD heavy-rain color differs.'
+);
 
 same(
     TransportDiagnostics::CLASS_TLS_RECORD,
@@ -130,6 +155,19 @@ $dry['summary']['rainExpected'] = false;
 $dry['summary']['rainStartsInMinutes'] = -1;
 $dryChart = NowcastHtmlRenderer::render($dry, 'Europe/Berlin', $chartLabels);
 same(true, str_contains($dryChart, 'No rain in 60 min'), 'DWD dry chart headline differs.');
+$trace = $dry;
+$trace['windowPoints'][0]['intensityMmPerHour'] = 0.019;
+$trace['summary']['precipitationSumMm'] = 0.002;
+$trace['summary']['maximumIntensityMmPerHour'] = 0.019;
+$trace['summary']['nextIntervalIntensityMmPerHour'] = 0.019;
+$traceChart = NowcastHtmlRenderer::render($trace, 'Europe/Berlin', $chartLabels);
+same(true, str_contains($traceChart, 'No rain in 60 min'), 'DWD trace headline differs.');
+same(60, substr_count($traceChart, 'background:#4b5563'), 'DWD trace was colored as rain.');
+same(
+    true,
+    str_contains($traceChart, 'data-tip="+0 min: 0.02 mm/h"'),
+    'DWD trace value is missing from the tooltip.'
+);
 same(
     true,
     str_contains(NowcastHtmlRenderer::renderEmpty($chartLabels), 'No nowcast data'),

@@ -26,6 +26,9 @@ final class NowcastHtmlRenderer
         $windowMinutes = self::positiveInteger($cache['evaluationWindowMinutes'] ?? null);
         $resolutionMinutes = self::positiveInteger($cache['nativeResolutionMinutes'] ?? null);
         $productTime = self::positiveInteger($cache['productTime'] ?? null);
+        $rainThresholdMmPerHour = self::positiveFloat(
+            $cache['rainThresholdMmPerHour'] ?? null
+        );
         $summary = $cache['summary'] ?? null;
         $windowPoints = $cache['windowPoints'] ?? null;
         if (
@@ -54,7 +57,12 @@ final class NowcastHtmlRenderer
         $status = $rainExpected
             ? sprintf($labels['rainIn'], max(0, $rainStarts))
             : sprintf($labels['noRain'], $windowMinutes);
-        $minuteValues = self::minuteValues($windowPoints, $resolutionMinutes, $windowMinutes);
+        $minuteValues = self::minuteValues(
+            $windowPoints,
+            $resolutionMinutes,
+            $windowMinutes,
+            $rainThresholdMmPerHour
+        );
         $bars = [];
         foreach ($minuteValues as $minute => $intensity) {
             $tooltip = sprintf($labels['minuteTooltip'], $minute, $intensity);
@@ -66,7 +74,7 @@ final class NowcastHtmlRenderer
             $bars[] = '<div class="saef-nowcast__bar' . $edgeClass . '" data-tip="'
                 . self::escape($tooltip) . '" style="box-sizing:border-box;position:relative;'
                 . 'height:14px;min-width:2px;background:'
-                . self::colorForIntensity($intensity)
+                . self::colorForIntensity($intensity, $rainThresholdMmPerHour)
                 . '"></div>';
         }
 
@@ -106,14 +114,22 @@ final class NowcastHtmlRenderer
             . '</div>';
     }
 
-    public static function colorForIntensity(float $intensity): string
+    public static function colorForIntensity(
+        float $intensity,
+        float $rainThresholdMmPerHour
+    ): string
     {
-        if (!is_finite($intensity) || $intensity < 0.0) {
+        if (
+            !is_finite($intensity)
+            || $intensity < 0.0
+            || !is_finite($rainThresholdMmPerHour)
+            || $rainThresholdMmPerHour <= 0.0
+        ) {
             throw new InvalidArgumentException('Nowcast chart intensity is invalid.');
         }
 
         return match (true) {
-            $intensity === 0.0 => '#4b5563',
+            $intensity < $rainThresholdMmPerHour => '#4b5563',
             $intensity < 0.1 => '#38bdf8',
             $intensity < 0.5 => '#1677ff',
             $intensity < 1.0 => '#00c853',
@@ -131,7 +147,8 @@ final class NowcastHtmlRenderer
     private static function minuteValues(
         array $windowPoints,
         int $resolutionMinutes,
-        int $windowMinutes
+        int $windowMinutes,
+        float $rainThresholdMmPerHour
     ): array {
         $expectedPointCount = intdiv($windowMinutes, $resolutionMinutes);
         if (count($windowPoints) !== $expectedPointCount) {
@@ -157,7 +174,9 @@ final class NowcastHtmlRenderer
         $minuteValues = [];
         foreach ($leadValues as $index => $value) {
             $nextValue = $leadValues[$index + 1] ?? $value;
-            $delta = $nextValue - $value;
+            $sameThresholdClass = ($value >= $rainThresholdMmPerHour)
+                === ($nextValue >= $rainThresholdMmPerHour);
+            $delta = $sameThresholdClass ? $nextValue - $value : 0.0;
             for ($offset = 0; $offset < $resolutionMinutes; $offset++) {
                 $progress = $resolutionMinutes === 1
                     ? 1.0
@@ -187,6 +206,19 @@ final class NowcastHtmlRenderer
         }
 
         return $value;
+    }
+
+    private static function positiveFloat(mixed $value): float
+    {
+        if (
+            (!is_int($value) && !is_float($value))
+            || !is_finite((float) $value)
+            || (float) $value <= 0.0
+        ) {
+            throw new InvalidArgumentException('Nowcast chart threshold is invalid.');
+        }
+
+        return (float) $value;
     }
 
     private static function tooltipStyle(): string
