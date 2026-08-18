@@ -90,17 +90,31 @@ throws(
     UnexpectedValueException::class,
     'Unequal parallel arrays must be rejected.'
 );
+$temperatureWithGap = ResponseParser::parse(
+    $mutate(static function (array &$payload): void {
+        $payload['hourly']['temperature_2m'][1] = null;
+    }),
+    [],
+    ['temperature_2m'],
+    []
+);
+same(2, $temperatureWithGap->hourly('temperature_2m')->count(), 'Temperature gap was not omitted.');
+same(
+    1735725600,
+    $temperatureWithGap->hourly('temperature_2m')->points()[1]->sourceTimestamp(),
+    'Temperature timestamps were not preserved across a gap.'
+);
 throws(
     static fn () => ResponseParser::parse(
         $mutate(static function (array &$payload): void {
-            $payload['hourly']['temperature_2m'][1] = null;
+            $payload['hourly']['temperature_2m'] = [null, null, null];
         }),
         [],
         ['temperature_2m'],
         []
     ),
     UnexpectedValueException::class,
-    'Null values must be rejected.'
+    'An entirely unavailable temperature series must be rejected.'
 );
 $visibilityWithGap = ResponseParser::parse(
     $mutate(static function (array &$payload): void {
