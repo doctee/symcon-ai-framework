@@ -509,7 +509,7 @@ A response is usable only when:
 - every requested field has an expected compatible unit;
 - `time` and every parallel value array have equal length;
 - timestamps are strictly ordered after normalization;
-- numeric values are finite; individual hourly model values may be `null` and
+- numeric values are finite; individual hourly or daily model values may be `null` and
   are omitted from the affected field's canonical series without shifting its
   source timestamps;
 - the returned range covers the minimum accepted forecast horizon; and
