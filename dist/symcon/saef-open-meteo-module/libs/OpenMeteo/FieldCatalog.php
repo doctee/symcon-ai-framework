@@ -179,7 +179,7 @@ final class FieldCatalog
 
     public static function permitsNullGap(string $section, string $field): bool
     {
-        return $section === 'hourly';
+        return in_array($section, ['hourly', 'daily'], true);
     }
 
     public static function semantics(string $section, string $field): string

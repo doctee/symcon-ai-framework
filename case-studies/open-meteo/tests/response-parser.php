@@ -144,6 +144,44 @@ throws(
     UnexpectedValueException::class,
     'An entirely unavailable visibility series must be rejected.'
 );
+$dailyWithGap = ResponseParser::parse(
+    $mutate(static function (array &$payload): void {
+        $payload['daily']['temperature_2m_max'][1] = null;
+    }),
+    [],
+    [],
+    ['temperature_2m_max']
+);
+same(1, $dailyWithGap->daily('temperature_2m_max')->count(), 'Daily gap was not omitted.');
+same(
+    1735686000,
+    $dailyWithGap->daily('temperature_2m_max')->points()[0]->sourceTimestamp(),
+    'Daily timestamps were not preserved across a gap.'
+);
+throws(
+    static fn () => ResponseParser::parse(
+        $mutate(static function (array &$payload): void {
+            $payload['daily']['temperature_2m_max'] = [null, null];
+        }),
+        [],
+        [],
+        ['temperature_2m_max']
+    ),
+    UnexpectedValueException::class,
+    'An entirely unavailable daily series must be rejected.'
+);
+throws(
+    static fn () => ResponseParser::parse(
+        $mutate(static function (array &$payload): void {
+            $payload['current']['temperature_2m'] = null;
+        }),
+        ['temperature_2m'],
+        [],
+        []
+    ),
+    UnexpectedValueException::class,
+    'A null current value must remain invalid.'
+);
 throws(
     static fn () => ResponseParser::parse(
         $mutate(static function (array &$payload): void {

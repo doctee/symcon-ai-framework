@@ -100,3 +100,12 @@ response and both weather instances entered retry state. Version `0.8.8`
 generalizes the established visibility-gap rule to every hourly model field:
 individual unavailable points are omitted without shifting timestamps, while
 an entirely unavailable series, current values and daily values remain invalid.
+
+## 2026-08-18 follow-up: incomplete final forecast day
+
+The controlled `0.8.8` live verification proved that hourly gaps were accepted,
+but the same DWD ICON response also exposed the final forecast day with
+individual `null` values in most daily fields. Version `0.8.9` applies the same
+point-wise omission rule to daily model series. Current observations and
+entirely unavailable series remain invalid, and projection still requires every
+public daily field to contain the current local day.

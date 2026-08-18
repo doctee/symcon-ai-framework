@@ -1050,6 +1050,34 @@ scaffoldCheck(
     'Hourly model gap was not omitted from the cached forecast.'
 );
 
+$weatherWithDailyGap = json_decode(scaffoldWeatherResponse(false), true, 64, JSON_THROW_ON_ERROR);
+foreach (\SAEF\CaseStudy\OpenMeteo\FieldCatalog::weatherDailyFields() as $field) {
+    $weatherWithDailyGap['daily'][$field][1] = null;
+}
+$runtimeWeather->testQueueResponse(json_encode(
+    $weatherWithDailyGap,
+    JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES
+));
+$dailyGapSuccess = json_decode($runtimeWeather->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(
+    ($dailyGapSuccess['success'] ?? null) === true,
+    'Weather update with an incomplete final forecast day did not succeed.'
+);
+$dailyWithGap = json_decode(
+    $runtimeWeather->GetDailyForecastJson(
+        1735686000,
+        1735858800,
+        '["temperature_2m_max"]'
+    ),
+    true,
+    64,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    count($dailyWithGap['data']['temperature_2m_max'] ?? []) === 1,
+    'Incomplete final forecast day was not omitted from the cached field series.'
+);
+
 $runtimeWeather->testSetNow(1735718460);
 $runtimeWeather->testQueueResponse(false);
 $failure = json_decode($runtimeWeather->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
