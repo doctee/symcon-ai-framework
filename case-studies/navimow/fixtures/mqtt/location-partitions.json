@@ -1,0 +1,14 @@
+{
+  "topic": "/downlink/vehicle/DEVICE_001/realtimeDate/location",
+  "channel": "location",
+  "payload": [
+    {
+      "partitionIds": [
+        7,
+        9
+      ],
+      "time": 1700000002000,
+      "type": 3
+    }
+  ]
+}

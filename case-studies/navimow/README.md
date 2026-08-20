@@ -358,6 +358,7 @@ template or a general SAEF reference implementation.
 | `328-wet-delay-readonly-observation.md` | Records two fresh read-only Symcon observations during an app-visible wetness delay and keeps forced Start outside the supported safety contract. |
 | `329-wet-delay-mqtt-position-pilot-activation.md` | Records the single authorized 72-hour receive-only MQTT and position activation after passive token rotation and stable `ShadowActive` verification. |
 | `330-wet-delay-pilot-early-cleanup-and-closure-defect.md` | Proves immediate and delayed credential-free early cleanup while identifying the stale active closure registry left by direct operator disable. |
+| `331-early-closure-reconciliation-and-task-parser-implementation.md` | Implements owned early-disable closure, stale-session reconciliation and bounded task, area-candidate and delay parsing with privacy-safe correlation keys. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
