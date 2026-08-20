@@ -348,6 +348,16 @@ template or a general SAEF reference implementation.
 | `318-transport-incident-grace-and-recovery-design.md` | Reconstructs the three-second relapse behind the second-episode closure and designs bounded incident accounting using the existing 900-second healthy-reset boundary. |
 | `319-transport-incident-reducer-implementation.md` | Implements the bounded incident reducer, additive diagnostics and fail-closed terminal-state handling with focused offline verification. |
 | `320-transport-incident-publication-readiness.md` | Freezes the exact one-file incident-reducer release, requires a new branch from canonical main and separates SAEF, standalone, disabled-rollout and live-pilot gates. |
+| `321-transport-incident-standalone-publication-and-metadata-conformance.md` | Records the exact one-file standalone publication, remote and complete-tree verification, and metadata conformance through fresh official-asset and 13-input byte equivalence. |
+| `322-transport-incident-disabled-symcon-rollout.md` | Records the single supported disabled Symcon update, immediate and delayed credential-free verification, and the additive incident-policy contract without activating MQTT. |
+| `323-transport-incident-bounded-live-pilot-activation.md` | Records the single restart-free receive-only activation, accepted asynchronous reconnect transition and delayed `ShadowActive` proof with zero initial incidents. |
+| `324-transport-incident-bounded-live-pilot-result.md` | Accepts the 72-hour pilot after one naturally recovered incident, automatic deadline closure and immediate plus delayed credential-free cleanup. |
+| `325-mqtt-task-area-and-map-semantics-analysis.md` | Establishes local route feasibility, proves task-progress relationships, identifies the missing multi-area and polygon evidence and refreshes the fail-closed REST command matrix. |
+| `326-multi-area-task-semantics-capture-plan.md` | Defines a receive-only, schedule-driven multi-area observation with private zone labels, rain-interruption classification and coordinate-free public evidence. |
+| `327-start-command-private-capture-procedure.md` | Defines and statically validates one supervised generic Start capture with Docked precondition, one write, no retry and read-only Running verification. |
+| `328-wet-delay-readonly-observation.md` | Records two fresh read-only Symcon observations during an app-visible wetness delay and keeps forced Start outside the supported safety contract. |
+| `329-wet-delay-mqtt-position-pilot-activation.md` | Records the single authorized 72-hour receive-only MQTT and position activation after passive token rotation and stable `ShadowActive` verification. |
+| `330-wet-delay-pilot-early-cleanup-and-closure-defect.md` | Proves immediate and delayed credential-free early cleanup while identifying the stale active closure registry left by direct operator disable. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
