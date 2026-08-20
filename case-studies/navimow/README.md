@@ -360,6 +360,8 @@ template or a general SAEF reference implementation.
 | `330-wet-delay-pilot-early-cleanup-and-closure-defect.md` | Proves immediate and delayed credential-free early cleanup while identifying the stale active closure registry left by direct operator disable. |
 | `331-early-closure-reconciliation-and-task-parser-implementation.md` | Implements owned early-disable closure, stale-session reconciliation and bounded task, area-candidate and delay parsing with privacy-safe correlation keys. |
 | `332-early-closure-task-parser-publication-readiness.md` | Freezes the exact three-file standalone candidate, current rollback baseline and reduced SAEF, publication and live gate sequence. |
+| `333-early-closure-task-parser-standalone-publication.md` | Records the exact three-file standalone publication, complete-tree equality and unchanged metadata, REST, command and public-variable boundaries. |
+| `334-early-closure-task-parser-disabled-symcon-rollout.md` | Records the supported disabled update, stale early-cleanup reconciliation and immediate plus delayed credential-free Symcon verification. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
