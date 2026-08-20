@@ -1,0 +1,19 @@
+{
+  "topic": "/downlink/vehicle/DEVICE_001/realtimeDate/location",
+  "channel": "location",
+  "payload": [
+    {
+      "action": 8,
+      "currentMowBoundary": 7,
+      "currentMowProgress": 4250,
+      "mapWorkPosition": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "mowStartType": 0,
+      "mowingPercentage": 42,
+      "mowingWeekArea": "123.45",
+      "subAction": 6,
+      "subtotalArea": "23.45",
+      "time": 1700000001000,
+      "type": 1
+    }
+  ]
+}

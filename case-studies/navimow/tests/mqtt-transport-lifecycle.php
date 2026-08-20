@@ -1624,6 +1624,9 @@ $variablesBeforeDisable =
     $account->testSnapshotPersistentState()['variables'];
 $account->testSetProperty('EnableMqttShadow', false);
 $account->ApplyChanges();
+$disabledClosureRequested = decodeLifecycle(
+    $account->GetMqttPilotDiagnostics()
+);
 assertLifecycle(
     $account->testStatus() === IS_ACTIVE
         && $account->testTimerInterval('MqttLifecycle') === 0
@@ -1634,10 +1637,29 @@ assertLifecycle(
             === '[]'
         && ($lifecycleConfigurations[$mqttId]['UserName'] ?? null) === ''
         && ($lifecycleConfigurations[$mqttId]['Password'] ?? null) === ''
+        && ($disabledClosureRequested['closureState'] ?? null)
+            === 'ClosureRequested'
+        && ($disabledClosureRequested['closureReason'] ?? null)
+            === 'operator-disabled'
+        && $account->testTimerInterval('MqttPilotClosure') === 1000
         && $account->testSnapshotPersistentState()['variables']
             === $variablesBeforeDisable,
     'Feature disable did not stop MQTT without public-variable churn.'
 );
+$account->ProcessMqttPilotClosure();
+$disabledClosureCompleted = decodeLifecycle(
+    $account->GetMqttPilotDiagnostics()
+);
+assertLifecycle(
+    ($disabledClosureCompleted['closureState'] ?? null) === 'Closed'
+        && ($disabledClosureCompleted['closureReason'] ?? null)
+            === 'operator-disabled'
+        && $account->testTimerInterval('MqttPilotClosure') === 0
+        && $account->testSnapshotPersistentState()['variables']
+            === $variablesBeforeDisable,
+    'Feature disable did not complete owned pilot closure.'
+);
+$lifecycleOperations = [];
 $account->ApplyChanges();
 assertLifecycle(
     $account->testStatus() === IS_ACTIVE
@@ -2472,6 +2494,16 @@ $disableWinsAccount->testSetKernelStartTime($clock->now());
 $disableWinsAccount->MessageSink(11, 0, IPS_KERNELSTARTED, []);
 $disableWinsAccount->testSetProperty('EnableMqttShadow', false);
 $disableWinsAccount->ApplyChanges();
+$disableWinsAccount->ProcessMqttPilotClosure();
+$disableWinsClosure = decodeLifecycle(
+    $disableWinsAccount->GetMqttPilotDiagnostics()
+);
+assertLifecycle(
+    ($disableWinsClosure['closureState'] ?? null) === 'Closed'
+        && ($disableWinsClosure['closureReason'] ?? null)
+            === 'operator-disabled',
+    'Explicit disable did not complete before kernel reconciliation.'
+);
 $credentialCallsBeforeDisableWins = $credentialCalls;
 $lifecycleOperations = [];
 $clock->advance(15);

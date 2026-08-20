@@ -33,6 +33,8 @@ The mower remained docked. The client:
 | `location-docking.json` | Preserve numeric location state 5 aligned with Docking. |
 | `location-docked.json` | Preserve numeric location state 2 aligned with final Docked. |
 | `location-type-4-no-time.json` | Preserve the observed task-delay message without a source timestamp. |
+| `location-task-progress.json` | Synthetic bounded progress, area-candidate and opaque work-position shape derived from sanitized evidence. |
+| `location-partitions.json` | Synthetic bounded partition-list shape derived from sanitized evidence. |
 | `symcon-envelope-location.json` | Synthetic native Symcon receive envelope carrying a location payload string. |
 | `symcon-envelope-state.json` | Synthetic native Symcon receive envelope carrying a direct-state payload string. |
 | `symcon-envelope-retained.json` | Synthetic retained-envelope classification case; not evidence that Navimow sends retained state. |
@@ -56,8 +58,9 @@ The active comparison additionally proves:
   timestamp;
 - numeric location states 4, 5 and 2 aligned with Running, Docking and final
   Docked in one observed transition;
-- `type: 4` can arrive without `time` and must not update a timestamp-ordered
-  accumulator.
+- `type: 4` task-delay evidence can arrive without `time`; it may update only
+  the bounded task-delay projection using local receipt ordering and must not
+  advance the last manufacturer source timestamp.
 
 The observed numeric values do not yet prove:
 

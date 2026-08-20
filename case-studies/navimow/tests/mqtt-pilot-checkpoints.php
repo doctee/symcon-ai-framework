@@ -686,18 +686,19 @@ assertPilotCheckpoint(
 
 $restarted->testSetProperty('EnableMqttShadow', false);
 $restarted->ApplyChanges();
-$closed = decodePilotCheckpoint(
+$closedMalformedMigration = decodePilotCheckpoint(
     $restarted->GetMqttPilotDiagnostics()
 );
 assertPilotCheckpoint(
-    ($closed['active'] ?? null) === false
-        && ($closed['stoppedAt'] ?? null) === $clock->now()
-        && ($closed['nextCheckpointAt'] ?? null) === 0
+    ($closedMalformedMigration['active'] ?? null) === false
+        && ($closedMalformedMigration['stoppedAt'] ?? null)
+            === $clock->now()
+        && ($closedMalformedMigration['nextCheckpointAt'] ?? null) === 0
         && $restarted->testTimerInterval('MqttPilotCheckpoint') === 0
         && count(
             $restarted->testSnapshotPersistentState()['variables']
         ) === 6,
-    'Disabling MQTT did not close the internal pilot schedule.'
+    'Disabling MQTT did not close the migrated internal schedule.'
 );
 assertPilotCheckpoint(
     !str_contains(
@@ -707,6 +708,102 @@ assertPilotCheckpoint(
         'SYNTHETIC_PRIVATE_VALUE'
     ),
     'Version-1 migration retained unsupported nested fields.'
+);
+
+$operatorClosureAccount = new MqttPilotCheckpointAccount(
+    7102,
+    $clock,
+    1699999900
+);
+$operatorClosureAccount->Create();
+$operatorClosureAccount->ApplyChanges();
+$operatorClosureAccount->testSetProperty('EnableMqttShadow', true);
+invokePilotPrivate(
+    $operatorClosureAccount,
+    'startMqttPilotObservationIfNeeded'
+);
+$operatorClosureAccount->testSetProperty('EnableMqttShadow', false);
+$operatorClosureAccount->ApplyChanges();
+$operatorClosureRequested = decodePilotCheckpoint(
+    $operatorClosureAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($operatorClosureRequested['active'] ?? null) === false
+        && ($operatorClosureRequested['stoppedAt'] ?? null)
+            === $clock->now()
+        && ($operatorClosureRequested['closureState'] ?? null)
+            === 'ClosureRequested'
+        && ($operatorClosureRequested['closureReason'] ?? null)
+            === 'operator-disabled'
+        && $operatorClosureAccount->testTimerInterval(
+            'MqttPilotClosure'
+        ) === 1000,
+    'Disabling an active pilot did not request owned closure.'
+);
+$operatorClosureAccount->ProcessMqttPilotClosure();
+$operatorClosed = decodePilotCheckpoint(
+    $operatorClosureAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($operatorClosed['closureState'] ?? null) === 'Closed'
+        && ($operatorClosed['closureReason'] ?? null)
+            === 'operator-disabled'
+        && ($operatorClosed['closureCompletedAt'] ?? null)
+            === $clock->now()
+        && $operatorClosureAccount->testOwnApplyChangesCount() === 1
+        && $operatorClosureAccount->testTimerInterval(
+            'MqttPilotClosure'
+        ) === 0,
+    'Operator disable did not complete exactly one owned closure.'
+);
+
+$staleClosureAccount = new MqttPilotCheckpointAccount(
+    7104,
+    $clock,
+    1699999900
+);
+$staleClosureAccount->Create();
+$staleClosureAccount->testSetAttribute(
+    'MqttPilotObservationRegistry',
+    json_encode([
+        'formatVersion' => 2,
+        'active' => false,
+        'sessionSequence' => 7,
+        'startedAt' => 1699999000,
+        'hardStopAt' => 1700258200,
+        'closureState' => 'Active',
+        'closureReason' => '',
+        'stoppedAt' => 1699999900,
+        'nextCheckpointAt' => 0,
+    ], JSON_THROW_ON_ERROR)
+);
+$staleClosureAccount->ApplyChanges();
+$staleRequested = decodePilotCheckpoint(
+    $staleClosureAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($staleRequested['active'] ?? null) === false
+        && ($staleRequested['closureState'] ?? null)
+            === 'ClosureRequested'
+        && ($staleRequested['closureReason'] ?? null)
+            === 'operator-disabled'
+        && $staleClosureAccount->testTimerInterval(
+            'MqttPilotClosure'
+        ) === 1000,
+    'Stale inactive Active closure was not reconciled after update.'
+);
+$staleClosureAccount->ProcessMqttPilotClosure();
+$staleClosed = decodePilotCheckpoint(
+    $staleClosureAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($staleClosed['closureState'] ?? null) === 'Closed'
+        && ($staleClosed['closureReason'] ?? null)
+            === 'operator-disabled'
+        && ($staleClosed['closureCompletedAt'] ?? null)
+            === $clock->now()
+        && $staleClosureAccount->testOwnApplyChangesCount() === 1,
+    'Stale inactive Active closure did not complete idempotently.'
 );
 
 $malformedCleanupAccount = new MqttPilotCheckpointAccount(

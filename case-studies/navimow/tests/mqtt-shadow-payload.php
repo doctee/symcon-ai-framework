@@ -203,10 +203,61 @@ $timestampLessResult = MqttPartialStateAccumulator::reduce(
     SHADOW_RECEIVED_AT + 3
 );
 assertShadow(
-    $timestampLessResult['accepted'] === false
-        && $timestampLessResult['reason'] === 'missing-timestamp'
-        && $timestampLessResult['state'] === $secondLocation['state'],
-    'Timestamp-less location patch changed shadow state.'
+    $timestampLessResult['accepted'] === true
+        && $timestampLessResult['reason'] === 'applied'
+        && $timestampLess['patches'][0]['classification']
+            === 'receipt-timestamped-task'
+        && $timestampLessResult['state']['fields']['taskDelay'] === true
+        && $timestampLessResult['state']['fields']
+            ['taskTelemetryReceivedAt'] === SHADOW_RECEIVED_AT + 3
+        && $timestampLessResult['state']['lastSourceTimestamp']
+            === $secondLocation['state']['lastSourceTimestamp'],
+    'Timestamp-less task delay was not safely receipt-timestamped.'
+);
+
+$taskProgress = MqttPayloadParser::parse(
+    SHADOW_LOCATION_TOPIC,
+    loadShadowPayload('location-task-progress.json'),
+    SHADOW_DEVICE_ID,
+    SHADOW_RECEIVED_AT + 4
+);
+$taskPatch = $taskProgress['patches'][0];
+assertShadow(
+    $taskPatch['fields'] === [
+        'action' => 8,
+        'currentMowProgress' => 4250,
+        'mowStartType' => 0,
+        'mowingPercentage' => 42.0,
+        'mowingWeekArea' => 123.45,
+        'subAction' => 6,
+        'subtotalArea' => 23.45,
+        'locationType' => 1,
+        'taskTelemetryReceivedAt' => SHADOW_RECEIVED_AT + 4,
+    ]
+        && $taskPatch['areaIdentity'] === ['boundaryId' => 7]
+        && $taskPatch['unknownFieldCount'] === 0
+        && !str_contains(
+            json_encode($taskPatch, JSON_THROW_ON_ERROR),
+            str_repeat('a', 128)
+        ),
+    'Task progress was not reduced to the bounded diagnostic contract.'
+);
+
+$partition = MqttPayloadParser::parse(
+    SHADOW_LOCATION_TOPIC,
+    loadShadowPayload('location-partitions.json'),
+    SHADOW_DEVICE_ID,
+    SHADOW_RECEIVED_AT + 5
+);
+assertShadow(
+    $partition['patches'][0]['areaIdentity'] === [
+        'partitionIds' => [7, 9],
+        ]
+        && $partition['patches'][0]['fields'] === [
+            'locationType' => 3,
+            'taskTelemetryReceivedAt' => SHADOW_RECEIVED_AT + 5,
+        ],
+    'Partition evidence was not retained as bounded transient identity.'
 );
 
 $serialized = MqttPartialStateAccumulator::serializeState(
@@ -257,6 +308,24 @@ assertShadowThrows(
         SHADOW_RECEIVED_AT
     ),
     'Invalid geometry was accepted.'
+);
+assertShadowThrows(
+    static fn (): array => MqttPayloadParser::parse(
+        SHADOW_LOCATION_TOPIC,
+        '[{"taskDelay":"true","type":4}]',
+        SHADOW_DEVICE_ID,
+        SHADOW_RECEIVED_AT
+    ),
+    'Invalid task-delay type was accepted.'
+);
+assertShadowThrows(
+    static fn (): array => MqttPayloadParser::parse(
+        SHADOW_LOCATION_TOPIC,
+        '[{"partitionIds":[],"time":1700000003000,"type":3}]',
+        SHADOW_DEVICE_ID,
+        SHADOW_RECEIVED_AT
+    ),
+    'Empty partition list was accepted.'
 );
 assertShadowThrows(
     static fn (): array => MqttPayloadParser::parse(

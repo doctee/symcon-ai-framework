@@ -99,6 +99,18 @@ function mqttAccountLocationEnvelope(): string
     ], JSON_THROW_ON_ERROR);
 }
 
+function mqttAccountTaskEnvelope(array $payload): string
+{
+    return json_encode([
+        'DataID' => '{7F7632D9-FA40-4F38-8DEA-C83CD4325A32}',
+        'PacketType' => 3,
+        'Payload' => json_encode([$payload], JSON_THROW_ON_ERROR),
+        'QualityOfService' => 0,
+        'Retain' => false,
+        'Topic' => '/downlink/vehicle/DEVICE_001/realtimeDate/location',
+    ], JSON_THROW_ON_ERROR);
+}
+
 $account = new NavimowAccount(MQTT_TEST_ACCOUNT_ID);
 $account->Create();
 $account->ApplyChanges();
@@ -264,6 +276,74 @@ assertMqttAccount(
         && !str_contains($positionJson, '/downlink/')
         && !str_contains($positionJson, 'posture'),
     'Position diagnostics exposed an identity, topic or raw field name.'
+);
+
+$taskProgressResult = $account->IngestMqttEnvelope(
+    MQTT_TEST_RECEIVER_ID,
+    mqttAccountTaskEnvelope([
+        'action' => 8,
+        'currentMowBoundary' => 700001,
+        'currentMowProgress' => 4250,
+        'mapWorkPosition' => str_repeat('a', 128),
+        'mowStartType' => 0,
+        'mowingPercentage' => 42,
+        'mowingWeekArea' => '123.45',
+        'subAction' => 6,
+        'subtotalArea' => '23.45',
+        'time' => 1700000003000,
+        'type' => 1,
+    ])
+);
+$partitionResult = $account->IngestMqttEnvelope(
+    MQTT_TEST_RECEIVER_ID,
+    mqttAccountTaskEnvelope([
+        'partitionIds' => [700001, 700002],
+        'time' => 1700000004000,
+        'type' => 3,
+    ])
+);
+$taskDelayResult = $account->IngestMqttEnvelope(
+    MQTT_TEST_RECEIVER_ID,
+    mqttAccountTaskEnvelope([
+        'taskDelay' => true,
+        'type' => 4,
+    ])
+);
+$taskDiagnosticsJson = $account->GetMqttDiagnostics();
+$taskDiagnostics = decodeMqttAccount($taskDiagnosticsJson);
+$taskFields = $taskDiagnostics['shadow']['observation']['fields'] ?? [];
+assertMqttAccount(
+    $taskProgressResult === 'accepted'
+        && $partitionResult === 'accepted'
+        && $taskDelayResult === 'accepted'
+        && ($taskFields['action'] ?? null) === 8
+        && ($taskFields['subAction'] ?? null) === 6
+        && ($taskFields['mowStartType'] ?? null) === 0
+        && ($taskFields['currentMowProgress'] ?? null) === 4250
+        && ($taskFields['mowingPercentage'] ?? null) === 42
+        && ($taskFields['subtotalArea'] ?? null) === 23.45
+        && ($taskFields['mowingWeekArea'] ?? null) === 123.45
+        && ($taskFields['taskDelay'] ?? null) === true
+        && ($taskFields['partitionCount'] ?? null) === 2
+        && preg_match(
+            '/^[a-f0-9]{64}$/D',
+            (string) ($taskFields['boundaryKey'] ?? '')
+        ) === 1
+        && preg_match(
+            '/^[a-f0-9]{64}$/D',
+            (string) ($taskFields['partitionKey'] ?? '')
+        ) === 1
+        && !str_contains($taskDiagnosticsJson, str_repeat('a', 128)),
+    'Task telemetry did not reach the bounded diagnostic projection.'
+);
+$taskShadowJson = $account->testReadAttribute('MqttShadowState');
+assertMqttAccount(
+    !str_contains($taskShadowJson, '700001')
+        && !str_contains($taskShadowJson, '700002')
+        && !str_contains($taskShadowJson, 'currentMowBoundary')
+        && !str_contains($taskShadowJson, 'partitionIds')
+        && !str_contains($taskShadowJson, 'mapWorkPosition'),
+    'Raw task identity or opaque work-position data was persisted.'
 );
 $positionRoot = decodeMqttAccount(
     $account->testReadAttribute('MqttPositionDiagnostic')

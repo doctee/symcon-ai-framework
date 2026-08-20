@@ -73,7 +73,19 @@
           "batteryLevel": 43,
           "mowingPercentage": null,
           "locationType": null,
-          "locationVehicleStateCode": null
+          "locationVehicleStateCode": null,
+          "action": null,
+          "subAction": null,
+          "mowStartType": null,
+          "currentMowProgress": null,
+          "subtotalArea": null,
+          "mowingWeekArea": null,
+          "taskDelay": null,
+          "taskTelemetryReceivedAt": null,
+          "taskTelemetryAgeSeconds": null,
+          "boundaryKey": null,
+          "partitionKey": null,
+          "partitionCount": null
         }
       }
     }
