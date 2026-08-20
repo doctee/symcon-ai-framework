@@ -1626,21 +1626,26 @@ scaffoldCheck(
     'DWD full native horizon differs.'
 );
 $capturedOuterWarnings = 0;
+$logCountBeforeTransientFailure = count($scaffoldLogMessages);
 set_error_handler(static function () use (&$capturedOuterWarnings): bool {
     $capturedOuterWarnings++;
 
     return true;
 }, E_USER_WARNING);
 $dwdNowcast->testQueueTransportWarning(
-    'Failure when receiving data from the peer: OpenSSL SSL_read: error:0A0001BB:SSL routines::bad record type'
+    'SSL connect error: TLS connect error: error:0A0000D9:SSL routines::unsolicited extension'
 );
-$dwdNowcast->testQueueResponse(false);
+$dwdNowcast->testQueueResponse('classified warning body must not be parsed');
 $dwdFailure = json_decode($dwdNowcast->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
 trigger_error('DWD warning-handler restoration probe', E_USER_WARNING);
 restore_error_handler();
 scaffoldCheck(
     $capturedOuterWarnings === 1,
     'DWD transport warning escaped or the previous warning handler was not restored.'
+);
+scaffoldCheck(
+    count($scaffoldLogMessages) === $logCountBeforeTransientFailure,
+    'DWD transient transport failure emitted an operational log entry.'
 );
 scaffoldCheck(($dwdFailure['code'] ?? null) === 'transport_error', 'DWD failure differs.');
 scaffoldCheck($dwdNowcast->testReadValue('DataState') === 4, 'DWD last-good failure must warn.');
@@ -1652,7 +1657,7 @@ $dwdDiagnostics = json_decode($dwdNowcast->GetDiagnosticsJson(), true, 16, JSON_
 scaffoldCheck(
     ($dwdDiagnostics['transport']['failureCount'] ?? null) === 1
     && ($dwdDiagnostics['transport']['consecutiveFailures'] ?? null) === 1
-    && ($dwdDiagnostics['transport']['lastFailureClass'] ?? null) === 'tls_record',
+    && ($dwdDiagnostics['transport']['lastFailureClass'] ?? null) === 'tls_handshake',
     'DWD transport diagnostics did not preserve the failure.'
 );
 scaffoldCheck(
@@ -1671,9 +1676,79 @@ scaffoldCheck(
     'DWD transport recovery diagnostics differ.'
 );
 scaffoldCheck(
-    count($scaffoldLogMessages) === $logCountBeforeRecovery + 1
-    && str_contains($scaffoldLogMessages[array_key_last($scaffoldLogMessages)]['message'], 'recovered'),
-    'DWD successful retry did not emit one recovery diagnostic.'
+    count($scaffoldLogMessages) === $logCountBeforeRecovery,
+    'DWD short successful retry emitted a recovery log entry.'
+);
+$logCountBeforeSustainedFailure = count($scaffoldLogMessages);
+$capturedOuterWarnings = 0;
+set_error_handler(static function () use (&$capturedOuterWarnings): bool {
+    $capturedOuterWarnings++;
+
+    return true;
+}, E_USER_WARNING);
+for ($attempt = 1; $attempt <= 4; $attempt++) {
+    $dwdNowcast->testSetNow(1735718880 + ($attempt * 60));
+    $dwdNowcast->testQueueTransportWarning(
+        'Error 503, <html><title>Information</title><body>Service unavailable</body></html>'
+    );
+    $dwdNowcast->testQueueResponse(false);
+    $sustainedFailure = json_decode($dwdNowcast->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+    scaffoldCheck(
+        ($sustainedFailure['code'] ?? null) === 'transport_error',
+        'DWD sustained transport failure differs.'
+    );
+}
+trigger_error('DWD HTTP warning-handler restoration probe', E_USER_WARNING);
+restore_error_handler();
+scaffoldCheck(
+    $capturedOuterWarnings === 1,
+    'DWD HTTP server warning escaped or the previous warning handler was not restored.'
+);
+scaffoldCheck(
+    count($scaffoldLogMessages) === $logCountBeforeSustainedFailure + 1
+    && str_contains($scaffoldLogMessages[array_key_last($scaffoldLogMessages)]['message'], 'retry 4/4')
+    && str_contains($scaffoldLogMessages[array_key_last($scaffoldLogMessages)]['message'], 'http_server_error'),
+    'DWD sustained failure did not emit exactly one final diagnostic.'
+);
+$dwdDiagnostics = json_decode($dwdNowcast->GetDiagnosticsJson(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(
+    ($dwdDiagnostics['transport']['failureCount'] ?? null) === 5
+    && ($dwdDiagnostics['transport']['consecutiveFailures'] ?? null) === 4
+    && ($dwdDiagnostics['transport']['lastFailureClass'] ?? null) === 'http_server_error',
+    'DWD sustained transport diagnostics differ.'
+);
+$dwdNowcast->testSetNow(1735719180);
+$dwdNowcast->testQueueResponse(scaffoldDwdResponse(1735718400));
+$sustainedRecovery = json_decode($dwdNowcast->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($sustainedRecovery['success'] ?? null) === true, 'DWD sustained retry did not recover.');
+scaffoldCheck(
+    count($scaffoldLogMessages) === $logCountBeforeSustainedFailure + 2
+    && str_contains($scaffoldLogMessages[array_key_last($scaffoldLogMessages)]['message'], 'recovered after 4'),
+    'DWD sustained recovery did not emit exactly one diagnostic.'
+);
+$logCountBeforeStaleFailure = count($scaffoldLogMessages);
+$dwdNowcast->testSetNow(1735720200);
+$dwdNowcast->testQueueTransportWarning('Timeout was reached: Operation timed out with 0 bytes received');
+$dwdNowcast->testQueueResponse(false);
+$staleFailure = json_decode($dwdNowcast->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(
+    ($staleFailure['code'] ?? null) === 'transport_error'
+    && $dwdNowcast->testReadValue('DataState') === 3,
+    'DWD stale transport failure differs.'
+);
+scaffoldCheck(
+    count($scaffoldLogMessages) === $logCountBeforeStaleFailure + 1
+    && str_contains($scaffoldLogMessages[array_key_last($scaffoldLogMessages)]['message'], 'retry 1/4'),
+    'DWD stale transition did not emit exactly one diagnostic.'
+);
+$dwdNowcast->testSetNow(1735720260);
+$dwdNowcast->testQueueResponse(scaffoldDwdResponse(1735720200));
+$staleRecovery = json_decode($dwdNowcast->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($staleRecovery['success'] ?? null) === true, 'DWD stale retry did not recover.');
+scaffoldCheck(
+    count($scaffoldLogMessages) === $logCountBeforeStaleFailure + 2
+    && str_contains($scaffoldLogMessages[array_key_last($scaffoldLogMessages)]['message'], 'recovered after 1'),
+    'DWD stale recovery did not emit exactly one diagnostic.'
 );
 $dwdNowcast->testSetProperty('PollingOffsetSeconds', 121);
 $dwdNowcast->ApplyChanges();
@@ -1684,6 +1759,29 @@ $dwdNowcast->ApplyChanges();
 scaffoldCheck(
     $dwdNowcast->testReadValue('ForecastPointCount') === 0,
     'Changed DWD window retained an incompatible cache.'
+);
+$logCountBeforeInitialFailure = count($scaffoldLogMessages);
+$dwdNowcast->testSetNow(1735720320);
+$dwdNowcast->testQueueTransportWarning('Timeout was reached: Operation timed out with 0 bytes received');
+$dwdNowcast->testQueueResponse(false);
+$initialFailure = json_decode($dwdNowcast->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(
+    ($initialFailure['code'] ?? null) === 'transport_error'
+    && $dwdNowcast->testReadValue('DataState') === 5,
+    'DWD initial transport failure differs.'
+);
+scaffoldCheck(
+    count($scaffoldLogMessages) === $logCountBeforeInitialFailure + 1,
+    'DWD missing-data failure did not emit exactly one diagnostic.'
+);
+$dwdNowcast->testSetNow(1735720380);
+$dwdNowcast->testQueueResponse(scaffoldDwdResponse(1735720200));
+$initialRecovery = json_decode($dwdNowcast->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($initialRecovery['success'] ?? null) === true, 'DWD initial retry did not recover.');
+scaffoldCheck(
+    count($scaffoldLogMessages) === $logCountBeforeInitialFailure + 2
+    && str_contains($scaffoldLogMessages[array_key_last($scaffoldLogMessages)]['message'], 'recovered after 1'),
+    'DWD initial recovery did not emit exactly one diagnostic.'
 );
 $dwdNowcast->testSetProperty('ForecastWindowMinutes', 61);
 $dwdNowcast->ApplyChanges();

@@ -43,6 +43,10 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Reduced DWD nowcast log noise by classifying observed TLS-handshake and HTTP
+  5xx provider warnings inside the bounded transport adapter. Brief recovered
+  outages remain in structured counters; operational logs are reserved for
+  missing initial data, stale forecasts and exhausted retries.
 - Added one bounded, request-free Solar dependency reconciliation after
   `IPS_KERNELSTARTED`, preventing a transient Weather startup-ordering gap from
   leaving an otherwise valid Solar instance permanently in configuration error.

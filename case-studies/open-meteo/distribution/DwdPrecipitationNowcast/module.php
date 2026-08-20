@@ -255,6 +255,7 @@ class DwdPrecipitationNowcast extends IPSModule
                 $attemptedAt
             );
             $failedAttempts = $state['retryCount'];
+            $shouldLogRecovery = $this->shouldLogRecovery($state);
             $transportDiagnostics = $this->transportDiagnostics();
             $transportFailures = $transportDiagnostics['consecutiveFailures'];
             $state = ForecastStateReducer::success(
@@ -274,7 +275,7 @@ class DwdPrecipitationNowcast extends IPSModule
             $this->scheduleNormalPolling();
             $this->SetStatus(self::STATUS_ACTIVE);
 
-            if ($failedAttempts > 0) {
+            if ($shouldLogRecovery) {
                 $message = sprintf(
                     'Update recovered after %d failed attempt(s)',
                     $failedAttempts
@@ -311,7 +312,9 @@ class DwdPrecipitationNowcast extends IPSModule
             return true;
         }, E_WARNING | E_USER_WARNING);
         try {
-            return $this->performUrlRequest($url, $timeoutMilliseconds);
+            $body = $this->performUrlRequest($url, $timeoutMilliseconds);
+
+            return $this->capturedTransportWarningClass === null ? $body : false;
         } finally {
             restore_error_handler();
         }
@@ -350,7 +353,7 @@ class DwdPrecipitationNowcast extends IPSModule
         bool $retryable,
         ?string $detailCode = null
     ): string {
-        $previousState = $state['state'];
+        $previousState = $state;
         $state = ForecastStateReducer::failure($state, $attemptedAt, $errorCode, $retryable);
         $state = ForecastStateReducer::evaluateFreshness(
             $state,
@@ -362,7 +365,7 @@ class DwdPrecipitationNowcast extends IPSModule
         if ($retryable) {
             $this->scheduleAfterFailure($state['retryCount']);
         }
-        if ($state['retryCount'] === 1 || $state['state'] !== $previousState) {
+        if ($this->shouldLogFailure($previousState, $state, $retryable)) {
             $context = $detailCode === null ? $errorCode : $errorCode . ', ' . $detailCode;
             IPS_LogMessage(
                 'DwdPrecipitationNowcast',
@@ -376,6 +379,39 @@ class DwdPrecipitationNowcast extends IPSModule
         }
 
         return $this->result(false, $errorCode);
+    }
+
+    /**
+     * @param RuntimeState $previousState
+     * @param RuntimeState $state
+     */
+    private function shouldLogFailure(array $previousState, array $state, bool $retryable): bool
+    {
+        if (!$retryable) {
+            return true;
+        }
+        if (!$state['hasData'] && $previousState['state'] !== ForecastStateReducer::STATE_ERROR) {
+            return true;
+        }
+        if (
+            $state['state'] === ForecastStateReducer::STATE_STALE
+            && $previousState['state'] !== ForecastStateReducer::STATE_STALE
+        ) {
+            return true;
+        }
+
+        return $previousState['retryCount'] < $state['maxRetries']
+            && $state['retryCount'] >= $state['maxRetries'];
+    }
+
+    /** @param RuntimeState $state */
+    private function shouldLogRecovery(array $state): bool
+    {
+        return $state['retryCount'] > 0 && (
+            !$state['hasData']
+            || $state['state'] === ForecastStateReducer::STATE_STALE
+            || $state['retryCount'] >= $state['maxRetries']
+        );
     }
 
     /** @return RuntimeState */

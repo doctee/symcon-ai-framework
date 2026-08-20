@@ -124,6 +124,23 @@ same(
     'DWD DNS warning classification differs.'
 );
 same(
+    TransportDiagnostics::CLASS_TLS_HANDSHAKE,
+    TransportDiagnostics::classifyWarning(
+        'SSL connect error: TLS connect error: error:0A0000D9:SSL routines::unsolicited extension'
+    ),
+    'DWD TLS handshake warning classification differs.'
+);
+same(
+    TransportDiagnostics::CLASS_HTTP_SERVER_ERROR,
+    TransportDiagnostics::classifyWarning('Error 503, upstream service temporarily unavailable'),
+    'DWD HTTP server warning classification differs.'
+);
+same(
+    null,
+    TransportDiagnostics::classifyWarning('Error 404, provider contract not found'),
+    'DWD non-retryable HTTP warning was classified as a server outage.'
+);
+same(
     TransportDiagnostics::CLASS_TIMEOUT,
     TransportDiagnostics::classifyWarning('Timeout was reached: Operation timed out with 0 bytes received'),
     'DWD timeout warning classification differs.'
