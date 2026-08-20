@@ -362,6 +362,7 @@ template or a general SAEF reference implementation.
 | `332-early-closure-task-parser-publication-readiness.md` | Freezes the exact three-file standalone candidate, current rollback baseline and reduced SAEF, publication and live gate sequence. |
 | `333-early-closure-task-parser-standalone-publication.md` | Records the exact three-file standalone publication, complete-tree equality and unchanged metadata, REST, command and public-variable boundaries. |
 | `334-early-closure-task-parser-disabled-symcon-rollout.md` | Records the supported disabled update, stale early-cleanup reconciliation and immediate plus delayed credential-free Symcon verification. |
+| `335-early-closure-task-parser-bounded-pilot-activation.md` | Records the fresh token gate, single restart-free receive-only activation and phased MQTT, position and task-evidence observation with mandatory cleanup. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
