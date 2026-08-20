@@ -10,9 +10,11 @@ use JsonException;
 final class TransportDiagnostics
 {
     public const CLASS_TLS_RECORD = 'tls_record';
+    public const CLASS_TLS_HANDSHAKE = 'tls_handshake';
     public const CLASS_DNS_TIMEOUT = 'dns_timeout';
     public const CLASS_TIMEOUT = 'timeout';
     public const CLASS_CONNECTION = 'connection';
+    public const CLASS_HTTP_SERVER_ERROR = 'http_server_error';
     public const CLASS_NO_RESPONSE = 'no_response';
     public const CLASS_RESPONSE_TOO_LARGE = 'response_too_large';
     public const CLASS_EXCEPTION = 'exception';
@@ -112,6 +114,18 @@ final class TransportDiagnostics
             return self::CLASS_TLS_RECORD;
         }
         if (
+            str_contains($normalized, 'unsolicited extension')
+            || (
+                str_contains($normalized, 'ssl connect error')
+                && str_contains($normalized, 'tls connect error')
+            )
+        ) {
+            return self::CLASS_TLS_HANDSHAKE;
+        }
+        if (preg_match('/\berror\s+5[0-9]{2}\b/', $normalized) === 1) {
+            return self::CLASS_HTTP_SERVER_ERROR;
+        }
+        if (
             str_contains($normalized, 'resolving timed out')
             || str_contains($normalized, 'could not resolve host')
         ) {
@@ -161,9 +175,11 @@ final class TransportDiagnostics
             $failureClass,
             [
                 self::CLASS_TLS_RECORD,
+                self::CLASS_TLS_HANDSHAKE,
                 self::CLASS_DNS_TIMEOUT,
                 self::CLASS_TIMEOUT,
                 self::CLASS_CONNECTION,
+                self::CLASS_HTTP_SERVER_ERROR,
                 self::CLASS_NO_RESPONSE,
                 self::CLASS_RESPONSE_TOO_LARGE,
                 self::CLASS_EXCEPTION,

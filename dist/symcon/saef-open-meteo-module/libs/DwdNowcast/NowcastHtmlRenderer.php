@@ -117,8 +117,7 @@ final class NowcastHtmlRenderer
     public static function colorForIntensity(
         float $intensity,
         float $rainThresholdMmPerHour
-    ): string
-    {
+    ): string {
         if (
             !is_finite($intensity)
             || $intensity < 0.0

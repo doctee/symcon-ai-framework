@@ -13,6 +13,13 @@ Transport failures are classified without retaining the URL or raw warning,
 successful recovery is logged once, and repeated failures no longer generate
 one generic log entry per retry while the operational state remains unchanged.
 
+Module version `0.8.11` also classifies the observed OpenSSL handshake warning
+and HTTP 5xx provider responses inside the bounded transport boundary. Short
+failures that recover before data becomes stale remain visible in structured
+diagnostics but no longer produce a failure-and-recovery pair in the Symcon
+log. Missing initial data, stale data and an exhausted retry sequence still
+produce one operational failure entry and one later recovery entry.
+
 ## Purpose
 
 `DwdPrecipitationNowcast` adds a genuine radar-based short-range precipitation
