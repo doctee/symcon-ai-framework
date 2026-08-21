@@ -24,6 +24,8 @@ Implement a new and independent `MediaCarousel` module using the official
 IP-Symcon HTML-SDK.
 
 - The PHP module validates configuration and supplies media content.
+- The initial tile contains no media bytes; the browser requests the current
+  image after the HTML shell has initialized.
 - The browser owns sequence timing, gesture state and the current index.
 - The browser prefetches all compressed sequence sources progressively.
 - Only the previous, current and next images are attached as render slots.
@@ -45,8 +47,9 @@ Client-local sequence state also prevents independent visualisation sessions
 from moving one shared server-side index.
 
 Progressive prefetch matches the normal full-sequence viewing pattern without
-blocking the initial tile on all ten images. Separating compressed source cache
-from the three render slots bounds intentional decoded-image ownership.
+blocking tile creation on a synchronous media read. Separating compressed
+source cache from the three render slots bounds intentional decoded-image
+ownership.
 
 ## Consequences
 
