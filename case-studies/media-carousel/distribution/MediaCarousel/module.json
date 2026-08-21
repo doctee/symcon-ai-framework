@@ -1,0 +1,14 @@
+{
+  "id": "{41D0C5ED-8331-4B26-A44E-6FDCEC1BC41F}",
+  "name": "MediaCarousel",
+  "type": 3,
+  "vendor": "SAEF",
+  "aliases": [
+    "SAEF Media Carousel"
+  ],
+  "url": "https://github.com/doctee/symcon-ai-framework",
+  "parentRequirements": [],
+  "childRequirements": [],
+  "implemented": [],
+  "prefix": "SAEFMC"
+}

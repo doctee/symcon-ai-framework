@@ -29,6 +29,12 @@
         "control-light:fileset-check": [
             "@php tools/build-symcon-fileset.php --check deployments/symcon/control-light.fileset.json"
         ],
+        "media-carousel:fileset-build": [
+            "@php tools/build-symcon-module-fileset.php deployments/symcon/media-carousel-module.fileset.json"
+        ],
+        "media-carousel:fileset-check": [
+            "@php tools/build-symcon-module-fileset.php --check deployments/symcon/media-carousel-module.fileset.json"
+        ],
         "test:bundles": [
             "@php tests/bundles/ensure-variable-bundle.php"
         ],
@@ -120,6 +126,11 @@
         "test:navimow-distribution": [
             "@php case-studies/navimow/tools/validate-distribution.php"
         ],
+        "test:media-carousel": [
+            "@php case-studies/media-carousel/tests/module.php",
+            "@php case-studies/media-carousel/tools/validate-distribution.php",
+            "@php case-studies/media-carousel/tests/module-fileset.php"
+        ],
         "lint": [
             "@php tools/lint.php"
         ],
@@ -137,6 +148,7 @@
             "@bundle:check",
             "@fileset:check",
             "@control-light:fileset-check",
+            "@media-carousel:fileset-check",
             "@test:bundles",
             "@test:filesets",
             "@test:control-light-fileset",
@@ -165,6 +177,7 @@
             "@test:navimow-rest-auth",
             "@test:navimow-pilot",
             "@test:navimow-distribution",
+            "@test:media-carousel",
             "@phpstan",
             "@phpstan:bundle",
             "@phpcs"

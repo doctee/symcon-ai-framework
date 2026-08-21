@@ -1,0 +1,36 @@
+{
+    "formatVersion": 1,
+    "name": "saef-media-carousel-module",
+    "phpMinimum": "8.2",
+    "outputDirectory": "dist/symcon/saef-media-carousel-module",
+    "files": [
+        {
+            "source": "case-studies/media-carousel/distribution/MediaCarousel/carousel.js",
+            "target": "MediaCarousel/carousel.js"
+        },
+        {
+            "source": "case-studies/media-carousel/distribution/MediaCarousel/form.json",
+            "target": "MediaCarousel/form.json"
+        },
+        {
+            "source": "case-studies/media-carousel/distribution/MediaCarousel/locale.json",
+            "target": "MediaCarousel/locale.json"
+        },
+        {
+            "source": "case-studies/media-carousel/distribution/MediaCarousel/module.html",
+            "target": "MediaCarousel/module.html"
+        },
+        {
+            "source": "case-studies/media-carousel/distribution/MediaCarousel/module.json",
+            "target": "MediaCarousel/module.json"
+        },
+        {
+            "source": "case-studies/media-carousel/distribution/MediaCarousel/module.php",
+            "target": "MediaCarousel/module.php"
+        },
+        {
+            "source": "case-studies/media-carousel/distribution/library.json",
+            "target": "library.json"
+        }
+    ]
+}

@@ -11,6 +11,13 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added an offline-only MediaCarousel HTML-SDK candidate for ordered Symcon
+  image media objects. It progressively prefetches the normal full sequence,
+  commits transitions only after browser decode, keeps gesture/index state
+  client-local and leaves the native content switcher unchanged behind a
+  separate live pilot gate. A deterministic standalone module fileset,
+  structural validator and publication-inventory regression close the
+  repository-only candidate without committing, publishing or installing it.
 - Added reconciliation-time MQTT Client subscription coverage for every
   exporter command topic and retained owned adapter/event identities across
   runtime namespace changes. The state-only Home Assistant and Apple Home

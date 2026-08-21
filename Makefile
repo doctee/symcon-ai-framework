@@ -1,4 +1,4 @@
-.PHONY: bundle-build bundle-check fileset-build fileset-check control-light-fileset-build control-light-fileset-check open-meteo-fileset-build open-meteo-fileset-check open-meteo-publication-check open-meteo-publication-prepare test-bundles test-filesets test-control-light-fileset test-deployment-restart test-deployment-channel test-runtime-source-mirror test-runtime-health-probe test-helpers test-mqtt-exporter-core test-mqtt-exporter-runtime test-mqtt-exporter-reconcile test-mqtt-exporter-execute test-mqtt-exporter-dispatch test-mqtt-exporter-cleanup test-mqtt-exporter-fixtures test-control-light-core test-control-light-runtime test-control-light-topology test-control-light-runtime-mirror test-navimow-rest-auth test-navimow-pilot test-navimow-distribution test-open-meteo-publication test-open-meteo-offline lint phpstan phpstan-bundle phpcs check
+.PHONY: bundle-build bundle-check fileset-build fileset-check control-light-fileset-build control-light-fileset-check media-carousel-fileset-build media-carousel-fileset-check open-meteo-fileset-build open-meteo-fileset-check open-meteo-publication-check open-meteo-publication-prepare test-bundles test-filesets test-control-light-fileset test-deployment-restart test-deployment-channel test-runtime-source-mirror test-runtime-health-probe test-helpers test-mqtt-exporter-core test-mqtt-exporter-runtime test-mqtt-exporter-reconcile test-mqtt-exporter-execute test-mqtt-exporter-dispatch test-mqtt-exporter-cleanup test-mqtt-exporter-fixtures test-control-light-core test-control-light-runtime test-control-light-topology test-control-light-runtime-mirror test-navimow-rest-auth test-navimow-pilot test-navimow-distribution test-media-carousel test-open-meteo-publication test-open-meteo-offline lint phpstan phpstan-bundle phpcs check
 
 bundle-build:
 	composer bundle:build
@@ -17,6 +17,12 @@ control-light-fileset-build:
 
 control-light-fileset-check:
 	composer control-light:fileset-check
+
+media-carousel-fileset-build:
+	composer media-carousel:fileset-build
+
+media-carousel-fileset-check:
+	composer media-carousel:fileset-check
 
 open-meteo-fileset-build:
 	php tools/build-symcon-module-fileset.php deployments/symcon/open-meteo-module.fileset.json
@@ -95,6 +101,9 @@ test-navimow-pilot:
 
 test-navimow-distribution:
 	composer test:navimow-distribution
+
+test-media-carousel:
+	composer test:media-carousel
 
 test-open-meteo-offline:
 	case-studies/open-meteo/tools/check-offline.sh
