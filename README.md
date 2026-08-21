@@ -95,6 +95,8 @@ Important current artifacts include:
 - `deployments/symcon/windows/Invoke-SaefRuntimeMirror.ps1`
 - `deployments/symcon/windows/SaefRuntimeSourceMirror.php`
 - `deployments/symcon/windows/saef-deploy`
+- `case-studies/media-carousel/README.md`
+- `dist/symcon/saef-media-carousel-module/`
 - `references/RI-001-idempotent-configuration-script.md`
 - `references/RI-002-runtime-diagnostics-internal-state.md`
 - `prompts/IMPLEMENT_REFERENCE.md`

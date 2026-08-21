@@ -1,0 +1,29 @@
+{
+  "translations": {
+    "de": {
+      "Ordered images": "Geordnete Bilder",
+      "Media object": "Medienobjekt",
+      "Title": "Titel",
+      "Enabled": "Aktiv",
+      "Automatically advance images": "Bilder automatisch wechseln",
+      "Display duration in seconds": "Anzeigedauer in Sekunden",
+      "Image load timeout in seconds": "Zeitlimit zum Laden in Sekunden",
+      "Retries per sequence pass": "Wiederholungen je Sequenzdurchlauf",
+      "Pause after manual interaction in seconds": "Pause nach manueller Bedienung in Sekunden",
+      "Slide duration in milliseconds": "Dauer des Wischübergangs in Millisekunden",
+      "Image fit": "Bildanpassung",
+      "Fill tile (cover)": "Kachel ausfüllen (cover)",
+      "Fit entire image (contain)": "Ganzes Bild einpassen (contain)",
+      "Show image title": "Bildtitel anzeigen",
+      "Show sequence position": "Sequenzposition anzeigen",
+      "Show large navigation arrows": "Große Navigationspfeile anzeigen",
+      "Maximum size of one image in megabytes": "Maximale Größe eines Bildes in Megabyte",
+      "The carousel reads media objects only. It does not create links, timers, media objects or camera commands.": "Das Carousel liest ausschließlich Medienobjekte. Es erzeugt keine Links, Timer oder Medienobjekte und löst keine Kamerabefehle aus.",
+      "Previous image": "Vorheriges Bild",
+      "Next image": "Nächstes Bild",
+      "Loading image": "Bild wird geladen",
+      "Image unavailable": "Bild nicht verfügbar",
+      "No valid images configured": "Keine gültigen Bilder konfiguriert"
+    }
+  }
+}

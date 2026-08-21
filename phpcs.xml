@@ -26,10 +26,13 @@
     <file>case-studies/mqtt-discovery-exporter/candidate</file>
     <file>case-studies/navimow/distribution</file>
     <file>case-studies/navimow/tools</file>
+    <file>case-studies/media-carousel/distribution</file>
+    <file>case-studies/media-carousel/tools</file>
 
     <rule ref="PSR1.Classes.ClassDeclaration.MultipleClasses">
         <exclude-pattern>case-studies/navimow/distribution/libs/Navimow/ApiClient.php</exclude-pattern>
     </rule>
 
     <exclude-pattern>vendor/*</exclude-pattern>
+    <exclude-pattern>case-studies/media-carousel/distribution/MediaCarousel/carousel.js</exclude-pattern>
 </ruleset>

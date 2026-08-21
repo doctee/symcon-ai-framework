@@ -19,6 +19,9 @@ $directories = [
     'case-studies/navimow/distribution',
     'case-studies/navimow/tests',
     'case-studies/navimow/tools',
+    'case-studies/media-carousel/distribution',
+    'case-studies/media-carousel/tests',
+    'case-studies/media-carousel/tools',
     'dist/symcon',
 ];
 

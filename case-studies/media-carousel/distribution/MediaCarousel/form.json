@@ -1,0 +1,130 @@
+{
+  "elements": [
+    {
+      "type": "List",
+      "name": "MediaItems",
+      "caption": "Ordered images",
+      "rowCount": 10,
+      "add": true,
+      "delete": true,
+      "columns": [
+        {
+          "name": "MediaID",
+          "caption": "Media object",
+          "width": "auto",
+          "add": 0,
+          "edit": {
+            "type": "SelectObject"
+          }
+        },
+        {
+          "name": "Title",
+          "caption": "Title",
+          "width": "260px",
+          "add": "",
+          "edit": {
+            "type": "ValidationTextBox"
+          }
+        },
+        {
+          "name": "Enabled",
+          "caption": "Enabled",
+          "width": "90px",
+          "add": true,
+          "edit": {
+            "type": "CheckBox"
+          }
+        }
+      ]
+    },
+    {
+      "type": "CheckBox",
+      "name": "AutoLoop",
+      "caption": "Automatically advance images"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "LoopSeconds",
+      "caption": "Display duration in seconds",
+      "minimum": 3,
+      "maximum": 120,
+      "digits": 0
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "LoadTimeoutSeconds",
+      "caption": "Image load timeout in seconds",
+      "minimum": 2,
+      "maximum": 30,
+      "digits": 0
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "RetryCount",
+      "caption": "Retries per sequence pass",
+      "minimum": 0,
+      "maximum": 5,
+      "digits": 0
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "PauseAfterInteractionSeconds",
+      "caption": "Pause after manual interaction in seconds",
+      "minimum": 0,
+      "maximum": 120,
+      "digits": 0
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "TransitionMilliseconds",
+      "caption": "Slide duration in milliseconds",
+      "minimum": 100,
+      "maximum": 1000,
+      "digits": 0
+    },
+    {
+      "type": "Select",
+      "name": "FitMode",
+      "caption": "Image fit",
+      "options": [
+        {
+          "caption": "Fill tile (cover)",
+          "value": "cover"
+        },
+        {
+          "caption": "Fit entire image (contain)",
+          "value": "contain"
+        }
+      ]
+    },
+    {
+      "type": "CheckBox",
+      "name": "ShowTitles",
+      "caption": "Show image title"
+    },
+    {
+      "type": "CheckBox",
+      "name": "ShowDots",
+      "caption": "Show sequence position"
+    },
+    {
+      "type": "CheckBox",
+      "name": "ShowArrows",
+      "caption": "Show large navigation arrows"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "MaxMediaMegabytes",
+      "caption": "Maximum size of one image in megabytes",
+      "minimum": 1,
+      "maximum": 20,
+      "digits": 0
+    }
+  ],
+  "actions": [
+    {
+      "type": "Label",
+      "caption": "The carousel reads media objects only. It does not create links, timers, media objects or camera commands."
+    }
+  ]
+}

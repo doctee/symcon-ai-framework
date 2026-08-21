@@ -9,6 +9,15 @@ declare(strict_types=1);
 /** @var array{SELF:int} $_IPS */
 $_IPS = ['SELF' => 0];
 
+define('IS_ACTIVE', 102);
+define('IS_INACTIVE', 104);
+define('MEDIATYPE_IMAGE', 1);
+define('OM_CHANGENAME', 10404);
+define('MM_DELETE', 10902);
+define('MM_CHANGEFILE', 10903);
+define('MM_AVAILABLE', 10904);
+define('MM_UPDATE', 10905);
+
 class IPSModule
 {
     public int $InstanceID;
@@ -71,6 +80,8 @@ class IPSModule
     protected function UnregisterReference(int $id): void {}
     protected function RegisterTimer(string $ident, int $interval, string $script): void {}
     protected function SetTimerInterval(string $ident, int $interval): void {}
+    protected function SetVisualizationType(int $type): void {}
+    protected function UpdateVisualizationValue(string $value): void {}
     protected function SetStatus(int $status): void {}
     protected function SendDataToParent(string $json): string {}
     protected function SendDataToChildren(string $json): void {}
@@ -78,11 +89,16 @@ class IPSModule
     protected function Translate(string $text): string {}
 }
 
+class IPSModuleStrict extends IPSModule
+{
+}
+
 function IPS_ObjectExists(int $id): bool {}
 function IPS_VariableExists(int $id): bool {}
 function IPS_ScriptExists(int $id): bool {}
 function IPS_EventExists(int $id): bool {}
 function IPS_InstanceExists(int $id): bool {}
+function IPS_MediaExists(int $id): bool {}
 function IPS_VariableProfileExists(string $name): bool {}
 function HasAction(int $variableID): bool {}
 
@@ -115,6 +131,9 @@ function IPS_GetInstance(int $id): array {}
 function IPS_GetConfiguration(int $instanceID): string {}
 function IPS_GetVariableProfile(string $name): array {}
 function IPS_GetLink(int $id): array {}
+/** @return array{MediaType: int, MediaFile: string} */
+function IPS_GetMedia(int $id): array {}
+function IPS_GetMediaContent(int $id): string {}
 
 function IPS_CreateCategory(): int {}
 function IPS_DeleteCategory(int $id): bool {}

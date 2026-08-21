@@ -14,6 +14,7 @@ parameters:
         - case-studies/control-light/candidate
         - case-studies/mqtt-discovery-exporter/candidate
         - case-studies/navimow/distribution
+        - case-studies/media-carousel/distribution
 
     # Executable test entrypoints define mutually incompatible global Symcon
     # fakes. They are linted and executed by the Composer test scripts, but must

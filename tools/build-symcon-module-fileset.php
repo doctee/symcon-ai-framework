@@ -162,6 +162,7 @@ final class SaefSymconModuleFilesetBuilder
         $path = $this->validateRelativePath($path, 'source');
         if (
             !str_starts_with($path, 'case-studies/open-meteo/distribution/')
+            && !str_starts_with($path, 'case-studies/media-carousel/distribution/')
             && !in_array($path, [
                 'helpers/common/Validation.php',
                 'helpers/diagnostics/ConfigurationHash.php',
@@ -177,7 +178,7 @@ final class SaefSymconModuleFilesetBuilder
     private function validateTargetPath(string $path): string
     {
         $path = $this->validateRelativePath($path, 'target');
-        if (!preg_match('/\.(json|php)$/', $path)) {
+        if (!preg_match('/\.(html|js|json|php)$/', $path)) {
             throw new RuntimeException('Module fileset target type is unsupported.');
         }
 
