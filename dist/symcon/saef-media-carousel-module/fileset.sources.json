@@ -31,7 +31,7 @@
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/module.json",
             "target": "MediaCarousel/module.json",
-            "sha256": "d10fc57c069502a67409c74f8768f377a4271ac9da8f0a899daf1527aecaeb74",
+            "sha256": "9eeb210160afd902fcf72bd7858a82ccdf8ea0d1139cd36bf2e419f3e9d21d8d",
             "bytes": 315
         },
         {
@@ -43,11 +43,11 @@
         {
             "source": "case-studies/media-carousel/distribution/library.json",
             "target": "library.json",
-            "sha256": "4503e93802506c6d26d8fc5f3e81bb39c13a6a2fb4a704309aea2e09688e05d2",
+            "sha256": "d85fa319323bf5cce778d7f3727aea03916c3da81ceec6b810f962719696f624",
             "bytes": 260
         }
     ],
-    "filesetSha256": "b3c7230431e1b6e0ca6a6a4c7fb08388f4b2db9266aea223186717fd33c7d0dc",
+    "filesetSha256": "3b62ce62b3164dc7ce4705c0885f2e6e920a769027e0291b4a68dc1c6ccd45e8",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

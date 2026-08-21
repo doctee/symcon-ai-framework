@@ -6,10 +6,22 @@ client-local touch state.
 
 ## Status
 
-Version `0.1.0` is an offline pilot candidate. Installing the library does not
+Version `0.1.0` is a preview pilot candidate. Adding the library does not
 create an instance, alter a visualisation or replace the native content
-switcher. A repository URL and live installation procedure are intentionally
-deferred to separate publication and live-operation approvals.
+switcher. Instance creation and every live-operation step require a separate
+approval.
+
+## Installation
+
+Add the following URL in the IP-Symcon Module Control only after the live
+installation gate has been approved:
+
+```text
+https://github.com/doctee/saef-media-carousel
+```
+
+Adding the library alone does not create a `MediaCarousel` instance or change
+the productive start page.
 
 ## Compatibility
 

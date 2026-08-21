@@ -13,6 +13,7 @@ $expectedModuleEntries = [
     'module.json',
     'module.php',
 ];
+$publicRepositoryUrl = 'https://github.com/doctee/saef-media-carousel';
 
 validateExactEntries($distribution, $expectedRootEntries, $errors);
 validateExactEntries($distribution . '/MediaCarousel', $expectedModuleEntries, $errors);
@@ -32,10 +33,13 @@ if ($library !== []) {
     );
     validateGuid($library['id'] ?? null, 'library GUID', $errors);
     if (($library['version'] ?? null) !== '0.1.0') {
-        $errors[] = 'Library version must identify the 0.1.0 offline candidate.';
+        $errors[] = 'Library version must identify the 0.1.0 preview candidate.';
     }
     if (($library['compatibility']['version'] ?? null) !== '8.1') {
         $errors[] = 'Library compatibility must require IP-Symcon 8.1.';
+    }
+    if (($library['url'] ?? null) !== $publicRepositoryUrl) {
+        $errors[] = 'Library URL must identify the standalone publication repository.';
     }
 }
 
@@ -55,6 +59,9 @@ if ($module !== []) {
     }
     if (($module['type'] ?? null) !== 3 || ($module['prefix'] ?? null) !== 'SAEFMC') {
         $errors[] = 'Module type or prefix differs from the frozen contract.';
+    }
+    if (($module['url'] ?? null) !== $publicRepositoryUrl) {
+        $errors[] = 'Module URL must identify the standalone publication repository.';
     }
 }
 
