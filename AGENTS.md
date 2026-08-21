@@ -103,6 +103,10 @@ repository work.
 
 - Start each workstream from a current, clean `origin/main` in a dedicated Git
   worktree and branch.
+- Place persistent worktrees under the primary checkout's ignored
+  `private/worktrees/<workstream>` directory. Use a system temporary directory
+  only for explicitly disposable tests or reconstructions, and state the
+  reason and retention risk before creating it there.
 - Never build, package, publish or deploy from a mixed or unexplained dirty
   checkout.
 - Treat an existing dirty checkout as user-owned recovery input. Do not reset,
