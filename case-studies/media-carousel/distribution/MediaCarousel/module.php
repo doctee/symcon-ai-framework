@@ -169,7 +169,7 @@ class MediaCarousel extends IPSModuleStrict
         );
 
         try {
-            $message = $this->createBootstrapMessage(true);
+            $message = $this->createBootstrapMessage(false);
         } catch (Throwable $exception) {
             $this->SendDebug('Tile bootstrap failed', $exception->getMessage(), 0);
             $message = [

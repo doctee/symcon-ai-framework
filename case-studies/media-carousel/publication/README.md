@@ -6,7 +6,9 @@ client-local touch state.
 
 ## Status
 
-Version `0.1.0` is a preview pilot candidate. Adding the library does not
+Version `0.1.1` is a preview pilot candidate. Its initial tile is lightweight;
+the current image is requested asynchronously after the HTML shell starts.
+Adding the library does not
 create an instance, alter a visualisation or replace the native content
 switcher. Instance creation and every live-operation step require a separate
 approval.

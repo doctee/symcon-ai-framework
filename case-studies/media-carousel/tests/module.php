@@ -45,6 +45,9 @@ $mediaFixtures = [
     ],
 ];
 
+/** @var list<int> $mediaContentReads */
+$mediaContentReads = [];
+
 class IPSModuleStrict
 {
     public int $InstanceID = 42;
@@ -257,7 +260,9 @@ function IPS_GetMedia(int $id): array
 
 function IPS_GetMediaContent(int $id): string
 {
-    global $mediaFixtures;
+    global $mediaFixtures, $mediaContentReads;
+
+    $mediaContentReads[] = $id;
 
     return $mediaFixtures[$id]['content'] ?? '';
 }
@@ -309,9 +314,11 @@ check(
     'Empty title did not fall back to the media name.'
 );
 check(!isset($applyUpdate['initialMedia']), 'ApplyChanges unexpectedly transported image content.');
+check($mediaContentReads === [], 'ApplyChanges unexpectedly read media content.');
 
 $tile = $module->GetVisualizationTile();
-check(str_contains($tile, 'data:image\\/jpeg;base64,'), 'Initial media is not embedded.');
+check(!str_contains($tile, 'data:image\\/'), 'Initial tile unexpectedly embeds a media Data URL.');
+check($mediaContentReads === [], 'Initial tile generation unexpectedly read media content.');
 check(str_contains($tile, 'pointerdown'), 'Swipe handling is missing.');
 check(str_contains($tile, 'ResizeObserver'), 'Resize handling is missing.');
 check(str_contains($tile, '.decode()'), 'Decode gate is missing.');
@@ -322,6 +329,7 @@ $module->RequestAction(
     json_encode(['index' => 1, 'requestID' => 'test_1'], JSON_THROW_ON_ERROR)
 );
 $mediaUpdate = $module->testLastVisualizationUpdate();
+check($mediaContentReads === [102], 'LoadMedia did not read exactly the requested media content.');
 check(($mediaUpdate['action'] ?? null) === 'media', 'LoadMedia did not publish media.');
 check(($mediaUpdate['index'] ?? null) === 1, 'Loaded media index differs.');
 check(

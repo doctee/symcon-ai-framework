@@ -16,8 +16,10 @@ until a separately authorised live pilot has passed.
 ## Behaviour
 
 - The configured source is an ordered list of IP-Symcon image media objects.
-- The first image is embedded in the initial tile response when available.
-- Remaining images are requested progressively in viewing order.
+- The initial tile response contains only the lightweight HTML shell and
+  sequence metadata.
+- The current and remaining images are requested asynchronously and
+  progressively in viewing order.
 - The browser retains compressed sources for the sequence but renders only the
   previous, current and next image.
 - A transition is committed only after the target image has loaded and decoded.
@@ -62,10 +64,11 @@ entries are rejected instead of being silently reinterpreted.
 
 ## Preview decision
 
-The first candidate transports the original compressed media bytes. It keeps
-only three image elements active and prefetches the normal sequence over the
-full viewing interval. This avoids introducing an unverified image-processing
-dependency into the IP-Symcon PHP runtime.
+The candidate transports the original compressed media bytes only through
+asynchronous HTML-SDK update messages. It keeps only three image elements
+active and prefetches the normal sequence over the full viewing interval. This
+avoids blocking tile creation on a media read and introducing an unverified
+image-processing dependency into the IP-Symcon PHP runtime.
 
 Reduced previews remain an explicit optimisation gate. They should be added
 only if live measurements with approximately ten representative camera images

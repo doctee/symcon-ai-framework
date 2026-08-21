@@ -48,12 +48,6 @@ $configuration = [
         'showDots' => true,
         'showArrows' => true,
     ],
-    'initialMedia' => [
-        'index' => 0,
-        'source' => $sources[0],
-        'contentRevision' => hash('sha256', $sources[0]),
-        'configurationRevision' => 'browser-fixture-v2',
-    ],
 ];
 
 $fixtureScript = sprintf(
