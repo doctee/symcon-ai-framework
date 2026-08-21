@@ -26,6 +26,22 @@ workstream is extracted.
 Generated artifacts and deployment hashes are authoritative only when they are
 reproducible from the clean workstream source.
 
+## Worktree Placement
+
+Persistent development worktrees use
+`<primary-checkout>/private/worktrees/<workstream>` by default. Before creating
+one, verify that the target does not exist and that the primary checkout
+excludes `private/` from version control. This keeps the worktree durable,
+private and inside the authorized repository workspace without mixing it into
+the tracked source tree.
+
+A system temporary directory is reserved for explicitly disposable tests or
+historical reconstructions. Before placing a worktree there, document the
+constraint that requires the exception, its retention risk and any resulting
+workspace-authorization impact. Do not relocate an existing user-owned or
+dirty worktree merely to normalize its path; moving it is a separate scoped
+operation that preserves its branch and changes.
+
 ## Workstream Record
 
 The private overlay should maintain a machine-readable record for each active
@@ -108,7 +124,8 @@ delete a deployment record when its target fileset is still referenced.
 ## Recommended Sequence
 
 1. Refresh `origin/main` read-only.
-2. Create the dedicated worktree and branch.
+2. Verify the ignored persistent worktree location, then create the dedicated
+   worktree and branch.
 3. Capture the clean baseline and workstream record.
 4. Implement and test only the stated scope.
 5. Perform the shared-impact gate where applicable.
