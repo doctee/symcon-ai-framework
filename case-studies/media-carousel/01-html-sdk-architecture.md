@@ -23,7 +23,10 @@ is needed to meet measured transport or memory budgets.
 Implement a new and independent `MediaCarousel` module using the official
 IP-Symcon HTML-SDK.
 
-- The PHP module validates configuration and supplies media content.
+- The PHP module validates configuration and supplies media content from an
+  explicit list or a dynamically resolved source category.
+- Category mode bounds and orders current image children by object position,
+  newest first by default, without persisting rolling child ObjectIDs.
 - The initial tile contains a bounded preview of the current media so every new
   compact or expanded client has a self-contained first image.
 - The browser requests the full current image after the preview has loaded.
@@ -32,6 +35,8 @@ IP-Symcon HTML-SDK.
 - Only the previous, current and next images are attached as render slots.
 - A target becomes current only after a successful browser load event.
 - Media updates invalidate one client cache entry through `MM_UPDATE`.
+- Every media request carries the active sequence revision. Sequence drift
+  returns a new bootstrap and preview instead of applying a stale index.
 - The native content switcher remains unchanged until a live pilot is approved.
 
 The module does not create or retarget a link and does not use a server-side
@@ -54,6 +59,12 @@ quality. Serial load-event preparation avoids explicit parallel decoding on
 the target iPad. Separating compressed source cache from the three render slots
 bounds intentional decoded-image ownership.
 
+The production-equivalent archive replaces media children over time. Treating
+those children as fixed configuration would make normal retention look like a
+configuration failure. Category identity is therefore stable configuration;
+its current media children are runtime input. Missing explicit-list entries are
+also tolerated when at least one valid image remains.
+
 ## Consequences
 
 - IP-Symcon 8.1 or newer is the candidate baseline.
@@ -65,6 +76,8 @@ bounds intentional decoded-image ownership.
 - Browser engines may retain decoded resources beyond the three visible image
   elements. Live memory measurement is therefore still required.
 - Preview generation adds one bounded media read and resize to each new tile.
+- A category rollover can replace the browser sequence and generate one new
+  bounded preview; it does not create a server-side polling timer.
 - Expanded-tile lifecycle behaviour must be verified on the target TileVisu.
 
 ## Rejected alternatives

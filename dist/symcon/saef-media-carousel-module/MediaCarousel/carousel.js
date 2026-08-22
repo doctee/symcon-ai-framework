@@ -294,7 +294,11 @@
         }, state.settings.loadTimeoutSeconds * 1000);
 
         state.pending.set(index, {requestID: id, timer: timeout});
-        requestAction('LoadMedia', JSON.stringify({index: index, requestID: id}));
+        requestAction('LoadMedia', JSON.stringify({
+            index: index,
+            requestID: id,
+            configurationRevision: state.configurationRevision
+        }));
     }
 
     function handleRequestFailure(index) {

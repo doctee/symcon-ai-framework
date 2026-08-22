@@ -110,6 +110,8 @@ function IPS_GetObject(int $id): array {}
 function IPS_GetName(int $id): string {}
 function IPS_GetParent(int $id): int {}
 function IPS_GetChildrenIDs(int $id): array {}
+
+function IPS_CategoryExists(int $id): bool {}
 /**
  * @return array{
  *   VariableAction: int,

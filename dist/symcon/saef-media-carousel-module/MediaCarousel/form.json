@@ -1,6 +1,39 @@
 {
   "elements": [
     {
+      "type": "Select",
+      "name": "SourceMode",
+      "caption": "Image source",
+      "options": [
+        {
+          "caption": "Explicit image list",
+          "value": "list"
+        },
+        {
+          "caption": "Images from category",
+          "value": "category"
+        }
+      ]
+    },
+    {
+      "type": "SelectObject",
+      "name": "SourceCategoryID",
+      "caption": "Image category"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "CategoryItemLimit",
+      "caption": "Maximum category images",
+      "minimum": 1,
+      "maximum": 50,
+      "digits": 0
+    },
+    {
+      "type": "CheckBox",
+      "name": "CategoryNewestFirst",
+      "caption": "Show newest category image first"
+    },
+    {
       "type": "List",
       "name": "MediaItems",
       "caption": "Ordered images",
@@ -124,7 +157,7 @@
   "actions": [
     {
       "type": "Label",
-      "caption": "The carousel reads media objects only. It does not create links, timers, media objects or camera commands."
+      "caption": "The carousel reads explicit media objects or current image children of one category. It does not create links, timers, media objects or camera commands."
     }
   ]
 }

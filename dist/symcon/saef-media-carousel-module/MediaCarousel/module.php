@@ -8,6 +8,8 @@ class MediaCarousel extends IPSModuleStrict
     private const MAX_ITEM_COUNT = 50;
     private const PREVIEW_MAX_WIDTH = 640;
     private const PREVIEW_JPEG_QUALITY = 68;
+    private const SOURCE_CATEGORY = 'category';
+    private const SOURCE_LIST = 'list';
 
     /** @var list<int> */
     private const MEDIA_MESSAGES = [
@@ -22,7 +24,11 @@ class MediaCarousel extends IPSModuleStrict
     {
         parent::Create();
 
+        $this->RegisterPropertyString('SourceMode', self::SOURCE_LIST);
         $this->RegisterPropertyString('MediaItems', '[]');
+        $this->RegisterPropertyInteger('SourceCategoryID', 0);
+        $this->RegisterPropertyInteger('CategoryItemLimit', 10);
+        $this->RegisterPropertyBoolean('CategoryNewestFirst', true);
         $this->RegisterPropertyBoolean('AutoLoop', true);
         $this->RegisterPropertyInteger('LoopSeconds', 8);
         $this->RegisterPropertyInteger('LoadTimeoutSeconds', 10);
@@ -36,6 +42,7 @@ class MediaCarousel extends IPSModuleStrict
         $this->RegisterPropertyInteger('MaxMediaMegabytes', 5);
 
         $this->RegisterAttributeString('RegisteredMediaIDs', '[]');
+        $this->RegisterAttributeInteger('RegisteredCategoryID', 0);
 
         $this->SetVisualizationType(1);
     }
@@ -44,19 +51,25 @@ class MediaCarousel extends IPSModuleStrict
     {
         parent::ApplyChanges();
 
-        $this->unregisterConfiguredMedia();
+        $this->applyConfiguration(false);
+    }
+
+    private function applyConfiguration(bool $includeInitialPreview): void
+    {
+        $this->unregisterConfiguredSources();
 
         try {
-            $items = $this->resolveMediaItems();
             $this->validatePresentationConfiguration();
-            $this->registerConfiguredMedia($items);
+            $items = $this->resolveMediaItems();
+            $this->registerConfiguredSources($items);
 
             $this->SetStatus($items === [] ? IS_INACTIVE : IS_ACTIVE);
             $this->UpdateVisualizationValue(
-                $this->encodeMessage($this->createBootstrapMessage(false))
+                $this->encodeMessage($this->createBootstrapMessage($includeInitialPreview))
             );
         } catch (Throwable $exception) {
             $this->WriteAttributeString('RegisteredMediaIDs', '[]');
+            $this->WriteAttributeInteger('RegisteredCategoryID', 0);
             $this->SetStatus(self::STATUS_INVALID_CONFIGURATION);
             $this->SendDebug('Invalid configuration', $exception->getMessage(), 0);
             $this->UpdateVisualizationValue(
@@ -84,7 +97,7 @@ class MediaCarousel extends IPSModuleStrict
         }
 
         if ($message === OM_CHANGENAME || $message === MM_DELETE) {
-            $this->ApplyChanges();
+            $this->applyConfiguration(true);
 
             return;
         }
@@ -128,7 +141,17 @@ class MediaCarousel extends IPSModuleStrict
 
             $requestID = $this->readRequestID($request);
             $index = $this->readRequestIndex($request);
+            $this->validatePresentationConfiguration();
             $items = $this->resolveMediaItems();
+            $configurationRevision = $this->configurationRevision($items);
+
+            if ($this->readRequestConfigurationRevision($request) !== $configurationRevision) {
+                $this->UpdateVisualizationValue(
+                    $this->encodeMessage($this->createBootstrapMessage(true))
+                );
+
+                return;
+            }
 
             if (!array_key_exists($index, $items)) {
                 throw new OutOfRangeException('Requested media index is outside the configured sequence.');
@@ -140,7 +163,7 @@ class MediaCarousel extends IPSModuleStrict
                         $items,
                         $index,
                         $requestID,
-                        $this->configurationRevision($items)
+                        $configurationRevision
                     )
                 )
             );
@@ -198,6 +221,20 @@ class MediaCarousel extends IPSModuleStrict
      */
     private function resolveMediaItems(): array
     {
+        return match ($this->ReadPropertyString('SourceMode')) {
+            self::SOURCE_LIST     => $this->resolveExplicitMediaItems(),
+            self::SOURCE_CATEGORY => $this->resolveCategoryMediaItems(),
+            default               => throw new InvalidArgumentException(
+                'SourceMode must be list or category.'
+            ),
+        };
+    }
+
+    /**
+     * @return list<array{mediaID: int, title: string, mimeType: string}>
+     */
+    private function resolveExplicitMediaItems(): array
+    {
         $rows = json_decode(
             $this->ReadPropertyString('MediaItems'),
             true,
@@ -213,6 +250,7 @@ class MediaCarousel extends IPSModuleStrict
 
         $items = [];
         $seenMediaIDs = [];
+        $enabledRows = 0;
 
         foreach ($rows as $rowIndex => $row) {
             if (!is_array($row)) {
@@ -226,6 +264,7 @@ class MediaCarousel extends IPSModuleStrict
             if (!$enabled) {
                 continue;
             }
+            $enabledRows++;
 
             $mediaID = $row['MediaID'] ?? null;
             if (!is_int($mediaID) || $mediaID <= 0) {
@@ -236,18 +275,15 @@ class MediaCarousel extends IPSModuleStrict
             if (isset($seenMediaIDs[$mediaID])) {
                 throw new InvalidArgumentException('Duplicate MediaID is not allowed.');
             }
+            $seenMediaIDs[$mediaID] = true;
             if (!IPS_MediaExists($mediaID)) {
-                throw new InvalidArgumentException('Configured media object does not exist.');
-            }
+                $this->SendDebug(
+                    'Missing configured media skipped',
+                    sprintf('MediaItems row %d no longer exists.', $rowIndex),
+                    0
+                );
 
-            $media = IPS_GetMedia($mediaID);
-            if ($media['MediaType'] !== MEDIATYPE_IMAGE) {
-                throw new InvalidArgumentException('Configured object is not image media.');
-            }
-
-            $mediaFile = $media['MediaFile'];
-            if ($mediaFile === '') {
-                throw new InvalidArgumentException('Configured media object has no media file.');
+                continue;
             }
 
             $title = $row['Title'] ?? '';
@@ -258,19 +294,96 @@ class MediaCarousel extends IPSModuleStrict
             if (strlen($title) > 120) {
                 throw new InvalidArgumentException('Media title exceeds 120 bytes.');
             }
-            if ($title === '') {
-                $title = IPS_GetName($mediaID);
-            }
+            $items[] = $this->createMediaItem($mediaID, $title);
+        }
 
-            $items[] = [
-                'mediaID'  => $mediaID,
-                'title'    => $title,
-                'mimeType' => $this->mimeTypeFromMediaFile($mediaFile),
-            ];
-            $seenMediaIDs[$mediaID] = true;
+        if ($enabledRows > 0 && $items === []) {
+            throw new InvalidArgumentException('No configured media object currently exists.');
         }
 
         return $items;
+    }
+
+    /**
+     * @return list<array{mediaID: int, title: string, mimeType: string}>
+     */
+    private function resolveCategoryMediaItems(): array
+    {
+        $categoryID = $this->ReadPropertyInteger('SourceCategoryID');
+        if ($categoryID <= 0 || !IPS_CategoryExists($categoryID)) {
+            throw new InvalidArgumentException('SourceCategoryID must identify an existing category.');
+        }
+
+        $candidates = [];
+        foreach (IPS_GetChildrenIDs($categoryID) as $childID) {
+            if ($childID <= 0 || !IPS_MediaExists($childID)) {
+                continue;
+            }
+
+            try {
+                $item = $this->createMediaItem($childID, '');
+                $object = IPS_GetObject($childID);
+                $candidates[] = [
+                    'item'     => $item,
+                    'position' => (int) ($object['ObjectPosition'] ?? 0),
+                ];
+            } catch (Throwable $exception) {
+                $this->SendDebug('Category child skipped', $exception->getMessage(), 0);
+            }
+        }
+
+        $newestFirst = $this->ReadPropertyBoolean('CategoryNewestFirst');
+        usort(
+            $candidates,
+            static function (array $left, array $right) use ($newestFirst): int {
+                $comparison = [$left['position'], $left['item']['mediaID']]
+                    <=> [$right['position'], $right['item']['mediaID']];
+
+                return $newestFirst ? -$comparison : $comparison;
+            }
+        );
+
+        $limit = $this->ReadPropertyInteger('CategoryItemLimit');
+        if ($limit < 1 || $limit > self::MAX_ITEM_COUNT) {
+            throw new InvalidArgumentException('CategoryItemLimit is outside the supported range.');
+        }
+        $items = array_map(
+            static fn (array $candidate): array => $candidate['item'],
+            array_slice($candidates, 0, $limit)
+        );
+        if ($items === []) {
+            throw new InvalidArgumentException('Source category contains no supported image media.');
+        }
+
+        return $items;
+    }
+
+    /** @return array{mediaID: int, title: string, mimeType: string} */
+    private function createMediaItem(int $mediaID, string $title): array
+    {
+        $media = IPS_GetMedia($mediaID);
+        if ($media['MediaType'] !== MEDIATYPE_IMAGE) {
+            throw new InvalidArgumentException('Configured object is not image media.');
+        }
+
+        $mediaFile = $media['MediaFile'];
+        if ($mediaFile === '') {
+            throw new InvalidArgumentException('Configured media object has no media file.');
+        }
+
+        $title = trim($title);
+        if ($title === '') {
+            $title = IPS_GetName($mediaID);
+        }
+        if (strlen($title) > 120) {
+            throw new InvalidArgumentException('Media title exceeds 120 bytes.');
+        }
+
+        return [
+            'mediaID'  => $mediaID,
+            'title'    => $title,
+            'mimeType' => $this->mimeTypeFromMediaFile($mediaFile),
+        ];
     }
 
     private function validatePresentationConfiguration(): void
@@ -281,9 +394,18 @@ class MediaCarousel extends IPSModuleStrict
         $this->assertIntegerRange('PauseAfterInteractionSeconds', 0, 120);
         $this->assertIntegerRange('TransitionMilliseconds', 100, 1000);
         $this->assertIntegerRange('MaxMediaMegabytes', 1, 20);
+        $this->assertIntegerRange('CategoryItemLimit', 1, self::MAX_ITEM_COUNT);
 
         if (!in_array($this->ReadPropertyString('FitMode'), ['cover', 'contain'], true)) {
             throw new InvalidArgumentException('FitMode must be cover or contain.');
+        }
+        $supportedSourceMode = in_array(
+            $this->ReadPropertyString('SourceMode'),
+            [self::SOURCE_LIST, self::SOURCE_CATEGORY],
+            true
+        );
+        if (!$supportedSourceMode) {
+            throw new InvalidArgumentException('SourceMode must be list or category.');
         }
     }
 
@@ -298,7 +420,7 @@ class MediaCarousel extends IPSModuleStrict
     /**
      * @param list<array{mediaID: int, title: string, mimeType: string}> $items
      */
-    private function registerConfiguredMedia(array $items): void
+    private function registerConfiguredSources(array $items): void
     {
         $registerMessage = [$this, 'Register' . 'Message'];
         if (!is_callable($registerMessage)) {
@@ -319,9 +441,15 @@ class MediaCarousel extends IPSModuleStrict
             'RegisteredMediaIDs',
             json_encode($mediaIDs, JSON_THROW_ON_ERROR)
         );
+
+        if ($this->ReadPropertyString('SourceMode') === self::SOURCE_CATEGORY) {
+            $categoryID = $this->ReadPropertyInteger('SourceCategoryID');
+            $this->RegisterReference($categoryID);
+            $this->WriteAttributeInteger('RegisteredCategoryID', $categoryID);
+        }
     }
 
-    private function unregisterConfiguredMedia(): void
+    private function unregisterConfiguredSources(): void
     {
         $unregisterMessage = [$this, 'Unregister' . 'Message'];
         if (!is_callable($unregisterMessage)) {
@@ -336,6 +464,12 @@ class MediaCarousel extends IPSModuleStrict
         }
 
         $this->WriteAttributeString('RegisteredMediaIDs', '[]');
+
+        $categoryID = $this->ReadAttributeInteger('RegisteredCategoryID');
+        if ($categoryID > 0) {
+            $this->UnregisterReference($categoryID);
+        }
+        $this->WriteAttributeInteger('RegisteredCategoryID', 0);
     }
 
     /** @return list<int> */
@@ -371,8 +505,8 @@ class MediaCarousel extends IPSModuleStrict
      */
     private function createBootstrapMessage(bool $includeInitialPreview): array
     {
-        $items = $this->resolveMediaItems();
         $this->validatePresentationConfiguration();
+        $items = $this->resolveMediaItems();
         $configurationRevision = $this->configurationRevision($items);
 
         $message = [
@@ -584,6 +718,16 @@ class MediaCarousel extends IPSModuleStrict
             json_encode(
                 [
                     'items'                         => $items,
+                    'sourceMode'                    => $this->ReadPropertyString('SourceMode'),
+                    'sourceCategoryID'              => $this->ReadPropertyInteger(
+                        'SourceCategoryID'
+                    ),
+                    'categoryItemLimit'             => $this->ReadPropertyInteger(
+                        'CategoryItemLimit'
+                    ),
+                    'categoryNewestFirst'           => $this->ReadPropertyBoolean(
+                        'CategoryNewestFirst'
+                    ),
                     'autoLoop'                      => $this->ReadPropertyBoolean('AutoLoop'),
                     'loopSeconds'                   => $this->ReadPropertyInteger('LoopSeconds'),
                     'loadTimeoutSeconds'            => $this->ReadPropertyInteger(
@@ -642,6 +786,17 @@ class MediaCarousel extends IPSModuleStrict
         }
 
         return $index;
+    }
+
+    /** @param array<string, mixed> $request */
+    private function readRequestConfigurationRevision(array $request): string
+    {
+        $revision = $request['configurationRevision'] ?? '';
+        if (!is_string($revision) || preg_match('/^[a-f0-9]{64}$/D', $revision) !== 1) {
+            throw new InvalidArgumentException('Invalid media configuration revision.');
+        }
+
+        return $revision;
     }
 
     /** @param array<string, mixed> $message */

@@ -6,7 +6,8 @@ installation or start-page replacement
 ## Purpose
 
 This case study implements an IP-Symcon HTML-SDK tile for an ordered sequence
-of image media objects. It is intended as a separately testable replacement
+of explicit image media objects or the current image children of a category.
+It is intended as a separately testable replacement
 candidate for the native content switcher when image loading, touch navigation
 and resize behaviour need stronger guarantees.
 
@@ -15,7 +16,12 @@ until a separately authorised live pilot has passed.
 
 ## Behaviour
 
-- The configured source is an ordered list of IP-Symcon image media objects.
+- The configured source is either an ordered explicit list or a dynamically
+  resolved category of IP-Symcon image media objects.
+- Category mode selects a bounded number of current children and shows the
+  newest object position first by default.
+- A rolling deletion refreshes the bounded category sequence; an individual
+  missing explicit object is skipped while other valid entries remain usable.
 - Every newly created tile response contains a bounded preview of the current
   image together with the HTML shell and sequence metadata.
 - The full current image and remaining images are requested asynchronously and
@@ -34,7 +40,8 @@ until a separately authorised live pilot has passed.
 ## Ownership and side effects
 
 The module owns only its instance properties, message registrations and object
-references. It deliberately has no server-side loop timer and creates no child
+references. Category mode references the configured source category and the
+currently selected image children. It deliberately has no server-side loop timer and creates no child
 objects, links, variables or media objects. User interaction is local to the
 visualisation client; two tablets do not change one shared server-side index.
 
@@ -44,7 +51,7 @@ calls a camera action or writes media content.
 
 ## Configuration
 
-`MediaItems` is a list with the following public schema:
+`SourceMode=list` uses `MediaItems` with the following public schema:
 
 ```json
 [
@@ -59,9 +66,21 @@ calls a camera action or writes media content.
 ObjectIDs above are synthetic documentation values. Installation-specific IDs
 belong only in the IP-Symcon instance configuration or private evidence.
 
-An empty list leaves the module inactive. A non-empty but invalid list fails
-closed with status 200. Duplicate, missing, non-image or unsupported media
-entries are rejected instead of being silently reinterpreted.
+`SourceMode=category` uses `SourceCategoryID`, `CategoryItemLimit` and
+`CategoryNewestFirst`. The category is resolved again for every new tile and
+media request. Object position defines archive order; the media ObjectID is a
+deterministic tie-breaker.
+
+An empty explicit list leaves the module inactive. Duplicate, non-image or
+unsupported explicit entries remain configuration errors. Missing explicit
+objects are skipped so one expired archive object cannot suppress remaining
+valid images; a list with no surviving valid entry still fails visibly. In
+category mode, non-image and unsupported children are ignored, while an absent
+category or a category without supported images fails with status 200.
+
+Every browser media request carries the sequence revision. If a rolling
+category changes between bootstrap and image retrieval, the module returns a
+fresh bootstrap with a replacement preview instead of serving a stale index.
 
 ## Preview decision
 
@@ -82,10 +101,10 @@ failure falls back to the original current media for that initial response.
 1. Run the offline module, distribution and deterministic fileset tests.
 2. Publish the exact generated fileset only after a separate approval.
 3. Install the candidate as a separate module library only after approval.
-4. Add a test instance with two non-commanding image media objects.
+4. Add a test instance with a non-commanding rolling image category.
 5. Verify initial preview, delayed full-image load, load failure and resize behaviour.
-6. Configure the approximately ten-image production-equivalent sequence on a
-   separate test page.
+6. Configure the approximately ten-image production-equivalent category on a
+   separate test page and verify one archive rollover.
 7. Measure first-pass transport, memory and image-load timing on the target iPad.
 8. Verify that both compact and expanded tile recreation display the preview.
 9. Replace the native content switcher only through a separate live gate.
