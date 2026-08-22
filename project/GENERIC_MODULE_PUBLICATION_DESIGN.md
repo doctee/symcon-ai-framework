@@ -91,7 +91,8 @@ deployments/symcon/
 
 The generic CLI requires `--contract=PATH`. The Open-Meteo adapter injects its
 contract and preserves the established interface. No contract may select a live
-Symcon target or a merge operation.
+Symcon target. PR contracts may declare a repository-specific confirmation for
+the separately invoked integration phase.
 
 ## Operating modes
 
@@ -114,15 +115,23 @@ paths, commit, recheck remote drift, push, independently verify and optionally
 create a non-draft pull request.
 
 For PR mode, branch creation and push are part of the authorized publication
-phase. Merge is not implemented. A failure after push retains the workspace and
+phase. A failure after push retains the workspace and
 reports its path for recovery.
+
+### Integrate
+
+Validate the exact candidate hashes, unchanged base commit, PR number, full PR
+head and integration token. Independently verify the topic branch, reject draft,
+changed, unmergeable, pending or failed PRs, merge with exact-head protection,
+then independently verify the merged base commit and complete target tree.
 
 ## Approval model
 
 1. Candidate check is read-only.
 2. One exact publisher invocation may authorize the bounded repository
    publication phase.
-3. PR merge requires a separate decision after CI and review.
+3. PR merge requires a separate fixed integration invocation after CI and
+   review; its internal reads, merge and postflight share that one authorization.
 4. Any live Symcon update requires fresh installation-specific MCP preflight and
    separate authorization.
 5. Recovery-workspace or artifact deletion requires a separate retention gate.
@@ -155,7 +164,7 @@ The comparison performed no push, pull-request creation, merge or live action.
 ## Non-goals
 
 - No Symcon MCP call or installed-module update.
-- No automatic PR merge.
+- No merge during `--apply`; integration is always a separate explicit mode.
 - No standalone-history rewrite.
 - No cleanup of publication or historical worktrees.
 - No general-purpose Git automation API.

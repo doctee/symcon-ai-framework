@@ -44,6 +44,7 @@ try {
     modulePublicationTestContractFailures($projectRoot, $privateContractRoot);
     modulePublicationTestCandidateFailures($mediaContract, $mediaCandidate, $temporaryRoot);
     modulePublicationTestApplyGates($mediaContract, $mediaCandidate);
+    modulePublicationTestIntegrationGates($mediaContract, $mediaCandidate);
     modulePublicationTestCleanupBoundaries($temporaryRoot);
     modulePublicationTestGitFlows($mediaContract, $mediaCandidate, $temporaryRoot);
 
@@ -318,6 +319,70 @@ function modulePublicationTestApplyGates(array $contract, array $candidate): voi
 
 /**
  * @param array<string, mixed> $contract
+ * @param array{filesetSha256: string, publicationSha256: string} $candidate
+ */
+function modulePublicationTestIntegrationGates(array $contract, array $candidate): void
+{
+    $parsed = parseModulePublicationArguments(
+        [
+            'tool.php',
+            '--contract=deployments/symcon/media-carousel-publication.json',
+            '--integrate',
+            '--expected-fileset-sha256=' . $candidate['filesetSha256'],
+            '--expected-publication-sha256=' . $candidate['publicationSha256'],
+            '--expected-remote-commit=' . str_repeat('a', 40),
+            '--expected-pull-request=42',
+            '--expected-pull-request-head=' . str_repeat('b', 40),
+            '--confirm-integration=' . $contract['publication']['pullRequest']['integrationConfirmation'],
+        ],
+        null,
+        'tool.php'
+    );
+    modulePublicationTestSame('integrate', $parsed['mode'], 'Integration mode was not parsed.');
+    modulePublicationTestSame(42, $parsed['expectedPullRequest'], 'PR number was not parsed.');
+
+    $valid = modulePublicationTestIntegrationOptions(
+        $contract,
+        $candidate,
+        str_repeat('a', 40),
+        str_repeat('b', 40)
+    );
+    assertModulePublicationIntegrationGate($valid, $contract, $candidate);
+
+    $wrongHead = $valid;
+    $wrongHead['expectedPullRequestHead'] = 'short';
+    modulePublicationTestThrows(
+        static fn (): null => assertModulePublicationIntegrationGate(
+            $wrongHead,
+            $contract,
+            $candidate
+        ),
+        'full SHA-1'
+    );
+    $wrongPullRequest = $valid;
+    $wrongPullRequest['expectedPullRequest'] = 0;
+    modulePublicationTestThrows(
+        static fn (): null => assertModulePublicationIntegrationGate(
+            $wrongPullRequest,
+            $contract,
+            $candidate
+        ),
+        'pull-request number'
+    );
+    $wrongConfirmation = $valid;
+    $wrongConfirmation['integrationConfirmation'] = 'wrong';
+    modulePublicationTestThrows(
+        static fn (): null => assertModulePublicationIntegrationGate(
+            $wrongConfirmation,
+            $contract,
+            $candidate
+        ),
+        'integration confirmation differs'
+    );
+}
+
+/**
+ * @param array<string, mixed> $contract
  * @param array{files: array<string, string>, filesetSha256: string, publicationSha256: string} $candidate
  */
 function modulePublicationTestGitFlows(array $contract, array $candidate, string $temporaryRoot): void
@@ -365,6 +430,28 @@ function modulePublicationTestGitFlows(array $contract, array $candidate, string
     if (str_contains($ghArguments, '--draft')) {
         throw new RuntimeException('Pull-request publication unexpectedly created a draft.');
     }
+
+    putenv('FAKE_GH_MODE=integrate');
+    putenv('FAKE_GH_REMOTE=' . $success['remote']);
+    putenv('FAKE_GH_BASE=' . $success['commit']);
+    putenv('FAKE_GH_HEAD=' . $publishedCommit);
+    putenv('FAKE_GH_BRANCH=' . $topicBranch);
+    putenv('FAKE_GH_MARKER=' . $temporaryRoot . '/gh-integrated');
+    integrateModulePublication(
+        $successContract,
+        $candidate,
+        modulePublicationTestIntegrationOptions(
+            $contract,
+            $candidate,
+            $success['commit'],
+            $publishedCommit
+        )
+    );
+    modulePublicationTestSame(
+        $publishedCommit,
+        modulePublicationRemoteCommit($success['seed'], 'main'),
+        'Successful integration did not update the base branch.'
+    );
 
     $drift = modulePublicationTestRemote($temporaryRoot . '/drift', $candidate, true);
     $driftContract = modulePublicationTestLocalContract($contract, $drift['remote']);
@@ -442,6 +529,32 @@ function modulePublicationTestOptions(array $contract, array $candidate, string 
         'expectedRemoteCommit' => $commit,
         'confirmation' => $contract['repository']['confirmation'],
         'commitMessage' => 'feat: publish module fixture',
+    ];
+}
+
+/**
+ * @param array<string, mixed> $contract
+ * @param array{filesetSha256: string, publicationSha256: string} $candidate
+ * @return array<string, mixed>
+ */
+function modulePublicationTestIntegrationOptions(
+    array $contract,
+    array $candidate,
+    string $baseCommit,
+    string $headCommit
+): array {
+    return [
+        'mode' => 'integrate',
+        'contractPath' => 'unused',
+        'prepareTarget' => '',
+        'expectedFilesetSha256' => $candidate['filesetSha256'],
+        'expectedPublicationSha256' => $candidate['publicationSha256'],
+        'expectedRemoteCommit' => $baseCommit,
+        'confirmation' => '',
+        'commitMessage' => '',
+        'expectedPullRequest' => 42,
+        'expectedPullRequestHead' => $headCommit,
+        'integrationConfirmation' => $contract['publication']['pullRequest']['integrationConfirmation'],
     ];
 }
 
@@ -534,6 +647,19 @@ fi
 if [ "$FAKE_GH_MODE" = "fail" ]; then
     echo "simulated PR failure" >&2
     exit 1
+fi
+if [ "$FAKE_GH_MODE" = "integrate" ] && [ "$1" = "pr" ] && [ "$2" = "view" ]; then
+    if [ -f "$FAKE_GH_MARKER" ]; then
+        printf '{"number":42,"state":"MERGED","isDraft":false,"baseRefName":"main","headRefName":"%s","headRefOid":"%s","mergeable":"MERGEABLE","statusCheckRollup":[{"conclusion":"SUCCESS"}],"url":"https://github.com/doctee/saef-media-carousel/pull/42","mergeCommit":{"oid":"%s"}}\n' "$FAKE_GH_BRANCH" "$FAKE_GH_HEAD" "$FAKE_GH_HEAD"
+    else
+        printf '{"number":42,"state":"OPEN","isDraft":false,"baseRefName":"main","headRefName":"%s","headRefOid":"%s","mergeable":"MERGEABLE","statusCheckRollup":[{"conclusion":"SUCCESS"}],"url":"https://github.com/doctee/saef-media-carousel/pull/42","mergeCommit":null}\n' "$FAKE_GH_BRANCH" "$FAKE_GH_HEAD"
+    fi
+    exit 0
+fi
+if [ "$FAKE_GH_MODE" = "integrate" ] && [ "$1" = "pr" ] && [ "$2" = "merge" ]; then
+    git --git-dir="$FAKE_GH_REMOTE" update-ref refs/heads/main "$FAKE_GH_HEAD" "$FAKE_GH_BASE"
+    : > "$FAKE_GH_MARKER"
+    exit 0
 fi
 echo "https://github.com/doctee/saef-media-carousel/pull/42"
 SH;
