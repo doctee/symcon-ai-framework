@@ -33,6 +33,12 @@ $mediaFixtures = [
         'name' => 'Camera three',
         'content' => base64_encode('webp-three'),
     ],
+    104 => [
+        'MediaType' => MEDIATYPE_IMAGE,
+        'MediaFile' => 'camera-four.png',
+        'name' => 'Camera four',
+        'content' => $pngFixture,
+    ],
     201 => [
         'MediaType' => 4,
         'MediaFile' => 'not-an-image.txt',
@@ -45,6 +51,20 @@ $mediaFixtures = [
         'name' => 'Unsupported image',
         'content' => base64_encode('<svg/>'),
     ],
+];
+
+/** @var array<int, list<int>> $categoryFixtures */
+$categoryFixtures = [
+    301 => [101, 102, 103, 201],
+];
+
+/** @var array<int, int> $objectPositions */
+$objectPositions = [
+    101 => 30,
+    102 => 10,
+    103 => 20,
+    104 => 40,
+    201 => 50,
 ];
 
 /** @var list<int> $mediaContentReads */
@@ -122,6 +142,11 @@ class IPSModuleStrict
         $this->attributes[$ident] ??= $default;
     }
 
+    protected function RegisterAttributeInteger(string $ident, int $default): void
+    {
+        $this->attributes[$ident] ??= (string) $default;
+    }
+
     protected function ReadAttributeString(string $ident): string
     {
         return $this->attributes[$ident];
@@ -130,6 +155,16 @@ class IPSModuleStrict
     protected function WriteAttributeString(string $ident, string $value): void
     {
         $this->attributes[$ident] = $value;
+    }
+
+    protected function ReadAttributeInteger(string $ident): int
+    {
+        return (int) $this->attributes[$ident];
+    }
+
+    protected function WriteAttributeInteger(string $ident, int $value): void
+    {
+        $this->attributes[$ident] = (string) $value;
     }
 
     protected function RegisterReference(int $id): void
@@ -245,6 +280,29 @@ function IPS_MediaExists(int $id): bool
     return isset($mediaFixtures[$id]);
 }
 
+function IPS_CategoryExists(int $id): bool
+{
+    global $categoryFixtures;
+
+    return isset($categoryFixtures[$id]);
+}
+
+/** @return list<int> */
+function IPS_GetChildrenIDs(int $id): array
+{
+    global $categoryFixtures;
+
+    return $categoryFixtures[$id] ?? [];
+}
+
+/** @return array{ObjectPosition: int} */
+function IPS_GetObject(int $id): array
+{
+    global $objectPositions;
+
+    return ['ObjectPosition' => $objectPositions[$id] ?? 0];
+}
+
 /** @return array{MediaType: int, MediaFile: string} */
 function IPS_GetMedia(int $id): array
 {
@@ -353,6 +411,8 @@ check($mediaContentReads === [], 'ApplyChanges unexpectedly read media content.'
 $tile = $module->GetVisualizationTile();
 $initialMessage = extractInitialMessage($tile);
 check(($initialMessage['action'] ?? null) === 'bootstrap', 'Initial tile bootstrap is missing.');
+$configurationRevision = (string) ($initialMessage['configurationRevision'] ?? '');
+check(strlen($configurationRevision) === 64, 'Initial configuration revision is invalid.');
 check(($initialMessage['initialMedia']['preview'] ?? null) === true, 'Initial preview is missing.');
 check(
     str_starts_with((string) ($initialMessage['initialMedia']['source'] ?? ''), 'data:image/jpeg;base64,'),
@@ -379,7 +439,14 @@ check(
 
 $module->RequestAction(
     'LoadMedia',
-    json_encode(['index' => 1, 'requestID' => 'test_1'], JSON_THROW_ON_ERROR)
+    json_encode(
+        [
+            'index' => 1,
+            'requestID' => 'test_1',
+            'configurationRevision' => $configurationRevision,
+        ],
+        JSON_THROW_ON_ERROR
+    )
 );
 $mediaUpdate = $module->testLastVisualizationUpdate();
 check(
@@ -396,7 +463,14 @@ check(($mediaUpdate['preview'] ?? null) === false, 'Loaded original is marked as
 
 $module->RequestAction(
     'LoadMedia',
-    json_encode(['index' => 99, 'requestID' => 'test_invalid'], JSON_THROW_ON_ERROR)
+    json_encode(
+        [
+            'index' => 99,
+            'requestID' => 'test_invalid',
+            'configurationRevision' => $configurationRevision,
+        ],
+        JSON_THROW_ON_ERROR
+    )
 );
 $mediaError = $module->testLastVisualizationUpdate();
 check(($mediaError['action'] ?? null) === 'mediaError', 'Invalid media index did not fail closed.');
@@ -452,13 +526,100 @@ $module->testSetProperty('MediaItems', '{broken');
 $module->ApplyChanges();
 check($module->testStatus() === 200, 'Malformed JSON did not fail configuration.');
 
+$module->testSetProperty('MediaItems', encodeItems([
+    ['MediaID' => 999, 'Title' => 'Expired', 'Enabled' => true],
+    ['MediaID' => 101, 'Title' => 'Available', 'Enabled' => true],
+]));
+$module->ApplyChanges();
+check($module->testStatus() === IS_ACTIVE, 'One expired explicit media disabled the sequence.');
+check($module->testReferences() === [101], 'Expired explicit media remains referenced.');
+
+$module->testSetProperty('MediaItems', encodeItems([
+    ['MediaID' => 999, 'Title' => 'Expired', 'Enabled' => true],
+]));
+$module->ApplyChanges();
+check($module->testStatus() === 200, 'All-expired explicit media did not fail visibly.');
+
+$categoryModule = new MediaCarousel();
+$categoryModule->Create();
+$categoryModule->testSetProperty('SourceMode', 'category');
+$categoryModule->testSetProperty('SourceCategoryID', 301);
+$categoryModule->testSetProperty('CategoryItemLimit', 2);
+$categoryModule->ApplyChanges();
+check($categoryModule->testStatus() === IS_ACTIVE, 'Valid category source is not active.');
+check(
+    $categoryModule->testReferences() === [101, 103, 301],
+    'Category source references do not contain the category and selected media.'
+);
+check($categoryModule->testMessageCount() === 10, 'Category media registrations differ.');
+$categoryBootstrap = $categoryModule->testLastVisualizationUpdate();
+check(
+    array_column($categoryBootstrap['items'] ?? [], 'title') === ['Camera one', 'Camera three'],
+    'Category source is not ordered newest first and limited.'
+);
+
+$oldCategoryRevision = (string) ($categoryBootstrap['configurationRevision'] ?? '');
+$categoryModule->testSetProperty('CategoryNewestFirst', false);
+$categoryModule->ApplyChanges();
+$oldestFirstBootstrap = $categoryModule->testLastVisualizationUpdate();
+check(
+    array_column($oldestFirstBootstrap['items'] ?? [], 'title') === ['Camera two', 'Camera three'],
+    'Category source is not ordered oldest first.'
+);
+
+$categoryModule->testSetProperty('CategoryNewestFirst', true);
+$categoryModule->ApplyChanges();
+unset($mediaFixtures[101]);
+$categoryFixtures[301] = [102, 103, 104, 201];
+$categoryModule->MessageSink(time(), 101, MM_DELETE, []);
+check($categoryModule->testStatus() === IS_ACTIVE, 'Rolling category deletion disabled the module.');
+check(
+    $categoryModule->testReferences() === [103, 104, 301],
+    'Rolling category references were not reconciled.'
+);
+$rolledBootstrap = $categoryModule->testLastVisualizationUpdate();
+check(($rolledBootstrap['action'] ?? null) === 'bootstrap', 'Category roll did not publish bootstrap.');
+check(isset($rolledBootstrap['initialMedia']), 'Category roll did not include a replacement preview.');
+check(
+    array_column($rolledBootstrap['items'] ?? [], 'title') === ['Camera four', 'Camera three'],
+    'Category roll did not expose the newest bounded sequence.'
+);
+
+$categoryModule->RequestAction(
+    'LoadMedia',
+    json_encode(
+        [
+            'index' => 0,
+            'requestID' => 'stale_revision',
+            'configurationRevision' => $oldCategoryRevision,
+        ],
+        JSON_THROW_ON_ERROR
+    )
+);
+$revisionRefresh = $categoryModule->testLastVisualizationUpdate();
+check(
+    ($revisionRefresh['action'] ?? null) === 'bootstrap',
+    'Stale category request did not receive a refreshed bootstrap.'
+);
+check(
+    ($revisionRefresh['configurationRevision'] ?? null)
+        === ($rolledBootstrap['configurationRevision'] ?? null),
+    'Stale category request received a different current revision.'
+);
+
 $form = json_decode(
     (string) file_get_contents(__DIR__ . '/../distribution/MediaCarousel/form.json'),
     true,
     32,
     JSON_THROW_ON_ERROR
 );
-$list = $form['elements'][0] ?? [];
+$list = [];
+foreach ($form['elements'] ?? [] as $element) {
+    if (($element['name'] ?? null) === 'MediaItems') {
+        $list = $element;
+        break;
+    }
+}
 check(($list['type'] ?? null) === 'List', 'MediaItems is not configured as a List.');
 check(($list['rowCount'] ?? null) === 10, 'MediaItems default row count differs.');
 foreach ($list['columns'] ?? [] as $column) {
@@ -469,6 +630,7 @@ $moduleSource = (string) file_get_contents(__DIR__ . '/../distribution/MediaCaro
 check(!str_contains($moduleSource, 'IPS_SetLinkTargetID'), 'Module still changes a link target.');
 check(!str_contains($moduleSource, 'RegisterTimer'), 'Module still owns a server timer.');
 check(!str_contains($moduleSource, 'IPS_Create'), 'Module unexpectedly creates Symcon objects.');
+check(str_contains($moduleSource, 'resolveCategoryMediaItems'), 'Dynamic category source is missing.');
 
 $frontendSource = (string) file_get_contents(
     __DIR__ . '/../distribution/MediaCarousel/carousel.js'
@@ -476,6 +638,10 @@ $frontendSource = (string) file_get_contents(
 check(str_contains($frontendSource, 'buildPrefetchOrder'), 'Progressive sequence prefetch is missing.');
 check(str_contains($frontendSource, 'readyRevisions'), 'Loaded source cache is missing.');
 check(str_contains($frontendSource, 'sessionStorage'), 'Client-local resize persistence is missing.');
+check(
+    str_contains($frontendSource, 'configurationRevision: state.configurationRevision'),
+    'Media requests do not carry the sequence revision.'
+);
 $moveStart = strpos($frontendSource, 'async function move(');
 $loadStart = strpos($frontendSource, 'await waitForLoadedImage(', $moveStart ?: 0);
 $busyStart = strpos($frontendSource, 'state.busy = true;', $moveStart ?: 0);

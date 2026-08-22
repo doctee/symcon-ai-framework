@@ -32,8 +32,8 @@ if ($library !== []) {
         $errors
     );
     validateGuid($library['id'] ?? null, 'library GUID', $errors);
-    if (($library['version'] ?? null) !== '0.1.2') {
-        $errors[] = 'Library version must identify the 0.1.2 preview candidate.';
+    if (($library['version'] ?? null) !== '0.2.0') {
+        $errors[] = 'Library version must identify the 0.2.0 preview candidate.';
     }
     if (($library['compatibility']['version'] ?? null) !== '8.1') {
         $errors[] = 'Library compatibility must require IP-Symcon 8.1.';
@@ -81,6 +81,11 @@ if (str_contains($javascript, '.decode()') || str_contains($javascript, 'Promise
 foreach (['PREVIEW_MAX_WIDTH', 'createPreviewMediaMessage', "'preview'               => true"] as $marker) {
     if (!str_contains(readText($distribution . '/MediaCarousel/module.php', $errors), $marker)) {
         $errors[] = 'Preview contract marker is missing: ' . $marker . '.';
+    }
+}
+foreach (['resolveCategoryMediaItems', 'CategoryItemLimit', 'readRequestConfigurationRevision'] as $marker) {
+    if (!str_contains(readText($distribution . '/MediaCarousel/module.php', $errors), $marker)) {
+        $errors[] = 'Dynamic category contract marker is missing: ' . $marker . '.';
     }
 }
 

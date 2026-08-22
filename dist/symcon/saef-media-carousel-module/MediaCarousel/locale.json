@@ -1,6 +1,12 @@
 {
   "translations": {
     "de": {
+      "Image source": "Bildquelle",
+      "Explicit image list": "Explizite Bilderliste",
+      "Images from category": "Bilder aus Kategorie",
+      "Image category": "Bilderkategorie",
+      "Maximum category images": "Maximale Anzahl Kategoriebilder",
+      "Show newest category image first": "Neuestes Kategoriebild zuerst anzeigen",
       "Ordered images": "Geordnete Bilder",
       "Media object": "Medienobjekt",
       "Title": "Titel",
@@ -18,7 +24,7 @@
       "Show sequence position": "Sequenzposition anzeigen",
       "Show large navigation arrows": "Große Navigationspfeile anzeigen",
       "Maximum size of one image in megabytes": "Maximale Größe eines Bildes in Megabyte",
-      "The carousel reads media objects only. It does not create links, timers, media objects or camera commands.": "Das Carousel liest ausschließlich Medienobjekte. Es erzeugt keine Links, Timer oder Medienobjekte und löst keine Kamerabefehle aus.",
+      "The carousel reads explicit media objects or current image children of one category. It does not create links, timers, media objects or camera commands.": "Das Carousel liest explizite Medienobjekte oder die aktuellen Bildmedien einer Kategorie. Es erzeugt keine Links, Timer oder Medienobjekte und löst keine Kamerabefehle aus.",
       "Previous image": "Vorheriges Bild",
       "Next image": "Nächstes Bild",
       "Loading image": "Bild wird geladen",

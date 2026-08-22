@@ -7,20 +7,20 @@
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/carousel.js",
             "target": "MediaCarousel/carousel.js",
-            "sha256": "5f93c869bbe57fa23f30452d8991aee4eb05cabfbfb2abc4c6033ced95ca08a2",
-            "bytes": 22551
+            "sha256": "8fd0bc5560b743ad6bc88a43df01da4eb0a2df0271cb4f321b2115a695f63cec",
+            "bytes": 22649
         },
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/form.json",
             "target": "MediaCarousel/form.json",
-            "sha256": "2625916d565a266bdf22f332c588ed9b620621dd3fd8d8d1c23db454d0f1e43a",
-            "bytes": 2886
+            "sha256": "e757fbc80638c9f8c8e6a8463b0d820f4a8a08e853f831ed782ae9503164c48a",
+            "bytes": 3664
         },
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/locale.json",
             "target": "MediaCarousel/locale.json",
-            "sha256": "07f21d316e19527811c0344ce3470217750ed1e59079e452a05c6d2859b6608f",
-            "bytes": 1585
+            "sha256": "62603caf8b8c5bee3ae5dcf726ad983516dc391a420853854bcde070302c50fe",
+            "bytes": 2010
         },
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/module.html",
@@ -37,17 +37,17 @@
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/module.php",
             "target": "MediaCarousel/module.php",
-            "sha256": "88e65fa4ff4ac1f360cbe82f786c451e5b0c09f618ec381f89ef8c780e9f2b63",
-            "bytes": 23193
+            "sha256": "55f90d336807a30a22888307909dc36651102e6164e5ad43fb9f89c1b52fa3b9",
+            "bytes": 29389
         },
         {
             "source": "case-studies/media-carousel/distribution/library.json",
             "target": "library.json",
-            "sha256": "f1ecefb8f205deafdf4b1fb1cc8e809bcaa4529c99d1b127ce66ffc0e1d268f1",
+            "sha256": "82125601d3824040bf106f20e832abbe1d567b618fc07f5e2d836fab6711f7ef",
             "bytes": 260
         }
     ],
-    "filesetSha256": "539e4e3090c4e776e22a056ba68becde033be2b77eebf165cccf835e8dfc54af",
+    "filesetSha256": "504776068b3bda78aaad49799f48e9ec121226d7a62b49ae901329c3b85aa7f5",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",
