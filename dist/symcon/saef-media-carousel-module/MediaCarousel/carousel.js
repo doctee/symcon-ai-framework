@@ -1,6 +1,8 @@
 (function () {
     'use strict';
 
+    const MAX_PENDING_REQUESTS = 2;
+
     const carousel = document.getElementById('carousel');
     const track = document.getElementById('track');
     const previousImage = document.getElementById('previousImage');
@@ -33,7 +35,8 @@
         pointerID: null,
         pointerStartX: 0,
         pointerStartTime: 0,
-        pointerDeltaX: 0
+        pointerDeltaX: 0,
+        lifecycleRenderFrame: null
     };
 
     function localize(text) {
@@ -171,8 +174,8 @@
             receiveMedia(payload.initialMedia, false);
         }
 
+        requestMedia(state.currentIndex);
         renderSlots().then(function () {
-            requestMedia(state.currentIndex);
             pumpPrefetch();
         });
     }
@@ -272,6 +275,7 @@
             !state.settings
             || (existing && existing.preview === false)
             || state.pending.has(index)
+            || state.pending.size >= MAX_PENDING_REQUESTS
             || index < 0
             || index >= state.items.length
         ) {
@@ -339,7 +343,7 @@
     }
 
     function pumpPrefetch() {
-        if (!state.settings || state.pending.size >= 2) {
+        if (!state.settings || state.pending.size >= MAX_PENDING_REQUESTS) {
             return;
         }
 
@@ -353,10 +357,28 @@
 
         if (nextIndex !== undefined) {
             requestMedia(nextIndex);
-            if (state.pending.size < 2) {
+            if (state.pending.size < MAX_PENDING_REQUESTS) {
                 window.setTimeout(pumpPrefetch, 120);
             }
         }
+    }
+
+    function renderForLifecycleChange() {
+        if (state.lifecycleRenderFrame !== null) {
+            return;
+        }
+
+        state.lifecycleRenderFrame = window.requestAnimationFrame(function () {
+            state.lifecycleRenderFrame = null;
+            centerTrack(false);
+            if (!state.settings || state.items.length === 0 || document.hidden) {
+                return;
+            }
+            renderSlots().then(function () {
+                pumpPrefetch();
+                scheduleAutoAdvance();
+            });
+        });
     }
 
     function waitForLoadedImage(index) {
@@ -693,12 +715,15 @@
         if (document.hidden) {
             clearTimeout(state.autoTimer);
         } else {
-            scheduleAutoAdvance();
+            renderForLifecycleChange();
         }
     });
 
+    window.addEventListener('pageshow', renderForLifecycleChange);
+    window.addEventListener('focus', renderForLifecycleChange);
+
     const resizeObserver = new ResizeObserver(function () {
-        centerTrack(false);
+        renderForLifecycleChange();
     });
     resizeObserver.observe(carousel);
 }());

@@ -6,8 +6,10 @@ class MediaCarousel extends IPSModuleStrict
 {
     private const STATUS_INVALID_CONFIGURATION = 200;
     private const MAX_ITEM_COUNT = 50;
-    private const PREVIEW_MAX_WIDTH = 640;
-    private const PREVIEW_JPEG_QUALITY = 68;
+    private const DISPLAY_MAX_WIDTH = 1280;
+    private const DISPLAY_JPEG_QUALITY = 76;
+    private const PREVIEW_MAX_WIDTH = 480;
+    private const PREVIEW_JPEG_QUALITY = 58;
     private const SOURCE_CATEGORY = 'category';
     private const SOURCE_LIST = 'list';
 
@@ -556,8 +558,44 @@ class MediaCarousel extends IPSModuleStrict
         string $requestID,
         string $configurationRevision
     ): array {
+        $content = $this->readMediaContent($items[$index]['mediaID']);
+
+        try {
+            return $this->createRenderedMediaMessage(
+                $index,
+                $requestID,
+                $configurationRevision,
+                $content,
+                self::DISPLAY_MAX_WIDTH,
+                self::DISPLAY_JPEG_QUALITY,
+                false
+            );
+        } catch (Throwable $exception) {
+            $this->SendDebug('Display image generation failed', $exception->getMessage(), 0);
+
+            return $this->createOriginalMediaMessage(
+                $items,
+                $index,
+                $requestID,
+                $configurationRevision,
+                $content
+            );
+        }
+    }
+
+    /**
+     * @param list<array{mediaID: int, title: string, mimeType: string}> $items
+     * @return array<string, bool|int|string>
+     */
+    private function createOriginalMediaMessage(
+        array $items,
+        int $index,
+        string $requestID,
+        string $configurationRevision,
+        ?string $content = null
+    ): array {
         $item = $items[$index];
-        $content = $this->readMediaContent($item['mediaID']);
+        $content ??= $this->readMediaContent($item['mediaID']);
 
         return [
             'action'                => 'media',
@@ -602,6 +640,31 @@ class MediaCarousel extends IPSModuleStrict
         int $index,
         string $configurationRevision
     ): array {
+        $content = $this->readMediaContent($items[$index]['mediaID']);
+
+        return $this->createRenderedMediaMessage(
+            $index,
+            'initial-preview',
+            $configurationRevision,
+            $content,
+            self::PREVIEW_MAX_WIDTH,
+            self::PREVIEW_JPEG_QUALITY,
+            true
+        );
+    }
+
+    /**
+     * @return array<string, bool|int|string>
+     */
+    private function createRenderedMediaMessage(
+        int $index,
+        string $requestID,
+        string $configurationRevision,
+        string $content,
+        int $maximumWidth,
+        int $jpegQuality,
+        bool $preview
+    ): array {
         foreach (
             [
                 'imagecreatefromstring',
@@ -617,8 +680,6 @@ class MediaCarousel extends IPSModuleStrict
             }
         }
 
-        $item = $items[$index];
-        $content = $this->readMediaContent($item['mediaID']);
         $binary = base64_decode($content, true);
         if ($binary === false) {
             throw new RuntimeException('Media content is not valid base64.');
@@ -636,7 +697,7 @@ class MediaCarousel extends IPSModuleStrict
         try {
             $sourceWidth = imagesx($sourceImage);
             $sourceHeight = imagesy($sourceImage);
-            $previewWidth = min(self::PREVIEW_MAX_WIDTH, $sourceWidth);
+            $previewWidth = min($maximumWidth, $sourceWidth);
             $previewHeight = max(
                 1,
                 (int) round($sourceHeight * ($previewWidth / $sourceWidth))
@@ -665,7 +726,7 @@ class MediaCarousel extends IPSModuleStrict
             }
 
             ob_start();
-            if (!imagejpeg($previewImage, null, self::PREVIEW_JPEG_QUALITY)) {
+            if (!imagejpeg($previewImage, null, $jpegQuality)) {
                 throw new RuntimeException('Preview encoding failed.');
             }
             $previewBytes = ob_get_clean();
@@ -681,14 +742,14 @@ class MediaCarousel extends IPSModuleStrict
         return [
             'action'                => 'media',
             'configurationRevision' => $configurationRevision,
-            'requestID'             => 'initial-preview',
+            'requestID'             => $requestID,
             'index'                 => $index,
             'contentRevision'       => hash(
                 'sha256',
-                $content . ':preview:' . self::PREVIEW_MAX_WIDTH . ':' . self::PREVIEW_JPEG_QUALITY
+                $content . ':render:' . $maximumWidth . ':' . $jpegQuality
             ),
             'source'                => 'data:image/jpeg;base64,' . base64_encode($previewBytes),
-            'preview'               => true,
+            'preview'               => $preview,
         ];
     }
 
