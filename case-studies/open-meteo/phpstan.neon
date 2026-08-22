@@ -11,6 +11,7 @@ parameters:
         - tools/build-calibration-collector.php
 
     scanFiles:
+        - ../../tools/publication/ModulePublication.php
         - ../../tools/publish-open-meteo-module.php
 
     bootstrapFiles:

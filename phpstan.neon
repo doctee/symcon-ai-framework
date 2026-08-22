@@ -1,5 +1,6 @@
 parameters:
     level: 5
+    phpVersion: 80200
 
     parallel:
         maximumNumberOfProcesses: 1

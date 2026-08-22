@@ -182,3 +182,31 @@ When analysis boundaries change, verify both the complete production PHPStan
 gate and every executable test group. A green production gate alone does not
 replace test execution, and passing tests do not replace production static
 analysis.
+
+## 11. Standalone module publication
+
+Repository publication is an independently authorized engineering phase. It is
+not a live Symcon operation and does not authorize pull-request merge, Module
+Control updates or retention cleanup.
+
+A reusable standalone-module publisher shall provide:
+
+1. a read-only candidate check without clone or remote mutation;
+2. a deterministic local prepare mode that requires a new target;
+3. exact contract, inventory, fileset and publication hashes;
+4. repository identity and full remote-commit preconditions;
+5. allowlisted staging and a remote-drift check immediately before push;
+6. an independent post-push clone and byte comparison;
+7. PR publication as the default integration boundary for new contracts; and
+8. retained recovery evidence after a remote mutation followed by failure.
+
+Contracts must reject unknown fields, unsafe paths, symbolic links,
+unclassified files and configured private markers. Tests shall cover unchanged
+behavior, deterministic preparation, malformed contracts, wrong immutable
+gates, baseline and staged-path violations, pre-push drift, push failure,
+post-push PR failure and successful non-draft PR creation.
+
+One explicit authorization may cover the internal subprocesses of one fixed,
+hash-pinned publisher invocation. Platform sandbox approval is independent of
+that SAEF phase authorization. Merge, live installation and destructive cleanup
+remain separate gates.

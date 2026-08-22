@@ -1,0 +1,64 @@
+{
+  "formatVersion": 1,
+  "name": "media-carousel",
+  "hashNamespace": "SAEF-MEDIA-CAROUSEL-PUBLICATION",
+  "repository": {
+    "name": "doctee/saef-media-carousel",
+    "publicUrl": "https://github.com/doctee/saef-media-carousel",
+    "cloneUrl": "git@github.com:doctee/saef-media-carousel.git",
+    "baseBranch": "main",
+    "confirmation": "publish-doctee-saef-media-carousel-pr"
+  },
+  "publication": {
+    "mode": "pull_request",
+    "topicBranch": "saef/{name}-{fileset}",
+    "pullRequest": {
+      "repository": "doctee/saef-media-carousel",
+      "base": "main",
+      "title": "feat: publish MediaCarousel module update",
+      "body": "Automated bounded SAEF module publication.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`"
+    }
+  },
+  "generated": {
+    "directory": "dist/symcon/saef-media-carousel-module",
+    "manifest": "deployments/symcon/media-carousel-module.fileset.json",
+    "sourceMap": "fileset.sources.json",
+    "sidecar": "fileset.sha256",
+    "name": "saef-media-carousel-module"
+  },
+  "metadata": [
+    {
+      "source": "LICENSE",
+      "target": "LICENSE"
+    },
+    {
+      "source": "case-studies/media-carousel/publication/README.md",
+      "target": "README.md"
+    }
+  ],
+  "inventory": [
+    "LICENSE",
+    "MediaCarousel/carousel.js",
+    "MediaCarousel/form.json",
+    "MediaCarousel/locale.json",
+    "MediaCarousel/module.html",
+    "MediaCarousel/module.json",
+    "MediaCarousel/module.php",
+    "README.md",
+    "fileset.sha256",
+    "fileset.sources.json",
+    "library.json"
+  ],
+  "privacy": {
+    "forbiddenMarkers": []
+  },
+  "metadataValidation": {
+    "repositoryUrlPaths": [
+      "MediaCarousel/module.json",
+      "library.json"
+    ],
+    "readmeTarget": "README.md",
+    "licenseTarget": "LICENSE",
+    "licenseMarker": "PolyForm Noncommercial License 1.0.0"
+  }
+}

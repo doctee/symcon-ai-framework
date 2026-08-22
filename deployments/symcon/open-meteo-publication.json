@@ -1,15 +1,26 @@
 {
   "formatVersion": 1,
+  "name": "open-meteo",
+  "hashNamespace": "SAEF-OPEN-METEO-PUBLICATION",
   "repository": {
     "name": "doctee/saef-open-meteo",
     "publicUrl": "https://github.com/doctee/saef-open-meteo",
     "cloneUrl": "git@github.com:doctee/saef-open-meteo.git",
-    "branch": "main",
+    "baseBranch": "main",
     "confirmation": "publish-doctee-saef-open-meteo-main"
   },
-  "generatedDirectory": "dist/symcon/saef-open-meteo-module",
-  "sourceMap": "fileset.sources.json",
-  "sidecar": "fileset.sha256",
+  "publication": {
+    "mode": "direct_branch",
+    "topicBranch": null,
+    "pullRequest": null
+  },
+  "generated": {
+    "directory": "dist/symcon/saef-open-meteo-module",
+    "manifest": "deployments/symcon/open-meteo-module.fileset.json",
+    "sourceMap": "fileset.sources.json",
+    "sidecar": "fileset.sha256",
+    "name": "saef-open-meteo-module"
+  },
   "metadata": [
     {
       "source": "LICENSE",
@@ -19,5 +30,66 @@
       "source": "case-studies/open-meteo/publication/README.md",
       "target": "README.md"
     }
-  ]
+  ],
+  "inventory": [
+    "DwdPrecipitationNowcast/form.json",
+    "DwdPrecipitationNowcast/locale.json",
+    "DwdPrecipitationNowcast/module.json",
+    "DwdPrecipitationNowcast/module.php",
+    "LICENSE",
+    "OpenMeteoSolarForecast/form.json",
+    "OpenMeteoSolarForecast/locale.json",
+    "OpenMeteoSolarForecast/module.json",
+    "OpenMeteoSolarForecast/module.php",
+    "OpenMeteoWeather/form.json",
+    "OpenMeteoWeather/locale.json",
+    "OpenMeteoWeather/module.json",
+    "OpenMeteoWeather/module.php",
+    "README.md",
+    "SharedLocation/form.json",
+    "SharedLocation/locale.json",
+    "SharedLocation/module.json",
+    "SharedLocation/module.php",
+    "fileset.sha256",
+    "fileset.sources.json",
+    "library.json",
+    "libs/DwdNowcast/ForecastProjector.php",
+    "libs/DwdNowcast/NowcastHtmlRenderer.php",
+    "libs/DwdNowcast/Profiles.php",
+    "libs/DwdNowcast/RequestBuilder.php",
+    "libs/DwdNowcast/ResponseParser.php",
+    "libs/DwdNowcast/TransportDiagnostics.php",
+    "libs/OpenMeteo/FieldCatalog.php",
+    "libs/OpenMeteo/ForecastPoint.php",
+    "libs/OpenMeteo/ForecastSeries.php",
+    "libs/OpenMeteo/ForecastStateReducer.php",
+    "libs/OpenMeteo/IntervalAligner.php",
+    "libs/OpenMeteo/LocationDefinition.php",
+    "libs/OpenMeteo/ParsedForecast.php",
+    "libs/OpenMeteo/Profiles.php",
+    "libs/OpenMeteo/PvConfiguration.php",
+    "libs/OpenMeteo/RequestBuilder.php",
+    "libs/OpenMeteo/ResponseParser.php",
+    "libs/OpenMeteo/SolarForecastCalculator.php",
+    "libs/OpenMeteo/SolarForecastProjector.php",
+    "libs/OpenMeteo/WeatherForecastProjector.php",
+    "libs/SAEF/helpers/common/Validation.php",
+    "libs/SAEF/helpers/diagnostics/ConfigurationHash.php",
+    "libs/SAEF/helpers/object/EnsureProfile.php"
+  ],
+  "privacy": {
+    "forbiddenMarkers": []
+  },
+  "metadataValidation": {
+    "repositoryUrlPaths": [
+      "DwdPrecipitationNowcast/module.json",
+      "OpenMeteoSolarForecast/module.json",
+      "OpenMeteoWeather/module.json",
+      "SharedLocation/module.json",
+      "library.json"
+    ],
+    "readmeTarget": "README.md",
+    "licenseTarget": "LICENSE",
+    "licenseMarker": "PolyForm Noncommercial License 1.0.0"
+  }
 }

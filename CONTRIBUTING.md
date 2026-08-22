@@ -100,6 +100,24 @@ static analysis and coding-style checks configured for SAEF.
 If a change affects Markdown-only documentation, still run `make check` so the
 repository remains in a known-good state.
 
+## Publication Authorization
+
+SAEF authorizes bounded engineering phases, not every implementation detail in
+isolation. A reviewed, fixed module-publisher invocation may include its
+allowlisted clone, staging, commit, push, independent verification and pull
+request creation under one explicit repository-publication approval.
+
+This does not authorize:
+
+- merging the pull request;
+- updating an installed Symcon module;
+- changing an IP-Symcon object or device; or
+- deleting a recovery workspace or retained artifact.
+
+Those actions remain separate gates with fresh evidence. Codex or operating
+system sandbox permissions are independent and may still require their own
+narrow command-prefix approval.
+
 ## Licensing of Contributions
 
 SAEF uses a noncommercial public license and reserves the ability to offer

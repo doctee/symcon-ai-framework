@@ -11,6 +11,12 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added a generic manifest-driven standalone Symcon module publisher with
+  strict contracts, deterministic check/prepare modes, exact apply gates,
+  topic-branch pull-request publication, remote-drift protection, independent
+  verification and retained post-mutation recovery evidence. Open-Meteo keeps
+  its proven direct-branch behavior through a compatibility adapter, while
+  MediaCarousel provides the byte-exact eleven-file PR-based second contract.
 - Added an offline-only MediaCarousel HTML-SDK candidate for ordered Symcon
   image media objects. It progressively prefetches the normal full sequence,
   commits transitions only after browser decode, keeps gesture/index state
@@ -50,6 +56,8 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Pinned repository and bundle PHPStan analysis to the declared PHP 8.2
+  minimum so checks remain deterministic when the local PHP runtime changes.
 - Reduced DWD nowcast log noise by classifying observed TLS-handshake and HTTP
   5xx provider warnings inside the bounded transport adapter. Brief recovered
   outages remain in structured counters; operational logs are reserved for

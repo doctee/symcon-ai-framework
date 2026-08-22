@@ -12,6 +12,10 @@ The workflow is implemented by:
 tools/publish-open-meteo-module.php
 ```
 
+This file is a compatibility entrypoint over the generic engine in
+`tools/publication/ModulePublication.php`. The generic CLI and contract model
+are documented in `deployments/symcon/publication/README.md`.
+
 Its immutable publication contract is:
 
 ```text
@@ -64,6 +68,16 @@ php tools/publish-open-meteo-module.php \
   --confirm-publication=publish-doctee-saef-open-meteo-main \
   --commit-message="<reviewed commit message>"
 ```
+
+Open-Meteo temporarily retains its established `direct_branch` contract so the
+observable publisher behavior and publication hash remain equivalent. New SAEF
+module contracts publish to a topic branch and create a pull request by
+default. Migrating Open-Meteo itself to PR publication is a separate review and
+authorization boundary.
+
+One explicit authorization for the complete fixed command covers its bounded
+Git subprocess sequence. Merge, any later Module Control update and retention
+cleanup remain separate gates.
 
 Before any remote mutation the publisher:
 
@@ -153,3 +167,8 @@ changed publication remains a separate explicit approval.
 - rejection of an ungated apply before network access;
 - rejection of directory symbolic links before file filtering; and
 - absence of any IP-Symcon live-operation surface in the publisher.
+
+The shared regression in `tests/publication/module-publication.php` additionally
+proves strict contract validation, staged-path enforcement, pre-push remote
+drift, retained recovery workspaces, PR failure handling and a successful local
+topic-branch/PR simulation.
