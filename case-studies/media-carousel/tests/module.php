@@ -381,10 +381,18 @@ function encodeItems(array $items): string
     return json_encode($items, JSON_THROW_ON_ERROR);
 }
 
+$fallbackModule = new MediaCarousel();
+$fallbackModule->Create();
+check(
+    $fallbackModule->testVisualizationType() === 1,
+    'Pre-9.1 HTML visualization fallback is not active.'
+);
+
+define('INSTANCE_VISUALIZATION_TYPE_HTML_FULLSCREEN', 2);
 $module = new MediaCarousel();
 $module->Create();
 check($module->testParentCreateCalls() === 1, 'Parent Create was not called exactly once.');
-check($module->testVisualizationType() === 1, 'HTML visualization type is not active.');
+check($module->testVisualizationType() === 2, 'HTML fullscreen visualization type is not active.');
 
 $validItems = [
     ['MediaID' => 101, 'Title' => 'Entrance', 'Enabled' => true],
