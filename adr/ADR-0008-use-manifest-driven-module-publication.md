@@ -55,6 +55,14 @@ hash-pinned publisher invocation and its internal bounded Git/GitHub commands.
 Pull-request merge, live Symcon update and destructive retention cleanup remain
 separate authorization gates.
 
+For `pull_request` contracts, the same publisher also provides a separate
+`--integrate` phase. It replaces a sequence of individually approved PR reads,
+check polling, merge and post-merge reads with one fixed invocation. The phase
+requires the exact candidate hashes, base commit, PR number, full PR head commit
+and a repository-specific integration token. It verifies PR identity,
+mergeability and every reported check before merging, uses head-match protection,
+and independently verifies the merged base tree afterwards.
+
 ## Required safeguards
 
 The implementation must:
@@ -67,9 +75,11 @@ The implementation must:
 - stage only contract-classified paths;
 - recheck the remote base immediately before push;
 - independently clone and verify the pushed tree;
+- require a separately confirmed, hash-bound integration invocation before a
+  PR merge and verify the merged base tree independently;
 - preserve recovery evidence after any attempted remote mutation followed by
   failure; and
-- never merge or access a live Symcon installation.
+- never access a live Symcon installation.
 
 ## Rationale
 

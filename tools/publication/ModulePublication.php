@@ -59,14 +59,19 @@ function runModulePublicationCli(
             return 0;
         }
 
-        assertModulePublicationApplyGate($options, $contract, $candidate);
-        applyModulePublication(
-            $contract,
-            $candidate,
-            $options,
-            null,
-            $openMeteoCompatibility
-        );
+        if ($options['mode'] === 'integrate') {
+            assertModulePublicationIntegrationGate($options, $contract, $candidate);
+            integrateModulePublication($contract, $candidate, $options);
+        } else {
+            assertModulePublicationApplyGate($options, $contract, $candidate);
+            applyModulePublication(
+                $contract,
+                $candidate,
+                $options,
+                null,
+                $openMeteoCompatibility
+            );
+        }
 
         return 0;
     } catch (Throwable $exception) {
@@ -117,14 +122,17 @@ function modulePublicationArguments(mixed $value): array
  * @param list<string> $arguments
  *
  * @return array{
- *     mode: 'check'|'prepare'|'apply',
+ *     mode: 'check'|'prepare'|'apply'|'integrate',
  *     contractPath: string,
  *     prepareTarget: string,
  *     expectedFilesetSha256: string,
  *     expectedPublicationSha256: string,
  *     expectedRemoteCommit: string,
  *     confirmation: string,
- *     commitMessage: string
+ *     commitMessage: string,
+ *     expectedPullRequest: int,
+ *     expectedPullRequestHead: string,
+ *     integrationConfirmation: string
  * }
  */
 function parseModulePublicationArguments(
@@ -140,10 +148,16 @@ function parseModulePublicationArguments(
     $expectedRemoteCommit = '';
     $confirmation = '';
     $commitMessage = '';
+    $expectedPullRequest = 0;
+    $expectedPullRequestHead = '';
+    $integrationConfirmation = '';
     $contractPath = $boundContract ?? '';
 
     foreach ($arguments as $argument) {
-        if ($argument === '--check' || $argument === '--prepare' || $argument === '--apply') {
+        if (
+            $argument === '--check' || $argument === '--prepare'
+            || $argument === '--apply' || $argument === '--integrate'
+        ) {
             $candidateMode = substr($argument, 2);
             if ($mode !== '' && $mode !== $candidateMode) {
                 throw new InvalidArgumentException('Publication modes are mutually exclusive.');
@@ -168,6 +182,16 @@ function parseModulePublicationArguments(
             $confirmation = substr($argument, strlen('--confirm-publication='));
         } elseif (str_starts_with($argument, '--commit-message=')) {
             $commitMessage = substr($argument, strlen('--commit-message='));
+        } elseif (str_starts_with($argument, '--expected-pull-request=')) {
+            $value = substr($argument, strlen('--expected-pull-request='));
+            $expectedPullRequest = ctype_digit($value) ? (int) $value : 0;
+        } elseif (str_starts_with($argument, '--expected-pull-request-head=')) {
+            $expectedPullRequestHead = substr(
+                $argument,
+                strlen('--expected-pull-request-head=')
+            );
+        } elseif (str_starts_with($argument, '--confirm-integration=')) {
+            $integrationConfirmation = substr($argument, strlen('--confirm-integration='));
         } elseif (str_starts_with($argument, '--contract=')) {
             $requestedContract = substr($argument, strlen('--contract='));
             if ($boundContract !== null && $requestedContract !== $boundContract) {
@@ -182,7 +206,7 @@ function parseModulePublicationArguments(
     if ($mode === '') {
         throw new InvalidArgumentException(
             'Usage: php ' . $programName . ' '
-            . '--check|--prepare[=TARGET]|--apply [apply gates]'
+            . '--check|--prepare[=TARGET]|--apply|--integrate [phase gates]'
         );
     }
     if ($contractPath === '') {
@@ -198,6 +222,9 @@ function parseModulePublicationArguments(
         'expectedRemoteCommit' => strtolower($expectedRemoteCommit),
         'confirmation' => $confirmation,
         'commitMessage' => $commitMessage,
+        'expectedPullRequest' => $expectedPullRequest,
+        'expectedPullRequestHead' => strtolower($expectedPullRequestHead),
+        'integrationConfirmation' => $integrationConfirmation,
     ];
 }
 
@@ -310,7 +337,11 @@ function loadModulePublicationContract(
         if (!is_array($pullRequest)) {
             throw new RuntimeException('Pull-request metadata is invalid.');
         }
-        assertModulePublicationFields($pullRequest, ['repository', 'base', 'title', 'body'], 'pull request');
+        assertModulePublicationFields(
+            $pullRequest,
+            ['repository', 'base', 'title', 'body', 'integrationConfirmation'],
+            'pull request'
+        );
         if (
             ($pullRequest['repository'] ?? null) !== $repository['name']
             || ($pullRequest['base'] ?? null) !== $repository['baseBranch']
@@ -321,6 +352,15 @@ function loadModulePublicationContract(
             if (!is_string($pullRequest[$key] ?? null) || trim($pullRequest[$key]) === '') {
                 throw new RuntimeException('Pull-request ' . $key . ' is invalid.');
             }
+        }
+        if (
+            !is_string($pullRequest['integrationConfirmation'] ?? null)
+            || preg_match(
+                '/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/D',
+                $pullRequest['integrationConfirmation']
+            ) !== 1
+        ) {
+            throw new RuntimeException('Pull-request integration confirmation is invalid.');
         }
     }
 
@@ -565,6 +605,254 @@ function assertModulePublicationApplyGate(array $options, array $contract, array
         || str_contains($options['commitMessage'], "\r")
     ) {
         throw new RuntimeException('Publication commit message is invalid.');
+    }
+}
+
+/**
+ * @param array<string, mixed> $options
+ * @param array<string, mixed> $contract
+ * @param array{filesetSha256: string, publicationSha256: string} $candidate
+ */
+function assertModulePublicationIntegrationGate(
+    array $options,
+    array $contract,
+    array $candidate
+): void {
+    if ($options['mode'] !== 'integrate' || $contract['publication']['mode'] !== 'pull_request') {
+        throw new RuntimeException('Integration is restricted to pull-request publication.');
+    }
+    if (!hash_equals($candidate['filesetSha256'], $options['expectedFilesetSha256'])) {
+        throw new RuntimeException('Explicit expected fileset hash does not match the candidate.');
+    }
+    if (!hash_equals($candidate['publicationSha256'], $options['expectedPublicationSha256'])) {
+        throw new RuntimeException('Explicit expected publication hash does not match the candidate.');
+    }
+    foreach (['expectedRemoteCommit', 'expectedPullRequestHead'] as $key) {
+        if (preg_match('/^[a-f0-9]{40}$/D', $options[$key]) !== 1) {
+            throw new RuntimeException('Integration commits must be full SHA-1 values.');
+        }
+    }
+    if ($options['expectedPullRequest'] < 1) {
+        throw new RuntimeException('Explicit expected pull-request number is invalid.');
+    }
+    if (
+        !hash_equals(
+            $contract['publication']['pullRequest']['integrationConfirmation'],
+            $options['integrationConfirmation']
+        )
+    ) {
+        throw new RuntimeException('Explicit integration confirmation differs.');
+    }
+}
+
+/**
+ * @param array<string, mixed> $contract
+ * @param array{files: array<string, string>, filesetSha256: string, publicationSha256: string} $candidate
+ * @param array<string, mixed> $options
+ */
+function integrateModulePublication(array $contract, array $candidate, array $options): void
+{
+    $temporaryRoot = newModulePublicationPath('saef-module-publication-apply-');
+    if (!mkdir($temporaryRoot, 0700)) {
+        throw new RuntimeException('Cannot create publication integration workspace.');
+    }
+    $baseTree = $temporaryRoot . '/repository';
+    $topicTree = $temporaryRoot . '/verification';
+    $postMergeTree = $temporaryRoot . '/post-merge';
+    $mergeAttempted = false;
+    $preserveWorkspace = false;
+    $baseBranch = $contract['repository']['baseBranch'];
+    $topicBranch = modulePublicationTopicBranch(
+        $contract['publication']['topicBranch'],
+        $contract['name'],
+        $candidate['filesetSha256']
+    );
+
+    try {
+        runModulePublicationCommand([
+            'git', 'clone', '--depth', '1', '--branch', $baseBranch,
+            '--single-branch', '--no-tags', $contract['repository']['cloneUrl'], $baseTree,
+        ], $temporaryRoot);
+        $baseCommit = trim(runModulePublicationCommand(['git', 'rev-parse', 'HEAD'], $baseTree));
+        if (!hash_equals($options['expectedRemoteCommit'], $baseCommit)) {
+            throw new RuntimeException('Integration base branch changed.');
+        }
+        verifyModulePublicationRemote(
+            $temporaryRoot,
+            $topicTree,
+            $contract,
+            $candidate,
+            $options['expectedPullRequestHead'],
+            $topicBranch
+        );
+
+        $pullRequest = waitForModulePublicationPullRequest(
+            $contract,
+            $options['expectedPullRequest'],
+            $baseTree,
+            $topicBranch,
+            $options['expectedPullRequestHead']
+        );
+
+        $mergeAttempted = true;
+        runModulePublicationCommand([
+            'gh', 'pr', 'merge', (string) $options['expectedPullRequest'],
+            '--repo', $contract['repository']['name'],
+            '--merge',
+            '--match-head-commit', $options['expectedPullRequestHead'],
+        ], $baseTree);
+        $merged = readModulePublicationPullRequest(
+            $contract,
+            $options['expectedPullRequest'],
+            $baseTree
+        );
+        $mergeCommit = $merged['mergeCommit']['oid'] ?? null;
+        if (
+            ($merged['state'] ?? null) !== 'MERGED'
+            || !is_string($mergeCommit)
+            || preg_match('/^[a-f0-9]{40}$/D', $mergeCommit) !== 1
+        ) {
+            throw new RuntimeException('Pull request did not reach a verified merged state.');
+        }
+        verifyModulePublicationRemote(
+            $temporaryRoot,
+            $postMergeTree,
+            $contract,
+            $candidate,
+            $mergeCommit,
+            $baseBranch
+        );
+        writeModulePublicationResult([
+            'outcome' => 'integrated',
+            'mutationAttempted' => true,
+            ...modulePublicationResultIdentity($contract, false),
+            'repository' => $contract['repository']['name'],
+            'branch' => $baseBranch,
+            'previousCommit' => $options['expectedRemoteCommit'],
+            'commit' => $mergeCommit,
+            'pullRequest' => $options['expectedPullRequest'],
+            'pullRequestHead' => $options['expectedPullRequestHead'],
+            'checkCount' => count($pullRequest['statusCheckRollup']),
+            'fileCount' => count($candidate['files']),
+            'filesetSha256' => $candidate['filesetSha256'],
+            'publicationSha256' => $candidate['publicationSha256'],
+        ]);
+    } catch (Throwable $exception) {
+        if ($mergeAttempted) {
+            $preserveWorkspace = true;
+            throw new RuntimeException(
+                'Pull-request integration was attempted; preserve workspace evidence at '
+                . $temporaryRoot . ' and verify the remote before retrying. '
+                . $exception->getMessage(),
+                0,
+                $exception
+            );
+        }
+        throw $exception;
+    } finally {
+        if (!$preserveWorkspace) {
+            removeModulePublicationTree($temporaryRoot);
+        }
+    }
+}
+
+/**
+ * @param array<string, mixed> $contract
+ * @return array<string, mixed>
+ */
+function readModulePublicationPullRequest(
+    array $contract,
+    int $number,
+    string $workingTree
+): array {
+    $output = runModulePublicationCommand([
+        'gh', 'pr', 'view', (string) $number,
+        '--repo', $contract['repository']['name'],
+        '--json', 'number,state,isDraft,baseRefName,headRefName,headRefOid,mergeable,statusCheckRollup,url,mergeCommit',
+    ], $workingTree);
+    $result = json_decode($output, true, 512, JSON_THROW_ON_ERROR);
+    if (!is_array($result) || !is_array($result['statusCheckRollup'] ?? null)) {
+        throw new RuntimeException('Pull-request integration metadata is invalid.');
+    }
+
+    return $result;
+}
+
+/**
+ * @param array<string, mixed> $contract
+ * @return array<string, mixed>
+ */
+function waitForModulePublicationPullRequest(
+    array $contract,
+    int $number,
+    string $workingTree,
+    string $topicBranch,
+    string $expectedHead
+): array {
+    for ($attempt = 0; $attempt < 12; $attempt++) {
+        $pullRequest = readModulePublicationPullRequest($contract, $number, $workingTree);
+        try {
+            assertModulePublicationPullRequestReady(
+                $pullRequest,
+                $contract,
+                $topicBranch,
+                $expectedHead
+            );
+
+            return $pullRequest;
+        } catch (RuntimeException $exception) {
+            if (
+                !in_array(
+                    $exception->getMessage(),
+                    [
+                        'Pull request is not yet mergeable.',
+                        'Pull-request checks are not complete and successful.',
+                    ],
+                    true
+                )
+            ) {
+                throw $exception;
+            }
+            $lastFailure = $exception;
+            if ($attempt < 11) {
+                sleep(5);
+            }
+        }
+    }
+
+    throw $lastFailure;
+}
+
+/**
+ * @param array<string, mixed> $pullRequest
+ * @param array<string, mixed> $contract
+ */
+function assertModulePublicationPullRequestReady(
+    array $pullRequest,
+    array $contract,
+    string $topicBranch,
+    string $expectedHead
+): void {
+    if (
+        ($pullRequest['state'] ?? null) !== 'OPEN'
+        || ($pullRequest['isDraft'] ?? null) !== false
+        || ($pullRequest['baseRefName'] ?? null) !== $contract['repository']['baseBranch']
+        || ($pullRequest['headRefName'] ?? null) !== $topicBranch
+        || ($pullRequest['headRefOid'] ?? null) !== $expectedHead
+    ) {
+        throw new RuntimeException('Pull request identity differs.');
+    }
+    if (($pullRequest['mergeable'] ?? null) !== 'MERGEABLE') {
+        throw new RuntimeException('Pull request is not yet mergeable.');
+    }
+    foreach ($pullRequest['statusCheckRollup'] as $check) {
+        if (!is_array($check)) {
+            throw new RuntimeException('Pull-request check metadata is invalid.');
+        }
+        $conclusion = $check['conclusion'] ?? $check['state'] ?? null;
+        if (!in_array($conclusion, ['SUCCESS', 'NEUTRAL', 'SKIPPED'], true)) {
+            throw new RuntimeException('Pull-request checks are not complete and successful.');
+        }
     }
 }
 

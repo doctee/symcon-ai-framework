@@ -16,7 +16,8 @@
       "repository": "doctee/saef-media-carousel",
       "base": "main",
       "title": "feat: publish MediaCarousel module update",
-      "body": "Automated bounded SAEF module publication.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`"
+      "body": "Automated bounded SAEF module publication.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "integrationConfirmation": "merge-doctee-saef-media-carousel-pr"
     }
   },
   "generated": {
