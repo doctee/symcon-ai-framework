@@ -673,7 +673,26 @@ $frontendSource = (string) file_get_contents(
 );
 check(str_contains($frontendSource, 'buildPrefetchOrder'), 'Progressive sequence prefetch is missing.');
 check(str_contains($frontendSource, 'readyRevisions'), 'Loaded source cache is missing.');
-check(str_contains($frontendSource, 'sessionStorage'), 'Client-local resize persistence is missing.');
+check(str_contains($frontendSource, 'sessionStorage'), 'Session image-source persistence is missing.');
+check(str_contains($frontendSource, 'localStorage'), 'Cross-view position persistence is missing.');
+check(
+    str_contains($frontendSource, 'positionStorageKey'),
+    'Position storage is not isolated from image-source storage.'
+);
+$positionStoreStart = strpos(
+    $frontendSource,
+    'localStorage.setItem(positionStorageKey(), JSON.stringify({'
+);
+$positionStoreEnd = $positionStoreStart === false
+    ? false
+    : strpos($frontendSource, '} catch (error)', $positionStoreStart);
+$positionStore = $positionStoreStart === false || $positionStoreEnd === false
+    ? ''
+    : substr($frontendSource, $positionStoreStart, $positionStoreEnd - $positionStoreStart);
+check(
+    $positionStore !== '' && !str_contains($positionStore, 'source'),
+    'Persistent position storage unexpectedly contains an image source.'
+);
 check(
     str_contains($frontendSource, 'configurationRevision: state.configurationRevision'),
     'Media requests do not carry the sequence revision.'

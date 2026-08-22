@@ -39,8 +39,9 @@ until a separately authorised live pilot has passed.
   without changing the sequence index.
 - IP-Symcon 9.1 and newer use the HTML-SDK fullscreen visualization type;
   IP-Symcon 8.1 through 9.0 retain the compact HTML-SDK visualization type.
-- The browser stores the current sequence index per instance and configuration
-  revision in `sessionStorage` for a possible tile recreation.
+- The browser stores only the current sequence index and configuration revision
+  in `localStorage` so compact and fullscreen contexts on one device can resume
+  the same position. Compressed image sources remain limited to `sessionStorage`.
 
 ## Ownership and side effects
 
