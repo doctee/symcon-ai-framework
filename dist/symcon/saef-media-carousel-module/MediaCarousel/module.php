@@ -6,6 +6,8 @@ class MediaCarousel extends IPSModuleStrict
 {
     private const STATUS_INVALID_CONFIGURATION = 200;
     private const MAX_ITEM_COUNT = 50;
+    private const PREVIEW_MAX_WIDTH = 640;
+    private const PREVIEW_JPEG_QUALITY = 68;
 
     /** @var list<int> */
     private const MEDIA_MESSAGES = [
@@ -169,7 +171,7 @@ class MediaCarousel extends IPSModuleStrict
         );
 
         try {
-            $message = $this->createBootstrapMessage(false);
+            $message = $this->createBootstrapMessage(true);
         } catch (Throwable $exception) {
             $this->SendDebug('Tile bootstrap failed', $exception->getMessage(), 0);
             $message = [
@@ -367,7 +369,7 @@ class MediaCarousel extends IPSModuleStrict
     /**
      * @return array<string, mixed>
      */
-    private function createBootstrapMessage(bool $includeInitialMedia): array
+    private function createBootstrapMessage(bool $includeInitialPreview): array
     {
         $items = $this->resolveMediaItems();
         $this->validatePresentationConfiguration();
@@ -399,11 +401,10 @@ class MediaCarousel extends IPSModuleStrict
             ],
         ];
 
-        if ($includeInitialMedia && $items !== []) {
-            $message['initialMedia'] = $this->createMediaMessage(
+        if ($includeInitialPreview && $items !== []) {
+            $message['initialMedia'] = $this->createInitialMediaMessage(
                 $items,
                 0,
-                'initial',
                 $configurationRevision
             );
         }
@@ -413,7 +414,7 @@ class MediaCarousel extends IPSModuleStrict
 
     /**
      * @param list<array{mediaID: int, title: string, mimeType: string}> $items
-     * @return array<string, int|string>
+     * @return array<string, bool|int|string>
      */
     private function createMediaMessage(
         array $items,
@@ -422,7 +423,144 @@ class MediaCarousel extends IPSModuleStrict
         string $configurationRevision
     ): array {
         $item = $items[$index];
-        $content = IPS_GetMediaContent($item['mediaID']);
+        $content = $this->readMediaContent($item['mediaID']);
+
+        return [
+            'action'                => 'media',
+            'configurationRevision' => $configurationRevision,
+            'requestID'             => $requestID,
+            'index'                 => $index,
+            'contentRevision'       => hash('sha256', $content),
+            'source'                => 'data:' . $item['mimeType'] . ';base64,' . $content,
+            'preview'               => false,
+        ];
+    }
+
+    /**
+     * @param list<array{mediaID: int, title: string, mimeType: string}> $items
+     * @return array<string, bool|int|string>
+     */
+    private function createInitialMediaMessage(
+        array $items,
+        int $index,
+        string $configurationRevision
+    ): array {
+        try {
+            return $this->createPreviewMediaMessage($items, $index, $configurationRevision);
+        } catch (Throwable $exception) {
+            $this->SendDebug('Preview generation failed', $exception->getMessage(), 0);
+
+            return $this->createMediaMessage(
+                $items,
+                $index,
+                'initial-fallback',
+                $configurationRevision
+            );
+        }
+    }
+
+    /**
+     * @param list<array{mediaID: int, title: string, mimeType: string}> $items
+     * @return array<string, bool|int|string>
+     */
+    private function createPreviewMediaMessage(
+        array $items,
+        int $index,
+        string $configurationRevision
+    ): array {
+        foreach (
+            [
+                'imagecreatefromstring',
+                'imagecreatetruecolor',
+                'imagecopyresampled',
+                'imagecolorallocate',
+                'imagefill',
+                'imagejpeg',
+            ] as $requiredFunction
+        ) {
+            if (!function_exists($requiredFunction)) {
+                throw new RuntimeException('GD preview support is unavailable.');
+            }
+        }
+
+        $item = $items[$index];
+        $content = $this->readMediaContent($item['mediaID']);
+        $binary = base64_decode($content, true);
+        if ($binary === false) {
+            throw new RuntimeException('Media content is not valid base64.');
+        }
+
+        $sourceImage = @imagecreatefromstring($binary);
+        if ($sourceImage === false) {
+            throw new RuntimeException('Media content cannot be decoded for preview generation.');
+        }
+
+        $previewImage = null;
+        $previewBytes = '';
+        $bufferLevel = ob_get_level();
+
+        try {
+            $sourceWidth = imagesx($sourceImage);
+            $sourceHeight = imagesy($sourceImage);
+            $previewWidth = min(self::PREVIEW_MAX_WIDTH, $sourceWidth);
+            $previewHeight = max(
+                1,
+                (int) round($sourceHeight * ($previewWidth / $sourceWidth))
+            );
+            $previewImage = imagecreatetruecolor($previewWidth, $previewHeight);
+            if ($previewImage === false) {
+                throw new RuntimeException('Preview canvas cannot be created.');
+            }
+
+            $background = imagecolorallocate($previewImage, 0, 0, 0);
+            imagefill($previewImage, 0, 0, $background);
+            $resampled = imagecopyresampled(
+                $previewImage,
+                $sourceImage,
+                0,
+                0,
+                0,
+                0,
+                $previewWidth,
+                $previewHeight,
+                $sourceWidth,
+                $sourceHeight
+            );
+            if (!$resampled) {
+                throw new RuntimeException('Preview resampling failed.');
+            }
+
+            ob_start();
+            if (!imagejpeg($previewImage, null, self::PREVIEW_JPEG_QUALITY)) {
+                throw new RuntimeException('Preview encoding failed.');
+            }
+            $previewBytes = ob_get_clean();
+            if ($previewBytes === '') {
+                throw new RuntimeException('Preview encoding returned no data.');
+            }
+        } finally {
+            while (ob_get_level() > $bufferLevel) {
+                ob_end_clean();
+            }
+        }
+
+        return [
+            'action'                => 'media',
+            'configurationRevision' => $configurationRevision,
+            'requestID'             => 'initial-preview',
+            'index'                 => $index,
+            'contentRevision'       => hash(
+                'sha256',
+                $content . ':preview:' . self::PREVIEW_MAX_WIDTH . ':' . self::PREVIEW_JPEG_QUALITY
+            ),
+            'source'                => 'data:image/jpeg;base64,' . base64_encode($previewBytes),
+            'preview'               => true,
+        ];
+    }
+
+    private function readMediaContent(int $mediaID): string
+    {
+        $content = IPS_GetMediaContent($mediaID);
         if ($content === '') {
             throw new RuntimeException('Media content is empty.');
         }
@@ -433,14 +571,7 @@ class MediaCarousel extends IPSModuleStrict
             throw new LengthException('Media content exceeds MaxMediaMegabytes.');
         }
 
-        return [
-            'action'                => 'media',
-            'configurationRevision' => $configurationRevision,
-            'requestID'             => $requestID,
-            'index'                 => $index,
-            'contentRevision'       => hash('sha256', $content),
-            'source'                => 'data:' . $item['mimeType'] . ';base64,' . $content,
-        ];
+        return $content;
     }
 
     /**

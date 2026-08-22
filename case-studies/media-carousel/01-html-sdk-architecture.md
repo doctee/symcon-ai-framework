@@ -24,12 +24,13 @@ Implement a new and independent `MediaCarousel` module using the official
 IP-Symcon HTML-SDK.
 
 - The PHP module validates configuration and supplies media content.
-- The initial tile contains no media bytes; the browser requests the current
-  image after the HTML shell has initialized.
+- The initial tile contains a bounded preview of the current media so every new
+  compact or expanded client has a self-contained first image.
+- The browser requests the full current image after the preview has loaded.
 - The browser owns sequence timing, gesture state and the current index.
 - The browser prefetches all compressed sequence sources progressively.
 - Only the previous, current and next images are attached as render slots.
-- A target becomes current only after successful browser decoding.
+- A target becomes current only after a successful browser load event.
 - Media updates invalidate one client cache entry through `MM_UPDATE`.
 - The native content switcher remains unchanged until a live pilot is approved.
 
@@ -46,21 +47,24 @@ change cannot provide that guarantee.
 Client-local sequence state also prevents independent visualisation sessions
 from moving one shared server-side index.
 
-Progressive prefetch matches the normal full-sequence viewing pattern without
-blocking tile creation on a synchronous media read. Separating compressed
-source cache from the three render slots bounds intentional decoded-image
-ownership.
+Progressive prefetch matches the normal full-sequence viewing pattern. A
+bounded initial preview avoids depending on a runtime message that can race a
+new TileVisu client, while the later full-image upgrade preserves expanded
+quality. Serial load-event preparation avoids explicit parallel decoding on
+the target iPad. Separating compressed source cache from the three render slots
+bounds intentional decoded-image ownership.
 
 ## Consequences
 
 - IP-Symcon 8.1 or newer is the candidate baseline.
+- GD image support is used for the bounded JPEG preview; a failed preview falls
+  back to the original current image.
 - Large media messages require an explicit per-image size limit.
 - HTML-SDK update messages may be observed by multiple connected clients; the
   content is installation-local media data and each client may reuse it.
 - Browser engines may retain decoded resources beyond the three visible image
   elements. Live memory measurement is therefore still required.
-- Preview generation is deferred until measurement demonstrates need and the
-  image-processing runtime has been verified.
+- Preview generation adds one bounded media read and resize to each new tile.
 - Expanded-tile lifecycle behaviour must be verified on the target TileVisu.
 
 ## Rejected alternatives
@@ -80,7 +84,7 @@ HTML-SDK authentication model.
 Rejected because it would introduce a new externally reachable image-serving
 surface and an avoidable security boundary.
 
-### Immediate thumbnail pipeline
+### Full original in every initial tile
 
-Deferred because it would add image decoding and resampling assumptions before
-the original compressed sequence has been measured on the target client.
+Rejected because the original-image pilot still produced an unreliable blank
+expanded client and unnecessarily enlarged every recreated tile response.

@@ -85,7 +85,11 @@
                 && typeof stored.source.source === 'string'
                 && typeof stored.source.contentRevision === 'string'
             ) {
-                state.sources.set(state.currentIndex, stored.source);
+                state.sources.set(state.currentIndex, {
+                    source: stored.source.source,
+                    contentRevision: stored.source.contentRevision,
+                    preview: stored.source.preview === true
+                });
             }
         } catch (error) {
             // Session persistence is an optimisation and never authoritative.
@@ -164,13 +168,13 @@
         buildPrefetchOrder();
 
         if (payload.initialMedia) {
-            receiveMedia(payload.initialMedia);
-        } else {
-            requestMedia(state.currentIndex);
+            receiveMedia(payload.initialMedia, false);
         }
 
-        renderSlots();
-        pumpPrefetch();
+        renderSlots().then(function () {
+            requestMedia(state.currentIndex);
+            pumpPrefetch();
+        });
     }
 
     function showConfigurationMessage(text) {
@@ -185,7 +189,7 @@
         message.hidden = false;
     }
 
-    function receiveMedia(payload) {
+    function receiveMedia(payload, shouldRender) {
         if (payload.configurationRevision !== state.configurationRevision) {
             return;
         }
@@ -196,25 +200,33 @@
             return;
         }
 
+        const isPreview = payload.preview === true;
+        const existing = state.sources.get(payload.index);
+        if (isPreview && existing && existing.preview === false) {
+            return;
+        }
+
         const pending = state.pending.get(payload.index);
-        if (pending) {
+        if (pending && !isPreview) {
             clearTimeout(pending.timer);
             state.pending.delete(payload.index);
         }
 
         state.sources.set(payload.index, {
             source: payload.source,
-            contentRevision: payload.contentRevision
+            contentRevision: payload.contentRevision,
+            preview: isPreview
         });
         state.readyRevisions.delete(payload.index);
         state.failures.delete(payload.index);
 
-        if (isNeighbour(payload.index)) {
-            renderSlots();
-        }
-
         buildPrefetchOrder();
-        pumpPrefetch();
+        if (shouldRender !== false) {
+            if (isNeighbour(payload.index)) {
+                renderSlots();
+            }
+            pumpPrefetch();
+        }
     }
 
     function invalidateMedia(payload) {
@@ -255,9 +267,10 @@
     }
 
     function requestMedia(index) {
+        const existing = state.sources.get(index);
         if (
             !state.settings
-            || state.sources.has(index)
+            || (existing && existing.preview === false)
             || state.pending.has(index)
             || index < 0
             || index >= state.items.length
@@ -328,7 +341,8 @@
 
         const nextIndex = state.prefetchOrder.find(function (index) {
             const failures = state.failures.get(index) || 0;
-            return !state.sources.has(index)
+            const source = state.sources.get(index);
+            return (!source || source.preview === true)
                 && !state.pending.has(index)
                 && failures <= state.settings.retryCount;
         });
@@ -341,7 +355,7 @@
         }
     }
 
-    function waitForDecodedImage(index) {
+    function waitForLoadedImage(index) {
         const entry = state.sources.get(index);
         if (!entry) {
             requestMedia(index);
@@ -365,28 +379,19 @@
                 }
                 resolve(ready);
             };
-            const decode = function () {
-                if (typeof probe.decode === 'function') {
-                    probe.decode().then(function () {
-                        finish(true);
-                    }).catch(function () {
-                        finish(false);
-                    });
-                } else {
-                    finish(probe.naturalWidth > 0);
-                }
-            };
             const timer = window.setTimeout(function () {
                 finish(false);
             }, state.settings.loadTimeoutSeconds * 1000);
 
-            probe.onload = decode;
+            probe.onload = function () {
+                finish(probe.naturalWidth > 0);
+            };
             probe.onerror = function () {
                 finish(false);
             };
             probe.src = entry.source;
             if (probe.complete && probe.naturalWidth > 0) {
-                decode();
+                finish(true);
             }
         });
     }
@@ -398,43 +403,45 @@
 
         const generation = ++state.renderGeneration;
         const slotDefinitions = [
-            {element: previousImage, index: wrapIndex(state.currentIndex - 1)},
             {element: currentImage, index: state.currentIndex},
+            {element: previousImage, index: wrapIndex(state.currentIndex - 1)},
             {element: nextImage, index: wrapIndex(state.currentIndex + 1)}
         ];
 
-        const prepared = await Promise.all(slotDefinitions.map(async function (slot) {
-            const ready = await waitForDecodedImage(slot.index);
-            return {slot: slot, ready: ready};
-        }));
-        if (generation !== state.renderGeneration) {
-            return;
-        }
-
-        prepared.forEach(function (result) {
-            const source = state.sources.get(result.slot.index);
-            if (!result.ready || !source) {
-                if (result.slot.element !== currentImage || currentImage.hidden) {
-                    result.slot.element.hidden = true;
-                }
+        for (const slot of slotDefinitions) {
+            const ready = await waitForLoadedImage(slot.index);
+            if (generation !== state.renderGeneration) {
                 return;
             }
 
-            result.slot.element.src = source.source;
-            result.slot.element.alt = state.items[result.slot.index].title || '';
-            result.slot.element.dataset.index = String(result.slot.index);
-            result.slot.element.dataset.revision = source.contentRevision;
-            result.slot.element.hidden = false;
-        });
+            const source = state.sources.get(slot.index);
+            if (!ready || !source) {
+                if (slot.element !== currentImage || currentImage.hidden) {
+                    slot.element.hidden = true;
+                }
+                continue;
+            }
 
-        const currentReady = state.readyRevisions.get(state.currentIndex)
-            === (state.sources.get(state.currentIndex) || {}).contentRevision;
+            slot.element.src = source.source;
+            slot.element.alt = state.items[slot.index].title || '';
+            slot.element.dataset.index = String(slot.index);
+            slot.element.dataset.revision = source.contentRevision;
+            slot.element.hidden = false;
+        }
+
+        const currentSource = state.sources.get(state.currentIndex);
+        const currentReady = currentSource
+            && state.readyRevisions.get(state.currentIndex) === currentSource.contentRevision;
         if (currentReady) {
             loading.hidden = true;
             message.hidden = true;
             updatePresentationMetadata();
             storeSession();
-            scheduleAutoAdvance();
+            if (currentSource.preview === true) {
+                clearTimeout(state.autoTimer);
+            } else {
+                scheduleAutoAdvance();
+            }
         }
 
         centerTrack(false);
@@ -498,7 +505,7 @@
 
         state.busy = true;
         const targetIndex = wrapIndex(state.currentIndex + direction);
-        const ready = await waitForDecodedImage(targetIndex);
+        const ready = await waitForLoadedImage(targetIndex);
         if (!ready) {
             state.busy = false;
             centerTrack(true);

@@ -16,13 +16,14 @@ until a separately authorised live pilot has passed.
 ## Behaviour
 
 - The configured source is an ordered list of IP-Symcon image media objects.
-- The initial tile response contains only the lightweight HTML shell and
-  sequence metadata.
-- The current and remaining images are requested asynchronously and
+- Every newly created tile response contains a bounded preview of the current
+  image together with the HTML shell and sequence metadata.
+- The full current image and remaining images are requested asynchronously and
   progressively in viewing order.
 - The browser retains compressed sources for the sequence but renders only the
   previous, current and next image.
-- A transition is committed only after the target image has loaded and decoded.
+- A transition is committed only after the target image has fired a successful
+  browser load event.
 - A failed target leaves the last good image visible.
 - Horizontal pointer gestures move the image with the finger.
 - Large arrows and keyboard navigation remain available.
@@ -64,17 +65,17 @@ entries are rejected instead of being silently reinterpreted.
 
 ## Preview decision
 
-The candidate transports the original compressed media bytes only through
-asynchronous HTML-SDK update messages. It keeps only three image elements
-active and prefetches the normal sequence over the full viewing interval. This
-avoids blocking tile creation on a media read and introducing an unverified
-image-processing dependency into the IP-Symcon PHP runtime.
+The initial lightweight-bootstrap pilot showed that a newly created expanded
+TileVisu client cannot rely on receiving an immediate HTML-SDK response. The
+candidate therefore generates one 640-pixel-wide JPEG preview with GD and
+embeds it in each initial tile response. The full current image is requested
+after that preview has loaded and replaces it only after its own successful
+load event.
 
-Reduced previews remain an explicit optimisation gate. They should be added
-only if live measurements with approximately ten representative camera images
-show that full compressed media exceed the agreed transport, decode or memory
-budget. A preview must never replace the full-resolution current image in an
-expanded tile without a successful upgrade path.
+The browser keeps only three image elements active and prefetches the normal
+sequence over the full viewing interval. Image preparation is serial and uses
+normal load events instead of explicit parallel `Image.decode()` calls. Preview
+failure falls back to the original current media for that initial response.
 
 ## Verification sequence
 
@@ -82,11 +83,11 @@ expanded tile without a successful upgrade path.
 2. Publish the exact generated fileset only after a separate approval.
 3. Install the candidate as a separate module library only after approval.
 4. Add a test instance with two non-commanding image media objects.
-5. Verify initial display, delayed load, decode failure and resize behaviour.
+5. Verify initial preview, delayed full-image load, load failure and resize behaviour.
 6. Configure the approximately ten-image production-equivalent sequence on a
    separate test page.
-7. Measure first-pass transport, memory and decode timing on the target iPad.
-8. Decide whether the optional preview gate is necessary.
+7. Measure first-pass transport, memory and image-load timing on the target iPad.
+8. Verify that both compact and expanded tile recreation display the preview.
 9. Replace the native content switcher only through a separate live gate.
 
 ## Repository distribution
