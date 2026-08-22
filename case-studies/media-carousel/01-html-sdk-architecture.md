@@ -29,9 +29,11 @@ IP-Symcon HTML-SDK.
   newest first by default, without persisting rolling child ObjectIDs.
 - The initial tile contains a bounded preview of the current media so every new
   compact or expanded client has a self-contained first image.
-- The browser requests the full current image after the preview has loaded.
+- The browser requests a bounded display image after the preview has loaded.
+- The current display image is requested before neighbours and at most two
+  media requests are active concurrently.
 - The browser owns sequence timing, gesture state and the current index.
-- The browser prefetches all compressed sequence sources progressively.
+- The browser prefetches bounded compressed sequence sources progressively.
 - Only the previous, current and next images are attached as render slots.
 - A target becomes current only after a successful browser load event.
 - Media updates invalidate one client cache entry through `MM_UPDATE`.
@@ -40,8 +42,10 @@ IP-Symcon HTML-SDK.
 - The native content switcher remains unchanged until a live pilot is approved.
 
 The module does not create or retarget a link and does not use a server-side
-timer. The module transports supported media as authenticated HTML-SDK messages
-using Data URLs, following the official Symcon example.
+timer. The module transforms supported media into bounded JPEG display payloads
+and transports them as authenticated HTML-SDK messages using Data URLs,
+following the official Symcon example. If transformation is unavailable for an
+otherwise valid image, the validated original remains the compatibility fallback.
 
 ## Rationale
 
@@ -54,10 +58,12 @@ from moving one shared server-side index.
 
 Progressive prefetch matches the normal full-sequence viewing pattern. A
 bounded initial preview avoids depending on a runtime message that can race a
-new TileVisu client, while the later full-image upgrade preserves expanded
-quality. Serial load-event preparation avoids explicit parallel decoding on
-the target iPad. Separating compressed source cache from the three render slots
-bounds intentional decoded-image ownership.
+new TileVisu client, while a 1280-pixel display payload retains useful expanded
+quality without transporting every 1920-pixel camera original. Current-first
+request ordering and an effective two-request ceiling prevent neighbour
+prefetch from starving the visible image. Load-event preparation avoids
+explicit parallel decoding on the target iPad. Separating compressed source
+cache from the three render slots bounds intentional decoded-image ownership.
 
 The production-equivalent archive replaces media children over time. Treating
 those children as fixed configuration would make normal retention look like a
@@ -68,14 +74,15 @@ also tolerated when at least one valid image remains.
 ## Consequences
 
 - IP-Symcon 8.1 or newer is the candidate baseline.
-- GD image support is used for the bounded JPEG preview; a failed preview falls
-  back to the original current image.
+- GD image support is used for the bounded JPEG preview and display payload; a
+  failed transformation falls back to the original current image.
 - Large media messages require an explicit per-image size limit.
 - HTML-SDK update messages may be observed by multiple connected clients; the
   content is installation-local media data and each client may reuse it.
 - Browser engines may retain decoded resources beyond the three visible image
   elements. Live memory measurement is therefore still required.
-- Preview generation adds one bounded media read and resize to each new tile.
+- Preview generation adds one bounded media read and resize to each new tile;
+  each requested display payload adds one bounded resize.
 - A category rollover can replace the browser sequence and generate one new
   bounded preview; it does not create a server-side polling timer.
 - Expanded-tile lifecycle behaviour must be verified on the target TileVisu.

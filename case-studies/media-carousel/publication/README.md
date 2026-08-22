@@ -6,9 +6,11 @@ client-local touch state.
 
 ## Status
 
-Version `0.2.0` is a preview pilot candidate. It supports explicit media lists
+Version `0.2.1` is a preview pilot candidate. It supports explicit media lists
 and bounded rolling image categories. Every newly created tile embeds a bounded
-preview before asynchronously upgrading to the full current image.
+preview before asynchronously upgrading to a bounded display image. The visible
+image is requested first, no more than two media requests run concurrently and
+resize/page lifecycle events re-render the current slot.
 Adding the library does not
 create an instance, alter a visualisation or replace the native content
 switcher. Instance creation and every live-operation step require a separate

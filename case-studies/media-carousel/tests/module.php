@@ -421,6 +421,9 @@ check(
 check($mediaContentReads === [101], 'Initial tile did not read exactly the current media content.');
 check(str_contains($tile, 'pointerdown'), 'Swipe handling is missing.');
 check(str_contains($tile, 'ResizeObserver'), 'Resize handling is missing.');
+check(str_contains($tile, 'MAX_PENDING_REQUESTS = 2'), 'Request concurrency bound is missing.');
+check(str_contains($tile, "addEventListener('pageshow'"), 'Page lifecycle rendering is missing.');
+check(str_contains($tile, 'renderForLifecycleChange'), 'Resize lifecycle rendering is missing.');
 check(str_contains($tile, 'probe.onload'), 'DOM load gate is missing.');
 check(!str_contains($tile, '.decode()'), 'Explicit decode remains in the frontend.');
 check(!str_contains($tile, 'Promise.all'), 'Parallel image preparation remains in the frontend.');
@@ -460,6 +463,31 @@ check(
     'Loaded media MIME type differs.'
 );
 check(($mediaUpdate['preview'] ?? null) === false, 'Loaded original is marked as preview.');
+
+$module->RequestAction(
+    'LoadMedia',
+    json_encode(
+        [
+            'index' => 0,
+            'requestID' => 'test_rendered',
+            'configurationRevision' => $configurationRevision,
+        ],
+        JSON_THROW_ON_ERROR
+    )
+);
+$renderedUpdate = $module->testLastVisualizationUpdate();
+check(
+    $mediaContentReads === [101, 101, 102, 101],
+    'Rendered display request did not read exactly the requested media content.'
+);
+check(
+    str_starts_with((string) ($renderedUpdate['source'] ?? ''), 'data:image/jpeg;base64,'),
+    'Rendered display request did not transport a bounded JPEG.'
+);
+check(
+    ($renderedUpdate['preview'] ?? null) === false,
+    'Rendered display image is marked as preview.'
+);
 
 $module->RequestAction(
     'LoadMedia',

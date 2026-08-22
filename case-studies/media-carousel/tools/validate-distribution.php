@@ -32,8 +32,8 @@ if ($library !== []) {
         $errors
     );
     validateGuid($library['id'] ?? null, 'library GUID', $errors);
-    if (($library['version'] ?? null) !== '0.2.0') {
-        $errors[] = 'Library version must identify the 0.2.0 preview candidate.';
+    if (($library['version'] ?? null) !== '0.2.1') {
+        $errors[] = 'Library version must identify the 0.2.1 preview candidate.';
     }
     if (($library['compatibility']['version'] ?? null) !== '8.1') {
         $errors[] = 'Library compatibility must require IP-Symcon 8.1.';
@@ -78,9 +78,19 @@ foreach (['window.handleMessage', "requestAction('LoadMedia'", 'probe.onload', '
 if (str_contains($javascript, '.decode()') || str_contains($javascript, 'Promise.all')) {
     $errors[] = 'Frontend must not use explicit or parallel image decoding.';
 }
-foreach (['PREVIEW_MAX_WIDTH', 'createPreviewMediaMessage', "'preview'               => true"] as $marker) {
+foreach (['PREVIEW_MAX_WIDTH', 'PREVIEW_JPEG_QUALITY', 'createPreviewMediaMessage'] as $marker) {
     if (!str_contains(readText($distribution . '/MediaCarousel/module.php', $errors), $marker)) {
         $errors[] = 'Preview contract marker is missing: ' . $marker . '.';
+    }
+}
+foreach (['DISPLAY_MAX_WIDTH', 'createRenderedMediaMessage', 'DISPLAY_JPEG_QUALITY'] as $marker) {
+    if (!str_contains(readText($distribution . '/MediaCarousel/module.php', $errors), $marker)) {
+        $errors[] = 'Bounded display-image contract marker is missing: ' . $marker . '.';
+    }
+}
+foreach (['MAX_PENDING_REQUESTS = 2', 'renderForLifecycleChange', "addEventListener('pageshow'"] as $marker) {
+    if (!str_contains($javascript, $marker)) {
+        $errors[] = 'Client lifecycle contract marker is missing: ' . $marker . '.';
     }
 }
 foreach (['resolveCategoryMediaItems', 'CategoryItemLimit', 'readRequestConfigurationRevision'] as $marker) {
