@@ -25,6 +25,8 @@ IP-Symcon HTML-SDK.
 
 - The PHP module validates configuration and supplies media content from an
   explicit list or a dynamically resolved source category.
+- The module selects the HTML fullscreen visualization type when the Symcon 9.1
+  runtime exposes it and otherwise retains the HTML tile visualization type.
 - Category mode bounds and orders current image children by object position,
   newest first by default, without persisting rolling child ObjectIDs.
 - The initial tile contains a bounded preview of the current media so every new
@@ -74,6 +76,8 @@ also tolerated when at least one valid image remains.
 ## Consequences
 
 - IP-Symcon 8.1 or newer is the candidate baseline.
+- Maximized HTML uses the native Symcon 9.1 fullscreen visualization type;
+  compatible older runtimes continue to expose only the compact HTML tile.
 - GD image support is used for the bounded JPEG preview and display payload; a
   failed transformation falls back to the original current image.
 - Large media messages require an explicit per-image size limit.

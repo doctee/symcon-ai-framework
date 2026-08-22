@@ -32,8 +32,8 @@ if ($library !== []) {
         $errors
     );
     validateGuid($library['id'] ?? null, 'library GUID', $errors);
-    if (($library['version'] ?? null) !== '0.2.1') {
-        $errors[] = 'Library version must identify the 0.2.1 preview candidate.';
+    if (($library['version'] ?? null) !== '0.2.2') {
+        $errors[] = 'Library version must identify the 0.2.2 preview candidate.';
     }
     if (($library['compatibility']['version'] ?? null) !== '8.1') {
         $errors[] = 'Library compatibility must require IP-Symcon 8.1.';
@@ -86,6 +86,11 @@ foreach (['PREVIEW_MAX_WIDTH', 'PREVIEW_JPEG_QUALITY', 'createPreviewMediaMessag
 foreach (['DISPLAY_MAX_WIDTH', 'createRenderedMediaMessage', 'DISPLAY_JPEG_QUALITY'] as $marker) {
     if (!str_contains(readText($distribution . '/MediaCarousel/module.php', $errors), $marker)) {
         $errors[] = 'Bounded display-image contract marker is missing: ' . $marker . '.';
+    }
+}
+foreach (['INSTANCE_VISUALIZATION_TYPE_HTML_FULLSCREEN', 'VISUALIZATION_TYPE_HTML'] as $marker) {
+    if (!str_contains(readText($distribution . '/MediaCarousel/module.php', $errors), $marker)) {
+        $errors[] = 'Visualization compatibility marker is missing: ' . $marker . '.';
     }
 }
 foreach (['MAX_PENDING_REQUESTS = 2', 'renderForLifecycleChange', "addEventListener('pageshow'"] as $marker) {

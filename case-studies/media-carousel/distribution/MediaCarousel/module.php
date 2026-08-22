@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 class MediaCarousel extends IPSModuleStrict
 {
+    private const VISUALIZATION_TYPE_HTML = 1;
     private const STATUS_INVALID_CONFIGURATION = 200;
     private const MAX_ITEM_COUNT = 50;
     private const DISPLAY_MAX_WIDTH = 1280;
@@ -46,7 +47,10 @@ class MediaCarousel extends IPSModuleStrict
         $this->RegisterAttributeString('RegisteredMediaIDs', '[]');
         $this->RegisterAttributeInteger('RegisteredCategoryID', 0);
 
-        $this->SetVisualizationType(1);
+        $visualizationType = defined('INSTANCE_VISUALIZATION_TYPE_HTML_FULLSCREEN')
+            ? (int) constant('INSTANCE_VISUALIZATION_TYPE_HTML_FULLSCREEN')
+            : self::VISUALIZATION_TYPE_HTML;
+        $this->SetVisualizationType($visualizationType);
     }
 
     public function ApplyChanges(): void

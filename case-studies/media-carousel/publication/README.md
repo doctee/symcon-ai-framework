@@ -6,11 +6,13 @@ client-local touch state.
 
 ## Status
 
-Version `0.2.1` is a preview pilot candidate. It supports explicit media lists
+Version `0.2.2` is a preview pilot candidate. It supports explicit media lists
 and bounded rolling image categories. Every newly created tile embeds a bounded
 preview before asynchronously upgrading to a bounded display image. The visible
 image is requested first, no more than two media requests run concurrently and
-resize/page lifecycle events re-render the current slot.
+resize/page lifecycle events re-render the current slot. On IP-Symcon 9.1 and
+newer, the HTML-SDK presentation is also registered for the maximized view;
+older compatible installations retain the compact HTML-SDK tile.
 Adding the library does not
 create an instance, alter a visualisation or replace the native content
 switcher. Instance creation and every live-operation step require a separate

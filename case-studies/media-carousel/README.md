@@ -37,6 +37,8 @@ until a separately authorised live pilot has passed.
 - Large arrows and keyboard navigation remain available.
 - Resize, page-show and visibility restoration re-render the current image
   without changing the sequence index.
+- IP-Symcon 9.1 and newer use the HTML-SDK fullscreen visualization type;
+  IP-Symcon 8.1 through 9.0 retain the compact HTML-SDK visualization type.
 - The browser stores the current sequence index per instance and configuration
   revision in `sessionStorage` for a possible tile recreation.
 
@@ -111,7 +113,9 @@ falls back to the validated original media.
 6. Configure the approximately ten-image production-equivalent category on a
    separate test page and verify one archive rollover.
 7. Measure first-pass transport, memory and image-load timing on the target iPad.
-8. Verify that both compact and expanded tile recreation display the preview.
+8. On IP-Symcon 9.1 or newer, verify that both compact and expanded tile
+   recreation display the preview; on older compatible versions verify the
+   compact tile and native detail fallback.
 9. Replace the native content switcher only through a separate live gate.
 
 ## Repository distribution
