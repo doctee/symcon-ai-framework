@@ -32,8 +32,8 @@ if ($library !== []) {
         $errors
     );
     validateGuid($library['id'] ?? null, 'library GUID', $errors);
-    if (($library['version'] ?? null) !== '0.1.1') {
-        $errors[] = 'Library version must identify the 0.1.1 preview candidate.';
+    if (($library['version'] ?? null) !== '0.1.2') {
+        $errors[] = 'Library version must identify the 0.1.2 preview candidate.';
     }
     if (($library['compatibility']['version'] ?? null) !== '8.1') {
         $errors[] = 'Library compatibility must require IP-Symcon 8.1.';
@@ -70,9 +70,17 @@ $javascript = readText($distribution . '/MediaCarousel/carousel.js', $errors);
 if (substr_count($html, '/* SAEF_MEDIA_CAROUSEL_SCRIPT */') !== 1) {
     $errors[] = 'HTML script injection marker must occur exactly once.';
 }
-foreach (['window.handleMessage', "requestAction('LoadMedia'", 'decode()', 'sessionStorage'] as $marker) {
+foreach (['window.handleMessage', "requestAction('LoadMedia'", 'probe.onload', 'sessionStorage'] as $marker) {
     if (!str_contains($javascript, $marker)) {
         $errors[] = 'Frontend contract marker is missing: ' . $marker . '.';
+    }
+}
+if (str_contains($javascript, '.decode()') || str_contains($javascript, 'Promise.all')) {
+    $errors[] = 'Frontend must not use explicit or parallel image decoding.';
+}
+foreach (['PREVIEW_MAX_WIDTH', 'createPreviewMediaMessage', "'preview'               => true"] as $marker) {
+    if (!str_contains(readText($distribution . '/MediaCarousel/module.php', $errors), $marker)) {
+        $errors[] = 'Preview contract marker is missing: ' . $marker . '.';
     }
 }
 

@@ -1,13 +1,13 @@
 # SAEF Media Carousel
 
 Preview IP-Symcon HTML-SDK module for an ordered sequence of image media
-objects with progressive preload, decode-before-transition navigation and
+objects with an embedded initial preview, load-before-transition navigation and
 client-local touch state.
 
 ## Status
 
-Version `0.1.1` is a preview pilot candidate. Its initial tile is lightweight;
-the current image is requested asynchronously after the HTML shell starts.
+Version `0.1.2` is a preview pilot candidate. Every newly created tile embeds a
+bounded preview before asynchronously upgrading to the full current image.
 Adding the library does not
 create an instance, alter a visualisation or replace the native content
 switcher. Instance creation and every live-operation step require a separate

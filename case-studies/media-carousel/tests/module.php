@@ -11,13 +11,15 @@ define('MM_AVAILABLE', 10904);
 define('MM_UPDATE', 10905);
 define('OM_CHANGENAME', 10404);
 
+$pngFixture = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
 /** @var array<int, array{MediaType: int, MediaFile: string, name: string, content: string}> $mediaFixtures */
 $mediaFixtures = [
     101 => [
         'MediaType' => MEDIATYPE_IMAGE,
-        'MediaFile' => 'camera-one.jpg',
+        'MediaFile' => 'camera-one.png',
         'name' => 'Camera one',
-        'content' => base64_encode('jpeg-one'),
+        'content' => $pngFixture,
     ],
     102 => [
         'MediaType' => MEDIATYPE_IMAGE,
@@ -283,6 +285,38 @@ function check(bool $condition, string $message): void
     }
 }
 
+/** @return array<string, mixed> */
+function extractInitialMessage(string $tile): array
+{
+    $marker = '<script>handleMessage(';
+    $start = strrpos($tile, $marker);
+    if ($start === false) {
+        throw new RuntimeException('Initial tile message marker is missing.');
+    }
+    $start += strlen($marker);
+    $end = strpos($tile, ');</script>', $start);
+    if ($end === false) {
+        throw new RuntimeException('Initial tile message terminator is missing.');
+    }
+
+    $messageJSON = json_decode(
+        substr($tile, $start, $end - $start),
+        true,
+        16,
+        JSON_THROW_ON_ERROR
+    );
+    if (!is_string($messageJSON)) {
+        throw new RuntimeException('Initial tile message is not JSON text.');
+    }
+
+    $message = json_decode($messageJSON, true, 32, JSON_THROW_ON_ERROR);
+    if (!is_array($message)) {
+        throw new RuntimeException('Initial tile message is not an object.');
+    }
+
+    return $message;
+}
+
 /** @param list<array{MediaID: int, Title: string, Enabled: bool}> $items */
 function encodeItems(array $items): string
 {
@@ -317,25 +351,48 @@ check(!isset($applyUpdate['initialMedia']), 'ApplyChanges unexpectedly transport
 check($mediaContentReads === [], 'ApplyChanges unexpectedly read media content.');
 
 $tile = $module->GetVisualizationTile();
-check(!str_contains($tile, 'data:image\\/'), 'Initial tile unexpectedly embeds a media Data URL.');
-check($mediaContentReads === [], 'Initial tile generation unexpectedly read media content.');
+$initialMessage = extractInitialMessage($tile);
+check(($initialMessage['action'] ?? null) === 'bootstrap', 'Initial tile bootstrap is missing.');
+check(($initialMessage['initialMedia']['preview'] ?? null) === true, 'Initial preview is missing.');
+check(
+    str_starts_with((string) ($initialMessage['initialMedia']['source'] ?? ''), 'data:image/jpeg;base64,'),
+    'Initial preview MIME type differs.'
+);
+check($mediaContentReads === [101], 'Initial tile did not read exactly the current media content.');
 check(str_contains($tile, 'pointerdown'), 'Swipe handling is missing.');
 check(str_contains($tile, 'ResizeObserver'), 'Resize handling is missing.');
-check(str_contains($tile, '.decode()'), 'Decode gate is missing.');
+check(str_contains($tile, 'probe.onload'), 'DOM load gate is missing.');
+check(!str_contains($tile, '.decode()'), 'Explicit decode remains in the frontend.');
+check(!str_contains($tile, 'Promise.all'), 'Parallel image preparation remains in the frontend.');
 check(!str_contains($tile, 'SAEF_MEDIA_CAROUSEL_SCRIPT'), 'Frontend script placeholder remains.');
+
+$recreatedTile = $module->GetVisualizationTile();
+$recreatedMessage = extractInitialMessage($recreatedTile);
+check(
+    ($recreatedMessage['initialMedia']['preview'] ?? null) === true,
+    'Recreated tile has no self-contained initial preview.'
+);
+check(
+    $mediaContentReads === [101, 101],
+    'Recreated tile did not independently read the current media content.'
+);
 
 $module->RequestAction(
     'LoadMedia',
     json_encode(['index' => 1, 'requestID' => 'test_1'], JSON_THROW_ON_ERROR)
 );
 $mediaUpdate = $module->testLastVisualizationUpdate();
-check($mediaContentReads === [102], 'LoadMedia did not read exactly the requested media content.');
+check(
+    $mediaContentReads === [101, 101, 102],
+    'LoadMedia did not read exactly the requested media content.'
+);
 check(($mediaUpdate['action'] ?? null) === 'media', 'LoadMedia did not publish media.');
 check(($mediaUpdate['index'] ?? null) === 1, 'Loaded media index differs.');
 check(
     str_starts_with((string) ($mediaUpdate['source'] ?? ''), 'data:image/png;base64,'),
     'Loaded media MIME type differs.'
 );
+check(($mediaUpdate['preview'] ?? null) === false, 'Loaded original is marked as preview.');
 
 $module->RequestAction(
     'LoadMedia',
@@ -417,17 +474,17 @@ $frontendSource = (string) file_get_contents(
     __DIR__ . '/../distribution/MediaCarousel/carousel.js'
 );
 check(str_contains($frontendSource, 'buildPrefetchOrder'), 'Progressive sequence prefetch is missing.');
-check(str_contains($frontendSource, 'readyRevisions'), 'Decoded source cache is missing.');
+check(str_contains($frontendSource, 'readyRevisions'), 'Loaded source cache is missing.');
 check(str_contains($frontendSource, 'sessionStorage'), 'Client-local resize persistence is missing.');
 $moveStart = strpos($frontendSource, 'async function move(');
-$decodeStart = strpos($frontendSource, 'await waitForDecodedImage(', $moveStart ?: 0);
+$loadStart = strpos($frontendSource, 'await waitForLoadedImage(', $moveStart ?: 0);
 $busyStart = strpos($frontendSource, 'state.busy = true;', $moveStart ?: 0);
 check(
     $moveStart !== false
-        && $decodeStart !== false
+        && $loadStart !== false
         && $busyStart !== false
-        && $busyStart < $decodeStart,
-    'Navigation is not guarded before asynchronous decoding.'
+        && $busyStart < $loadStart,
+    'Navigation is not guarded before asynchronous loading.'
 );
 check(
     substr_count(

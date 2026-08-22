@@ -48,10 +48,18 @@ $configuration = [
         'showDots' => true,
         'showArrows' => true,
     ],
+    'initialMedia' => [
+        'index' => 0,
+        'source' => $sources[0],
+        'contentRevision' => 'fixture-preview-0',
+        'configurationRevision' => 'browser-fixture-v2',
+        'requestID' => 'initial-preview',
+        'preview' => true,
+    ],
 ];
 
 $fixtureScript = sprintf(
-    '<script>window.fixtureRequests=[];window.requestAction=function(action,payload){if(action!=="LoadMedia"){return;}const request=JSON.parse(payload);window.fixtureRequests.push(request.index);window.setTimeout(function(){window.handleMessage(JSON.stringify({action:"media",configurationRevision:"browser-fixture-v2",requestID:request.requestID,index:request.index,source:%s[request.index],contentRevision:"fixture-"+request.index}));},request.index===4?650:60);};window.handleMessage(%s);</script>',
+    '<script>window.fixtureRequests=[];window.requestAction=function(action,payload){if(action!=="LoadMedia"){return;}const request=JSON.parse(payload);window.fixtureRequests.push(request.index);window.setTimeout(function(){window.handleMessage(JSON.stringify({action:"media",configurationRevision:"browser-fixture-v2",requestID:request.requestID,index:request.index,source:%s[request.index],contentRevision:"fixture-"+request.index,preview:false}));},request.index===0?900:(request.index===4?650:60));};window.handleMessage(%s);</script>',
     json_encode($sources, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES),
     json_encode(json_encode($configuration, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES), JSON_THROW_ON_ERROR)
 );
