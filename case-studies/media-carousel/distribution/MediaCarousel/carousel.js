@@ -74,17 +74,33 @@
         return 'saef-media-carousel:' + state.instanceID;
     }
 
-    function restoreSession() {
+    function positionStorageKey() {
+        return storageKey() + ':position';
+    }
+
+    function restorePosition() {
         try {
-            const stored = JSON.parse(sessionStorage.getItem(storageKey()) || 'null');
+            const stored = JSON.parse(localStorage.getItem(positionStorageKey()) || 'null');
             if (!stored || stored.configurationRevision !== state.configurationRevision) {
                 return;
             }
             if (Number.isInteger(stored.index) && stored.index >= 0 && stored.index < state.items.length) {
                 state.currentIndex = stored.index;
             }
+        } catch (error) {
+            // Cross-view position persistence is an optimisation and never authoritative.
+        }
+    }
+
+    function restoreSessionSource() {
+        try {
+            const stored = JSON.parse(sessionStorage.getItem(storageKey()) || 'null');
+            if (!stored || stored.configurationRevision !== state.configurationRevision) {
+                return;
+            }
             if (
-                stored.source
+                stored.index === state.currentIndex
+                && stored.source
                 && typeof stored.source.source === 'string'
                 && typeof stored.source.contentRevision === 'string'
             ) {
@@ -99,7 +115,21 @@
         }
     }
 
-    function storeSession() {
+    function restoreClientState() {
+        restorePosition();
+        restoreSessionSource();
+    }
+
+    function storeClientState() {
+        try {
+            localStorage.setItem(positionStorageKey(), JSON.stringify({
+                configurationRevision: state.configurationRevision,
+                index: state.currentIndex
+            }));
+        } catch (error) {
+            // Cross-view position persistence is an optimisation and never authoritative.
+        }
+
         try {
             const source = state.sources.get(state.currentIndex);
             const persistableSource = source && source.source.length <= 1_500_000 ? source : null;
@@ -160,7 +190,7 @@
         }
 
         if (revisionChanged) {
-            restoreSession();
+            restoreClientState();
         } else if (state.currentIndex >= state.items.length) {
             state.currentIndex = 0;
         }
@@ -462,7 +492,7 @@
             loading.hidden = true;
             message.hidden = true;
             updatePresentationMetadata();
-            storeSession();
+            storeClientState();
             if (currentSource.preview === true) {
                 clearTimeout(state.autoTimer);
             } else {

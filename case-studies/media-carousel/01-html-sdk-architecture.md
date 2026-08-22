@@ -35,6 +35,8 @@ IP-Symcon HTML-SDK.
 - The current display image is requested before neighbours and at most two
   media requests are active concurrently.
 - The browser owns sequence timing, gesture state and the current index.
+- The client persists only index and sequence revision across compact and
+  fullscreen contexts; image payloads remain session-scoped.
 - The browser prefetches bounded compressed sequence sources progressively.
 - Only the previous, current and next images are attached as render slots.
 - A target becomes current only after a successful browser load event.

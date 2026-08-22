@@ -32,8 +32,8 @@ if ($library !== []) {
         $errors
     );
     validateGuid($library['id'] ?? null, 'library GUID', $errors);
-    if (($library['version'] ?? null) !== '0.2.2') {
-        $errors[] = 'Library version must identify the 0.2.2 preview candidate.';
+    if (($library['version'] ?? null) !== '0.2.3') {
+        $errors[] = 'Library version must identify the 0.2.3 preview candidate.';
     }
     if (($library['compatibility']['version'] ?? null) !== '8.1') {
         $errors[] = 'Library compatibility must require IP-Symcon 8.1.';
@@ -96,6 +96,11 @@ foreach (['INSTANCE_VISUALIZATION_TYPE_HTML_FULLSCREEN', 'VISUALIZATION_TYPE_HTM
 foreach (['MAX_PENDING_REQUESTS = 2', 'renderForLifecycleChange', "addEventListener('pageshow'"] as $marker) {
     if (!str_contains($javascript, $marker)) {
         $errors[] = 'Client lifecycle contract marker is missing: ' . $marker . '.';
+    }
+}
+foreach (['localStorage', 'positionStorageKey', 'restoreClientState', 'storeClientState'] as $marker) {
+    if (!str_contains($javascript, $marker)) {
+        $errors[] = 'Cross-view position contract marker is missing: ' . $marker . '.';
     }
 }
 foreach (['resolveCategoryMediaItems', 'CategoryItemLimit', 'readRequestConfigurationRevision'] as $marker) {
