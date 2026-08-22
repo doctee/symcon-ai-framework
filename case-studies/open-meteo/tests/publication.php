@@ -17,6 +17,19 @@ try {
     openMeteoPublicationTestSame(0, $check['status'], 'Publication check failed.');
     openMeteoPublicationTestSame('checked', $checkResult['outcome'] ?? null, 'Check outcome differs.');
     openMeteoPublicationTestSame(false, $checkResult['mutationAttempted'] ?? null, 'Check attempted mutation.');
+    openMeteoPublicationTestSame(
+        [
+            'outcome',
+            'mutationAttempted',
+            'repository',
+            'branch',
+            'fileCount',
+            'filesetSha256',
+            'publicationSha256',
+        ],
+        array_keys($checkResult),
+        'Open-Meteo check result fields differ.'
+    );
     openMeteoPublicationTestSame(44, $checkResult['fileCount'] ?? null, 'Publication file count differs.');
     openMeteoPublicationTestHash($checkResult['filesetSha256'] ?? null, 'Fileset hash is invalid.');
     openMeteoPublicationTestHash($checkResult['publicationSha256'] ?? null, 'Publication hash is invalid.');
@@ -82,7 +95,7 @@ try {
     if (file_put_contents($baselineRoot . '/LICENSE', (string) file_get_contents($preparedRoot . '/LICENSE')) === false) {
         throw new RuntimeException('Cannot create allowlisted publication baseline file.');
     }
-    assertOpenMeteoPublicationBaselinePathsAllowed($baselineRoot, [
+    assertModulePublicationBaselinePathsAllowed($baselineRoot, [
         'LICENSE' => (string) file_get_contents($preparedRoot . '/LICENSE'),
         'README.md' => (string) file_get_contents($preparedRoot . '/README.md'),
     ]);
@@ -91,7 +104,7 @@ try {
     }
     $unknownBaselinePathRejected = false;
     try {
-        assertOpenMeteoPublicationBaselinePathsAllowed($baselineRoot, [
+        assertModulePublicationBaselinePathsAllowed($baselineRoot, [
             'LICENSE' => (string) file_get_contents($preparedRoot . '/LICENSE'),
             'README.md' => (string) file_get_contents($preparedRoot . '/README.md'),
         ]);
@@ -125,7 +138,8 @@ try {
         throw new RuntimeException('Ungated apply failure is not classified before network access.');
     }
 
-    $toolSource = (string) file_get_contents($publisher);
+    $toolSource = (string) file_get_contents($publisher)
+        . (string) file_get_contents($projectRoot . '/tools/publication/ModulePublication.php');
     foreach (['MC_UpdateModule', 'IPS_CreateInstance', 'symcon_'] as $forbidden) {
         if (str_contains($toolSource, $forbidden)) {
             throw new RuntimeException('Publisher crosses the repository/live-operation boundary.');
@@ -142,7 +156,7 @@ try {
     }
     $symlinkRejected = false;
     try {
-        openMeteoPublicationTreeHashes($symlinkTree, false);
+        modulePublicationTreeHashes($symlinkTree, false);
     } catch (RuntimeException $exception) {
         if (!str_contains($exception->getMessage(), 'symbolic link')) {
             throw $exception;

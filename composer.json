@@ -35,6 +35,12 @@
         "media-carousel:fileset-check": [
             "@php tools/build-symcon-module-fileset.php --check deployments/symcon/media-carousel-module.fileset.json"
         ],
+        "open-meteo:publication-check": [
+            "@php tools/publish-open-meteo-module.php --check"
+        ],
+        "media-carousel:publication-check": [
+            "@php tools/publish-symcon-module.php --contract=deployments/symcon/media-carousel-publication.json --check"
+        ],
         "test:bundles": [
             "@php tests/bundles/ensure-variable-bundle.php"
         ],
@@ -131,6 +137,10 @@
             "@php case-studies/media-carousel/tools/validate-distribution.php",
             "@php case-studies/media-carousel/tests/module-fileset.php"
         ],
+        "test:module-publication": [
+            "@php case-studies/open-meteo/tests/publication.php",
+            "@php tests/publication/module-publication.php"
+        ],
         "lint": [
             "@php tools/lint.php"
         ],
@@ -149,6 +159,8 @@
             "@fileset:check",
             "@control-light:fileset-check",
             "@media-carousel:fileset-check",
+            "@open-meteo:publication-check",
+            "@media-carousel:publication-check",
             "@test:bundles",
             "@test:filesets",
             "@test:control-light-fileset",
@@ -178,6 +190,7 @@
             "@test:navimow-pilot",
             "@test:navimow-distribution",
             "@test:media-carousel",
+            "@test:module-publication",
             "@phpstan",
             "@phpstan:bundle",
             "@phpcs"
