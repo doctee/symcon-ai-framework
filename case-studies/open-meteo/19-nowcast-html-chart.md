@@ -12,6 +12,10 @@ removes tile padding and restores the proven CSS tooltip contract. Older Symcon
 versions retain the `~HTMLBox` fallback.
 Version `0.8.10` aligns segment colors with the configured operational rain
 threshold so that a dry headline cannot be paired with colored trace echoes.
+Version `0.8.12` removes the renderer's vertical padding, compacts the headline
+and axis gaps and fixes mobile text sizing. The resulting content block fits a
+narrow titleless Ninja tile without clipping the bottom axis; bar height,
+horizontal spacing, tooltip overflow and minute semantics remain unchanged.
 
 ## Purpose
 
@@ -28,7 +32,9 @@ The presentation follows the handed-over operator contract:
 - a native tooltip with minute offset and intensity in `mm/h`.
 
 The compact presentation follows the established Symcon reference dimensions:
-11-pixel base text, 14-pixel bars and 9-pixel axis labels. Every minute segment
+11-pixel base text, 14-pixel bars and 9-pixel axis labels. Its titleless mobile
+layout needs approximately 41 CSS pixels rather than approximately 58 CSS
+pixels, without shrinking the text or minute segments. Every minute segment
 stores the minute offset and intensity in a `data-tip` attribute. A namespaced
 CSS `::after` pseudo-element exposes that immutable text on `:hover`, with no
 JavaScript or DOM mutation. Inline layout dimensions remain the fallback for
