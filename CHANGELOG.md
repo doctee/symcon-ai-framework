@@ -56,6 +56,10 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Made SAEF analyzer resolution worktree-aware through the existing
+  `COMPOSER_VENDOR_DIR` contract, with repository-local defaults,
+  lock-identical external toolchains, deterministic failure diagnostics and
+  focused local/external/invalid-path regression coverage.
 - Compacted the DWD nowcast HTML renderer for narrow titleless Ninja tiles by
   removing vertical root padding, reducing headline and axis gaps and fixing
   mobile text sizing without changing bar geometry, tooltips or forecast data.

@@ -97,6 +97,20 @@ make check
 This runs syntax linting, generated-artifact drift checks, behavioral tests,
 static analysis and coding-style checks configured for SAEF.
 
+An isolated worktree without its own dependency installation may use an
+explicit, canonical Composer toolchain:
+
+```sh
+COMPOSER_VENDOR_DIR=/absolute/path/to/vendor make check
+```
+
+The path is local environment input and must not be committed. Relative values
+are resolved from the checked repository root. SAEF accepts the toolchain only
+when `phpstan` and `phpcs` are executable and the toolchain owner's
+`composer.lock` is byte-identical to the checked worktree. Resolution never
+installs packages or accesses the network; an absent, incomplete or mismatched
+toolchain fails with a deterministic error.
+
 If a change affects Markdown-only documentation, still run `make check` so the
 repository remains in a known-good state.
 

@@ -42,6 +42,19 @@ workspace-authorization impact. Do not relocate an existing user-owned or
 dirty worktree merely to normalize its path; moving it is a separate scoped
 operation that preserves its branch and changes.
 
+## Worktree Toolchain Isolation
+
+The dedicated worktree remains the only source, build and publication input.
+It may reuse an external Composer installation solely as validation tooling by
+setting `COMPOSER_VENDOR_DIR`. Without that variable, the worktree-local
+`vendor` directory is used.
+
+SAEF resolves relative values from the worktree repository root and requires
+the external toolchain owner's `composer.lock` to be byte-identical to the
+worktree lock file. Missing analyzers, inaccessible paths or lock drift fail
+closed. Toolchain reuse must not copy source between worktrees, trigger
+dependency installation or perform network access.
+
 ## Workstream Record
 
 The private overlay should maintain a machine-readable record for each active

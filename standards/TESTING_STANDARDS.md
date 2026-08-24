@@ -14,11 +14,23 @@ Where possible, test cases should be executable without a live private Symcon in
 
 Tests requiring a real Symcon installation must be clearly marked as integration tests.
 
-## 4. Safety
+## 4. Isolated worktree toolchains
+
+An isolated worktree may reuse a canonical Composer installation by setting
+`COMPOSER_VENDOR_DIR`. Without that variable, checks use the worktree-local
+`vendor` directory. Relative values are resolved from the repository root.
+
+External tools are validation input only. Their parent `composer.lock` must be
+byte-identical to the worktree lock file, and required analyzer executables
+must exist before any analyzer runs. Resolution must not copy source, install
+dependencies or access the network. Missing, incomplete or lock-mismatched
+toolchains fail closed with a deterministic diagnostic.
+
+## 5. Safety
 
 Tests must not unexpectedly switch real devices or modify production state.
 
-## 5. Live-system change gate
+## 6. Live-system change gate
 
 A change to an authorized live IP-Symcon installation shall be treated as a
 separate integration gate after repository and offline verification.
@@ -44,7 +56,7 @@ expected object type before the first presentation or parent mutation.
 Do not infer permission for unrelated live objects from authorization for one
 caller or migration cohort.
 
-## 6. Staged live verification
+## 7. Staged live verification
 
 Apply one independently reviewable live change at a time. Keep an unchanged
 control where practical.
@@ -64,7 +76,7 @@ Idempotent configuration changes should be verified twice when execution is
 safe. The second verification must confirm stable object identity and structure,
 not only a successful function return.
 
-## 7. MCP result evaluation
+## 8. MCP result evaluation
 
 Follow `project/SYMCON_MCP_SCRIPT_READBACK.md` for authorized live inspection.
 
@@ -79,7 +91,7 @@ Temporary scripts, variables, events or markers require explicit authorization.
 Delete them immediately after use and verify their absence through a separate
 read-back.
 
-## 8. Acceptance and rollback
+## 9. Acceptance and rollback
 
 A live migration passes only when all declared invariants remain satisfied.
 Relevant invariants may include:
@@ -101,7 +113,7 @@ On failure, stop the migration cohort. Preserve the managed target object and
 restore only the changed source or configuration from the prepared rollback.
 Do not delete and recreate variables merely to recover from a caller migration.
 
-## 9. Live evidence closure
+## 10. Live evidence closure
 
 An authorized live mutation or real-device test is not complete when the
 runtime check passes. Its evidence and the framework's current-state claims
@@ -150,7 +162,7 @@ the repository claims to model the live cohort. A public report without exact
 private evidence is incomplete when installation-specific rollback or audit
 details are required.
 
-## 10. Static analysis boundaries for runtime fakes
+## 11. Static analysis boundaries for runtime fakes
 
 PHP test entrypoints that emulate IP-Symcon functions in the global namespace
 shall not be analyzed in the same PHPStan process as production candidates or
@@ -183,7 +195,7 @@ gate and every executable test group. A green production gate alone does not
 replace test execution, and passing tests do not replace production static
 analysis.
 
-## 11. Standalone module publication
+## 12. Standalone module publication
 
 Repository publication is an independently authorized engineering phase. It is
 not a live Symcon operation and does not authorize pull-request merge, Module

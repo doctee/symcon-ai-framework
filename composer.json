@@ -153,6 +153,9 @@
             "@php case-studies/open-meteo/tests/publication.php",
             "@php tests/publication/module-publication.php"
         ],
+        "test:toolchain-resolution": [
+            "tests/toolchain/vendor-resolution.sh"
+        ],
         "lint": [
             "@php tools/lint.php"
         ],
@@ -166,6 +169,7 @@
             "phpcs"
         ],
         "check": [
+            "@test:toolchain-resolution",
             "@lint",
             "@bundle:check",
             "@fileset:check",

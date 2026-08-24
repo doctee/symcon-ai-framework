@@ -1,4 +1,4 @@
-.PHONY: bundle-build bundle-check fileset-build fileset-check control-light-fileset-build control-light-fileset-check media-carousel-fileset-build media-carousel-fileset-check navimow-fileset-build navimow-fileset-check open-meteo-fileset-build open-meteo-fileset-check open-meteo-publication-check open-meteo-publication-prepare media-carousel-publication-check media-carousel-publication-prepare navimow-publication-check navimow-publication-prepare test-bundles test-filesets test-control-light-fileset test-deployment-restart test-deployment-channel test-runtime-source-mirror test-runtime-health-probe test-helpers test-mqtt-exporter-core test-mqtt-exporter-runtime test-mqtt-exporter-reconcile test-mqtt-exporter-execute test-mqtt-exporter-dispatch test-mqtt-exporter-cleanup test-mqtt-exporter-fixtures test-control-light-core test-control-light-runtime test-control-light-topology test-control-light-runtime-mirror test-navimow-rest-auth test-navimow-pilot test-navimow-mqtt test-navimow-distribution test-media-carousel test-module-publication test-open-meteo-publication test-open-meteo-offline lint phpstan phpstan-bundle phpcs check
+.PHONY: bundle-build bundle-check fileset-build fileset-check control-light-fileset-build control-light-fileset-check media-carousel-fileset-build media-carousel-fileset-check navimow-fileset-build navimow-fileset-check open-meteo-fileset-build open-meteo-fileset-check open-meteo-publication-check open-meteo-publication-prepare media-carousel-publication-check media-carousel-publication-prepare navimow-publication-check navimow-publication-prepare test-bundles test-filesets test-control-light-fileset test-deployment-restart test-deployment-channel test-runtime-source-mirror test-runtime-health-probe test-helpers test-mqtt-exporter-core test-mqtt-exporter-runtime test-mqtt-exporter-reconcile test-mqtt-exporter-execute test-mqtt-exporter-dispatch test-mqtt-exporter-cleanup test-mqtt-exporter-fixtures test-control-light-core test-control-light-runtime test-control-light-topology test-control-light-runtime-mirror test-navimow-rest-auth test-navimow-pilot test-navimow-mqtt test-navimow-distribution test-media-carousel test-module-publication test-toolchain-resolution test-open-meteo-publication test-open-meteo-offline lint phpstan phpstan-bundle phpcs check
 
 bundle-build:
 	composer bundle:build
@@ -128,6 +128,9 @@ test-media-carousel:
 
 test-module-publication:
 	composer test:module-publication
+
+test-toolchain-resolution:
+	composer test:toolchain-resolution
 
 test-open-meteo-offline:
 	case-studies/open-meteo/tools/check-offline.sh
