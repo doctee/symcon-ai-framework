@@ -3,7 +3,7 @@
 **Assessment date:** 2026-08-24
 **Baseline revision:** `a7f86d725b9487c3ca661363e325382210c8f59f`
 **Scope-freeze base revision:** `46cc50cb7876ad1a65f055ef6a9b85abdf05b1e1`
-**Decision:** SCOPE FROZEN - RELEASE CANDIDATE PREPARED
+**Decision:** RELEASED
 
 ## Purpose
 
@@ -18,12 +18,12 @@ does not claim a fresh live Symcon verification.
 
 | Item | Verified state |
 | --- | --- |
-| latest release | `v0.3.0` |
-| annotated tag target | `e223b76673b495cecae3e2232ce148c5dabb6230` |
-| GitHub Release | published 2026-07-23; neither draft nor prerelease |
-| current development baseline | `a7f86d725b9487c3ca661363e325382210c8f59f` |
-| commits after `v0.3.0` | 172 |
-| paths changed after `v0.3.0` | 739 |
+| latest release | `v0.4.0` |
+| annotated tag target | `de8a59d9f8d30e38d0fa18058057c620446f12c0` |
+| GitHub Release | published 2026-08-24; neither draft nor prerelease |
+| current development baseline | `de8a59d9f8d30e38d0fa18058057c620446f12c0` |
+| commits after `v0.4.0` | 0 |
+| paths changed after `v0.4.0` | 0 |
 | open pull requests at assessment | 0 |
 | open public engineering issues | 1 |
 | latest baseline CI | PASS |
@@ -126,11 +126,13 @@ is not part of the public v0.4 artifact set.
 | deterministic artifact regeneration | PASS | complete builders ran twice identically |
 | private-data and provenance review | PASS | recorded in v0.4 release readiness |
 | clean-checkout `make check` | PASS | repeat through exact-revision CI |
-| exact-revision CI | PENDING | require after publication |
-| annotated tag and GitHub Release | PENDING | final independent gate |
+| exact-revision CI | PASS | PR and post-merge CI passed on the frozen candidate and release revision |
+| annotated tag and GitHub Release | PASS | published and independently verified on 2026-08-24 |
 
 ## Decision
 
-The repository justifies a `v0.4.0` release line, its feature scope is frozen
-and the repository release candidate is prepared. Exact-revision checks and CI
-must pass before the separate annotated-tag and GitHub Release gate.
+The repository justified a `v0.4.0` release line and completed every frozen
+release gate. The annotated tag resolves to the exact post-merge revision, the
+release workflow passed and the GitHub Release is published. New work is not
+implicitly part of v0.4 and enters the separate v0.5 inventory before any
+future scope decision.

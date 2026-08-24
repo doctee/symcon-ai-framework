@@ -9,6 +9,18 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Added the initial v0.5 engineering inventory with one confirmed public
+  candidate, explicit admission gates and separation of repository scope from
+  live operations, standalone-module publication and private retention.
+
+### Changed
+
+- Reconciled the project overview and v0.4 scope, repository and readiness
+  records with the published annotated tag, exact-revision CI and successful
+  GitHub Release.
+
 ## [0.4.0] - 2026-08-24
 
 ### Added

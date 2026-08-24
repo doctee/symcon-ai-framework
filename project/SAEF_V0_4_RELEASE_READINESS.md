@@ -3,7 +3,7 @@
 **Assessment date:** 2026-08-24
 **Target:** `v0.4.0`
 **Scope-freeze base:** `f394d02ed4e511341b887a51cd07ee242d10d22f`
-**Current decision:** RELEASE CANDIDATE PREPARED - PUBLICATION PENDING
+**Current decision:** RELEASED
 
 ## Summary
 
@@ -18,9 +18,10 @@ Zone 3 natural observations, private legacy migration, live activation,
 standalone-module publication and retention cleanup remain outside the release.
 
 The public helper contract contains 30 functions. Both framework-version
-owners now use `0.4.0`, and all deterministic artifacts were rebuilt twice from
-the clean worktree with identical output. Tagging and the GitHub Release remain
-a separate final publication gate.
+owners use `0.4.0`, and all deterministic artifacts were rebuilt twice from
+the clean worktree with identical output. Pull request #72, post-merge CI and
+the tag-triggered release workflow passed. The annotated tag and GitHub Release
+were published on 2026-08-24 at revision `de8a59d`.
 
 ## Scope Reconciliation
 
@@ -56,10 +57,10 @@ boundary decision. No additional feature is admitted by release preparation.
 | Dated changelog section | PASS | `[0.4.0] - 2026-08-24` with a new empty Unreleased boundary. |
 | Release-note extraction | PASS | Release workflow expression extracts 84 non-empty note lines. |
 | Full clean-worktree checks | PASS | Full `make check` passed with the lock-identical external toolchain. |
-| Pull-request CI | PENDING | Require success on the exact candidate head. |
-| Post-merge CI | PENDING | Require success on the exact release revision. |
-| Annotated `v0.4.0` tag | PENDING | Separate final publication gate. |
-| GitHub Release | PENDING | Created by the verified tag workflow only. |
+| Pull-request CI | PASS | Both checks passed on candidate `e57596875a1ba2e736c3bc1bc38be2f356d41196` in PR #72. |
+| Post-merge CI | PASS | Run `32756679029` passed on release revision `de8a59d9f8d30e38d0fa18058057c620446f12c0`. |
+| Annotated `v0.4.0` tag | PASS | Tag object `dcb691144e83a3a4b7c7dcbf79376f7ac9f46d19` resolves to the release revision. |
+| GitHub Release | PASS | Run `32769086811` published SAEF v0.4.0 as neither draft nor prerelease. |
 
 ## Version Inventory
 
@@ -103,13 +104,13 @@ The Composer lock contains only development analyzers: PHPStan under MIT and
 PHP_CodeSniffer under BSD-3-Clause. No runtime dependency or vendored
 third-party source is added by v0.4.
 
-## Publication Boundary
+## Publication Outcome
 
-This candidate preparation does not create a tag or GitHub Release and does not
-publish a standalone module. It does not update Module Control, activate a
-fileset, restart Symcon, issue a device command or authorize retention cleanup.
+The annotated `v0.4.0` tag resolves to
+`de8a59d9f8d30e38d0fa18058057c620446f12c0`. Release workflow
+`32769086811` reran `composer check`, extracted the dated v0.4 changelog section
+and published SAEF v0.4.0 as neither a draft nor a prerelease on 2026-08-24.
 
-After the candidate merge and exact-revision CI pass, the remaining operation
-is one separately verified annotated-tag publication. The release workflow must
-rerun `composer check`, extract the dated v0.4 changelog section and create a
-non-draft, non-prerelease GitHub Release.
+This repository release did not publish a standalone module, update Module
+Control, activate a fileset, restart Symcon, issue a device command or
+authorize retention cleanup. Those operations retain their independent gates.
