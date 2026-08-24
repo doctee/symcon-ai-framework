@@ -16,7 +16,7 @@ Version `0.8.12` removes the renderer's vertical padding, compacts the headline
 and axis gaps and fixes mobile text sizing. The resulting content block fits a
 narrow titleless Ninja tile without clipping the bottom axis; bar height,
 horizontal spacing, tooltip overflow and minute semantics remain unchanged.
-The next revision keeps that compact top-aligned fallback below 70 CSS pixels
+Version `0.8.13` keeps that compact top-aligned fallback below 70 CSS pixels
 and vertically centers the complete chart in taller Web Content viewports. This
 uses the viewport height rather than a device-name check, so the narrow iPhone
 tile remains unchanged while the taller iPad tile uses its available space.
