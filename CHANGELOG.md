@@ -66,6 +66,10 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Froze the `v0.4.0` feature scope, explicitly deferred rapid-command
+  latest-command-wins behavior from GitHub issue #1 to a post-v0.4 workstream
+  and opened the dedicated release-preparation boundary without changing
+  runtime code, framework versions or generated artifacts.
 - Serialized `SAEF_IncrementStatistic()` per variable so concurrent counters
   retain their existing API while failing clearly on semaphore contention.
 - Reconciled the published `v0.3.0` tag and GitHub Release with the project

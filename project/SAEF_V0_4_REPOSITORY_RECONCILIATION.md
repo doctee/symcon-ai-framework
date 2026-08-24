@@ -2,7 +2,8 @@
 
 **Assessment date:** 2026-08-24
 **Baseline revision:** `a7f86d725b9487c3ca661363e325382210c8f59f`
-**Decision:** DEVELOPMENT BASELINE ESTABLISHED - NOT TAG-READY
+**Scope-freeze base revision:** `46cc50cb7876ad1a65f055ef6a9b85abdf05b1e1`
+**Decision:** SCOPE FROZEN - RELEASE PREPARATION PENDING
 
 ## Purpose
 
@@ -90,16 +91,18 @@ changed by this reconciliation.
 Historical dated reports remain unchanged. Current overview documents carry
 the reconciled status.
 
-## Open Decisions
+## Release Boundary Decisions
 
 ### GitHub issue #1
 
-Rapid superseding MQTT commands still have one public engineering proposal for
-latest-command-wins behavior. Before release freeze, either:
+Rapid superseding MQTT commands have one public engineering proposal for
+latest-command-wins behavior. It is explicitly deferred from `v0.4.0` and
+remains open for a post-v0.4 workstream.
 
-- implement it through a separately reviewed workstream and add it to scope;
-  or
-- explicitly defer it without weakening existing bounded feedback behavior.
+The existing bounded feedback behavior remains part of the frozen release.
+Deferral does not classify superseded commands as successful, weaken
+authoritative feedback predicates or suppress genuine action and confirmation
+failures.
 
 ### Navimow natural evidence
 
@@ -118,20 +121,20 @@ is not part of the public v0.4 artifact set.
 | Gate | State | Required next action |
 | --- | --- | --- |
 | version decision | PASS | target `v0.4.0` |
-| public repository reconciliation | PASS | maintain through release freeze |
-| current-status documentation | PASS in this candidate | verify final diff and CI |
+| public repository reconciliation | PASS | maintain through release preparation |
+| current-status documentation | PASS at scope freeze | verify final release diff and CI |
 | public API inventory | PASS at baseline | repeat on frozen release revision |
-| issue #1 disposition | PENDING | include or explicitly defer |
-| scope freeze | PENDING | select exact release commit range |
+| issue #1 disposition | PASS | deferred to a post-v0.4 workstream |
+| scope freeze | PASS | admit only release-gate completion changes |
 | framework version `0.4.0` | PENDING | dedicated release-preparation change |
 | deterministic artifact regeneration | PENDING | run after version change |
 | private-data and provenance review | PENDING | run on frozen candidate |
-| clean-checkout `make check` | PENDING | run for this candidate and final revision |
+| clean-checkout `make check` | PASS at scope freeze | repeat on final release revision |
 | exact-revision CI | PENDING | require after publication |
 | annotated tag and GitHub Release | PENDING | final independent gate |
 
 ## Decision
 
-The repository justifies a `v0.4.0` release line, but it is not tag-ready.
-Scope and status are now explicit; version mutation, artifact regeneration,
-issue disposition, final audits, CI and publication remain separate gates.
+The repository justifies a `v0.4.0` release line, and its feature scope is now
+frozen. It is not tag-ready: version mutation, artifact regeneration, final
+audits, exact-revision CI and publication remain separate release gates.
