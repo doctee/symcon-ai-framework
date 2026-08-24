@@ -22,6 +22,7 @@ Current contracts:
 | --- | --- | --- |
 | `open-meteo-publication.json` | `direct_branch` | Explicit legacy compatibility |
 | `media-carousel-publication.json` | `pull_request` | Default PR workflow |
+| `navimow-publication.json` | `pull_request` | Default PR workflow |
 
 New module contracts use `pull_request`. Direct base-branch publication is not
 the default and requires a separately justified compatibility decision.

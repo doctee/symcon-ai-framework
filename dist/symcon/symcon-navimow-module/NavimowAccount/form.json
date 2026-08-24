@@ -1,0 +1,143 @@
+{
+  "elements": [
+    {
+      "type": "ValidationTextBox",
+      "name": "BaseUrl",
+      "caption": "Base URL"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "ClientId",
+      "caption": "OAuth Client ID"
+    },
+    {
+      "type": "PasswordTextBox",
+      "name": "ClientSecret",
+      "caption": "OAuth Client Secret"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "RedirectUri",
+      "caption": "OAuth Redirect URI"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "PollInterval",
+      "caption": "Poll Interval (seconds)",
+      "minimum": 60
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "ActivePollInterval",
+      "caption": "Active Poll Interval (seconds)",
+      "minimum": 60
+    },
+    {
+      "type": "CheckBox",
+      "name": "DebugPayloads",
+      "caption": "Enable debug payload variable"
+    },
+    {
+      "type": "CheckBox",
+      "name": "EnableMqttShadow",
+      "caption": "Enable experimental MQTT shadow"
+    },
+    {
+      "type": "CheckBox",
+      "name": "EnableMqttPositionDiagnostics",
+      "caption": "Enable MQTT position diagnostics"
+    },
+    {
+      "type": "SelectInstance",
+      "name": "MqttReceiverInstanceId",
+      "caption": "Navimow MQTT Receiver",
+      "validModules": [
+        "{1B9960A2-A30C-D846-DF55-800F583AA812}"
+      ]
+    },
+    {
+      "type": "Label",
+      "caption": "MQTT shadow is optional and internal. REST remains authoritative."
+    }
+  ],
+  "actions": [
+    {
+      "type": "Button",
+      "caption": "Open Navimow Login",
+      "onClick": "echo NAVAC_GetAuthorizationUrl($id);"
+    },
+    {
+      "type": "PasswordTextBox",
+      "name": "AuthorizationInput",
+      "caption": "Authorization Code or Redirect URL"
+    },
+    {
+      "type": "Button",
+      "caption": "Exchange Authorization Code",
+      "onClick": "echo NAVAC_ExchangeAuthorizationCode($id, $AuthorizationInput);"
+    },
+    {
+      "type": "Button",
+      "caption": "Refresh Token",
+      "onClick": "echo NAVAC_RefreshAuthentication($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Discover Devices",
+      "onClick": "echo NAVAC_DiscoverDevices($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Wake Status Polling",
+      "onClick": "echo NAVAC_WakePolling($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Validate MQTT Adoption Candidate",
+      "onClick": "echo NAVAC_ValidateMqttAdoptionCandidate($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Show MQTT Diagnostics",
+      "onClick": "echo NAVAC_GetMqttDiagnostics($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Show MQTT Pilot Diagnostics",
+      "onClick": "echo NAVAC_GetMqttPilotDiagnostics($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Show MQTT Position Diagnostics",
+      "onClick": "echo NAVAC_GetMqttPositionDiagnostics($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Adopt MQTT Shadow Chain",
+      "confirm": "Adopt the configured inactive and credential-empty MQTT chain?",
+      "onClick": "echo NAVAC_AdoptMqttShadowChain($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Connect MQTT Shadow",
+      "confirm": "Retrieve fresh private MQTT credentials and start exactly one connection attempt?",
+      "onClick": "echo NAVAC_ConnectMqttShadow($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Disconnect MQTT Shadow",
+      "confirm": "Deactivate the owned WebSocket and clear its private MQTT credentials?",
+      "onClick": "echo NAVAC_DisconnectMqttShadow($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Reset Authentication",
+      "confirm": "Clear all stored Navimow tokens?",
+      "onClick": "NAVAC_ResetAuthentication($id); echo 'Authentication reset.';"
+    },
+    {
+      "type": "Label",
+      "caption": "Discovery, status polling, Pause, Resume and Dock command transport are enabled."
+    }
+  ]
+}
