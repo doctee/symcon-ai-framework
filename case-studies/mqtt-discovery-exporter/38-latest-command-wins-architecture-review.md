@@ -68,8 +68,9 @@ writer contract and avoids lost updates between unrelated responsibilities.
 
 The owner captures the event-time command value and passes it to the runtime
 with the triggering variable ID. For variable-triggered scripts, Symcon defines
-`$_IPS['VALUE']` as the value at the trigger time. Reading `GetValue()` only
-after semaphore acquisition is not an adequate invocation snapshot.
+[`$_IPS['VALUE']` as the value at the trigger time](https://www.symcon.de/de/service/dokumentation/grundlagen/automationen/php-skripte/systemvariablen/).
+Reading `GetValue()` only after semaphore acquisition is not an adequate
+invocation snapshot.
 
 The later runtime change should add an optional, implementation-local argument
 for the captured payload so the class transition can be staged safely. The
