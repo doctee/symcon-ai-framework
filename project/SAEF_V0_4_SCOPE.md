@@ -1,13 +1,14 @@
 # SAEF v0.4 Scope
 
-**Status:** Confirmed development scope; not release-ready
+**Status:** Scope frozen; release preparation pending
 **Target:** `v0.4.0`
 **Baseline date:** 2026-08-24
 **Baseline revision:** `a7f86d725b9487c3ca661363e325382210c8f59f`
+**Scope-freeze base revision:** `46cc50cb7876ad1a65f055ef6a9b85abdf05b1e1`
 
 ## Version Decision
 
-The next framework release from `main` should be `v0.4.0`.
+The next framework release from `main` will be `v0.4.0`.
 
 The changes after `v0.3.0` are not a maintenance-only correction. They add a
 manifest-driven module-publication platform, complete standalone module
@@ -16,9 +17,12 @@ worktree-isolated analysis tooling and substantial case-study evolution.
 Publishing that combined scope as `v0.3.1` would understate its new framework
 capabilities.
 
-This document establishes the development boundary. It does not bump framework
-version constants, regenerate release artifacts, create a tag, publish a
-release or authorize a live Symcon change.
+This document establishes the frozen release boundary. Work merged after the
+scope-freeze base enters `v0.4.0` only when it is required to complete the
+release gates below. New feature work requires an explicit scope reopening.
+
+The freeze does not bump framework version constants, regenerate release
+artifacts, create a tag, publish a release or authorize a live Symcon change.
 
 ## Current Baseline
 
@@ -73,8 +77,8 @@ release or authorize a live Symcon change.
 
 ## Excluded Scope
 
-- rapid-command latest-command-wins behavior from GitHub issue #1 unless it is
-  implemented, reviewed and explicitly added before scope freeze;
+- rapid-command latest-command-wins behavior from GitHub issue #1, deferred to
+  a post-v0.4 workstream;
 - unfinished Navimow Zone 2 and Zone 3 natural-observation gates;
 - bulk migration of retained private ControlLight or System Functions legacy
   consumers;
@@ -87,13 +91,26 @@ release or authorize a live Symcon change.
 
 Excluded work may continue independently. It must not enter the release merely
 because it finishes before the v0.4 tag; adding it requires an explicit scope
-decision and the appropriate verification gates.
+reopening and the appropriate verification gates.
+
+## Deferred Work Decision
+
+GitHub issue #1 remains open as a future engineering proposal and is not a
+`v0.4.0` release blocker. Deliberately separated MQTT commands retain their
+bounded, authoritative-feedback contract. Rapid superseding commands retain
+the documented operational caveat.
+
+Implementing latest-command-wins requires a separate architecture and runtime
+workstream with deterministic concurrency tests and supervised live evidence.
+Deferral must not weaken feedback predicates, remove serialization or hide
+genuine action and confirmation failures.
 
 ## Release Gates
 
-Before tagging `v0.4.0`:
+The feature scope and issue disposition are frozen. Before tagging `v0.4.0`,
+the release-preparation workstream must:
 
-1. freeze the included commit range and reconcile every Unreleased entry;
+1. reconcile every Unreleased entry against the frozen scope;
 2. update current-status documentation while preserving dated evidence as
    historical snapshots;
 3. audit all 30 public helper functions and every behavioral contract change;
@@ -113,6 +130,7 @@ cleanup. Those remain separate bounded operations.
 
 ## Immediate Next Boundary
 
-Complete the repository reconciliation in
-`project/SAEF_V0_4_REPOSITORY_RECONCILIATION.md`, then decide whether GitHub
-issue #1 is deferred or included before freezing the v0.4 release candidate.
+Begin the dedicated `v0.4.0` release-preparation workstream. It must update the
+framework versions, regenerate deterministic artifacts, complete the frozen
+API, provenance and privacy audits, and pass the exact-revision release gates
+before tag or GitHub Release authorization.

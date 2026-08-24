@@ -143,13 +143,15 @@ added the restricted Windows deployment channel, managed runtime health and
 source mirrors, MQTT feedback correction and the completed initial
 ControlLight, Navimow and System Functions evidence.
 
-Current `main` is the development line for `v0.4.0`. Its proposed scope adds
-the manifest-driven standalone-module publisher, complete module distributions,
-worktree-isolated tooling, safer object mutation, serialized Statistics updates
-and substantial MediaCarousel, Open-Meteo, Navimow, ControlLight and MQTT
-case-study evolution. See `project/SAEF_V0_4_SCOPE.md` and
-`project/SAEF_V0_4_REPOSITORY_RECONCILIATION.md` for the exact boundary and
-remaining release gates.
+Current `main` is the release-preparation line for `v0.4.0`. Its frozen scope
+adds the manifest-driven standalone-module publisher, complete module
+distributions, worktree-isolated tooling, safer object mutation, serialized
+Statistics updates and substantial MediaCarousel, Open-Meteo, Navimow,
+ControlLight and MQTT case-study evolution. Rapid-command latest-command-wins
+behavior remains deferred to a post-v0.4 workstream. See
+`project/SAEF_V0_4_SCOPE.md` and
+`project/SAEF_V0_4_REPOSITORY_RECONCILIATION.md` for the exact frozen boundary
+and remaining release gates.
 
 The Diagnostics helper set covers configuration hashes, Registry metadata,
 Statistics and bounded error ring buffers; `RI-002` demonstrates their
