@@ -1,6 +1,6 @@
 # SAEF v0.5 Engineering Inventory
 
-**Status:** Initial inventory; scope not frozen
+**Status:** V05-001 architecture reviewed; scope not frozen
 **Inventory date:** 2026-08-24
 **Published baseline:** `v0.4.0`
 **Baseline revision:** `de8a59d9f8d30e38d0fa18058057c620446f12c0`
@@ -35,8 +35,9 @@ functions and no post-release API delta.
 ### V05-001: Rapid MQTT command supersession
 
 GitHub issue #1 proposes an implementation-private latest-command-wins model
-for rapid, superseding MQTT commands. It is admitted for architecture and test
-work, not yet for release implementation.
+for rapid, superseding MQTT commands. The architecture review is complete in
+`case-studies/mqtt-discovery-exporter/38-latest-command-wins-architecture-review.md`.
+Implementation is not yet admitted.
 
 The design must:
 
@@ -49,12 +50,14 @@ The design must:
 - avoid an unbounded queue or JSON structure; and
 - add no public API unless recurring reuse is demonstrated.
 
-Before implementation admission, the workstream must inventory the exporting
-MQTT fileset, effective live owner, all known consumers and observation
-constraints. It must define command identity, supersession timing, ownership,
-failure classification, restart behavior and deterministic multi-command test
-cases. Any supervised live test remains a separately authorized gate with
-immediate compensation.
+The review inventories the public exporter, owner contract, known consumers
+and dated observation evidence. It defines command identity, supersession
+timing, ownership, failure classification, restart behavior and deterministic
+multi-command tests. Before implementation admission, a fresh read-only
+Symcon MCP inventory must verify the effective live owner, active fileset,
+configuration bounds, consumers and current observation constraints. Any
+supervised live test remains a separately authorized gate with immediate
+compensation.
 
 ## Evidence Watchlist
 
@@ -106,9 +109,11 @@ A candidate may enter a frozen v0.5 scope only when:
 
 ## Recommended Order
 
-1. Complete the architecture review for V05-001 without live mutation.
+1. Complete a fresh read-only live inventory for the V05-001 implementation
+   boundary without mutation.
 2. Build deterministic rapid-command tests against the existing MQTT runtime.
-3. Decide whether the solution remains implementation-private.
+3. Implement the bounded generation model inside the case-study runtime while
+   retaining the no-new-public-API decision.
 4. Review new evidence before admitting another candidate.
 5. Freeze version and scope only after the admitted change set is coherent.
 
