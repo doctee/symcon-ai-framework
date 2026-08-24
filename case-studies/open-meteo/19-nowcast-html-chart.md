@@ -16,6 +16,10 @@ Version `0.8.12` removes the renderer's vertical padding, compacts the headline
 and axis gaps and fixes mobile text sizing. The resulting content block fits a
 narrow titleless Ninja tile without clipping the bottom axis; bar height,
 horizontal spacing, tooltip overflow and minute semantics remain unchanged.
+The next revision keeps that compact top-aligned fallback below 70 CSS pixels
+and vertically centers the complete chart in taller Web Content viewports. This
+uses the viewport height rather than a device-name check, so the narrow iPhone
+tile remains unchanged while the taller iPad tile uses its available space.
 
 ## Purpose
 
@@ -39,6 +43,12 @@ stores the minute offset and intensity in a `data-tip` attribute. A namespaced
 CSS `::after` pseudo-element exposes that immutable text on `:hover`, with no
 JavaScript or DOM mutation. Inline layout dimensions remain the fallback for
 legacy HTMLBox rendering.
+
+The responsive wrapper deliberately activates vertical centering only from a
+70-pixel viewport height. Below that boundary it adds neither a fixed height nor
+vertical offset, preserving the clipping-safe narrow-tile layout. At and above
+the boundary it treats the Web Content viewport as the available vertical area
+and centers the chart as one block.
 
 ## Resolution Semantics
 
