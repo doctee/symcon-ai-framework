@@ -1,14 +1,16 @@
 # SAEF v0.4 Scope
 
-**Status:** Scope frozen; release candidate prepared; publication pending
+**Status:** Published historical release scope
 **Target:** `v0.4.0`
 **Baseline date:** 2026-08-24
 **Baseline revision:** `a7f86d725b9487c3ca661363e325382210c8f59f`
 **Scope-freeze base revision:** `46cc50cb7876ad1a65f055ef6a9b85abdf05b1e1`
+**Release date:** 2026-08-24
+**Release revision:** `de8a59d9f8d30e38d0fa18058057c620446f12c0`
 
 ## Version Decision
 
-The next framework release from `main` will be `v0.4.0`.
+The framework release after `v0.3.0` was correctly classified as `v0.4.0`.
 
 The changes after `v0.3.0` are not a maintenance-only correction. They add a
 manifest-driven module-publication platform, complete standalone module
@@ -128,9 +130,15 @@ Repository release does not authorize standalone-module publication, a Module
 Control update, fileset activation, restart, device action or retention
 cleanup. Those remain separate bounded operations.
 
-## Immediate Next Boundary
+## Release Outcome
 
-Complete exact-revision pull-request and post-merge CI for the prepared
-candidate. The annotated tag and GitHub Release then require their separate
-final publication gate; they do not authorize any live or standalone-module
-operation.
+Pull request #72 merged the byte-identical release candidate as revision
+`de8a59d9f8d30e38d0fa18058057c620446f12c0`. Exact-revision post-merge CI and
+the tag-triggered release workflow passed. The annotated `v0.4.0` tag and the
+non-draft, non-prerelease GitHub Release were published on 2026-08-24.
+
+Repository publication did not authorize a live Symcon mutation, standalone
+module publication, fileset activation, restart, device action or retention
+cleanup. Subsequent development intake is governed by
+`project/SAEF_V0_5_INVENTORY.md`; this file remains the historical record of
+the v0.4 decision.
