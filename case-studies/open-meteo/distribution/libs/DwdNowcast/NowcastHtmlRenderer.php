@@ -80,7 +80,9 @@ final class NowcastHtmlRenderer
 
         $middle = intdiv($windowMinutes, 2);
 
-        return '<div class="saef-nowcast" style="box-sizing:border-box;width:100%;padding:0 6px;color:#ddd;'
+        return '<div class="saef-nowcast__viewport" style="box-sizing:border-box;width:100%">'
+            . self::layoutStyle()
+            . '<div class="saef-nowcast" style="box-sizing:border-box;width:100%;padding:0 6px;color:#ddd;'
             . '-webkit-text-size-adjust:100%;font:11px/1.35 -apple-system,BlinkMacSystemFont,'
             . '&quot;Segoe UI&quot;,sans-serif">'
             . self::tooltipStyle()
@@ -95,7 +97,7 @@ final class NowcastHtmlRenderer
             . 'margin-top:1px;font-size:9px;color:#888"><span>'
             . self::escape($labels['now']) . '</span><span style="text-align:center">+'
             . $middle . ' min</span><span style="text-align:right">+' . $windowMinutes . ' min</span></div>'
-            . '</div>';
+            . '</div></div>';
     }
 
     /**
@@ -107,13 +109,15 @@ final class NowcastHtmlRenderer
             throw new InvalidArgumentException('Nowcast empty-chart label is invalid.');
         }
 
-        return '<div class="saef-nowcast saef-nowcast--empty" '
+        return '<div class="saef-nowcast__viewport" style="box-sizing:border-box;width:100%">'
+            . self::layoutStyle()
+            . '<div class="saef-nowcast saef-nowcast--empty" '
             . 'style="box-sizing:border-box;width:100%;padding:0 6px;color:#ddd;'
             . '-webkit-text-size-adjust:100%;font:11px/1.35 -apple-system,BlinkMacSystemFont,'
             . '&quot;Segoe UI&quot;,sans-serif">'
             . '<div class="saef-nowcast__empty" style="padding:10px 8px;text-align:center;opacity:.62">'
             . self::escape($labels['noData']) . '</div>'
-            . '</div>';
+            . '</div></div>';
     }
 
     public static function colorForIntensity(
@@ -235,6 +239,14 @@ final class NowcastHtmlRenderer
             . '.saef-nowcast .saef-nowcast__bar:hover::after{display:block}'
             . '.saef-nowcast .saef-nowcast__bar--start::after{left:0;transform:translate(0,-50%)}'
             . '.saef-nowcast .saef-nowcast__bar--end::after{left:auto;right:0;transform:translate(0,-50%)}'
+            . '</style>';
+    }
+
+    private static function layoutStyle(): string
+    {
+        return '<style>'
+            . '@media (min-height:70px){.saef-nowcast__viewport{height:100vh;display:flex;'
+            . 'align-items:center}.saef-nowcast__viewport>.saef-nowcast{width:100%}}'
             . '</style>';
     }
 

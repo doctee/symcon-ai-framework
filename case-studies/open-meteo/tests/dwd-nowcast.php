@@ -84,6 +84,21 @@ same(
     str_contains($chart, '-webkit-text-size-adjust:100%'),
     'DWD chart does not stabilize mobile text sizing.'
 );
+same(
+    true,
+    str_contains($chart, 'class="saef-nowcast__viewport"'),
+    'DWD chart responsive viewport wrapper is missing.'
+);
+same(
+    true,
+    str_contains($chart, '@media (min-height:70px)'),
+    'DWD chart tall-tile breakpoint is missing.'
+);
+same(
+    true,
+    str_contains($chart, 'height:100vh;display:flex;align-items:center'),
+    'DWD chart tall-tile vertical centering is missing.'
+);
 same(true, str_contains($chart, 'font:11px/1.35'), 'DWD chart base font is not compact.');
 same(true, str_contains($chart, 'height:14px'), 'DWD chart bars are not compact.');
 same(true, str_contains($chart, 'font-size:9px'), 'DWD chart axis is not compact.');
@@ -196,6 +211,11 @@ same(
     true,
     str_contains(NowcastHtmlRenderer::renderEmpty($chartLabels), 'No nowcast data'),
     'DWD empty chart differs.'
+);
+same(
+    true,
+    str_contains(NowcastHtmlRenderer::renderEmpty($chartLabels), '@media (min-height:70px)'),
+    'DWD empty chart tall-tile breakpoint is missing.'
 );
 
 $incomplete = $features;
