@@ -103,7 +103,7 @@
         {
             "source": "case-studies/open-meteo/distribution/library.json",
             "target": "library.json",
-            "sha256": "2652fa0bd72cbac1f2344a6aaf5c2ea449ca28be0b08d6f5dde8a897a5a1e600",
+            "sha256": "2c6ef47e2c2932d0c93a7d27f4dea277d37e5f5ad0631f1bea547c02050efe49",
             "bytes": 257
         },
         {
@@ -245,7 +245,7 @@
             "bytes": 3308
         }
     ],
-    "filesetSha256": "2d641d9b95d0c1d4c060ae20344117bb64a33521e9b55c74c076339c831b94ba",
+    "filesetSha256": "5aff1882845f59b3eb57b4a079ada1249d09a91238af2cd30b2d62d1d5af16eb",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

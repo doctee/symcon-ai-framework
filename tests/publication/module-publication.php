@@ -24,7 +24,7 @@ try {
     $openCandidate = buildModulePublicationCandidate($projectRoot, $openContract);
     modulePublicationTestSame(44, count($openCandidate['files']), 'Open-Meteo inventory differs.');
     modulePublicationTestSame(
-        'b37040fb54799d69223b5e62ce4027821a30bb7ca6c7d472d2de308c4f3dedd3',
+        '4b84c0cd02832485149abaef8588be88d8864132077361984fcdfe9fea595b16',
         $openCandidate['publicationSha256'],
         'Open-Meteo publication compatibility hash differs.'
     );
