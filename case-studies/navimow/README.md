@@ -368,6 +368,10 @@ template or a general SAEF reference implementation.
 | `338-task-observation-ledger-offline-implementation-plan.md` | Freezes the ledger files, failure behavior, synthetic fixtures and complete offline verification sequence. |
 | `339-task-observation-ledger-implementation.md` | Implements and verifies the retained MQTT task ledger without changing REST authority, public variables or commands. |
 | `340-task-observation-ledger-publication-readiness.md` | Verifies the clean candidate and adds a generic manifest-driven Navimow PR publication contract. |
+| `341-task-observation-ledger-standalone-publication.md` | Records CI-backed SAEF integration and hash-bound standalone PR publication through the generic publisher. |
+| `342-task-observation-ledger-disabled-symcon-rollout.md` | Proves the single disabled update, stable variables and archives, REST continuity and empty retained ledger contract. |
+| `343-zone-correlation-ledger-live-test-plan.md` | Prepares short command-free natural Zone 2 and Zone 3 ledger observations with mandatory cleanup. |
+| `344-path-map-and-zone-area-statistics-design.md` | Designs separate bounded path and zone-statistics stores with explicit calibration and denominator gates. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
