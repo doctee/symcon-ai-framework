@@ -11,6 +11,10 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added the V05-001 latest-command-wins architecture review with complete MQTT
+  exporter impact inventory, immutable event-input boundary, bounded
+  Registry-backed generation model, diagnostics classification, deterministic
+  test contract and separate implementation and live-activation gates.
 - Added the initial v0.5 engineering inventory with one confirmed public
   candidate, explicit admission gates and separation of repository scope from
   live operations, standalone-module publication and private retention.

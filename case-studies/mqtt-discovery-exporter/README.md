@@ -62,6 +62,7 @@ become an SAEF reference implementation.
 | `35-second-state-only-light-pilot-and-recovery-report.md` | Cleanup-disabled second light publication, rejected-command observability during an external transport outage and successful post-reconnect state restoration. |
 | `36-client-subscription-coverage-and-runtime-namespace-report.md` | Client-subscription coverage validation, controlled runtime-namespace correction and complete Home Assistant/Apple Home functional evidence. |
 | `37-owner-decoupling-and-subscription-runtime-activation-report.md` | Physical owner-path decoupling, corrected subscription-runtime activation, idempotent three-entity reconciliation and alarm-bounded live evidence. |
+| `38-latest-command-wins-architecture-review.md` | V05-001 impact inventory, bounded generation arbitration, failure classification, deterministic test contract and separate implementation/live gates. |
 | `candidate/MqttDiscoveryExporterCore.php` | Side-effect-free normalization, payload, parsing, hashing and cleanup-planning core. |
 | `candidate/MqttDiscoveryExporterRuntime.php` | Runtime adapter for diagnostics, reconcile, MQTT execution, indexed dispatch and exact cleanup. |
 | `../../tests/mqtt-discovery-exporter/fixtures/discovery-capabilities.json` | Sanitized deterministic discovery fixtures for every supported capability combination. |
@@ -102,6 +103,11 @@ The completed implementation demonstrates:
 - reconciliation-time MQTT Client subscription coverage without mutating the
   shared gateway;
 - repeatable offline tests and supervised live integration evidence.
+
+Post-v0.4 architecture work additionally defines a bounded latest-command-wins
+model for rapid commands. It is documentation only: implementation, generated
+filesets and live owners remain unchanged until the separate admission gates in
+report 38 have passed.
 
 The current supervised client-transport pilot manages two light entities. The
 second state-only entity has additionally demonstrated fail-closed handling
