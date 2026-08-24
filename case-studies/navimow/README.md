@@ -370,8 +370,9 @@ template or a general SAEF reference implementation.
 | `340-task-observation-ledger-publication-readiness.md` | Verifies the clean candidate and adds a generic manifest-driven Navimow PR publication contract. |
 | `341-task-observation-ledger-standalone-publication.md` | Records CI-backed SAEF integration and hash-bound standalone PR publication through the generic publisher. |
 | `342-task-observation-ledger-disabled-symcon-rollout.md` | Proves the single disabled update, stable variables and archives, REST continuity and empty retained ledger contract. |
-| `343-zone-correlation-ledger-live-test-plan.md` | Prepares short command-free natural Zone 2 and Zone 3 ledger observations with mandatory cleanup. |
+| `343-zone-correlation-ledger-live-test-plan.md` | Governs short command-free natural zone-correlation observations; Zone 1 passed and Zone 2 plus Zone 3 remain pending. |
 | `344-path-map-and-zone-area-statistics-design.md` | Designs separate bounded path and zone-statistics stores with explicit calibration and denominator gates. |
+| `345-zone-one-task-ledger-live-test-result.md` | Passes the first natural Zone 1 correlation with retained progress and area evidence plus verified credential-free cleanup. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
