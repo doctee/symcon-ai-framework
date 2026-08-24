@@ -74,6 +74,8 @@ Important current artifacts include:
 - `project/SAEF_V0_3_RELEASE_READINESS.md`
 - `project/SAEF_V0_4_SCOPE.md`
 - `project/SAEF_V0_4_REPOSITORY_RECONCILIATION.md`
+- `project/SAEF_V0_4_PUBLIC_API_AUDIT.md`
+- `project/SAEF_V0_4_RELEASE_READINESS.md`
 - `project/SAEF_DEPLOYMENT_CHANNEL_SECURITY_GATE.md`
 - `adr/ADR-0005-generate-symcon-helper-bundles.md`
 - `bundles/symcon/ensure-variable.bundle.json`
@@ -143,15 +145,17 @@ added the restricted Windows deployment channel, managed runtime health and
 source mirrors, MQTT feedback correction and the completed initial
 ControlLight, Navimow and System Functions evidence.
 
-Current `main` is the release-preparation line for `v0.4.0`. Its frozen scope
-adds the manifest-driven standalone-module publisher, complete module
+Current `main` contains the prepared `v0.4.0` release candidate. Its frozen
+scope adds the manifest-driven standalone-module publisher, complete module
 distributions, worktree-isolated tooling, safer object mutation, serialized
 Statistics updates and substantial MediaCarousel, Open-Meteo, Navimow,
 ControlLight and MQTT case-study evolution. Rapid-command latest-command-wins
-behavior remains deferred to a post-v0.4 workstream. See
+behavior remains deferred to a post-v0.4 workstream. The candidate is not a
+published release until the annotated tag and GitHub Release pass their
+separate final gate. See
 `project/SAEF_V0_4_SCOPE.md` and
-`project/SAEF_V0_4_REPOSITORY_RECONCILIATION.md` for the exact frozen boundary
-and remaining release gates.
+`project/SAEF_V0_4_RELEASE_READINESS.md` for the exact frozen boundary and
+remaining publication gates.
 
 The Diagnostics helper set covers configuration hashes, Registry metadata,
 Statistics and bounded error ring buffers; `RI-002` demonstrates their

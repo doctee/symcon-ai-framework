@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 const SAEF_SYMCON_FILESET_BUILDER_VERSION = '1.0.0';
-const SAEF_SYMCON_FILESET_FRAMEWORK_VERSION = '0.3.0';
+const SAEF_SYMCON_FILESET_FRAMEWORK_VERSION = '0.4.0';
 const SAEF_SYMCON_FILESET_LICENSE = 'PolyForm-Noncommercial-1.0.0';
 const SAEF_SYMCON_FILESET_LICENSE_URL = 'https://polyformproject.org/licenses/noncommercial/1.0.0/';
 

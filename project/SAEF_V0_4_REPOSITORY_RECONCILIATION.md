@@ -3,7 +3,7 @@
 **Assessment date:** 2026-08-24
 **Baseline revision:** `a7f86d725b9487c3ca661363e325382210c8f59f`
 **Scope-freeze base revision:** `46cc50cb7876ad1a65f055ef6a9b85abdf05b1e1`
-**Decision:** SCOPE FROZEN - RELEASE PREPARATION PENDING
+**Decision:** SCOPE FROZEN - RELEASE CANDIDATE PREPARED
 
 ## Purpose
 
@@ -68,14 +68,10 @@ a public SAEF helper API.
 
 ## Generated Artifact Boundary
 
-Current builders still declare framework version `0.3.0`. This is correct
-during development: changing the version would regenerate shared bundles and
-filesets before the release scope is frozen.
-
-The final v0.4 preparation must update both builder constants together,
-regenerate every declared artifact, prove deterministic output and review all
-exporting filesets affected by the helper changes. No generated artifact is
-changed by this reconciliation.
+Both canonical builders now declare framework version `0.4.0`. Release
+preparation regenerated every declared artifact twice, proved identical output
+and reviewed every helper-exporting fileset affected by the version and helper
+changes. Module protocol and library versions remain independent contracts.
 
 ## Documentation Reconciliation
 
@@ -126,15 +122,15 @@ is not part of the public v0.4 artifact set.
 | public API inventory | PASS at baseline | repeat on frozen release revision |
 | issue #1 disposition | PASS | deferred to a post-v0.4 workstream |
 | scope freeze | PASS | admit only release-gate completion changes |
-| framework version `0.4.0` | PENDING | dedicated release-preparation change |
-| deterministic artifact regeneration | PENDING | run after version change |
-| private-data and provenance review | PENDING | run on frozen candidate |
-| clean-checkout `make check` | PASS at scope freeze | repeat on final release revision |
+| framework version `0.4.0` | PASS | both canonical builder constants updated |
+| deterministic artifact regeneration | PASS | complete builders ran twice identically |
+| private-data and provenance review | PASS | recorded in v0.4 release readiness |
+| clean-checkout `make check` | PASS | repeat through exact-revision CI |
 | exact-revision CI | PENDING | require after publication |
 | annotated tag and GitHub Release | PENDING | final independent gate |
 
 ## Decision
 
-The repository justifies a `v0.4.0` release line, and its feature scope is now
-frozen. It is not tag-ready: version mutation, artifact regeneration, final
-audits, exact-revision CI and publication remain separate release gates.
+The repository justifies a `v0.4.0` release line, its feature scope is frozen
+and the repository release candidate is prepared. Exact-revision checks and CI
+must pass before the separate annotated-tag and GitHub Release gate.
