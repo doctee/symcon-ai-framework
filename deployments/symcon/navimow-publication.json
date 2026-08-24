@@ -1,0 +1,86 @@
+{
+  "formatVersion": 1,
+  "name": "navimow",
+  "hashNamespace": "SAEF-NAVIMOW-PUBLICATION",
+  "repository": {
+    "name": "doctee/symcon-navimow",
+    "publicUrl": "https://github.com/doctee/symcon-navimow",
+    "cloneUrl": "git@github.com:doctee/symcon-navimow.git",
+    "baseBranch": "main",
+    "confirmation": "publish-doctee-symcon-navimow-pr"
+  },
+  "publication": {
+    "mode": "pull_request",
+    "topicBranch": "saef/{name}-{fileset}",
+    "pullRequest": {
+      "repository": "doctee/symcon-navimow",
+      "base": "main",
+      "title": "feat: publish Navimow module update",
+      "body": "Automated bounded SAEF module publication.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "integrationConfirmation": "merge-doctee-symcon-navimow-pr"
+    }
+  },
+  "generated": {
+    "directory": "dist/symcon/symcon-navimow-module",
+    "manifest": "deployments/symcon/navimow-module.fileset.json",
+    "sourceMap": "fileset.sources.json",
+    "sidecar": "fileset.sha256",
+    "name": "symcon-navimow-module"
+  },
+  "metadata": [
+    {"source": "LICENSE", "target": "LICENSE"},
+    {"source": "case-studies/navimow/distribution/README.md", "target": "README.md"}
+  ],
+  "inventory": [
+    "LICENSE",
+    "NavimowAccount/form.json",
+    "NavimowAccount/locale.json",
+    "NavimowAccount/module.json",
+    "NavimowAccount/module.php",
+    "NavimowConfigurator/form.json",
+    "NavimowConfigurator/locale.json",
+    "NavimowConfigurator/module.json",
+    "NavimowConfigurator/module.php",
+    "NavimowDevice/form.json",
+    "NavimowDevice/locale.json",
+    "NavimowDevice/module.json",
+    "NavimowDevice/module.php",
+    "NavimowMqttReceiver/form.json",
+    "NavimowMqttReceiver/locale.json",
+    "NavimowMqttReceiver/module.json",
+    "NavimowMqttReceiver/module.php",
+    "README.md",
+    "fileset.sha256",
+    "fileset.sources.json",
+    "library.json",
+    "libs/Navimow/ApiClient.php",
+    "libs/Navimow/CommandContract.php",
+    "libs/Navimow/MqttCredentialMapper.php",
+    "libs/Navimow/MqttEnvelopeException.php",
+    "libs/Navimow/MqttEnvelopeParser.php",
+    "libs/Navimow/MqttPartialStateAccumulator.php",
+    "libs/Navimow/MqttPayloadException.php",
+    "libs/Navimow/MqttPayloadParser.php",
+    "libs/Navimow/MqttPositionDiagnostic.php",
+    "libs/Navimow/MqttTaskObservationLedger.php",
+    "libs/Navimow/MqttTransportConfiguration.php",
+    "libs/Navimow/OAuthHelper.php",
+    "libs/Navimow/PayloadMapper.php",
+    "libs/Navimow/Profiles.php"
+  ],
+  "privacy": {
+    "forbiddenMarkers": ["/Users/", "private/navimow-capture"]
+  },
+  "metadataValidation": {
+    "repositoryUrlPaths": [
+      "NavimowAccount/module.json",
+      "NavimowConfigurator/module.json",
+      "NavimowDevice/module.json",
+      "NavimowMqttReceiver/module.json",
+      "library.json"
+    ],
+    "readmeTarget": "README.md",
+    "licenseTarget": "LICENSE",
+    "licenseMarker": "PolyForm Noncommercial License 1.0.0"
+  }
+}

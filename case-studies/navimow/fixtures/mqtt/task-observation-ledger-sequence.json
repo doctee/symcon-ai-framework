@@ -1,0 +1,109 @@
+{
+  "formatVersion": 1,
+  "description": "Synthetic privacy-safe sequence covering completion, progress wrap, phase change, transport-session continuation and area correlation change.",
+  "deviceKey": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "observations": [
+    {
+      "receivedAt": 1800000001,
+      "sessionSequence": 4,
+      "fields": {
+        "action": 7,
+        "subAction": 2,
+        "currentMowProgress": 500,
+        "mowingPercentage": 5,
+        "subtotalArea": 2.5,
+        "mowingWeekArea": 20.5,
+        "boundaryKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taskTelemetryReceivedAt": 1800000001
+      }
+    },
+    {
+      "receivedAt": 1800000002,
+      "sessionSequence": 4,
+      "fields": {
+        "action": 7,
+        "subAction": 2,
+        "currentMowProgress": 10000,
+        "mowingPercentage": 100,
+        "subtotalArea": 50.0,
+        "mowingWeekArea": 68.0,
+        "boundaryKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taskTelemetryReceivedAt": 1800000002
+      }
+    },
+    {
+      "receivedAt": 1800000003,
+      "sessionSequence": 4,
+      "fields": {
+        "action": 8,
+        "subAction": 6,
+        "currentMowProgress": 0,
+        "mowingPercentage": 100,
+        "subtotalArea": 0.0,
+        "mowingWeekArea": 68.0,
+        "boundaryKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taskTelemetryReceivedAt": 1800000003
+      }
+    },
+    {
+      "receivedAt": 1800000004,
+      "sessionSequence": 4,
+      "fields": {
+        "action": 8,
+        "subAction": 7,
+        "currentMowProgress": 500,
+        "mowingPercentage": 100,
+        "subtotalArea": 3.0,
+        "mowingWeekArea": 71.0,
+        "boundaryKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taskTelemetryReceivedAt": 1800000004
+      }
+    },
+    {
+      "receivedAt": 1800000005,
+      "sessionSequence": 5,
+      "fields": {
+        "action": 8,
+        "subAction": 7,
+        "currentMowProgress": 800,
+        "mowingPercentage": 100,
+        "subtotalArea": 5.0,
+        "mowingWeekArea": 73.0,
+        "boundaryKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "taskTelemetryReceivedAt": 1800000005
+      }
+    },
+    {
+      "receivedAt": 1800000006,
+      "sessionSequence": 5,
+      "fields": {
+        "action": 8,
+        "subAction": 7,
+        "currentMowProgress": 200,
+        "mowingPercentage": 2,
+        "subtotalArea": 1.0,
+        "mowingWeekArea": 74.0,
+        "boundaryKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "partitionKey": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "partitionCount": 2,
+        "taskTelemetryReceivedAt": 1800000006
+      }
+    },
+    {
+      "receivedAt": 1800000007,
+      "sessionSequence": 5,
+      "fields": {
+        "taskDelay": true,
+        "taskTelemetryReceivedAt": 1800000007
+      }
+    },
+    {
+      "receivedAt": 1800000008,
+      "sessionSequence": 5,
+      "fields": {
+        "taskDelay": false,
+        "taskTelemetryReceivedAt": 1800000008
+      }
+    }
+  ]
+}

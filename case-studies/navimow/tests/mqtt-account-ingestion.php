@@ -337,6 +337,14 @@ assertMqttAccount(
     'Task telemetry did not reach the bounded diagnostic projection.'
 );
 $taskShadowJson = $account->testReadAttribute('MqttShadowState');
+$taskLedgerJson = $account->testReadAttribute(
+    'MqttTaskObservationLedger'
+);
+$taskLedgerDiagnosticsJson =
+    $account->GetMqttTaskObservationDiagnostics();
+$taskLedgerDiagnostics = decodeMqttAccount(
+    $taskLedgerDiagnosticsJson
+);
 assertMqttAccount(
     !str_contains($taskShadowJson, '700001')
         && !str_contains($taskShadowJson, '700002')
@@ -344,6 +352,20 @@ assertMqttAccount(
         && !str_contains($taskShadowJson, 'partitionIds')
         && !str_contains($taskShadowJson, 'mapWorkPosition'),
     'Raw task identity or opaque work-position data was persisted.'
+);
+assertMqttAccount(
+    $taskLedgerDiagnostics['status'] === 'available'
+        && $taskLedgerDiagnostics['authority'] === 'mqtt-inference'
+        && $taskLedgerDiagnostics['semanticUnit']
+            === 'correlated-zone-pass'
+        && $taskLedgerDiagnostics['retainedPassCount'] === 1
+        && $taskLedgerDiagnostics['passes'][0]['lastProgress'] === 4250
+        && !str_contains($taskLedgerJson, 'DEVICE_001')
+        && !str_contains($taskLedgerJson, '700001')
+        && !str_contains($taskLedgerJson, '700002')
+        && !str_contains($taskLedgerDiagnosticsJson, '/downlink/')
+        && !str_contains($taskLedgerDiagnosticsJson, 'mapWorkPosition'),
+    'Task observation ledger is unavailable, unbounded or not privacy-safe.'
 );
 $positionRoot = decodeMqttAccount(
     $account->testReadAttribute('MqttPositionDiagnostic')
@@ -433,11 +455,16 @@ $clearedPending = decodeMqttAccount(
 $clearedPosition = decodeMqttAccount(
     $account->GetMqttPositionDiagnostics()
 );
+$retainedTaskLedger = decodeMqttAccount(
+    $account->GetMqttTaskObservationDiagnostics()
+);
 assertMqttAccount(
     $clearedShadow['devices'] === []
         && $clearedPending['entries'] === []
         && $clearedPosition['status'] === 'unavailable'
-        && $clearedPosition['trackedDeviceCount'] === 0,
+        && $clearedPosition['trackedDeviceCount'] === 0
+        && $retainedTaskLedger['status'] === 'available'
+        && $retainedTaskLedger['retainedPassCount'] === 1,
     'ApplyChanges did not clear ephemeral MQTT state.'
 );
 

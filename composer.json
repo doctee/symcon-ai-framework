@@ -35,11 +35,20 @@
         "media-carousel:fileset-check": [
             "@php tools/build-symcon-module-fileset.php --check deployments/symcon/media-carousel-module.fileset.json"
         ],
+        "navimow:fileset-build": [
+            "@php tools/build-symcon-module-fileset.php deployments/symcon/navimow-module.fileset.json"
+        ],
+        "navimow:fileset-check": [
+            "@php tools/build-symcon-module-fileset.php --check deployments/symcon/navimow-module.fileset.json"
+        ],
         "open-meteo:publication-check": [
             "@php tools/publish-open-meteo-module.php --check"
         ],
         "media-carousel:publication-check": [
             "@php tools/publish-symcon-module.php --contract=deployments/symcon/media-carousel-publication.json --check"
+        ],
+        "navimow:publication-check": [
+            "@php tools/publish-symcon-module.php --contract=deployments/symcon/navimow-publication.json --check"
         ],
         "test:bundles": [
             "@php tests/bundles/ensure-variable-bundle.php"
@@ -129,6 +138,9 @@
         "test:navimow-pilot": [
             "@php case-studies/navimow/tests/pilot-observation-harness.php"
         ],
+        "test:navimow-mqtt": [
+            "case-studies/navimow/tools/check-mqtt-shadow.sh"
+        ],
         "test:navimow-distribution": [
             "@php case-studies/navimow/tools/validate-distribution.php"
         ],
@@ -159,8 +171,10 @@
             "@fileset:check",
             "@control-light:fileset-check",
             "@media-carousel:fileset-check",
+            "@navimow:fileset-check",
             "@open-meteo:publication-check",
             "@media-carousel:publication-check",
+            "@navimow:publication-check",
             "@test:bundles",
             "@test:filesets",
             "@test:control-light-fileset",
@@ -188,6 +202,7 @@
             "@test:hue-wall-topology",
             "@test:navimow-rest-auth",
             "@test:navimow-pilot",
+            "@test:navimow-mqtt",
             "@test:navimow-distribution",
             "@test:media-carousel",
             "@test:module-publication",

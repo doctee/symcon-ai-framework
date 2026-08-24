@@ -1,4 +1,4 @@
-.PHONY: bundle-build bundle-check fileset-build fileset-check control-light-fileset-build control-light-fileset-check media-carousel-fileset-build media-carousel-fileset-check open-meteo-fileset-build open-meteo-fileset-check open-meteo-publication-check open-meteo-publication-prepare media-carousel-publication-check media-carousel-publication-prepare test-bundles test-filesets test-control-light-fileset test-deployment-restart test-deployment-channel test-runtime-source-mirror test-runtime-health-probe test-helpers test-mqtt-exporter-core test-mqtt-exporter-runtime test-mqtt-exporter-reconcile test-mqtt-exporter-execute test-mqtt-exporter-dispatch test-mqtt-exporter-cleanup test-mqtt-exporter-fixtures test-control-light-core test-control-light-runtime test-control-light-topology test-control-light-runtime-mirror test-navimow-rest-auth test-navimow-pilot test-navimow-distribution test-media-carousel test-module-publication test-open-meteo-publication test-open-meteo-offline lint phpstan phpstan-bundle phpcs check
+.PHONY: bundle-build bundle-check fileset-build fileset-check control-light-fileset-build control-light-fileset-check media-carousel-fileset-build media-carousel-fileset-check navimow-fileset-build navimow-fileset-check open-meteo-fileset-build open-meteo-fileset-check open-meteo-publication-check open-meteo-publication-prepare media-carousel-publication-check media-carousel-publication-prepare navimow-publication-check navimow-publication-prepare test-bundles test-filesets test-control-light-fileset test-deployment-restart test-deployment-channel test-runtime-source-mirror test-runtime-health-probe test-helpers test-mqtt-exporter-core test-mqtt-exporter-runtime test-mqtt-exporter-reconcile test-mqtt-exporter-execute test-mqtt-exporter-dispatch test-mqtt-exporter-cleanup test-mqtt-exporter-fixtures test-control-light-core test-control-light-runtime test-control-light-topology test-control-light-runtime-mirror test-navimow-rest-auth test-navimow-pilot test-navimow-mqtt test-navimow-distribution test-media-carousel test-module-publication test-open-meteo-publication test-open-meteo-offline lint phpstan phpstan-bundle phpcs check
 
 bundle-build:
 	composer bundle:build
@@ -24,6 +24,12 @@ media-carousel-fileset-build:
 media-carousel-fileset-check:
 	composer media-carousel:fileset-check
 
+navimow-fileset-build:
+	composer navimow:fileset-build
+
+navimow-fileset-check:
+	composer navimow:fileset-check
+
 open-meteo-fileset-build:
 	php tools/build-symcon-module-fileset.php deployments/symcon/open-meteo-module.fileset.json
 
@@ -41,6 +47,12 @@ media-carousel-publication-check:
 
 media-carousel-publication-prepare:
 	php tools/publish-symcon-module.php --contract=deployments/symcon/media-carousel-publication.json --prepare
+
+navimow-publication-check:
+	php tools/publish-symcon-module.php --contract=deployments/symcon/navimow-publication.json --check
+
+navimow-publication-prepare:
+	php tools/publish-symcon-module.php --contract=deployments/symcon/navimow-publication.json --prepare
 
 test-bundles:
 	composer test:bundles
@@ -104,6 +116,9 @@ test-navimow-rest-auth:
 
 test-navimow-pilot:
 	composer test:navimow-pilot
+
+test-navimow-mqtt:
+	composer test:navimow-mqtt
 
 test-navimow-distribution:
 	composer test:navimow-distribution

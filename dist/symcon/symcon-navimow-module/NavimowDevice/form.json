@@ -1,0 +1,48 @@
+{
+  "elements": [
+    {
+      "type": "ValidationTextBox",
+      "name": "DeviceId",
+      "caption": "Device ID"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "DisplayName",
+      "caption": "Display Name"
+    },
+    {
+      "type": "CheckBox",
+      "name": "DebugPayloads",
+      "caption": "Enable debug payload variable"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Button",
+      "caption": "Refresh Status",
+      "onClick": "echo NAVDV_RefreshStatus($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Pause",
+      "confirm": "Pause the currently running mower?",
+      "onClick": "echo NAVDV_Pause($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Resume",
+      "confirm": "Resume mowing now? The mower may begin moving and cutting immediately.",
+      "onClick": "echo NAVDV_Resume($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Dock",
+      "confirm": "Send the mower to the dock?",
+      "onClick": "echo NAVDV_Dock($id);"
+    },
+    {
+      "type": "Label",
+      "caption": "Pause, Resume and Dock are enabled. Stop and Start remain disabled."
+    }
+  ]
+}

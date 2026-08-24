@@ -364,6 +364,10 @@ template or a general SAEF reference implementation.
 | `334-early-closure-task-parser-disabled-symcon-rollout.md` | Records the supported disabled update, stale early-cleanup reconciliation and immediate plus delayed credential-free Symcon verification. |
 | `335-early-closure-task-parser-bounded-pilot-activation.md` | Records the fresh token gate, single restart-free receive-only activation and phased MQTT, position and task-evidence observation with mandatory cleanup. |
 | `336-cross-zone-task-semantics-retest-result.md` | Closes the rain-affected pilot and short cross-zone retest with multi-phase task semantics, sparse-position findings and verified credential cleanup. |
+| `337-task-observation-ledger-design.md` | Defines bounded privacy-safe correlated zone-pass and transition evidence without claiming manufacturer task identity. |
+| `338-task-observation-ledger-offline-implementation-plan.md` | Freezes the ledger files, failure behavior, synthetic fixtures and complete offline verification sequence. |
+| `339-task-observation-ledger-implementation.md` | Implements and verifies the retained MQTT task ledger without changing REST authority, public variables or commands. |
+| `340-task-observation-ledger-publication-readiness.md` | Verifies the clean candidate and adds a generic manifest-driven Navimow PR publication contract. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

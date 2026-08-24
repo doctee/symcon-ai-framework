@@ -1,0 +1,9 @@
+{
+  "elements": [],
+  "actions": [
+    {
+      "type": "Label",
+      "caption": "The dynamic configurator loads sanitized discovery data from the connected Navimow Account."
+    }
+  ]
+}
