@@ -2,7 +2,7 @@
 
 **Case study:** Navimow native IP-Symcon module
 
-**Status:** Prepared; natural Zone 2 and Zone 3 observations pending
+**Status:** Zone 1 passed; natural Zone 2 and Zone 3 observations pending
 
 **Date:** 2026-08-24
 
@@ -55,9 +55,10 @@ one Account ApplyChanges and verify immediately plus after at least 60 seconds:
 - public variable and archive contracts unchanged;
 - retained task ledger still available.
 
-## 5. Pending Natural Gates
+## 5. Evidence And Pending Natural Gates
 
-The currently available run belongs to a previously observed app zone. The two
-remaining high-value observations are the other scheduled zones on their next
-natural runs. They cannot be completed offline and must not be induced with a
-Start or zone-selection command.
+The natural Zone 1 run passed this contract in step 345 and established the
+first installation-private zone-to-ledger correlation. The two remaining
+high-value observations are Zone 2 and Zone 3 on their next natural runs. They
+cannot be completed offline and must not be induced with a Start or
+zone-selection command.
