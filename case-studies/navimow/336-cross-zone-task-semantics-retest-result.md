@@ -47,9 +47,16 @@ The receive-only task projection observed this semantic sequence:
 5. Boundary correlation remained available; partition correlation appeared
    later with one partition in this observation.
 
+The operator confirmed the governing schedule semantics: a scheduled start
+resumes the last progress of the selected app zone. Reaching 100 percent
+completes one pass of that zone, after which a new pass starts while the same
+scheduled run continues until a stop condition such as battery, schedule-window
+end or rain is reached.
+
 Therefore `mowingPercentage=100` must not be interpreted as completion of the
-entire app job. Task progress and subtotal are phase-local candidates, while a
-subsequent action/sub-action phase may continue the same natural run.
+entire app job. It is a zone-pass boundary. Task progress and subtotal are
+pass-local candidates, while the subsequent action/sub-action phase belongs to
+another pass within the same natural run.
 
 ## 5. Zone Identity Boundary
 
@@ -99,7 +106,12 @@ or treating transient diagnostic fields as statistics.
 
 The ledger design must separately model:
 
-- app-job lifecycle versus internal task phases;
+- scheduled-run lifecycle versus resumable zone passes and internal phases;
 - area correlation versus user-facing zone labels;
-- cumulative and phase-local area candidates; and
+- cumulative, run-local and pass-local area candidates;
 - sparse position segments with explicit gaps.
+
+A user-facing percentage must state its denominator explicitly. The observed
+percentage is suitable as a zone-pass progress value, but not as daily,
+scheduled-run or weekly completion without a separately defined aggregation
+contract.
