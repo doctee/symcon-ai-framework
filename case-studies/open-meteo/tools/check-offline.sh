@@ -4,6 +4,10 @@ set -euo pipefail
 
 case_study_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 repository_dir="$(cd "${case_study_dir}/../.." && pwd)"
+vendor_dir=$(
+    "${repository_dir}/tools/resolve-composer-vendor-dir.sh" \
+        "${repository_dir}"
+)
 
 while IFS= read -r file; do
     php -l "${file}" >/dev/null
@@ -31,13 +35,13 @@ do
     php "${case_study_dir}/tests/${test}.php"
 done
 
-"${repository_dir}/vendor/bin/phpstan" analyse \
+"${vendor_dir}/bin/phpstan" analyse \
     --memory-limit=512M \
     --debug \
     --no-progress \
     --configuration="${case_study_dir}/phpstan.neon"
 
-"${repository_dir}/vendor/bin/phpcs" \
+"${vendor_dir}/bin/phpcs" \
     --standard="${repository_dir}/phpcs.xml" \
     "${case_study_dir}/candidate" \
     "${case_study_dir}/distribution" \

@@ -4,7 +4,10 @@ set -eu
 
 case_study_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 repository_dir=$(CDPATH= cd -- "$case_study_dir/../.." && pwd)
-vendor_dir=${COMPOSER_VENDOR_DIR:-vendor}
+vendor_dir=$(
+    "$repository_dir/tools/resolve-composer-vendor-dir.sh" \
+        "$repository_dir"
+)
 
 cd "$repository_dir"
 
