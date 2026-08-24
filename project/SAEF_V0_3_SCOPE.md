@@ -1,13 +1,15 @@
 # SAEF v0.3 Scope
 
-**Status:** Confirmed release scope; tag-readiness gates passed
+**Status:** Published historical release scope
 **Target:** `v0.3.0`
 **Decision date:** 2026-07-21
 **Readiness review:** 2026-07-23
+**Release date:** 2026-07-23
+**Release revision:** `e223b76673b495cecae3e2232ce148c5dabb6230`
 
 ## Version Decision
 
-The next release from `main` should be `v0.3.0`.
+The release after `v0.2.0` was correctly classified as `v0.3.0`.
 
 The post-v0.2 branch contains a backward-compatible MQTT confirmation fix and
 a new restricted Windows deployment channel with an operating-system-neutral
@@ -89,10 +91,9 @@ v0.3 fileset must be staged, preflighted, activated and verified through the
 restricted deployment channel; creating the Git tag alone changes no Symcon
 runtime.
 
-## Immediate Next Boundary
+## Release Outcome
 
-Repository consolidation, clean public-tree verification and CI are complete.
-Deployment channel version 7 passed its guarded Windows installation, deep
-probe and bounded rejection checks without activating a fileset or operating a
-device. The immediate next boundary is the framework version change and
-deterministic regeneration of the bundle and both filesets.
+The annotated `v0.3.0` tag and GitHub Release were published on 2026-07-23.
+Repository publication did not itself activate a fileset or operate a device.
+Subsequent development is governed by `project/SAEF_V0_4_SCOPE.md`; this file
+remains the historical record of the v0.3 decision.

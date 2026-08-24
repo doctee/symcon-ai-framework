@@ -1,7 +1,8 @@
 # SAEF Media Carousel
 
-**Status:** Repository-complete offline candidate - no publication, live
-installation or start-page replacement
+**Status:** Standalone module published and bounded live validation passed;
+current repository behavior includes category sources, resilient image
+lifecycle, HTML-SDK fullscreen and per-device position retention
 
 ## Purpose
 
@@ -11,8 +12,9 @@ It is intended as a separately testable replacement
 candidate for the native content switcher when image loading, touch navigation
 and resize behaviour need stronger guarantees.
 
-The productive native content switcher remains the rollback and control path
-until a separately authorised live pilot has passed.
+The module has passed separately authorized pilot, category-source and camera
+archive deployments. Native visualization configuration and retained legacy
+objects remain installation-owned rollback concerns rather than module logic.
 
 ## Behaviour
 
@@ -104,28 +106,35 @@ requests. Image preparation uses normal load events instead of explicit
 parallel `Image.decode()` calls. Preview or display-image transformation failure
 falls back to the validated original media.
 
-## Verification sequence
+## Maintenance verification sequence
 
 1. Run the offline module, distribution and deterministic fileset tests.
-2. Publish the exact generated fileset only after a separate approval.
-3. Install the candidate as a separate module library only after approval.
-4. Add a test instance with a non-commanding rolling image category.
-5. Verify initial preview, delayed display-image load, load failure and resize behaviour.
-6. Configure the approximately ten-image production-equivalent category on a
+2. Verify the generated tree against the publication contract before any
+   standalone update.
+3. Publish and integrate only through the manifest-driven publisher and its
+   separate hash-bound authorization gates.
+4. Update an installed module only through a separate live preflight and
+   postflight gate.
+5. Verify initial preview, delayed display-image load, load failure and resize
+   behaviour on a non-commanding rolling image category.
+6. Verify the approximately ten-image production-equivalent category on a
    separate test page and verify one archive rollover.
 7. Measure first-pass transport, memory and image-load timing on the target iPad.
 8. On IP-Symcon 9.1 or newer, verify that both compact and expanded tile
    recreation display the preview; on older compatible versions verify the
    compact tile and native detail fallback.
-9. Replace the native content switcher only through a separate live gate.
+9. Change native visualization placement or retained rollback objects only
+   through a separate live gate.
 
 ## Repository distribution
 
 The canonical sources are selected by
 `deployments/symcon/media-carousel-module.fileset.json` into the standalone
 generated tree `dist/symcon/saef-media-carousel-module/`. See
-`02-deterministic-distribution.md` for the byte-exact build, integrity and
-future publication contract.
+`02-deterministic-distribution.md` for the byte-exact build and integrity
+contract. Standalone publication uses
+`deployments/symcon/media-carousel-publication.json` through the generic
+publisher.
 
 ## Sources
 

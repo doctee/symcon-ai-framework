@@ -17,13 +17,23 @@ This project adheres to Semantic Versioning.
   verification and retained post-mutation recovery evidence. Open-Meteo keeps
   its proven direct-branch behavior through a compatibility adapter, while
   MediaCarousel provides the byte-exact eleven-file PR-based second contract.
-- Added an offline-only MediaCarousel HTML-SDK candidate for ordered Symcon
-  image media objects. It progressively prefetches the normal full sequence,
-  commits transitions only after browser decode, keeps gesture/index state
-  client-local and leaves the native content switcher unchanged behind a
-  separate live pilot gate. A deterministic standalone module fileset,
-  structural validator and publication-inventory regression close the
-  repository-only candidate without committing, publishing or installing it.
+- Added the deterministic MediaCarousel HTML-SDK module and standalone
+  publication contract for ordered image media objects and rolling image
+  categories. Bounded publication and live gates validated its initial
+  preview, client lifecycle, fullscreen, position retention and camera archive
+  behavior while keeping visualization placement and rollback objects under
+  separate installation ownership.
+- Added `SAEF_ValidateMutableObject()` as a fail-closed guard for concrete
+  Symcon mutation targets, including explicit protection of ObjectID `0`, and
+  applied it across the existing object-mutating Ensure helpers with direct
+  contract tests.
+- Added the bounded Navimow task-observation ledger, generic standalone
+  publication contract and disabled-by-default rollout. The first natural
+  Zone 1 gate retained privacy-safe pass, progress and area evidence through
+  credential-first cleanup; Zone 2 and Zone 3 remain separate evidence gates.
+- Added the confirmed `v0.4.0` development scope and repository reconciliation,
+  including the post-v0.3 API, artifact, documentation and release-gate
+  boundaries without changing framework version constants.
 - Added reconciliation-time MQTT Client subscription coverage for every
   exporter command topic and retained owned adapter/event identities across
   runtime namespace changes. The state-only Home Assistant and Apple Home
@@ -56,6 +66,10 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Serialized `SAEF_IncrementStatistic()` per variable so concurrent counters
+  retain their existing API while failing clearly on semaphore contention.
+- Reconciled the published `v0.3.0` tag and GitHub Release with the project
+  charter, current framework overview and historical release-readiness records.
 - Made SAEF analyzer resolution worktree-aware through the existing
   `COMPOSER_VENDOR_DIR` contract, with repository-local defaults,
   lock-identical external toolchains, deterministic failure diagnostics and
