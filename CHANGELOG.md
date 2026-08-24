@@ -9,6 +9,8 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-24
+
 ### Added
 
 - Added a generic manifest-driven standalone Symcon module publisher with
@@ -66,6 +68,9 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Set the canonical SAEF bundle and fileset framework versions to `0.4.0`,
+  regenerated every deterministic artifact and added the complete v0.4 public
+  API and release-readiness audits.
 - Froze the `v0.4.0` feature scope, explicitly deferred rapid-command
   latest-command-wins behavior from GitHub issue #1 to a post-v0.4 workstream
   and opened the dedicated release-preparation boundary without changing

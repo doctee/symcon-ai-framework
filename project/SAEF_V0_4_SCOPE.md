@@ -1,6 +1,6 @@
 # SAEF v0.4 Scope
 
-**Status:** Scope frozen; release preparation pending
+**Status:** Scope frozen; release candidate prepared; publication pending
 **Target:** `v0.4.0`
 **Baseline date:** 2026-08-24
 **Baseline revision:** `a7f86d725b9487c3ca661363e325382210c8f59f`
@@ -35,8 +35,8 @@ artifacts, create a tag, publish a release or authorize a live Symcon change.
 - The generic standalone-module publisher and its hash-bound integration mode
   are established operational tooling, not public helper APIs.
 - Current `main` passes the complete GitHub CI gate.
-- Generated SAEF bundle and fileset framework versions remain `0.3.0` until a
-  dedicated final release-preparation change.
+- Generated SAEF bundle and fileset framework versions are `0.4.0` in the
+  prepared release candidate.
 
 ## Included Scope
 
@@ -130,7 +130,7 @@ cleanup. Those remain separate bounded operations.
 
 ## Immediate Next Boundary
 
-Begin the dedicated `v0.4.0` release-preparation workstream. It must update the
-framework versions, regenerate deterministic artifacts, complete the frozen
-API, provenance and privacy audits, and pass the exact-revision release gates
-before tag or GitHub Release authorization.
+Complete exact-revision pull-request and post-merge CI for the prepared
+candidate. The annotated tag and GitHub Release then require their separate
+final publication gate; they do not authorize any live or standalone-module
+operation.

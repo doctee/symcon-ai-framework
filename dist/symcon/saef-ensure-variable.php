@@ -10,7 +10,7 @@ declare(strict_types=1);
  * - helpers/object/EnsureVariable.php
  *
  * Source input SHA-256: c1beb979bb6fefa8569c2176e461b6aabd8f9fdc7c8ee064afbf71e945056b67
- * SAEF version: 0.3.0
+ * SAEF version: 0.4.0
  * Builder version: 1.0.0
  * SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
  * License: https://polyformproject.org/licenses/noncommercial/1.0.0/
