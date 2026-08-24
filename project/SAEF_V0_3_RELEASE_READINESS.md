@@ -2,7 +2,7 @@
 
 **Assessment date:** 2026-07-23
 **Target:** `v0.3.0`
-**Current decision:** TAG-READY - TAG NOT CREATED
+**Current decision:** RELEASED
 
 ## Summary
 
@@ -12,12 +12,12 @@ restricted Windows deployment channel, runtime health and managed source
 mirror support, the ControlLight availability classification, and the closed
 Navimow and System Functions evidence.
 
-The current public API is unchanged from v0.2.0. Repository checks pass, the
+The release public API was unchanged from v0.2.0. Repository checks passed, the
 generated artifacts are deterministic for framework version `0.3.0`, and the
 consolidated pre-release revision and the exact release preparation revision
 passed GitHub CI. Deployment channel version 7 has passed its guarded Windows
-installation, deep probe and bounded rejection checks. All tag-readiness gates
-are complete; the annotated tag and GitHub Release have not yet been created.
+installation, deep probe and bounded rejection checks. The annotated tag and
+GitHub Release were published on 2026-07-23 at release revision `e223b766`.
 
 ## Scope Reconciliation
 
@@ -56,7 +56,7 @@ release.
 | Release-note extraction | PASS | Release workflow command extracts 108 non-empty v0.3 note lines |
 | Final clean public-tree verification | PASS | Strict Composer validation and full checks pass without `.git`, `private/` or local vendor contents |
 | Release preparation CI | PASS | GitHub Actions CI run 43 passed on revision `870f70e` |
-| Annotated `v0.3.0` tag | PENDING | Create only after every preceding gate passes |
+| Annotated `v0.3.0` tag | PASS | Published 2026-07-23 at release revision `e223b766` |
 
 ## Version Inventory
 
@@ -85,11 +85,11 @@ legacy inventory documents upstream association and license boundaries without
 relicensing or importing that source. Generated artifacts contain only
 canonical SAEF source and their deterministic provenance.
 
-## Remaining Sequence
+## Publication Outcome
 
-1. Commit and push this final tag-readiness evidence.
-2. Require successful GitHub Actions on that exact revision.
-3. Create the annotated `v0.3.0` tag and verify GitHub release publication.
+The final readiness revision passed CI, the annotated tag resolves to
+`e223b76673b495cecae3e2232ce148c5dabb6230`, and the GitHub Release is
+published as neither a draft nor a prerelease.
 
 Repository publication does not activate a Symcon fileset. Any later live v0.3
 runtime selection requires a separate staged package, preflight, explicit

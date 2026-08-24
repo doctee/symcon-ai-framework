@@ -72,6 +72,8 @@ Important current artifacts include:
 - `project/SAEF_V0_2_RELEASE_READINESS.md`
 - `project/SAEF_V0_3_SCOPE.md`
 - `project/SAEF_V0_3_RELEASE_READINESS.md`
+- `project/SAEF_V0_4_SCOPE.md`
+- `project/SAEF_V0_4_REPOSITORY_RECONCILIATION.md`
 - `project/SAEF_DEPLOYMENT_CHANNEL_SECURITY_GATE.md`
 - `adr/ADR-0005-generate-symcon-helper-bundles.md`
 - `bundles/symcon/ensure-variable.bundle.json`
@@ -126,7 +128,7 @@ Private data belongs only in:
 
 ## Development Status
 
-SAEF is currently in early development.
+SAEF is an operational pre-1.0 engineering platform under active development.
 
 The repository contains the project foundation, initial engineering knowledge
 articles, reusable helpers, templates and reference implementations.
@@ -135,24 +137,25 @@ articles, reusable helpers, templates and reference implementations.
 Standard for SAEF (`Stable Draft 1.0`). The earlier draft remains available in
 `drafts/SYMCON_STANDARDS.md` for comparison.
 
-Version 0.2.0 has passed the current local engineering gates. Its scope includes
-Runtime Diagnostics, deterministic bundles and filesets, managed runtime
-mirrors, migration guidance and the MQTT, ControlLight and Navimow case studies.
+Versions `v0.2.0` and `v0.3.0` are published and immutable. Their dated scope
+and release-readiness documents remain historical evidence. Version `v0.3.0`
+added the restricted Windows deployment channel, managed runtime health and
+source mirrors, MQTT feedback correction and the completed initial
+ControlLight, Navimow and System Functions evidence.
+
+Current `main` is the development line for `v0.4.0`. Its proposed scope adds
+the manifest-driven standalone-module publisher, complete module distributions,
+worktree-isolated tooling, safer object mutation, serialized Statistics updates
+and substantial MediaCarousel, Open-Meteo, Navimow, ControlLight and MQTT
+case-study evolution. See `project/SAEF_V0_4_SCOPE.md` and
+`project/SAEF_V0_4_REPOSITORY_RECONCILIATION.md` for the exact boundary and
+remaining release gates.
+
 The Diagnostics helper set covers configuration hashes, Registry metadata,
 Statistics and bounded error ring buffers; `RI-002` demonstrates their
-composition.
-
-The clean-checkout and CI gates in
-`project/SAEF_V0_2_RELEASE_READINESS.md` are complete. Version `v0.2.0` was
-published on 2026-07-20 from the annotated tag at release revision `be193aa`.
-The current `main` branch contains subsequent unreleased work.
-
-Post-v0.2 development includes a restricted Windows deployment channel. It
-uses a hash-pinned OpenSSH forced command on Windows and the same standard SSH
-protocol from macOS or a suitable iPhone/iPad terminal; it does not expose a
-general remote PowerShell session. Because this is a material new framework
-capability in addition to the MQTT correction, `project/SAEF_V0_3_SCOPE.md`
-classifies `v0.3.0` as the next recommended release target.
+composition. The restricted deployment channel uses a hash-pinned OpenSSH
+forced command on Windows and the same SSH protocol from macOS or a suitable
+iPhone/iPad terminal. It does not expose a general remote PowerShell session.
 
 ## Licensing
 

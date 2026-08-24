@@ -1,19 +1,17 @@
 # Navimow Native IP-Symcon Module Case Study
 
-**Status:** Private pilot `pilot-0.1.0.4`; receive-only MQTT and local-position
-diagnostics remain disabled by default after the corrected 88-hour observation
-proved monotonic position accounting, failed to stop on repeated episodes and
-the hard deadline, recorded one post-deadline exhausted recovery sequence and
-completed immediate plus delayed credential-free cleanup; automatic closure is
-now implemented and offline-tested but not published or installed
+**Status:** Private pilot `pilot-0.1.0.4`; the bounded privacy-safe task ledger
+is published, installed and disabled by default after a successful natural
+Zone 1 correlation and credential-first cleanup; equivalent Zone 2 and Zone 3
+evidence remains pending
 **Scope:** Native IP-Symcon module for Segway Navimow robotic mowers
 **Implementation state:** The canonical case-study distribution implements
 OAuth, discovery, adaptive read-only status polling and bounded Dock, Pause and
 Resume commands. The optional receive-only MQTT Receiver, symmetric Account
-pairing, private shadow ingestion and targeted REST confirmation are published
-and installed on standalone `main`, but remain disabled by default and
-credential-free after testing. REST remains the only source that updates
-public Device variables.
+pairing, private shadow ingestion, automatic closure, targeted REST
+confirmation and task-observation ledger are published and installed on
+standalone `main`, but remain disabled by default and credential-free after
+testing. REST remains the only source that updates public Device variables.
 
 ## Purpose
 
