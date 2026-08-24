@@ -56,6 +56,9 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Compacted the DWD nowcast HTML renderer for narrow titleless Ninja tiles by
+  removing vertical root padding, reducing headline and axis gaps and fixing
+  mobile text sizing without changing bar geometry, tooltips or forecast data.
 - Pinned repository and bundle PHPStan analysis to the declared PHP 8.2
   minimum so checks remain deterministic when the local PHP runtime changes.
 - Reduced DWD nowcast log noise by classifying observed TLS-handshake and HTTP

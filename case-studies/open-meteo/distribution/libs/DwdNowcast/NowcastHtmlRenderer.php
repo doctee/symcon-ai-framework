@@ -80,18 +80,19 @@ final class NowcastHtmlRenderer
 
         $middle = intdiv($windowMinutes, 2);
 
-        return '<div class="saef-nowcast" style="box-sizing:border-box;width:100%;padding:6px;color:#ddd;'
-            . 'font:11px/1.35 -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif">'
+        return '<div class="saef-nowcast" style="box-sizing:border-box;width:100%;padding:0 6px;color:#ddd;'
+            . '-webkit-text-size-adjust:100%;font:11px/1.35 -apple-system,BlinkMacSystemFont,'
+            . '&quot;Segoe UI&quot;,sans-serif">'
             . self::tooltipStyle()
             . '<div class="saef-nowcast__headline" style="display:flex;align-items:baseline;gap:8px;'
-            . 'margin:0 0 2px"><span class="saef-nowcast__time" style="color:#999;white-space:nowrap">'
+            . 'margin:0 0 1px"><span class="saef-nowcast__time" style="color:#999;white-space:nowrap">'
             . self::escape($time) . '</span><strong style="color:#fff">'
             . self::escape($status) . '</strong></div>'
             . '<div class="saef-nowcast__bars" style="display:grid;grid-template-columns:repeat('
             . $windowMinutes . ',minmax(1px,1fr));gap:1px;height:14px;overflow:visible;'
             . 'border-radius:4px">' . implode('', $bars) . '</div>'
             . '<div class="saef-nowcast__axis" style="display:grid;grid-template-columns:1fr auto 1fr;'
-            . 'margin-top:3px;font-size:9px;color:#888"><span>'
+            . 'margin-top:1px;font-size:9px;color:#888"><span>'
             . self::escape($labels['now']) . '</span><span style="text-align:center">+'
             . $middle . ' min</span><span style="text-align:right">+' . $windowMinutes . ' min</span></div>'
             . '</div>';
@@ -107,9 +108,10 @@ final class NowcastHtmlRenderer
         }
 
         return '<div class="saef-nowcast saef-nowcast--empty" '
-            . 'style="box-sizing:border-box;width:100%;padding:6px;color:#ddd;'
-            . 'font:11px/1.35 -apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif">'
-            . '<div class="saef-nowcast__empty" style="padding:18px 8px;text-align:center;opacity:.62">'
+            . 'style="box-sizing:border-box;width:100%;padding:0 6px;color:#ddd;'
+            . '-webkit-text-size-adjust:100%;font:11px/1.35 -apple-system,BlinkMacSystemFont,'
+            . '&quot;Segoe UI&quot;,sans-serif">'
+            . '<div class="saef-nowcast__empty" style="padding:10px 8px;text-align:center;opacity:.62">'
             . self::escape($labels['noData']) . '</div>'
             . '</div>';
     }

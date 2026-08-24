@@ -76,12 +76,19 @@ same(true, str_contains($chart, ':hover::after'), 'DWD chart tooltip CSS is miss
 same(true, str_contains($chart, 'pointer-events:none'), 'DWD chart tooltip captures the pointer.');
 same(
     true,
-    str_contains($chart, 'style="box-sizing:border-box;width:100%;padding:6px'),
+    str_contains($chart, 'style="box-sizing:border-box;width:100%;padding:0 6px'),
     'DWD chart root is not styled inline.'
+);
+same(
+    true,
+    str_contains($chart, '-webkit-text-size-adjust:100%'),
+    'DWD chart does not stabilize mobile text sizing.'
 );
 same(true, str_contains($chart, 'font:11px/1.35'), 'DWD chart base font is not compact.');
 same(true, str_contains($chart, 'height:14px'), 'DWD chart bars are not compact.');
 same(true, str_contains($chart, 'font-size:9px'), 'DWD chart axis is not compact.');
+same(true, str_contains($chart, 'margin:0 0 1px'), 'DWD chart headline spacing is too tall.');
+same(true, str_contains($chart, 'margin-top:1px'), 'DWD chart axis spacing is too tall.');
 preg_match_all('/background:(#[0-9a-f]{6})/', $chart, $chartColors);
 same(60, count($chartColors[1]), 'DWD chart color count differs.');
 same(
