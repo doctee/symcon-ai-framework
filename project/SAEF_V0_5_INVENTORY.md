@@ -1,6 +1,6 @@
 # SAEF v0.5 Engineering Inventory
 
-**Status:** V05-001 architecture reviewed; scope not frozen
+**Status:** V05-001 admitted for offline implementation; scope not frozen
 **Inventory date:** 2026-08-24
 **Published baseline:** `v0.4.0`
 **Baseline revision:** `de8a59d9f8d30e38d0fa18058057c620446f12c0`
@@ -37,7 +37,12 @@ functions and no post-release API delta.
 GitHub issue #1 proposes an implementation-private latest-command-wins model
 for rapid, superseding MQTT commands. The architecture review is complete in
 `case-studies/mqtt-discovery-exporter/38-latest-command-wins-architecture-review.md`.
-Implementation is not yet admitted.
+The fresh read-only live inventory in
+`case-studies/mqtt-discovery-exporter/39-latest-command-wins-live-inventory.md`
+confirms the finite owner and consumer set, repository-identical active
+runtime, complete event bindings and existing diagnostics boundary.
+Deterministic offline implementation is now admitted. Fileset activation and
+functional live testing remain separate explicit gates.
 
 The design must:
 
@@ -50,14 +55,12 @@ The design must:
 - avoid an unbounded queue or JSON structure; and
 - add no public API unless recurring reuse is demonstrated.
 
-The review inventories the public exporter, owner contract, known consumers
-and dated observation evidence. It defines command identity, supersession
-timing, ownership, failure classification, restart behavior and deterministic
-multi-command tests. Before implementation admission, a fresh read-only
-Symcon MCP inventory must verify the effective live owner, active fileset,
-configuration bounds, consumers and current observation constraints. Any
-supervised live test remains a separately authorized gate with immediate
-compensation.
+The architecture review and fresh inventory define command identity,
+supersession timing, ownership, failure classification, restart behavior,
+configuration bounds and deterministic multi-command tests. The implementation
+must remain exporter-private and use a maximum 15-second confirmation timeout
+with a configuration-derived lock wait capped at 20 seconds. Any supervised
+live test remains a separately authorized gate with immediate compensation.
 
 ## Evidence Watchlist
 
@@ -109,11 +112,10 @@ A candidate may enter a frozen v0.5 scope only when:
 
 ## Recommended Order
 
-1. Complete a fresh read-only live inventory for the V05-001 implementation
-   boundary without mutation.
-2. Build deterministic rapid-command tests against the existing MQTT runtime.
-3. Implement the bounded generation model inside the case-study runtime while
+1. Build deterministic rapid-command tests against the existing MQTT runtime.
+2. Implement the bounded generation model inside the case-study runtime while
    retaining the no-new-public-API decision.
+3. Regenerate and verify the MQTT fileset without live activation.
 4. Review new evidence before admitting another candidate.
 5. Freeze version and scope only after the admitted change set is coherent.
 

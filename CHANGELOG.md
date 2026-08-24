@@ -11,6 +11,10 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added the fresh V05-001 read-only Symcon MCP inventory, confirming the finite
+  MQTT exporter owner and consumer set, repository-identical active runtime,
+  complete event and diagnostics contracts, explicit timing correction and
+  admission for offline implementation without live mutation.
 - Added the V05-001 latest-command-wins architecture review with complete MQTT
   exporter impact inventory, immutable event-input boundary, bounded
   Registry-backed generation model, diagnostics classification, deterministic
