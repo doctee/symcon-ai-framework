@@ -31,7 +31,11 @@ final class MqttDiscoveryExporterRuntime
     private const MQTT_SERVER_DEVICE_MODULE_ID = '{01C00ADD-D04E-452E-B66A-D253278743FE}';
     private const MQTT_SERVER_GATEWAY_MODULE_ID = '{C6D2AEB3-6E1F-4B2E-8E69-3A1A00246850}';
     private const REGISTRY_SCHEMA_VERSION = 1;
+    private const ARBITRATION_REGISTRY_SCHEMA_VERSION = 1;
     private const ERROR_CAPACITY = 20;
+    private const ARBITRATION_LOCK_TIMEOUT_MILLISECONDS = 1000;
+    private const COMMAND_LOCK_GRACE_MILLISECONDS = 5 * 1000;
+    private const MAX_COMMAND_LOCK_TIMEOUT_MILLISECONDS = 20 * 1000;
 
     /**
      * Validates and ensures the desired reconcile resources without publishing
@@ -195,6 +199,14 @@ final class MqttDiscoveryExporterRuntime
                 \SAEF_WriteRegistry($diagnostics['registryID'], $registry);
             }
             $diagnostics['registry'] = $registry;
+            $arbitrationRegistry = self::normalizeArbitrationRegistry(
+                \SAEF_ReadRegistry($diagnostics['arbitrationRegistryID']),
+                $commandIndex
+            );
+            if ($arbitrationRegistry !== $diagnostics['arbitrationRegistry']) {
+                \SAEF_WriteRegistry($diagnostics['arbitrationRegistryID'], $arbitrationRegistry);
+            }
+            $diagnostics['arbitrationRegistry'] = $arbitrationRegistry;
 
             return [
                 'diagnostics' => $diagnostics,
@@ -409,8 +421,10 @@ final class MqttDiscoveryExporterRuntime
     public static function dispatchTriggeredVariable(
         int $ownerScriptID,
         array $configuration,
-        int $triggerVariableID
+        int $triggerVariableID,
+        mixed $triggerValue = null
     ): array {
+        $hasTriggerValueSnapshot = func_num_args() >= 4;
         $diagnostics = self::loadExistingDiagnostics($ownerScriptID);
         try {
             self::validateDispatchConfiguration($configuration, $diagnostics['registry']);
@@ -445,9 +459,38 @@ final class MqttDiscoveryExporterRuntime
             throw new RuntimeException('Trigger variable is not registered for dispatch.');
         }
 
+        $commandInvocation = null;
+        if ($commandEntry !== null && $hasTriggerValueSnapshot) {
+            try {
+                $commandInvocation = self::registerCommandInvocation(
+                    $ownerScriptID,
+                    $configuration,
+                    $diagnostics,
+                    $commandEntry,
+                    $triggerValue
+                );
+            } catch (Throwable $exception) {
+                self::recordFailure(
+                    $diagnostics['errorRingBufferID'],
+                    $diagnostics['statisticIDs'],
+                    $exception,
+                    'dispatch_arbitration'
+                );
+                \IPS_LogMessage(
+                    'SAEF MQTT Discovery Exporter',
+                    'Command arbitration failed: ' . $exception->getMessage()
+                );
+                throw $exception;
+            }
+            if (isset($commandInvocation['failure'])) {
+                return $commandInvocation['failure'];
+            }
+        }
+
         $isStateTrigger = $stateEntries !== null;
         $semaphoreName = 'SAEF_MQTT_EXPORTER_DISPATCH_' . $ownerScriptID;
-        if (!\IPS_SemaphoreEnter($semaphoreName, $isStateTrigger ? 1 : 5000)) {
+        $lockTimeout = $isStateTrigger ? 1 : self::commandLockTimeoutMilliseconds($configuration);
+        if (!\IPS_SemaphoreEnter($semaphoreName, $lockTimeout)) {
             if ($isStateTrigger) {
                 $entityKey = $stateEntries[0]['entityKey'] ?? null;
                 if (!is_string($entityKey)) {
@@ -460,6 +503,13 @@ final class MqttDiscoveryExporterRuntime
                     'entityKey' => $entityKey,
                     'publishedMessages' => 0,
                 ];
+            }
+
+            if (
+                $commandInvocation !== null
+                && !self::isCommandInvocationCurrent($ownerScriptID, $diagnostics, $commandInvocation)
+            ) {
+                return self::supersededCommandResult($diagnostics, $commandInvocation);
             }
 
             $exception = new RuntimeException('MQTT dispatch semaphore timed out.');
@@ -478,7 +528,10 @@ final class MqttDiscoveryExporterRuntime
                     $configuration,
                     $diagnostics,
                     $triggerVariableID,
-                    $commandEntry
+                    $commandEntry,
+                    $hasTriggerValueSnapshot ? $triggerValue : null,
+                    $hasTriggerValueSnapshot,
+                    $commandInvocation
                 );
             }
             return self::dispatchState($configuration, $diagnostics, $stateEntries[0]);
@@ -504,12 +557,15 @@ final class MqttDiscoveryExporterRuntime
      * @param array<string, mixed> $configuration Validated, normalized core configuration.
      *
      * @return array{
+     *     ownerScriptID: int,
      *     categoryID: int,
      *     registryID: int,
+     *     arbitrationRegistryID: int,
      *     errorRingBufferID: int,
      *     statisticIDs: array<string, int>,
      *     configurationHash: string,
-     *     registry: array<string, mixed>
+     *     registry: array<string, mixed>,
+     *     arbitrationRegistry: array<string, mixed>
      * }
      */
     public static function initializeDiagnostics(int $ownerScriptID, array $configuration): array
@@ -554,6 +610,15 @@ final class MqttDiscoveryExporterRuntime
                 false
             );
 
+            $arbitrationRegistryID = \SAEF_EnsureRegistryVariable(
+                $categoryID,
+                'COMMAND_ARBITRATION_REGISTRY',
+                'Command Arbitration Registry',
+                110,
+                'Database',
+                false
+            );
+
             $registry = \SAEF_ReadRegistry($registryID);
             self::validateRegistry($registry);
             $updatedRegistry = self::updateConfigurationMetadata(
@@ -566,13 +631,25 @@ final class MqttDiscoveryExporterRuntime
                 \SAEF_WriteRegistry($registryID, $updatedRegistry);
             }
 
+            $arbitrationRegistry = \SAEF_ReadRegistry($arbitrationRegistryID);
+            $updatedArbitrationRegistry = self::normalizeArbitrationRegistry(
+                $arbitrationRegistry,
+                $updatedRegistry['commandIndex'] ?? []
+            );
+            if ($updatedArbitrationRegistry !== $arbitrationRegistry) {
+                \SAEF_WriteRegistry($arbitrationRegistryID, $updatedArbitrationRegistry);
+            }
+
             return [
+                'ownerScriptID' => $ownerScriptID,
                 'categoryID' => $categoryID,
                 'registryID' => $registryID,
+                'arbitrationRegistryID' => $arbitrationRegistryID,
                 'errorRingBufferID' => $errorRingBufferID,
                 'statisticIDs' => $statisticIDs,
                 'configurationHash' => $configurationHash,
                 'registry' => $updatedRegistry,
+                'arbitrationRegistry' => $updatedArbitrationRegistry,
             ];
         } catch (Throwable $exception) {
             self::recordFailure(
@@ -592,11 +669,14 @@ final class MqttDiscoveryExporterRuntime
 
     /**
      * @return array{
+     *     ownerScriptID: int,
      *     categoryID: int,
      *     registryID: int,
+     *     arbitrationRegistryID: int|null,
      *     errorRingBufferID: int,
      *     statisticIDs: array<string, int>,
-     *     registry: array<string, mixed>
+     *     registry: array<string, mixed>,
+     *     arbitrationRegistry: array<string, mixed>|null
      * }
      */
     private static function loadExistingDiagnostics(int $ownerScriptID): array
@@ -608,8 +688,16 @@ final class MqttDiscoveryExporterRuntime
         $categoryID = self::requiredChildID($ownerScriptID, 'MQTT_DISCOVERY_EXPORTER_DIAGNOSTICS', 0);
         $registryID = self::requiredChildID($categoryID, 'MANAGED_STATE_REGISTRY', 2);
         $errorRingBufferID = self::requiredChildID($categoryID, 'ERROR_HISTORY', 2);
+        $arbitrationRegistryID = self::optionalChildID(
+            $categoryID,
+            'COMMAND_ARBITRATION_REGISTRY',
+            2
+        );
         \SAEF_ValidateRegistryVariable($registryID);
         \SAEF_ValidateErrorRingBufferVariable($errorRingBufferID);
+        if ($arbitrationRegistryID !== null) {
+            \SAEF_ValidateRegistryVariable($arbitrationRegistryID);
+        }
 
         $statisticIDs = [];
         foreach (
@@ -627,17 +715,50 @@ final class MqttDiscoveryExporterRuntime
         ) {
             $statisticIDs[$ident] = self::requiredChildID($categoryID, $ident, 2);
         }
+        $supersededStatisticID = self::optionalChildID($categoryID, 'SUPERSEDED_COMMANDS', 2);
+        if ($supersededStatisticID !== null) {
+            $statisticIDs['SUPERSEDED_COMMANDS'] = $supersededStatisticID;
+        }
 
         $registry = \SAEF_ReadRegistry($registryID);
         self::validateRegistry($registry);
 
         return [
+            'ownerScriptID' => $ownerScriptID,
             'categoryID' => $categoryID,
             'registryID' => $registryID,
+            'arbitrationRegistryID' => $arbitrationRegistryID,
             'errorRingBufferID' => $errorRingBufferID,
             'statisticIDs' => $statisticIDs,
             'registry' => $registry,
+            'arbitrationRegistry' => $arbitrationRegistryID === null
+                ? null
+                : self::normalizeArbitrationRegistry(
+                    \SAEF_ReadRegistry($arbitrationRegistryID),
+                    $registry['commandIndex'] ?? []
+                ),
         ];
+    }
+
+    private static function optionalChildID(
+        int $parentID,
+        string $ident,
+        int $expectedObjectType
+    ): ?int {
+        $objectID = @\IPS_GetObjectIDByIdent($ident, $parentID);
+        if ($objectID === false) {
+            return null;
+        }
+        $object = \IPS_GetObject($objectID);
+        if (
+            ($object['ParentID'] ?? null) !== $parentID
+            || ($object['ObjectIdent'] ?? null) !== $ident
+            || ($object['ObjectType'] ?? null) !== $expectedObjectType
+        ) {
+            throw new RuntimeException('Optional exporter object has incompatible ownership: ' . $ident);
+        }
+
+        return $objectID;
     }
 
     private static function requiredChildID(int $parentID, string $ident, int $expectedObjectType): int
@@ -684,7 +805,10 @@ final class MqttDiscoveryExporterRuntime
         array $configuration,
         array $diagnostics,
         int $commandVariableID,
-        array $commandEntry
+        array $commandEntry,
+        mixed $triggerValue,
+        bool $hasTriggerValueSnapshot,
+        ?array $commandInvocation
     ): array {
         $entityKey = $commandEntry['entityKey'] ?? null;
         $commandType = $commandEntry['commandType'] ?? null;
@@ -693,7 +817,7 @@ final class MqttDiscoveryExporterRuntime
         }
 
         $entityContract = self::findEntityContract($configuration, $entityKey);
-        $payload = \GetValue($commandVariableID);
+        $payload = $hasTriggerValueSnapshot ? $triggerValue : \GetValue($commandVariableID);
         if (!is_string($payload)) {
             return self::commandFailureResult(
                 $diagnostics,
@@ -746,6 +870,13 @@ final class MqttDiscoveryExporterRuntime
             );
         }
 
+        if (
+            $commandInvocation !== null
+            && !self::isCommandInvocationCurrent($diagnostics['ownerScriptID'], $diagnostics, $commandInvocation)
+        ) {
+            return self::supersededCommandResult($diagnostics, $commandInvocation);
+        }
+
         try {
             $actionAccepted = \RequestAction(
                 $capability['actionVariableID'],
@@ -775,18 +906,28 @@ final class MqttDiscoveryExporterRuntime
                 $actualValue
             )
         );
-        if (!$confirmed) {
-            $status = $actionAccepted ? 'confirmation_timeout' : 'action_failed';
-            $message = $actionAccepted
-                ? 'Observed state confirmation timed out.'
-                : 'Configured device action returned false without confirmed feedback.';
-
+        if (!$actionAccepted && !$confirmed) {
             return self::commandFailureResult(
                 $diagnostics,
                 $entityKey,
                 $commandType,
-                $status,
-                new RuntimeException($message)
+                'action_failed',
+                new RuntimeException('Configured device action returned false without confirmed feedback.')
+            );
+        }
+        if (
+            $commandInvocation !== null
+            && !self::isCommandInvocationCurrent($diagnostics['ownerScriptID'], $diagnostics, $commandInvocation)
+        ) {
+            return self::supersededCommandResult($diagnostics, $commandInvocation);
+        }
+        if (!$confirmed) {
+            return self::commandFailureResult(
+                $diagnostics,
+                $entityKey,
+                $commandType,
+                'confirmation_timeout',
+                new RuntimeException('Observed state confirmation timed out.')
             );
         }
 
@@ -876,6 +1017,149 @@ final class MqttDiscoveryExporterRuntime
             'commandType' => $commandType,
             'publishedMessages' => 0,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $configuration
+     * @param array<string, mixed> $diagnostics
+     * @param array<string, mixed> $commandEntry
+     *
+     * @return array<string, mixed>
+     */
+    private static function registerCommandInvocation(
+        int $ownerScriptID,
+        array $configuration,
+        array $diagnostics,
+        array $commandEntry,
+        mixed $payload
+    ): array {
+        $entityKey = $commandEntry['entityKey'] ?? null;
+        $commandType = $commandEntry['commandType'] ?? null;
+        if (!is_string($entityKey) || !is_string($commandType)) {
+            throw new RuntimeException('Command Registry index contract is invalid.');
+        }
+        if (!is_string($payload)) {
+            return ['failure' => self::commandFailureResult(
+                $diagnostics,
+                $entityKey,
+                $commandType,
+                'invalid_payload',
+                new RuntimeException('MQTT command payload is not a string.')
+            )];
+        }
+
+        $entityContract = self::findEntityContract($configuration, $entityKey);
+        try {
+            $command = MqttDiscoveryExporterCore::parseCommand(
+                $entityContract['entity'],
+                $commandType,
+                $payload
+            );
+        } catch (InvalidArgumentException $exception) {
+            return ['failure' => self::commandFailureResult(
+                $diagnostics,
+                $entityKey,
+                $commandType,
+                'invalid_payload',
+                $exception
+            )];
+        }
+
+        $registryID = $diagnostics['arbitrationRegistryID'] ?? null;
+        $supersededStatisticID = $diagnostics['statisticIDs']['SUPERSEDED_COMMANDS'] ?? null;
+        if (!is_int($registryID) || !is_int($supersededStatisticID)) {
+            throw new RuntimeException('Command arbitration diagnostics are not initialized.');
+        }
+
+        $channelKey = self::commandChannelKey($entityKey, $commandType);
+        $targetHash = MqttDiscoveryExporterCore::payloadHash([
+            'commandType' => $commandType,
+            'value' => $command['value'],
+        ]);
+        $semaphoreName = 'SAEF_MQTT_EXPORTER_ARBITRATION_' . $ownerScriptID;
+        if (!\IPS_SemaphoreEnter($semaphoreName, self::ARBITRATION_LOCK_TIMEOUT_MILLISECONDS)) {
+            throw new RuntimeException('MQTT command arbitration semaphore timed out.');
+        }
+
+        try {
+            $registry = self::normalizeArbitrationRegistry(
+                \SAEF_ReadRegistry($registryID),
+                $diagnostics['registry']['commandIndex'] ?? []
+            );
+            $slot = $registry['channels'][$channelKey] ?? null;
+            $generation = $slot !== null && $slot['targetHash'] === $targetHash
+                ? $slot['generation']
+                : ($slot !== null ? $slot['generation'] + 1 : 1);
+            $registry['channels'][$channelKey] = [
+                'generation' => $generation,
+                'targetHash' => $targetHash,
+                'updatedAt' => time(),
+            ];
+            ksort($registry['channels']);
+            \SAEF_WriteRegistry($registryID, $registry);
+        } finally {
+            if (!\IPS_SemaphoreLeave($semaphoreName)) {
+                \IPS_LogMessage('SAEF MQTT Discovery Exporter', 'Unable to release arbitration semaphore.');
+            }
+        }
+
+        return [
+            'entityKey' => $entityKey,
+            'commandType' => $commandType,
+            'channelKey' => $channelKey,
+            'generation' => $generation,
+            'targetHash' => $targetHash,
+        ];
+    }
+
+    /** @param array<string, mixed> $invocation */
+    private static function isCommandInvocationCurrent(
+        int $ownerScriptID,
+        array $diagnostics,
+        array $invocation
+    ): bool {
+        $registryID = $diagnostics['arbitrationRegistryID'] ?? null;
+        if (!is_int($registryID)) {
+            throw new RuntimeException('Command arbitration Registry is not initialized.');
+        }
+        $semaphoreName = 'SAEF_MQTT_EXPORTER_ARBITRATION_' . $ownerScriptID;
+        if (!\IPS_SemaphoreEnter($semaphoreName, self::ARBITRATION_LOCK_TIMEOUT_MILLISECONDS)) {
+            throw new RuntimeException('MQTT command arbitration semaphore timed out.');
+        }
+        try {
+            $registry = self::normalizeArbitrationRegistry(
+                \SAEF_ReadRegistry($registryID),
+                $diagnostics['registry']['commandIndex'] ?? []
+            );
+            $slot = $registry['channels'][$invocation['channelKey']] ?? null;
+        } finally {
+            if (!\IPS_SemaphoreLeave($semaphoreName)) {
+                \IPS_LogMessage('SAEF MQTT Discovery Exporter', 'Unable to release arbitration semaphore.');
+            }
+        }
+
+        return $slot !== null
+            && $slot['generation'] === $invocation['generation']
+            && $slot['targetHash'] === $invocation['targetHash'];
+    }
+
+    /** @param array<string, mixed> $invocation */
+    private static function supersededCommandResult(array $diagnostics, array $invocation): array
+    {
+        \SAEF_IncrementStatistic($diagnostics['statisticIDs']['SUPERSEDED_COMMANDS']);
+
+        return [
+            'type' => 'command',
+            'status' => 'superseded',
+            'entityKey' => $invocation['entityKey'],
+            'commandType' => $invocation['commandType'],
+            'publishedMessages' => 0,
+        ];
+    }
+
+    private static function commandChannelKey(string $entityKey, string $commandType): string
+    {
+        return hash('sha256', $entityKey . "\0" . $commandType);
     }
 
     /**
@@ -2830,9 +3114,98 @@ final class MqttDiscoveryExporterRuntime
             self::statisticDefinition('COMMANDS', 'Commands', 230),
             self::statisticDefinition('PUBLISHES', 'Publishes', 240),
             self::statisticDefinition('PUBLISH_SKIPS', 'Publish Skips', 250),
+            self::statisticDefinition('SUPERSEDED_COMMANDS', 'Superseded Commands', 260),
             self::statisticDefinition('LAST_RUN', 'Last Run', 300, '~UnixTimestamp'),
             self::statisticDefinition('LAST_SUCCESS', 'Last Success', 310, '~UnixTimestamp'),
             self::statisticDefinition('LAST_FAILURE', 'Last Failure', 320, '~UnixTimestamp'),
+        ];
+    }
+
+    /** @param array<string, mixed> $configuration */
+    private static function commandLockTimeoutMilliseconds(array $configuration): int
+    {
+        $maximumConfirmationTimeout = 0;
+        foreach ($configuration['devices'] ?? [] as $device) {
+            if (!is_array($device)) {
+                continue;
+            }
+            foreach ($device['entities'] ?? [] as $entity) {
+                if (!is_array($entity)) {
+                    continue;
+                }
+                $timeout = $entity['confirmation']['timeoutMilliseconds'] ?? null;
+                if (is_int($timeout)) {
+                    $maximumConfirmationTimeout = max($maximumConfirmationTimeout, $timeout);
+                }
+            }
+        }
+
+        return min(
+            self::MAX_COMMAND_LOCK_TIMEOUT_MILLISECONDS,
+            $maximumConfirmationTimeout + self::COMMAND_LOCK_GRACE_MILLISECONDS
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $registry
+     * @param array<int|string, mixed> $commandIndex
+     *
+     * @return array{schemaVersion: int, channels: array<string, array{generation: int, targetHash: string, updatedAt: int}>}
+     */
+    private static function normalizeArbitrationRegistry(array $registry, array $commandIndex): array
+    {
+        if ($registry === []) {
+            $registry = [
+                'schemaVersion' => self::ARBITRATION_REGISTRY_SCHEMA_VERSION,
+                'channels' => [],
+            ];
+        }
+        if (($registry['schemaVersion'] ?? null) !== self::ARBITRATION_REGISTRY_SCHEMA_VERSION) {
+            throw new RuntimeException('Unsupported command arbitration Registry schema.');
+        }
+        if (!isset($registry['channels']) || !is_array($registry['channels'])) {
+            throw new RuntimeException('Command arbitration Registry channels are invalid.');
+        }
+
+        $allowedChannels = [];
+        foreach ($commandIndex as $entry) {
+            if (!is_array($entry)) {
+                throw new RuntimeException('Command Registry index entry is invalid.');
+            }
+            $entityKey = $entry['entityKey'] ?? null;
+            $commandType = $entry['commandType'] ?? null;
+            if (!is_string($entityKey) || !is_string($commandType)) {
+                throw new RuntimeException('Command Registry index contract is invalid.');
+            }
+            $allowedChannels[self::commandChannelKey($entityKey, $commandType)] = true;
+        }
+
+        $channels = [];
+        foreach ($registry['channels'] as $channelKey => $slot) {
+            if (!is_string($channelKey) || preg_match('/^[0-9a-f]{64}$/', $channelKey) !== 1) {
+                throw new RuntimeException('Command arbitration Registry channel key is invalid.');
+            }
+            if (!isset($allowedChannels[$channelKey])) {
+                continue;
+            }
+            if (
+                !is_array($slot)
+                || !is_int($slot['generation'] ?? null)
+                || $slot['generation'] < 1
+                || !is_string($slot['targetHash'] ?? null)
+                || preg_match('/^[0-9a-f]{64}$/', $slot['targetHash']) !== 1
+                || !is_int($slot['updatedAt'] ?? null)
+                || $slot['updatedAt'] < 0
+            ) {
+                throw new RuntimeException('Command arbitration Registry slot is invalid.');
+            }
+            $channels[$channelKey] = $slot;
+        }
+        ksort($channels);
+
+        return [
+            'schemaVersion' => self::ARBITRATION_REGISTRY_SCHEMA_VERSION,
+            'channels' => $channels,
         ];
     }
 

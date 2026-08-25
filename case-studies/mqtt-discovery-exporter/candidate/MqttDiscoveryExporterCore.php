@@ -16,6 +16,7 @@ use RuntimeException;
 final class MqttDiscoveryExporterCore
 {
     private const DEFAULT_UUID_NAMESPACE = '36d5dfd1-d837-4e5f-8d67-0f41e3f0f2a1';
+    private const MAX_CONFIRMATION_TIMEOUT_MILLISECONDS = 15 * 1000;
 
     /**
      * Normalizes and validates the complete desired exporter configuration.
@@ -593,7 +594,12 @@ final class MqttDiscoveryExporterCore
 
         $timeout = self::normalizeIntegerValue($confirmation['timeoutMilliseconds'] ?? 2000, $path . '.confirmation.timeoutMilliseconds');
         $poll = self::normalizeIntegerValue($confirmation['pollIntervalMilliseconds'] ?? 50, $path . '.confirmation.pollIntervalMilliseconds');
-        if ($timeout <= 0 || $poll <= 0 || $poll > $timeout) {
+        if (
+            $timeout <= 0
+            || $timeout > self::MAX_CONFIRMATION_TIMEOUT_MILLISECONDS
+            || $poll <= 0
+            || $poll > $timeout
+        ) {
             throw new InvalidArgumentException($path . ' has invalid confirmation timing.');
         }
 

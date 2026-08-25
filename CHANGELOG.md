@@ -11,6 +11,10 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added the V05-001 repository-only latest-command-wins implementation with
+  immutable event payloads, bounded Registry-backed generation arbitration,
+  supersession Statistics, explicit confirmation and lock timing bounds,
+  deterministic concurrency regressions and no live activation.
 - Added the fresh V05-001 read-only Symcon MCP inventory, confirming the finite
   MQTT exporter owner and consumer set, repository-identical active runtime,
   complete event and diagnostics contracts, explicit timing correction and

@@ -149,8 +149,9 @@ Open-Meteo, Navimow, ControlLight and MQTT case-study evolution.
 
 Current `main` starts the post-v0.4 development line. The initial v0.5
 inventory admits no feature automatically: GitHub issue #1 is the only
-confirmed public engineering candidate and first requires a bounded
-latest-command-wins architecture and deterministic concurrency tests. Live
+confirmed public engineering candidate. Its bounded latest-command-wins
+architecture, live inventory and deterministic offline implementation are now
+complete, while all live gates remain closed. Live
 Symcon operations, standalone-module publication, private observations and
 local retention remain separate gates. See `project/SAEF_V0_5_INVENTORY.md`
 for the current intake and explicit non-commitments.

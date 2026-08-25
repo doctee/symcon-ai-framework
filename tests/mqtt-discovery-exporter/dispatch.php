@@ -149,6 +149,24 @@ function dispatchCommandVariableID(array $registry, string $commandType): int
     return (int)$variableID;
 }
 
+/** @param array<string, mixed> $setup */
+function supersedeRegisteredCommand(array $setup, string $commandType): void
+{
+    $registryID = $setup['reconcile']['diagnostics']['arbitrationRegistryID'];
+    $channelKey = hash('sha256', 'example_lamp.main_light' . "\0" . $commandType);
+    $registry = SAEF_ReadRegistry($registryID);
+    $slot = $registry['channels'][$channelKey] ?? null;
+    if (!is_array($slot)) {
+        throw new RuntimeException('Registered arbitration slot is missing.');
+    }
+    $registry['channels'][$channelKey] = [
+        'generation' => $slot['generation'] + 1,
+        'targetHash' => str_repeat('f', 64),
+        'updatedAt' => time(),
+    ];
+    SAEF_WriteRegistry($registryID, $registry);
+}
+
 $tests = [];
 
 $tests['confirms a strict command and republishes only its entity'] = static function (): void {
@@ -175,6 +193,391 @@ $tests['confirms a strict command and republishes only its entity'] = static fun
         GetValue($setup['reconcile']['diagnostics']['statisticIDs']['COMMANDS']),
         'Command count differs.'
     );
+};
+
+$tests['uses the immutable event payload instead of a later variable value'] = static function (): void {
+    $setup = initializedDispatchFixture();
+    $commandVariableID = dispatchCommandVariableID(
+        $setup['reconcile']['diagnostics']['registry'],
+        'brightness'
+    );
+    SetValue($commandVariableID, '99');
+
+    $result = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID,
+        '55'
+    );
+
+    assertDispatchSame('confirmed', $result['status'], 'Snapshot command status differs.');
+    assertDispatchSame(
+        55,
+        DiagnosticsFakeSymconRuntime::requestActionCalls()[0]['value'],
+        'Dispatch used the later variable value.'
+    );
+};
+
+$tests['supersedes an older target before device action'] = static function (): void {
+    $setup = initializedDispatchFixture();
+    $commandVariableID = dispatchCommandVariableID(
+        $setup['reconcile']['diagnostics']['registry'],
+        'brightness'
+    );
+    $mutated = false;
+    DiagnosticsFakeSymconRuntime::setSemaphoreEnterCallback(
+        static function (string $name, int $milliseconds) use ($setup, &$mutated): bool {
+            if (str_starts_with($name, 'SAEF_MQTT_EXPORTER_DISPATCH_') && !$mutated) {
+                supersedeRegisteredCommand($setup, 'brightness');
+                $mutated = true;
+            }
+            return $milliseconds > 0;
+        }
+    );
+
+    $result = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID,
+        '55'
+    );
+
+    assertDispatchSame('superseded', $result['status'], 'Older command was not superseded.');
+    assertDispatchSame([], DiagnosticsFakeSymconRuntime::requestActionCalls(), 'Superseded command caused an action.');
+    assertDispatchSame(
+        1,
+        GetValue($setup['reconcile']['diagnostics']['statisticIDs']['SUPERSEDED_COMMANDS']),
+        'Superseded command count differs.'
+    );
+    assertDispatchSame(
+        0,
+        GetValue($setup['reconcile']['diagnostics']['statisticIDs']['FAILURES']),
+        'Supersession was counted as a failure.'
+    );
+};
+
+$tests['lets only the newest of three different rapid targets act'] = static function (): void {
+    $setup = initializedDispatchFixture();
+    $commandVariableID = dispatchCommandVariableID(
+        $setup['reconcile']['diagnostics']['registry'],
+        'brightness'
+    );
+    $supersedeNext = true;
+    DiagnosticsFakeSymconRuntime::setSemaphoreEnterCallback(
+        static function (string $name, int $milliseconds) use ($setup, &$supersedeNext): bool {
+            if (str_starts_with($name, 'SAEF_MQTT_EXPORTER_DISPATCH_') && $supersedeNext) {
+                supersedeRegisteredCommand($setup, 'brightness');
+                $supersedeNext = false;
+            }
+            return $milliseconds > 0;
+        }
+    );
+
+    $first = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID,
+        '25'
+    );
+    $supersedeNext = true;
+    $second = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID,
+        '50'
+    );
+    $supersedeNext = false;
+    $third = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID,
+        '75'
+    );
+
+    assertDispatchSame('superseded', $first['status'], 'First rapid target status differs.');
+    assertDispatchSame('superseded', $second['status'], 'Second rapid target status differs.');
+    assertDispatchSame('confirmed', $third['status'], 'Newest rapid target status differs.');
+    assertDispatchSame(75, DiagnosticsFakeSymconRuntime::requestActionCalls()[0]['value'], 'Newest target did not act.');
+    assertDispatchSame(6, count(DiagnosticsFakeSymconRuntime::requestActionCalls()), 'Rapid targets caused extra actions.');
+};
+
+$tests['keeps repeated equal targets as independent dispatches'] = static function (): void {
+    $setup = initializedDispatchFixture();
+    $commandVariableID = dispatchCommandVariableID(
+        $setup['reconcile']['diagnostics']['registry'],
+        'brightness'
+    );
+
+    $first = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID,
+        '55'
+    );
+    $second = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID,
+        '55'
+    );
+
+    assertDispatchSame('confirmed', $first['status'], 'First equal command status differs.');
+    assertDispatchSame('confirmed', $second['status'], 'Second equal command status differs.');
+    assertDispatchSame(2, GetValue($setup['reconcile']['diagnostics']['statisticIDs']['COMMANDS']), 'Equal command count differs.');
+};
+
+$tests['suppresses old publication when superseded during confirmation'] = static function (): void {
+    $setup = initializedDispatchFixture();
+    $commandVariableID = dispatchCommandVariableID(
+        $setup['reconcile']['diagnostics']['registry'],
+        'brightness'
+    );
+    $mutated = false;
+    DiagnosticsFakeSymconRuntime::setRequestActionCallback(
+        static function (int $variableID, mixed $value) use ($setup, &$mutated): void {
+            if ($variableID === $setup['fixture']['ids']['brightnessAction'] && !$mutated) {
+                supersedeRegisteredCommand($setup, 'brightness');
+                $mutated = true;
+            }
+        }
+    );
+
+    $result = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID,
+        '55'
+    );
+
+    assertDispatchSame('superseded', $result['status'], 'Confirmed old command was not superseded.');
+    assertDispatchSame(1, count(DiagnosticsFakeSymconRuntime::requestActionCalls()), 'Old command published runtime state.');
+};
+
+$tests['classifies an old confirmation timeout as superseded'] = static function (): void {
+    $setup = initializedDispatchFixture(false);
+    $commandVariableID = dispatchCommandVariableID(
+        $setup['reconcile']['diagnostics']['registry'],
+        'brightness'
+    );
+    DiagnosticsFakeSymconRuntime::setRequestActionCallback(
+        static function (int $variableID, mixed $value) use ($setup): void {
+            if ($variableID === $setup['fixture']['ids']['brightnessAction']) {
+                supersedeRegisteredCommand($setup, 'brightness');
+            }
+        }
+    );
+
+    $result = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID,
+        '55'
+    );
+
+    assertDispatchSame('superseded', $result['status'], 'Old confirmation timeout status differs.');
+    assertDispatchSame(0, GetValue($setup['reconcile']['diagnostics']['statisticIDs']['FAILURES']), 'Old timeout failed.');
+};
+
+$tests['classifies dispatch lock timeout by current generation'] = static function (): void {
+    $setup = initializedDispatchFixture();
+    $commandVariableID = dispatchCommandVariableID(
+        $setup['reconcile']['diagnostics']['registry'],
+        'brightness'
+    );
+    DiagnosticsFakeSymconRuntime::setSemaphoreEnterCallback(
+        static fn (string $name, int $milliseconds): bool => !str_starts_with(
+            $name,
+            'SAEF_MQTT_EXPORTER_DISPATCH_'
+        ) && $milliseconds > 0
+    );
+
+    assertDispatchThrows(
+        RuntimeException::class,
+        static fn (): array => MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+            $setup['ownerScriptID'],
+            $setup['fixture']['configuration'],
+            $commandVariableID,
+            '55'
+        ),
+        'Current dispatch lock timeout was not rejected.'
+    );
+    assertDispatchSame(1, GetValue($setup['reconcile']['diagnostics']['statisticIDs']['FAILURES']), 'Current lock failure count differs.');
+};
+
+$tests['derives command lock wait from confirmation timing'] = static function (): void {
+    $setup = initializedDispatchFixture();
+    $commandVariableID = dispatchCommandVariableID(
+        $setup['reconcile']['diagnostics']['registry'],
+        'brightness'
+    );
+    $dispatchWait = null;
+    DiagnosticsFakeSymconRuntime::setSemaphoreEnterCallback(
+        static function (string $name, int $milliseconds) use (&$dispatchWait): bool {
+            if (str_starts_with($name, 'SAEF_MQTT_EXPORTER_DISPATCH_')) {
+                $dispatchWait = $milliseconds;
+            }
+            return $milliseconds > 0;
+        }
+    );
+
+    MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID,
+        '55'
+    );
+
+    assertDispatchSame(5100, $dispatchWait, 'Derived command lock wait differs.');
+};
+
+$tests['classifies an old dispatch lock timeout as superseded'] = static function (): void {
+    $setup = initializedDispatchFixture();
+    $commandVariableID = dispatchCommandVariableID(
+        $setup['reconcile']['diagnostics']['registry'],
+        'brightness'
+    );
+    $mutated = false;
+    DiagnosticsFakeSymconRuntime::setSemaphoreEnterCallback(
+        static function (string $name, int $milliseconds) use ($setup, &$mutated): bool {
+            if (str_starts_with($name, 'SAEF_MQTT_EXPORTER_DISPATCH_')) {
+                if (!$mutated) {
+                    supersedeRegisteredCommand($setup, 'brightness');
+                    $mutated = true;
+                }
+                return false;
+            }
+            return $milliseconds > 0;
+        }
+    );
+
+    $result = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID,
+        '55'
+    );
+
+    assertDispatchSame('superseded', $result['status'], 'Old lock timeout status differs.');
+    assertDispatchSame(0, GetValue($setup['reconcile']['diagnostics']['statisticIDs']['FAILURES']), 'Old lock timeout failed.');
+};
+
+$tests['keeps an action rejection as failure after supersession'] = static function (): void {
+    $setup = initializedDispatchFixture(false);
+    $commandVariableID = dispatchCommandVariableID(
+        $setup['reconcile']['diagnostics']['registry'],
+        'brightness'
+    );
+    DiagnosticsFakeSymconRuntime::failRequestActionAt(1);
+    DiagnosticsFakeSymconRuntime::setRequestActionCallback(
+        static function (int $variableID, mixed $value) use ($setup): void {
+            if ($variableID === $setup['fixture']['ids']['brightnessAction']) {
+                supersedeRegisteredCommand($setup, 'brightness');
+            }
+        }
+    );
+
+    $result = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID,
+        '55'
+    );
+
+    assertDispatchSame('action_failed', $result['status'], 'Superseded action rejection was hidden.');
+    assertDispatchSame(1, GetValue($setup['reconcile']['diagnostics']['statisticIDs']['FAILURES']), 'Action rejection count differs.');
+    assertDispatchSame(0, GetValue($setup['reconcile']['diagnostics']['statisticIDs']['SUPERSEDED_COMMANDS']), 'Action rejection was counted as superseded.');
+};
+
+$tests['keeps an action exception as failure after supersession'] = static function (): void {
+    $setup = initializedDispatchFixture(false);
+    $commandVariableID = dispatchCommandVariableID(
+        $setup['reconcile']['diagnostics']['registry'],
+        'brightness'
+    );
+    DiagnosticsFakeSymconRuntime::setRequestActionCallback(
+        static function (int $variableID, mixed $value) use ($setup): void {
+            if ($variableID === $setup['fixture']['ids']['brightnessAction']) {
+                supersedeRegisteredCommand($setup, 'brightness');
+                throw new RuntimeException('Simulated action exception.');
+            }
+        }
+    );
+
+    $result = MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration'],
+        $commandVariableID,
+        '55'
+    );
+
+    assertDispatchSame('action_failed', $result['status'], 'Superseded action exception was hidden.');
+    assertDispatchSame(1, GetValue($setup['reconcile']['diagnostics']['statisticIDs']['FAILURES']), 'Action exception count differs.');
+    assertDispatchSame(0, GetValue($setup['reconcile']['diagnostics']['statisticIDs']['SUPERSEDED_COMMANDS']), 'Action exception was superseded.');
+};
+
+$tests['keeps arbitration channels independent and bounded'] = static function (): void {
+    $setup = initializedDispatchFixture();
+    $registry = $setup['reconcile']['diagnostics']['registry'];
+    foreach (['power' => 'OFF', 'brightness' => '55', 'rgb' => '1,2,3', 'colorTemperature' => '3000'] as $type => $payload) {
+        MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+            $setup['ownerScriptID'],
+            $setup['fixture']['configuration'],
+            dispatchCommandVariableID($registry, $type),
+            $payload
+        );
+    }
+    $arbitration = SAEF_ReadRegistry($setup['reconcile']['diagnostics']['arbitrationRegistryID']);
+
+    assertDispatchSame(4, count($arbitration['channels']), 'Arbitration channel count differs.');
+    assertDispatchSame(
+        true,
+        count($arbitration['channels']) <= count($registry['commandIndex']),
+        'Arbitration Registry exceeded the command index.'
+    );
+};
+
+$tests['rejects invalid arbitration JSON without a device action'] = static function (): void {
+    $setup = initializedDispatchFixture();
+    $registryID = $setup['reconcile']['diagnostics']['arbitrationRegistryID'];
+    SetValue($registryID, '{invalid');
+    $commandVariableID = dispatchCommandVariableID(
+        $setup['reconcile']['diagnostics']['registry'],
+        'brightness'
+    );
+
+    assertDispatchThrows(
+        RuntimeException::class,
+        static fn (): array => MqttDiscoveryExporterRuntime::dispatchTriggeredVariable(
+            $setup['ownerScriptID'],
+            $setup['fixture']['configuration'],
+            $commandVariableID,
+            '55'
+        ),
+        'Invalid arbitration JSON was accepted.'
+    );
+    assertDispatchSame([], DiagnosticsFakeSymconRuntime::requestActionCalls(), 'Invalid arbitration JSON caused an action.');
+};
+
+$tests['prunes stale arbitration metadata without replay'] = static function (): void {
+    $setup = initializedDispatchFixture();
+    $registryID = $setup['reconcile']['diagnostics']['arbitrationRegistryID'];
+    $registry = SAEF_ReadRegistry($registryID);
+    $registry['channels'][str_repeat('a', 64)] = [
+        'generation' => 9,
+        'targetHash' => str_repeat('b', 64),
+        'updatedAt' => time(),
+    ];
+    SAEF_WriteRegistry($registryID, $registry);
+    DiagnosticsFakeSymconRuntime::clearRequestActionCalls();
+
+    MqttDiscoveryExporterRuntime::prepareReconcile(
+        $setup['ownerScriptID'],
+        $setup['fixture']['configuration']
+    );
+
+    $pruned = SAEF_ReadRegistry($registryID);
+    assertDispatchSame(false, isset($pruned['channels'][str_repeat('a', 64)]), 'Stale arbitration slot survived.');
+    assertDispatchSame([], DiagnosticsFakeSymconRuntime::requestActionCalls(), 'Arbitration metadata replayed a command.');
 };
 
 $tests['accepts brightness feedback within one percentage point'] = static function (): void {

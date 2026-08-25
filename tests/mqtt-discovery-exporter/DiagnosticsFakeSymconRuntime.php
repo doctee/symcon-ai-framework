@@ -49,6 +49,12 @@ final class DiagnosticsFakeSymconRuntime
 
     private static bool $semaphoreEnterResult = true;
 
+    /** @var (callable(string, int): bool)|null */
+    private static $semaphoreEnterCallback = null;
+
+    /** @var (callable(int, mixed): void)|null */
+    private static $requestActionCallback = null;
+
     public static function reset(): void
     {
         self::$nextID = 1000;
@@ -67,6 +73,8 @@ final class DiagnosticsFakeSymconRuntime
         self::$requestActionFailureCall = null;
         self::$requestActionFailureAfterFeedbackCall = null;
         self::$semaphoreEnterResult = true;
+        self::$semaphoreEnterCallback = null;
+        self::$requestActionCallback = null;
     }
 
     public static function createScript(string $name = 'Exporter'): int
@@ -295,6 +303,9 @@ final class DiagnosticsFakeSymconRuntime
 
         self::$requestActionCalls[] = ['variableID' => $variableID, 'value' => $value];
         $callNumber = count(self::$requestActionCalls);
+        if (self::$requestActionCallback !== null) {
+            (self::$requestActionCallback)($variableID, $value);
+        }
         if (self::$requestActionFailureCall === $callNumber) {
             return false;
         }
@@ -307,7 +318,6 @@ final class DiagnosticsFakeSymconRuntime
         if (self::$requestActionFailureAfterFeedbackCall === $callNumber) {
             return false;
         }
-
         return true;
     }
 
@@ -346,10 +356,25 @@ final class DiagnosticsFakeSymconRuntime
         self::$semaphoreEnterResult = $result;
     }
 
+    /** @param (callable(string, int): bool)|null $callback */
+    public static function setSemaphoreEnterCallback(?callable $callback): void
+    {
+        self::$semaphoreEnterCallback = $callback;
+    }
+
+    /** @param (callable(int, mixed): void)|null $callback */
+    public static function setRequestActionCallback(?callable $callback): void
+    {
+        self::$requestActionCallback = $callback;
+    }
+
     public static function semaphoreEnter(string $name, int $milliseconds): bool
     {
         if (str_starts_with($name, 'SAEF_STATISTIC_')) {
             return $milliseconds > 0;
+        }
+        if (self::$semaphoreEnterCallback !== null) {
+            return (self::$semaphoreEnterCallback)($name, $milliseconds);
         }
 
         return $name !== '' && $milliseconds > 0 && self::$semaphoreEnterResult;

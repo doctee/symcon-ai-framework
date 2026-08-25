@@ -1,7 +1,7 @@
 # SAEF v0.5 Engineering Inventory
 
-**Status:** V05-001 admitted for offline implementation; scope not frozen
-**Inventory date:** 2026-08-24
+**Status:** V05-001 offline implementation complete; live gates closed; scope not frozen
+**Inventory date:** 2026-08-25
 **Published baseline:** `v0.4.0`
 **Baseline revision:** `de8a59d9f8d30e38d0fa18058057c620446f12c0`
 
@@ -41,7 +41,8 @@ The fresh read-only live inventory in
 `case-studies/mqtt-discovery-exporter/39-latest-command-wins-live-inventory.md`
 confirms the finite owner and consumer set, repository-identical active
 runtime, complete event bindings and existing diagnostics boundary.
-Deterministic offline implementation is now admitted. Fileset activation and
+The deterministic offline implementation and generated-fileset verification
+are complete in report 40. Fileset staging, activation, owner migration and
 functional live testing remain separate explicit gates.
 
 The design must:
@@ -112,12 +113,12 @@ A candidate may enter a frozen v0.5 scope only when:
 
 ## Recommended Order
 
-1. Build deterministic rapid-command tests against the existing MQTT runtime.
-2. Implement the bounded generation model inside the case-study runtime while
-   retaining the no-new-public-API decision.
-3. Regenerate and verify the MQTT fileset without live activation.
+1. Review and merge the completed V05-001 offline implementation.
+2. Define a separate recoverable live migration gate for fileset and owners.
+3. Keep staging, restart and functional MQTT commands separately authorized.
 4. Review new evidence before admitting another candidate.
 5. Freeze version and scope only after the admitted change set is coherent.
 
-The current evidence supports beginning V05-001 as the first v0.5 workstream.
-It does not yet justify a final v0.5 release scope or a framework version bump.
+The current evidence supports V05-001 as the first implemented v0.5 candidate.
+It does not yet justify a final v0.5 release scope, framework version bump or
+live activation.
