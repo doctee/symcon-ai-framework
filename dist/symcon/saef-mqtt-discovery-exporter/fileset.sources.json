@@ -7,7 +7,7 @@
     "orderedSources": [
         {
             "path": "case-studies/mqtt-discovery-exporter/candidate/MqttDiscoveryExporterCore.php",
-            "sha256": "910aefdaf873965b461cb1dfc36775c92e93ce0463a5e47319feb529dafa71fc"
+            "sha256": "57da88f701b6c9d431683c92b5712ac87b1402654c79e9ace5fe26ef65821162"
         },
         {
             "path": "helpers/diagnostics/ConfigurationHash.php",
@@ -51,7 +51,7 @@
         },
         {
             "path": "case-studies/mqtt-discovery-exporter/candidate/MqttDiscoveryExporterRuntime.php",
-            "sha256": "3f39b2d67eed1ccbdc83ec52d323c9d945e3ecf85a1b6a5845de2abe6397e1ba"
+            "sha256": "ab7ebb375c02c51e9b9100685563d0e15972b49937f6543b470b0e4d4ae35174"
         },
         {
             "path": "helpers/object/EnsureScript.php",
@@ -63,7 +63,7 @@
         }
     ],
     "bootstrapSha256": "dd9ffc5d3dabaf4e0e467a5eb8f6b815bed97854cf0c1f6cbca0369cd4555674",
-    "filesetSha256": "21b96591c7256e6ab8e9224bc9faa89b6fd51ef2bba7bea19c2078ff9d3fbe7c",
+    "filesetSha256": "c5dbcdd1a608bf72119990bfca49d680ba829486ac19dc5add740870edaa8144",
     "functionExports": [
         "SAEF_AppendErrorRingBufferEntry",
         "SAEF_ClearErrorRingBuffer",

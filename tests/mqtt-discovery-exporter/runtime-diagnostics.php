@@ -89,7 +89,7 @@ $tests['creates the complete owned diagnostics structure'] = static function ():
     $diagnostics = MqttDiscoveryExporterRuntime::initializeDiagnostics($ownerScriptID, $configuration);
 
     assertRuntimeSame(1, DiagnosticsFakeSymconRuntime::categoryCount(), 'Unexpected category count.');
-    assertRuntimeSame(11, DiagnosticsFakeSymconRuntime::variableCount(), 'Unexpected variable count.');
+    assertRuntimeSame(13, DiagnosticsFakeSymconRuntime::variableCount(), 'Unexpected variable count.');
     assertRuntimeSame(
         [
             'EXECUTIONS',
@@ -98,6 +98,7 @@ $tests['creates the complete owned diagnostics structure'] = static function ():
             'COMMANDS',
             'PUBLISHES',
             'PUBLISH_SKIPS',
+            'SUPERSEDED_COMMANDS',
             'LAST_RUN',
             'LAST_SUCCESS',
             'LAST_FAILURE',
@@ -112,6 +113,11 @@ $tests['creates the complete owned diagnostics structure'] = static function ():
         'Configuration hash differs.'
     );
     assertRuntimeSame([], $diagnostics['registry']['managedEntities'], 'Managed entities are not initially empty.');
+    assertRuntimeSame(
+        ['schemaVersion' => 1, 'channels' => []],
+        $diagnostics['arbitrationRegistry'],
+        'Command arbitration Registry differs.'
+    );
 };
 
 $tests['is idempotent and avoids unchanged registry writes'] = static function (): void {
@@ -128,7 +134,7 @@ $tests['is idempotent and avoids unchanged registry writes'] = static function (
 
     assertRuntimeSame($first['categoryID'], $second['categoryID'], 'Diagnostics category identity changed.');
     assertRuntimeSame($first['registryID'], $second['registryID'], 'Registry identity changed.');
-    assertRuntimeSame(11, DiagnosticsFakeSymconRuntime::variableCount(), 'Repeated setup created variables.');
+    assertRuntimeSame(13, DiagnosticsFakeSymconRuntime::variableCount(), 'Repeated setup created variables.');
     assertRuntimeSame(
         $writesAfterFirstRun,
         DiagnosticsFakeSymconRuntime::valueWriteCount(),

@@ -148,6 +148,26 @@ $tests['normalizes complete aliases and separate state/action pairs'] = static f
     assertCoreSame(6500, $entity['capabilities']['colorTemperature']['maximumKelvin'], 'Maximum Kelvin differs.');
 };
 
+$tests['bounds command confirmation timing at fifteen seconds'] = static function (): void {
+    $maximum = validExporterConfiguration();
+    $maximum['devices'][0]['entities'][0]['confirmation']['timeoutMilliseconds'] = 15 * 1000;
+    $maximum['devices'][0]['entities'][0]['confirmation']['pollIntervalMilliseconds'] = 100;
+    $normalized = MqttDiscoveryExporterCore::normalizeConfiguration($maximum);
+    assertCoreSame(
+        15 * 1000,
+        $normalized['devices'][0]['entities'][0]['confirmation']['timeoutMilliseconds'],
+        'Maximum confirmation timeout differs.'
+    );
+
+    $excessive = $maximum;
+    $excessive['devices'][0]['entities'][0]['confirmation']['timeoutMilliseconds'] = (15 * 1000) + 1;
+    assertCoreThrows(
+        InvalidArgumentException::class,
+        static fn (): array => MqttDiscoveryExporterCore::normalizeConfiguration($excessive),
+        'Excessive confirmation timeout was accepted.'
+    );
+};
+
 $tests['accepts an empty desired entity set for complete cleanup'] = static function (): void {
     $raw = validExporterConfiguration();
     $raw['devices'] = [];
