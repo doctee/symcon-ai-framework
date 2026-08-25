@@ -63,6 +63,7 @@ become an SAEF reference implementation.
 | `36-client-subscription-coverage-and-runtime-namespace-report.md` | Client-subscription coverage validation, controlled runtime-namespace correction and complete Home Assistant/Apple Home functional evidence. |
 | `37-owner-decoupling-and-subscription-runtime-activation-report.md` | Physical owner-path decoupling, corrected subscription-runtime activation, idempotent three-entity reconciliation and alarm-bounded live evidence. |
 | `38-latest-command-wins-architecture-review.md` | V05-001 impact inventory, bounded generation arbitration, failure classification, deterministic test contract and separate implementation/live gates. |
+| `39-latest-command-wins-live-inventory.md` | Fresh read-only owner, consumer, event, runtime, diagnostics and timing inventory admitting bounded offline implementation without live mutation. |
 | `candidate/MqttDiscoveryExporterCore.php` | Side-effect-free normalization, payload, parsing, hashing and cleanup-planning core. |
 | `candidate/MqttDiscoveryExporterRuntime.php` | Runtime adapter for diagnostics, reconcile, MQTT execution, indexed dispatch and exact cleanup. |
 | `../../tests/mqtt-discovery-exporter/fixtures/discovery-capabilities.json` | Sanitized deterministic discovery fixtures for every supported capability combination. |
@@ -105,9 +106,14 @@ The completed implementation demonstrates:
 - repeatable offline tests and supervised live integration evidence.
 
 Post-v0.4 architecture work additionally defines a bounded latest-command-wins
-model for rapid commands. It is documentation only: implementation, generated
-filesets and live owners remain unchanged until the separate admission gates in
-report 38 have passed.
+model for rapid commands. Runtime code, generated filesets and live owners
+remain unchanged at this documentation stage.
+
+The fresh read-only inventory in report 39 confirms the complete two-owner
+consumer set and repository-identical active runtime. It admits deterministic
+offline implementation with an explicit 15-second confirmation cap and
+20-second maximum lock wait. Generated fileset activation and every functional
+command remain separate live gates.
 
 The current supervised client-transport pilot manages two light entities. The
 second state-only entity has additionally demonstrated fail-closed handling
