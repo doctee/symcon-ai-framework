@@ -2,7 +2,7 @@
 
 **Case study:** Navimow native IP-Symcon module
 
-**Status:** Architecture candidate; implementation gated by calibration evidence
+**Status:** Architecture candidate; offline prototype ready, calibration pending
 
 **Date:** 2026-08-24
 
@@ -33,7 +33,7 @@ A reliable map still requires:
 - coordinate unit, origin, orientation and scale calibration;
 - zone polygon or boundary geometry;
 - evidence that coordinate frames remain stable across sessions and maps;
-- at least two confirmed zone-to-correlation mappings;
+- a productive Zone 2 correlation to complete all three configured mappings;
 - a rule for rain, charging and other interrupted path segments.
 
 An exact percentage of actually mowed zone area additionally requires a known
@@ -84,8 +84,9 @@ in public fixtures or documentation.
 
 ## 5. Implementation Gates
 
-1. Complete the Zone 2 and Zone 3 correlation observations from step 343.
-2. Capture one coordinate-rich natural run per confirmed zone.
+1. Use the completed Zone 1 and Zone 3 correlations as the first synthetic
+   prototype boundary; retain Zone 2 as partial rain-interruption evidence.
+2. Capture a productive coordinate-rich Zone 2 run when weather permits.
 3. Determine coordinate scale and stability from repeated dock and path
    landmarks without publishing garden geometry.
 4. Decide the percentage denominator and confidence model.
@@ -93,6 +94,7 @@ in public fixtures or documentation.
    fixtures.
 6. Publish and roll out disabled before any new live observation.
 
-The next executable step is step 343 on the next natural run of one of the two
-remaining zones. The map and area reducers can then be implemented against
-evidence rather than guessed geometry.
+The next implementation step is an offline-only path-segmentation and zone
+aggregation prototype using synthetic geometry plus the proven correlation and
+interruption semantics. Another live activation remains blocked by step 347's
+cleanup-hardening gate.

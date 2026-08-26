@@ -2,7 +2,7 @@
 
 **Case study:** Navimow native IP-Symcon module
 
-**Status:** Zone 1 passed; natural Zone 2 and Zone 3 observations pending
+**Status:** Closed; Zone 1 and Zone 3 passed, Zone 2 rain-aborted
 
 **Date:** 2026-08-24
 
@@ -57,8 +57,9 @@ one Account ApplyChanges and verify immediately plus after at least 60 seconds:
 
 ## 5. Evidence And Pending Natural Gates
 
-The natural Zone 1 run passed this contract in step 345 and established the
-first installation-private zone-to-ledger correlation. The two remaining
-high-value observations are Zone 2 and Zone 3 on their next natural runs. They
-cannot be completed offline and must not be induced with a Start or
-zone-selection command.
+The natural Zone 1 run passed in step 345. Step 346 recorded a distinct Zone 2
+candidate that was interrupted by rain before productive progress, followed by
+a complete Zone 3 pass with a third distinct correlation, progress and area
+increments. The minimum objective of two productive operator-confirmed zones
+is therefore complete. A future natural Zone 2 pass remains useful but is no
+longer a prerequisite for beginning offline path and statistics work.
