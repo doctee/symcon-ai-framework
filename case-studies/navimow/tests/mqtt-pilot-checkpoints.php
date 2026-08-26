@@ -864,10 +864,33 @@ $deadlineVariables =
     $deadlineAccount->testSnapshotPersistentState()['variables'];
 assertPilotCheckpoint(
     ($deadlineStarted['hardStopAt'] ?? null) === 1800259200
+        && ($deadlineStarted['configuredMaximumDurationSeconds'] ?? null)
+            === 259200
+        && ($deadlineStarted['sessionMaximumDurationSeconds'] ?? null)
+            === 259200
         && ($deadlineStarted['closureState'] ?? null) === 'Active'
         && $deadlineAccount->testTimerInterval('MqttPilotDeadline')
             === 259200000,
     'Pilot start did not establish the absolute 72-hour deadline.'
+);
+$deadlineLedger = Navimow\MqttTaskObservationLedger::reduce(
+    Navimow\MqttTaskObservationLedger::initialLedger(),
+    [
+        'taskTelemetryReceivedAt' => $deadlineClock->now(),
+        'currentMowProgress' => 4200,
+        'subtotalArea' => 268.61,
+        'boundaryKey' => hash('sha256', 'SYNTHETIC_BOUNDARY'),
+        'partitionKey' => hash('sha256', 'SYNTHETIC_PARTITION'),
+    ],
+    hash('sha256', 'SYNTHETIC_DEVICE'),
+    $deadlineClock->now(),
+    1
+);
+$deadlineLedgerEncoded =
+    Navimow\MqttTaskObservationLedger::serializeLedger($deadlineLedger);
+$deadlineAccount->testSetAttribute(
+    'MqttTaskObservationLedger',
+    $deadlineLedgerEncoded
 );
 $deadlineClock->advance(259200);
 $deadlineAccount->ProcessMqttPilotDeadline();
@@ -905,12 +928,107 @@ assertPilotCheckpoint(
         && $deadlineAccount->testTimerInterval('MqttPilotClosure') === 0
         && $deadlineAccount->testSnapshotPersistentState()['variables']
             === $deadlineVariables
+        && $deadlineAccount->testReadAttribute(
+            'MqttTaskObservationLedger'
+        ) === $deadlineLedgerEncoded
         && (
             decodePilotCheckpoint(
                 $deadlineAccount->GetMqttPositionDiagnostics()
             )['status'] ?? null
         ) === 'disabled',
     'Deadline closure did not finish once without public-variable churn.'
+);
+
+$shortClock = new NavimowTestFakeClock(1801000000);
+$shortAccount = new MqttPilotCheckpointAccount(
+    7206,
+    $shortClock,
+    1800999900
+);
+$shortAccount->Create();
+$shortAccount->ApplyChanges();
+$shortAccount->testSetProperty('EnableMqttShadow', true);
+$shortAccount->testSetProperty(
+    'MqttPilotMaximumDurationSeconds',
+    900
+);
+invokePilotPrivate($shortAccount, 'startMqttPilotObservationIfNeeded');
+$shortStarted = decodePilotCheckpoint(
+    $shortAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($shortStarted['hardStopAt'] ?? null) === 1801000900
+        && ($shortStarted['configuredMaximumDurationSeconds'] ?? null)
+            === 900
+        && ($shortStarted['sessionMaximumDurationSeconds'] ?? null)
+            === 900
+        && $shortAccount->testTimerInterval('MqttPilotDeadline')
+            === 900000,
+    'Bounded short pilot duration was not persisted as an absolute deadline.'
+);
+$shortAccount->testSetProperty(
+    'MqttPilotMaximumDurationSeconds',
+    259200
+);
+$shortClock->advance(300);
+$shortRestart = new MqttPilotCheckpointAccount(
+    7206,
+    $shortClock,
+    1801000200
+);
+$shortRestart->Create();
+$shortRestart->testRestorePersistentState(
+    $shortAccount->testSnapshotPersistentState()
+);
+$shortRestart->ApplyChanges();
+$shortResumed = decodePilotCheckpoint(
+    $shortRestart->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($shortResumed['hardStopAt'] ?? null) === 1801000900
+        && ($shortResumed['configuredMaximumDurationSeconds'] ?? null)
+            === 259200
+        && ($shortResumed['sessionMaximumDurationSeconds'] ?? null)
+            === 900
+        && $shortRestart->testTimerInterval('MqttPilotDeadline')
+            === 600000,
+    'Property change or restart shifted the persisted short-test deadline.'
+);
+$shortClock->advance(601);
+$shortRestart->ProcessMqttPilotDeadline();
+$shortRestart->ProcessMqttPilotClosure();
+assertPilotCheckpoint(
+    (
+        decodePilotCheckpoint(
+            $shortRestart->GetMqttPilotDiagnostics()
+        )['closureState'] ?? null
+    ) === 'Closed'
+        && $shortRestart->testOwnApplyChangesCount() === 1,
+    'Late short-test deadline did not complete the existing closure path.'
+);
+
+$minimumClock = new NavimowTestFakeClock(1802000000);
+$minimumAccount = new MqttPilotCheckpointAccount(
+    7207,
+    $minimumClock,
+    1801999900
+);
+$minimumAccount->Create();
+$minimumAccount->ApplyChanges();
+$minimumAccount->testSetProperty('EnableMqttShadow', true);
+$minimumAccount->testSetProperty(
+    'MqttPilotMaximumDurationSeconds',
+    1
+);
+invokePilotPrivate($minimumAccount, 'startMqttPilotObservationIfNeeded');
+$minimumStarted = decodePilotCheckpoint(
+    $minimumAccount->GetMqttPilotDiagnostics()
+);
+assertPilotCheckpoint(
+    ($minimumStarted['hardStopAt'] ?? null) === 1802000300
+        && ($minimumStarted['sessionMaximumDurationSeconds'] ?? null)
+            === 300,
+    'Programmatic duration below the safety minimum was not clamped.'
 );
 
 $restartClock = new NavimowTestFakeClock(1810000000);
