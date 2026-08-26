@@ -1,0 +1,31 @@
+{
+  "description": "Synthetic multi-zone path and task evidence without installation geometry",
+  "points": [
+    {"localX": 0.0, "localY": 0.0, "orientation": 0.0, "sourceTimestamp": 1000000, "receivedAt": 1000, "vehicleStateCode": 1, "sessionSequence": 10},
+    {"localX": 0.1, "localY": 0.1, "orientation": 0.0, "sourceTimestamp": 1002000, "receivedAt": 1002, "vehicleStateCode": 1, "sessionSequence": 10},
+    {"localX": 3.0, "localY": 4.0, "orientation": 0.2, "sourceTimestamp": 1006000, "receivedAt": 1006, "vehicleStateCode": 1, "sessionSequence": 10},
+    {"localX": 5.0, "localY": 5.0, "orientation": 0.4, "sourceTimestamp": 1060000, "receivedAt": 1060, "vehicleStateCode": 1, "sessionSequence": 10},
+    {"localX": 50.0, "localY": 50.0, "orientation": 0.0, "sourceTimestamp": 2000000, "receivedAt": 2000, "vehicleStateCode": 1, "sessionSequence": 11},
+    {"localX": 51.0, "localY": 50.0, "orientation": 0.1, "sourceTimestamp": 2010000, "receivedAt": 2010, "vehicleStateCode": 1, "sessionSequence": 11},
+    {"localX": 52.0, "localY": 50.0, "orientation": 0.2, "sourceTimestamp": 2020000, "receivedAt": 2020, "vehicleStateCode": 5, "sessionSequence": 11},
+    {"localX": 100.0, "localY": 100.0, "orientation": 0.0, "sourceTimestamp": 3000000, "receivedAt": 3000, "vehicleStateCode": 1, "sessionSequence": 12},
+    {"localX": 103.0, "localY": 104.0, "orientation": 0.2, "sourceTimestamp": 3010000, "receivedAt": 3010, "vehicleStateCode": 1, "sessionSequence": 12},
+    {"localX": 104.0, "localY": 104.0, "orientation": 0.3, "sourceTimestamp": 3020000, "receivedAt": 3020, "vehicleStateCode": 1, "sessionSequence": 13},
+    {"localX": 400.0, "localY": 400.0, "orientation": 0.4, "sourceTimestamp": 3070000, "receivedAt": 3070, "vehicleStateCode": 1, "sessionSequence": 13}
+  ],
+  "ledgerProjection": {
+    "passes": [
+      {"sequence": 1, "startedAt": 1000, "lastObservedAt": 1060, "completionObservedAt": 1060, "boundaryKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "partitionKey": null, "firstProgress": 4000, "maxProgress": 10000, "firstSubtotalArea": 100.0, "maxSubtotalArea": 250.0},
+      {"sequence": 2, "startedAt": 2000, "lastObservedAt": 2030, "completionObservedAt": null, "boundaryKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "partitionKey": null, "firstProgress": 1000, "maxProgress": 1200, "firstSubtotalArea": 20.0, "maxSubtotalArea": 30.0},
+      {"sequence": 3, "startedAt": 3000, "lastObservedAt": 3070, "completionObservedAt": null, "boundaryKey": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "partitionKey": null, "firstProgress": 4000, "maxProgress": 4206, "firstSubtotalArea": 255.45, "maxSubtotalArea": 268.61}
+    ],
+    "transitions": [
+      {"passSequence": 2, "type": "delay-change", "taskDelay": true},
+      {"passSequence": 3, "type": "transport-session-change", "taskDelay": null}
+    ]
+  },
+  "configuredZoneAreas": {
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": 300.0,
+    "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc": 250.0
+  }
+}
