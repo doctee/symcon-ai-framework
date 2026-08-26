@@ -375,6 +375,8 @@ template or a general SAEF reference implementation.
 | `347-short-live-test-cleanup-hardening-decision.md` | Blocks another short activation until module-owned deadline cleanup replaces chat-dependent closure. |
 | `348-short-live-test-cleanup-hardening-implementation.md` | Composes the existing pilot deadline and closure machinery with a bounded short-test duration and verifies restart-safe credential-first cleanup offline. |
 | `349-path-segmentation-and-zone-statistics-offline-prototype.md` | Implements bounded time-window path segmentation and denominator-gated anonymous zone statistics as an offline-only synthetic prototype. |
+| `350-short-pilot-cleanup-publication-and-live-validation.md` | Records hash-bound standalone publication, disabled rollout and the passed 300-second module-owned automatic cleanup live test. |
+| `351-provider-neutral-track-map-and-zone-calibration-plan.md` | Separates a future shared Navimow/OwnTracks track renderer from provider adapters and defines authoritative, digitized and inferred zone-geometry gates. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
