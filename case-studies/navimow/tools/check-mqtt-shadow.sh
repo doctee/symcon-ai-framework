@@ -21,6 +21,7 @@ php case-studies/navimow/tests/mqtt-position-diagnostics.php
 php case-studies/navimow/tests/mqtt-receiver-scaffold.php
 php case-studies/navimow/tests/mqtt-account-ingestion.php
 php case-studies/navimow/tests/mqtt-task-observation-ledger.php
+php case-studies/navimow/tests/path-zone-prototype.php
 php case-studies/navimow/tests/mqtt-shadow-diagnostics.php
 php case-studies/navimow/tests/mqtt-pilot-checkpoints.php
 php case-studies/navimow/tests/mqtt-shadow-reconciliation.php

@@ -374,6 +374,7 @@ template or a general SAEF reference implementation.
 | `346-zone-two-and-zone-three-ledger-live-test-results.md` | Records the rain-aborted Zone 2 candidate, the complete Zone 3 pass, cross-zone separation and verified cleanup. |
 | `347-short-live-test-cleanup-hardening-decision.md` | Blocks another short activation until module-owned deadline cleanup replaces chat-dependent closure. |
 | `348-short-live-test-cleanup-hardening-implementation.md` | Composes the existing pilot deadline and closure machinery with a bounded short-test duration and verifies restart-safe credential-first cleanup offline. |
+| `349-path-segmentation-and-zone-statistics-offline-prototype.md` | Implements bounded time-window path segmentation and denominator-gated anonymous zone statistics as an offline-only synthetic prototype. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
