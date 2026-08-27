@@ -22,6 +22,7 @@ php case-studies/navimow/tests/mqtt-receiver-scaffold.php
 php case-studies/navimow/tests/mqtt-account-ingestion.php
 php case-studies/navimow/tests/mqtt-task-observation-ledger.php
 php case-studies/navimow/tests/path-zone-prototype.php
+php case-studies/navimow/tests/map-geometry-reducer.php
 php case-studies/navimow/tests/mqtt-shadow-diagnostics.php
 php case-studies/navimow/tests/mqtt-pilot-checkpoints.php
 php case-studies/navimow/tests/mqtt-shadow-reconciliation.php
@@ -42,7 +43,8 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/libs/Navimow/MqttPositionDiagnostic.php \
     case-studies/navimow/distribution/libs/Navimow/MqttTaskObservationLedger.php \
     case-studies/navimow/distribution/libs/Navimow/MqttTransportConfiguration.php \
-    case-studies/navimow/distribution/libs/Navimow/PayloadMapper.php
+    case-studies/navimow/distribution/libs/Navimow/PayloadMapper.php \
+    case-studies/navimow/candidate/MapGeometryReducer.php
 
 "$vendor_dir/bin/phpstan" analyse \
     --configuration=phpstan.neon \
@@ -57,6 +59,7 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/libs/Navimow/MqttPayloadParser.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPositionDiagnostic.php \
     case-studies/navimow/distribution/libs/Navimow/MqttTaskObservationLedger.php \
-    case-studies/navimow/distribution/libs/Navimow/MqttTransportConfiguration.php
+    case-studies/navimow/distribution/libs/Navimow/MqttTransportConfiguration.php \
+    case-studies/navimow/candidate/MapGeometryReducer.php
 
 printf '%s\n' "Navimow MQTT shadow offline checks passed."
