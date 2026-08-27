@@ -24,6 +24,8 @@ php case-studies/navimow/tests/mqtt-task-observation-ledger.php
 php case-studies/navimow/tests/path-zone-prototype.php
 php case-studies/navimow/tests/map-geometry-reducer.php
 php case-studies/navimow/tests/local-map-scene-prototype.php
+php case-studies/navimow/tests/local-map-svg-renderer.php
+php case-studies/navimow/tests/revision-bounded-track-store.php
 php case-studies/navimow/tests/mqtt-shadow-diagnostics.php
 php case-studies/navimow/tests/mqtt-pilot-checkpoints.php
 php case-studies/navimow/tests/mqtt-shadow-reconciliation.php
@@ -46,7 +48,11 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/libs/Navimow/MqttTransportConfiguration.php \
     case-studies/navimow/distribution/libs/Navimow/PayloadMapper.php \
     case-studies/navimow/candidate/MapGeometryReducer.php \
-    case-studies/navimow/candidate/LocalMapSceneProjector.php
+    case-studies/navimow/candidate/LocalMapSceneProjector.php \
+    case-studies/navimow/candidate/LocalMapSvgRenderer.php \
+    case-studies/navimow/candidate/RevisionBoundedTrackStore.php \
+    case-studies/navimow/tests/local-map-svg-renderer.php \
+    case-studies/navimow/tests/revision-bounded-track-store.php
 
 "$vendor_dir/bin/phpstan" analyse \
     --configuration=phpstan.neon \
@@ -63,6 +69,10 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/libs/Navimow/MqttTaskObservationLedger.php \
     case-studies/navimow/distribution/libs/Navimow/MqttTransportConfiguration.php \
     case-studies/navimow/candidate/MapGeometryReducer.php \
-    case-studies/navimow/candidate/LocalMapSceneProjector.php
+    case-studies/navimow/candidate/LocalMapSceneProjector.php \
+    case-studies/navimow/candidate/LocalMapSvgRenderer.php \
+    case-studies/navimow/candidate/RevisionBoundedTrackStore.php \
+    case-studies/navimow/tests/local-map-svg-renderer.php \
+    case-studies/navimow/tests/revision-bounded-track-store.php
 
 printf '%s\n' "Navimow MQTT shadow offline checks passed."
