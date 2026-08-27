@@ -387,6 +387,7 @@ template or a general SAEF reference implementation.
 | `359-private-map-capture-account-consent-and-final-live-gate.md` | Records the dedicated shared-account and private-protocol risk confirmations without account data, freezes the one-attempt terminal procedure and leaves actual network execution separately gated. |
 | `360-private-map-capture-live-root-preflight-correction.md` | Diagnoses the unconsumed silent wrapper exit, adds an explicit repository-bounded and reducer-hash-bound worktree root, and leaves the corrected one-attempt execution behind a refreshed gate. |
 | `361-private-map-capture-result-and-local-sanitizer-recovery.md` | Records the consumed command-free map capture, diagnoses a one-character identifier sanitizer false positive, completes network-free postprocessing and confirms usable private zone geometry without publishing it. |
+| `362-private-map-geometry-calibration-review.md` | Reconciles private zones, station and historical dock evidence, validates net-area semantics, identifies an overlapping boundary pair and approves only an offline local-map bootstrap with task-first attribution. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
