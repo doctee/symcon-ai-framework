@@ -1,0 +1,87 @@
+{
+  "description": "Synthetic revision-bound local map scene without installation data",
+  "geometry": {
+    "formatVersion": 1,
+    "authority": "decoded-private-map-payload",
+    "coordinateFrame": "navimow-local-map",
+    "reportedArea": 650.0,
+    "zones": [
+      {
+        "id": 101,
+        "name": "Synthetic A",
+        "reportedArea": 300.0,
+        "calculatedArea": 100.0,
+        "ring": [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0], [0.0, 0.0]]
+      },
+      {
+        "id": 102,
+        "name": "Synthetic B",
+        "reportedArea": 100.0,
+        "calculatedArea": 100.0,
+        "ring": [[8.0, -2.0], [18.0, -2.0], [18.0, 8.0], [8.0, 8.0], [8.0, -2.0]]
+      },
+      {
+        "id": 103,
+        "name": "Synthetic C",
+        "reportedArea": 250.0,
+        "calculatedArea": 100.0,
+        "ring": [[20.0, 0.0], [30.0, 0.0], [30.0, 10.0], [20.0, 10.0], [20.0, 0.0]]
+      },
+      {
+        "id": 104,
+        "name": "Synthetic Unassigned",
+        "reportedArea": 50.0,
+        "calculatedArea": 16.0,
+        "ring": [[32.0, 0.0], [36.0, 0.0], [36.0, 4.0], [32.0, 4.0], [32.0, 0.0]]
+      }
+    ],
+    "obstacles": [
+      {
+        "calculatedArea": 1.0,
+        "ring": [[1.0, 1.0], [2.0, 1.0], [2.0, 2.0], [1.0, 2.0], [1.0, 1.0]]
+      },
+      {
+        "calculatedArea": 1.0,
+        "ring": [[14.0, 1.0], [15.0, 1.0], [15.0, 2.0], [14.0, 2.0], [14.0, 1.0]]
+      },
+      {
+        "calculatedArea": 1.0,
+        "ring": [[22.0, 1.0], [23.0, 1.0], [23.0, 2.0], [22.0, 2.0], [22.0, 1.0]]
+      }
+    ],
+    "visionOffAreas": [],
+    "station": {"x": -1.0, "y": 0.0, "direction": 3.141592653589793},
+    "pointCount": 35,
+    "geometryContract": {
+      "ringsClosed": true,
+      "selfIntersectionsRejected": true,
+      "holesSupported": false
+    }
+  },
+  "bindings": [
+    {"zoneId": 101, "zoneKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "label": "Area A"},
+    {"zoneId": 102, "zoneKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "label": "Area B"},
+    {"zoneId": 103, "zoneKey": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "label": "Area C"},
+    {"zoneId": 104, "zoneKey": null, "label": "Unassigned Area"}
+  ],
+  "points": [
+    {"localX": 1.0, "localY": 1.0, "orientation": 0.0, "sourceTimestamp": 1000000, "receivedAt": 1000, "vehicleStateCode": 1, "sessionSequence": 1},
+    {"localX": 9.0, "localY": 5.0, "orientation": 0.1, "sourceTimestamp": 1010000, "receivedAt": 1010, "vehicleStateCode": 1, "sessionSequence": 1},
+    {"localX": 9.0, "localY": 5.0, "orientation": 0.2, "sourceTimestamp": 1500000, "receivedAt": 1500, "vehicleStateCode": 1, "sessionSequence": 1},
+    {"localX": 15.0, "localY": 5.0, "orientation": 0.3, "sourceTimestamp": 2000000, "receivedAt": 2000, "vehicleStateCode": 1, "sessionSequence": 1},
+    {"localX": 25.0, "localY": 5.0, "orientation": 0.4, "sourceTimestamp": 3000000, "receivedAt": 3000, "vehicleStateCode": 1, "sessionSequence": 1},
+    {"localX": 40.0, "localY": 40.0, "orientation": 0.5, "sourceTimestamp": 4000000, "receivedAt": 4000, "vehicleStateCode": 1, "sessionSequence": 1}
+  ],
+  "ledgerProjection": {
+    "passes": [
+      {"sequence": 1, "startedAt": 1000, "lastObservedAt": 1010, "completionObservedAt": 1010, "boundaryKey": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "partitionKey": null, "firstProgress": 1000, "maxProgress": 10000, "firstSubtotalArea": 0.0, "maxSubtotalArea": 90.0},
+      {"sequence": 2, "startedAt": 2000, "lastObservedAt": 2010, "completionObservedAt": null, "boundaryKey": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "partitionKey": null, "firstProgress": 1000, "maxProgress": 2000, "firstSubtotalArea": 0.0, "maxSubtotalArea": 20.0},
+      {"sequence": 3, "startedAt": 3000, "lastObservedAt": 3010, "completionObservedAt": null, "boundaryKey": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "partitionKey": null, "firstProgress": 1000, "maxProgress": 3000, "firstSubtotalArea": 0.0, "maxSubtotalArea": 30.0}
+    ],
+    "transitions": []
+  },
+  "configuredZoneAreas": {
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": 300.0,
+    "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc": 250.0
+  }
+}
