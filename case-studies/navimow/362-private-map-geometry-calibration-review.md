@@ -42,7 +42,7 @@ The ignored analyzer
 Analyzer SHA-256:
 
 ```text
-42f141842df8be958ebcc094cbc371ab7e198861dcf96c6a932d0494ad50cc8a
+db3dbd460b85af06cde655c4c141b492e339b8afdf60a4d312295c5d7f1f1dee
 ```
 
 The alias configuration and private evidence hashes are intentionally omitted
@@ -79,7 +79,9 @@ Three independent checks support a local metric interpretation:
    agrees with the manufacturer-reported area within two per mille.
 
 The map-reported total also agrees with the sum of reported zone areas within
-one per mille. Every retained obstacle is assigned to exactly one zone.
+one per mille. Every retained obstacle is assigned to exactly one zone. The
+private per-zone distribution also matches the configuration independently
+reported from the official app. Exact counts remain private.
 
 This is strong evidence that the local coordinate unit is a metre candidate and
 the reported areas are square-metre candidates. It is not vendor documentation
@@ -241,6 +243,31 @@ local and OwnTracks WGS84 adapters.
 **Reason:** Presentation reuse is valuable; applying WGS84 rules to local mower
 coordinates is not.
 
+### AD-NAV-362-06: Treat map geometry as revisioned mutable input
+
+**Decision:** Calculate and retain a private canonical fingerprint over the
+reduced projection. A changed fingerprint invalidates the accepted geometry
+revision and requires topology, obstacle ownership, area and alias
+reconciliation before the new revision is used.
+
+**Reason:** Boundaries and excluded areas can be edited in the official app.
+The captured map is a versioned observation, not immutable installation data.
+
+The lifecycle contract is:
+
+1. keep the last accepted geometry revision available for display;
+2. mark it `stale` when a newly retrieved projection has a different
+   fingerprint;
+3. do not merge old and new path-derived area statistics geometrically;
+4. validate the candidate revision offline and bind aliases explicitly;
+5. activate it atomically as a new revision after validation;
+6. retain the revision key with every future path/statistics segment so
+   historical observations remain interpretable;
+7. never trigger an undocumented map request solely from an unbounded timer.
+
+Map freshness and a bounded, explicitly configured refresh mechanism remain
+separate productive design gates.
+
 ## 11. Gate Decision And Next Step
 
 | Gate | Result |
@@ -250,6 +277,8 @@ coordinates is not.
 | Station/map frame correlation | **PASS** |
 | Independent station-anchor repeatability | **PASS** |
 | Net-area reconciliation | **PASS** |
+| Private obstacle-distribution reconciliation | **PASS** |
+| Geometry revision fingerprint | **PASS privately** |
 | Local metric frame candidate | **PASS strong evidence** |
 | Geometry-only attribution | **NO-GO due overlap** |
 | Task-first zone attribution | **Required** |
@@ -262,7 +291,8 @@ coordinates is not.
 The recommended next step is an offline local-map and zone-statistics prototype
 that consumes synthetic fixtures publicly and the retained projection only in
 the ignored private overlay. It should prove viewport fitting, obstacle layers,
-task-first zone assignment, overlap diagnostics and reported-area denominators.
+task-first zone assignment, overlap diagnostics, reported-area denominators and
+revision replacement without mixing historical geometries.
 
 Only after that prototype should SAEF decide the productive IP-Symcon variable,
 archive and renderer contracts. Geographic tiles and the separate OwnTracks
