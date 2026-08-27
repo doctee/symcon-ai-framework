@@ -381,6 +381,7 @@ template or a general SAEF reference implementation.
 | `353-map-source-readiness-and-offline-geometry-reducer.md` | Rejects an unproven MQTT map topic, identifies the separately gated private REST geometry source and verifies a bounded transport-neutral reducer with synthetic fixtures. |
 | `354-private-map-cloud-vs-manual-calibration-feasibility.md` | Selects manually calibrated polygons as the stable baseline and bounds private app-cloud geometry behind separate account, credential, terms and capture gates. |
 | `355-private-map-capture-security-and-procedure-plan.md` | Defines a command-free but authentication-state-mutating private map capture with exact endpoint denial, process-local tokens, structure-only evidence and explicit server-session limitations. |
+| `356-private-map-capture-tool-implementation.md` | Implements the ignored command-free private map tool, binds its provenance and hashes, and verifies its closed operation, reducer and structure-only sanitizer contracts without network access. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
