@@ -395,6 +395,7 @@ template or a general SAEF reference implementation.
 | `367-local-map-runtime-integration-implementation.md` | Implements and fully offline-verifies the default-disabled Device-owned local-map runtime, bounded Account evidence projection, REST-authoritative station rendering and manifest-driven packaging while keeping every publication and live gate closed. |
 | `368-local-map-runtime-candidate-review-and-publication-readiness.md` | Reviews and freezes the default-disabled 42-file local-map candidate, explicit Dark-Skin theme contract, private visual evidence and separate publication and live gates. |
 | `369-local-map-runtime-saef-branch-publication.md` | Freezes the reviewed local-map runtime candidate for one Conventional Commit and bounded SAEF branch publication while leaving pull request, standalone and live gates closed. |
+| `370-local-map-runtime-saef-pull-request-publication.md` | Records ready-for-review SAEF PR 82, its exact initial head and scope, pending CI observation and the still separate review, merge, standalone and live gates. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
