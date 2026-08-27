@@ -390,6 +390,8 @@ template or a general SAEF reference implementation.
 | `362-private-map-geometry-calibration-review.md` | Reconciles private zones, station and historical dock evidence, validates net-area semantics, identifies an overlapping boundary pair and approves only an offline local-map bootstrap with task-first attribution. |
 | `363-local-map-scene-and-zone-statistics-offline-prototype.md` | Composes revision-bound geometry, path and pass-statistics candidates, proves task-first overlap handling and validates the retained private map without claiming geometric coverage or runtime integration. |
 | `364-revision-bounded-track-retention-and-local-map-renderer.md` | Adds bounded geometry-revision track retention and an active-content-free local-map SVG renderer with explicit REST-authoritative station-state presentation while keeping runtime integration closed. |
+| `365-local-map-runtime-integration-readiness-design.md` | Designs Device-owned local-map persistence, timer-coalesced rendering, explicit private revision acceptance, stable Symcon presentation and configuration-first rollback without productive integration. |
+| `366-local-map-runtime-integration-implementation-plan.md` | Freezes the additive distribution fileset, bounded parent evidence request, Device lifecycle, variable-stability tests and separate publication and live gates for the local-map runtime. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
