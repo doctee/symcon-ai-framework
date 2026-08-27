@@ -80,7 +80,7 @@ All new properties default to a disabled or empty state:
 | Property | Type | Default | Purpose |
 | --- | --- | --- | --- |
 | `EnableLocalMap` | Boolean | `false` | Master gate for projection and rendering. |
-| `AcceptedMapProjection` | String | empty | Private reduced geometry projection, bounded and validated. |
+| `AcceptedMapProjection` | String | empty | Private bounded import package containing reduced geometry, bindings and explicit frame approval. |
 | `AcceptedGeometryKey` | String | empty | Explicitly accepted configuration fingerprint. |
 | `HiddenZoneSequences` | String | `[1]` | JSON list of presentation-only hidden zone labels; the current private convention hides Zone 4's label while retaining its polygon. |
 | `TrackRetentionHours` | Integer | `72` | Additional time boundary inside the candidate's hard count and byte limits. |
@@ -88,7 +88,7 @@ All new properties default to a disabled or empty state:
 | `MapIdleRefreshInterval` | Integer | `300` | Render cadence while docked, stale or inactive. |
 
 The property names are a design candidate, not an approved public contract.
-The map projection is installation-private and must be bounded before it enters
+The map package is installation-private and must be bounded before it enters
 the module configuration. A future import UI should show a structure summary
 and geometry fingerprint, never raw credentials or private protocol details.
 
@@ -150,6 +150,11 @@ possibly misleading last color.
 Zone-label visibility is presentation-only. Hiding the current Zone 4 label
 does not remove its polygon, change task attribution, alter geometry hashing or
 change zone statistics.
+
+The renderer accepts an explicit `dark` or `light` presentation theme. The
+initial Device default is `dark` for the Symcon Dark Skin. Theme changes affect
+only colors: geometry, station authority, path retention and statistics remain
+unchanged.
 
 ## 8. Map Revision Workflow
 

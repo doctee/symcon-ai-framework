@@ -123,9 +123,13 @@ values must be normalized to bounded ranges during use:
 - `MapRefreshInterval=60`, allowed 15 to 900;
 - `MapIdleRefreshInterval=300`, allowed 60 to 3600.
 
+The private projection input contains one format-version-1 package with
+`geometry`, `bindings` and `frameCorrelationApproved=true`. Geometry alone is
+insufficient because task evidence could not be assigned to private zones.
+
 The form exposes the master checkbox, bounded intervals, hidden-zone sequence
-list and a multiline private projection input. It shows the computed revision
-summary and never echoes raw geometry in validation errors.
+list, explicit color theme and a multiline private package input. It shows the
+computed revision summary and never echoes raw geometry in validation errors.
 
 ### 6.2 New attributes
 
@@ -176,7 +180,8 @@ One successful refresh performs this fixed sequence:
 8. ingest that scene into `RevisionBoundedTrackStore`;
 9. project only the accepted current revision;
 10. map fresh REST `VehicleState` to station presentation state;
-11. render SVG with hidden-zone sequences;
+11. render SVG with hidden-zone sequences and the validated explicit
+    `dark` or `light` theme;
 12. atomically persist validated retained state, metadata and SVG;
 13. schedule the next active or idle interval.
 
@@ -194,6 +199,9 @@ Focused tests must prove:
 | fresh other known active or idle state | `undocked` |
 | `Online=false` | `unknown` |
 | `LastStatusUpdate` older than the REST stale boundary | `unknown` |
+
+Theme tests must additionally prove that `dark` is the default, `light` is an
+explicit alternative and every other value fails configuration validation.
 | unsupported value | `unknown` |
 
 MQTT `vehicleStateCode` variations must not alter this result.

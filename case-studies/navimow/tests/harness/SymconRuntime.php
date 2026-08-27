@@ -18,6 +18,7 @@ if (!class_exists('IPSModule')) {
         private array $properties = [];
         private array $attributes = [];
         private array $variables = [];
+        private array $variableDefinitions = [];
         private array $timers = [];
         private array $registeredMessages = [];
         private array $debugEntries = [];
@@ -129,6 +130,12 @@ if (!class_exists('IPSModule')) {
             int $position
         ): void {
             $this->variables[$ident] ??= '';
+            $this->variableDefinitions[$ident] ??= [
+                'type' => 3,
+                'name' => $name,
+                'profile' => $profile,
+                'position' => $position,
+            ];
         }
 
         protected function RegisterVariableInteger(
@@ -138,6 +145,12 @@ if (!class_exists('IPSModule')) {
             int $position
         ): void {
             $this->variables[$ident] ??= 0;
+            $this->variableDefinitions[$ident] ??= [
+                'type' => 1,
+                'name' => $name,
+                'profile' => $profile,
+                'position' => $position,
+            ];
         }
 
         protected function RegisterVariableBoolean(
@@ -147,6 +160,12 @@ if (!class_exists('IPSModule')) {
             int $position
         ): void {
             $this->variables[$ident] ??= false;
+            $this->variableDefinitions[$ident] ??= [
+                'type' => 0,
+                'name' => $name,
+                'profile' => $profile,
+                'position' => $position,
+            ];
         }
 
         protected function SetValue(string $ident, mixed $value): void
@@ -271,6 +290,11 @@ if (!class_exists('IPSModule')) {
             return $this->requireEntry($this->variables, $ident, 'variable');
         }
 
+        public function testVariableDefinitions(): array
+        {
+            return $this->variableDefinitions;
+        }
+
         public function testSetVariable(string $ident, mixed $value): void
         {
             $this->requireEntry($this->variables, $ident, 'variable');
@@ -385,5 +409,12 @@ if (!function_exists('IPS_SemaphoreEnter')) {
 if (!function_exists('IPS_SemaphoreLeave')) {
     function IPS_SemaphoreLeave(string $name): void
     {
+    }
+}
+
+if (!function_exists('IPS_SetHidden')) {
+    function IPS_SetHidden(int $id, bool $hidden): void
+    {
+        $GLOBALS['SAEF_TEST_HIDDEN'][$id] = $hidden;
     }
 }

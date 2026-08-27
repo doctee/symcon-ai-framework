@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Navimow\Prototype;
+namespace Navimow;
 
 use InvalidArgumentException;
 

@@ -94,6 +94,22 @@ assertRevisionBoundedTrack(
     RevisionBoundedTrackStore::serializeState($restored) === $serialized,
     'Serialized retained-track state is not stable.'
 );
+$scenePath = RevisionBoundedTrackStore::scenePath($restored, $firstKey);
+assertRevisionBoundedTrack(
+    $scenePath['status'] === 'included'
+        && count($scenePath['segments']) === 1
+        && count($scenePath['segments'][0]['points']) === 2
+        && $scenePath['segments'][0]['points'][0]
+            ['attribution']['source'] === 'geometry-fallback',
+    'Retained track could not be projected for rendering.'
+);
+$pruned = RevisionBoundedTrackStore::pruneBefore($restored, 1005);
+$prunedProjection = RevisionBoundedTrackStore::project($pruned);
+assertRevisionBoundedTrack(
+    $prunedProjection['pointCount'] === 1
+        && $prunedProjection['counters']['evictedPointCount'] === 1,
+    'Time-bounded track pruning differs.'
+);
 
 $state = RevisionBoundedTrackStore::ingestScene($state, $firstScene);
 $projection = RevisionBoundedTrackStore::project($state);

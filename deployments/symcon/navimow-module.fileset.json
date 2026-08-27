@@ -23,10 +23,14 @@
     {"source": "case-studies/navimow/distribution/library.json", "target": "library.json"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/ApiClient.php", "target": "libs/Navimow/ApiClient.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/CommandContract.php", "target": "libs/Navimow/CommandContract.php"},
+    {"source": "case-studies/navimow/distribution/libs/Navimow/LocalMapSceneProjector.php", "target": "libs/Navimow/LocalMapSceneProjector.php"},
+    {"source": "case-studies/navimow/distribution/libs/Navimow/LocalMapSvgRenderer.php", "target": "libs/Navimow/LocalMapSvgRenderer.php"},
+    {"source": "case-studies/navimow/distribution/libs/Navimow/MapGeometryReducer.php", "target": "libs/Navimow/MapGeometryReducer.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/MqttCredentialMapper.php", "target": "libs/Navimow/MqttCredentialMapper.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/MqttEnvelopeException.php", "target": "libs/Navimow/MqttEnvelopeException.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/MqttEnvelopeParser.php", "target": "libs/Navimow/MqttEnvelopeParser.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/MqttPartialStateAccumulator.php", "target": "libs/Navimow/MqttPartialStateAccumulator.php"},
+    {"source": "case-studies/navimow/distribution/libs/Navimow/MqttPathSegmenter.php", "target": "libs/Navimow/MqttPathSegmenter.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/MqttPayloadException.php", "target": "libs/Navimow/MqttPayloadException.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/MqttPayloadParser.php", "target": "libs/Navimow/MqttPayloadParser.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/MqttPositionDiagnostic.php", "target": "libs/Navimow/MqttPositionDiagnostic.php"},
@@ -34,6 +38,9 @@
     {"source": "case-studies/navimow/distribution/libs/Navimow/MqttTransportConfiguration.php", "target": "libs/Navimow/MqttTransportConfiguration.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/OAuthHelper.php", "target": "libs/Navimow/OAuthHelper.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/PayloadMapper.php", "target": "libs/Navimow/PayloadMapper.php"},
-    {"source": "case-studies/navimow/distribution/libs/Navimow/Profiles.php", "target": "libs/Navimow/Profiles.php"}
+    {"source": "case-studies/navimow/distribution/libs/Navimow/Profiles.php", "target": "libs/Navimow/Profiles.php"},
+    {"source": "case-studies/navimow/distribution/libs/Navimow/RevisionBoundedTrackStore.php", "target": "libs/Navimow/RevisionBoundedTrackStore.php"},
+    {"source": "case-studies/navimow/distribution/libs/Navimow/ZoneStatisticsReducer.php", "target": "libs/Navimow/ZoneStatisticsReducer.php"},
+    {"source": "helpers/diagnostics/ConfigurationHash.php", "target": "libs/SAEF/helpers/diagnostics/ConfigurationHash.php"}
   ]
 }

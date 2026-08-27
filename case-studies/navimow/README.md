@@ -392,6 +392,9 @@ template or a general SAEF reference implementation.
 | `364-revision-bounded-track-retention-and-local-map-renderer.md` | Adds bounded geometry-revision track retention and an active-content-free local-map SVG renderer with explicit REST-authoritative station-state presentation while keeping runtime integration closed. |
 | `365-local-map-runtime-integration-readiness-design.md` | Designs Device-owned local-map persistence, timer-coalesced rendering, explicit private revision acceptance, stable Symcon presentation and configuration-first rollback without productive integration. |
 | `366-local-map-runtime-integration-implementation-plan.md` | Freezes the additive distribution fileset, bounded parent evidence request, Device lifecycle, variable-stability tests and separate publication and live gates for the local-map runtime. |
+| `367-local-map-runtime-integration-implementation.md` | Implements and fully offline-verifies the default-disabled Device-owned local-map runtime, bounded Account evidence projection, REST-authoritative station rendering and manifest-driven packaging while keeping every publication and live gate closed. |
+| `368-local-map-runtime-candidate-review-and-publication-readiness.md` | Reviews and freezes the default-disabled 42-file local-map candidate, explicit Dark-Skin theme contract, private visual evidence and separate publication and live gates. |
+| `369-local-map-runtime-saef-branch-publication.md` | Freezes the reviewed local-map runtime candidate for one Conventional Commit and bounded SAEF branch publication while leaving pull request, standalone and live gates closed. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

@@ -36,6 +36,7 @@ $configuredSvg = LocalMapSvgRenderer::render(
         'stationState' => 'docking',
     ]
 );
+$lightSvg = LocalMapSvgRenderer::render($scene, ['theme' => 'light']);
 
 assertLocalMapSvg(
     str_starts_with($svg, '<svg xmlns="http://www.w3.org/2000/svg"')
@@ -50,12 +51,20 @@ assertLocalMapSvg(
         && substr_count($svg, 'class="station station-unknown"') === 1
         && substr_count($svg, 'class="mower"') === 1
         && str_contains($svg, 'rotate(-180)')
-        && str_contains($svg, 'station-docked rect{fill:#16a34a')
-        && str_contains($svg, 'station-docking rect{fill:#d97706')
-        && str_contains($svg, 'station-undocked rect{fill:#64748b')
-        && str_contains($svg, 'fill-opacity:.12')
+        && str_contains($svg, 'data-theme="dark"')
+        && str_contains($svg, '.background{fill:#171b1f}')
+        && str_contains($svg, 'station-docked rect{fill:#22a06b')
+        && str_contains($svg, 'station-docking rect{fill:#d98b22')
+        && str_contains($svg, 'station-undocked rect{fill:#75818a')
+        && str_contains($svg, 'fill-opacity:.08')
         && str_contains($svg, 'stroke-dasharray:1.1 .8'),
     'Expected map layers are missing.'
+);
+assertLocalMapSvg(
+    str_contains($lightSvg, 'data-theme="light"')
+        && str_contains($lightSvg, '.background{fill:#f8fafc}')
+        && str_contains($lightSvg, '.path{fill:none;stroke:#111827'),
+    'Explicit light theme differs.'
 );
 assertLocalMapSvg(
     substr_count(
@@ -121,6 +130,13 @@ assertLocalMapSvgRejected(
         ['stationState' => 'moving']
     ),
     'An unknown station state was accepted.'
+);
+assertLocalMapSvgRejected(
+    static fn (): string => LocalMapSvgRenderer::render(
+        $scene,
+        ['theme' => 'system']
+    ),
+    'An unknown map theme was accepted.'
 );
 assertLocalMapSvgRejected(
     static fn (): string => LocalMapSvgRenderer::render(
