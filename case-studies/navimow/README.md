@@ -379,6 +379,7 @@ template or a general SAEF reference implementation.
 | `351-provider-neutral-track-map-and-zone-calibration-plan.md` | Separates a future shared Navimow/OwnTracks track renderer from provider adapters and defines authoritative, digitized and inferred zone-geometry gates. |
 | `352-zone-geometry-structure-evidence-and-owntracks-handoff.md` | Records the privacy-safe static geometry search, classifies area identifiers and the opaque map-work field, and hands OwnTracks inventory to a separate workstream. |
 | `353-map-source-readiness-and-offline-geometry-reducer.md` | Rejects an unproven MQTT map topic, identifies the separately gated private REST geometry source and verifies a bounded transport-neutral reducer with synthetic fixtures. |
+| `354-private-map-cloud-vs-manual-calibration-feasibility.md` | Selects manually calibrated polygons as the stable baseline and bounds private app-cloud geometry behind separate account, credential, terms and capture gates. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
