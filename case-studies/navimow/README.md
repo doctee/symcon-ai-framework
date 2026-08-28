@@ -399,6 +399,7 @@ template or a general SAEF reference implementation.
 | `371-local-map-runtime-pr-review-and-checks.md` | Records terminal green CI and one blocking medium fail-closed configuration finding in PR 82; merge remains closed pending a focused correction. |
 | `372-local-map-runtime-fail-closed-configuration-correction.md` | Corrects PR 82's configuration-first lifecycle finding by composing existing validators before visibility, timer or parent reads and verifies invalid update cleanup offline. |
 | `373-local-map-runtime-correction-re-review-and-merge-decision.md` | Closes the corrected PR finding after exact-delta re-review and fresh full validation, recommends the SAEF merge and keeps publication and live gates separate. |
+| `374-local-map-runtime-saef-merge-and-canonical-verification.md` | Records PR 82's merge commit, proves exact canonical tree equality and reruns the complete Navimow checks from a clean post-merge worktree while retaining release and live gates. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
