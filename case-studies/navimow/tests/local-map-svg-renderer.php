@@ -61,9 +61,30 @@ assertLocalMapSvg(
     'Expected map layers are missing.'
 );
 assertLocalMapSvg(
+    substr_count($svg, '<g class="legend"') === 1
+        && str_contains($svg, '<title>Symbollegende</title>')
+        && str_contains($svg, '>Station</text>')
+        && str_contains($svg, '>Mäher</text>')
+        && str_contains($svg, '>Fahrspur</text>')
+        && str_contains($svg, '>Sperrbereich</text>')
+        && str_contains($svg, '>Zuordnung prüfen</text>')
+        && str_contains(
+            $svg,
+            'class="legend-station legend-station-unknown"'
+        )
+        && substr_count($svg, 'class="station station-') === 1
+        && substr_count($svg, 'class="mower"') === 1
+        && substr_count($svg, '<polyline class="path"') === 5
+        && substr_count($svg, '<circle class="path-point') === 2
+        && substr_count($svg, '<polygon class="obstacle') === 3,
+    'Legend content or semantic layer isolation differs.'
+);
+assertLocalMapSvg(
     str_contains($lightSvg, 'data-theme="light"')
         && str_contains($lightSvg, '.background{fill:#f8fafc}')
-        && str_contains($lightSvg, '.path{fill:none;stroke:#111827'),
+        && str_contains($lightSvg, '.path{fill:none;stroke:#111827')
+        && str_contains($lightSvg, '.legend-background{fill:#ffffff')
+        && str_contains($lightSvg, 'fill:#1f2937'),
     'Explicit light theme differs.'
 );
 assertLocalMapSvg(
@@ -104,6 +125,10 @@ assertLocalMapSvg(
         && str_contains(
             $configuredSvg,
             '<title>Mower returning to station</title>'
+        )
+        && str_contains(
+            $configuredSvg,
+            'class="legend-station legend-station-docking"'
         ),
     'Configured zone-label visibility or station state differs.'
 );
