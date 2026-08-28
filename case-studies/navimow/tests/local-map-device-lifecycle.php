@@ -59,23 +59,83 @@ assertLocalMapLifecycle(
     'Kernel reconciliation did not select the active cadence.'
 );
 
-$invalidTheme = new LocalMapLifecycleDevice(4102);
-$invalidTheme->Create();
-$invalidTheme->testSetProperty('DeviceId', 'SYNTHETIC_DEVICE');
-$invalidTheme->testSetProperty('EnableLocalMap', true);
-$invalidTheme->testSetProperty(
-    'AcceptedMapProjection',
-    json_encode($fixture['package'], JSON_THROW_ON_ERROR)
-);
-$invalidTheme->testSetProperty(
-    'AcceptedGeometryKey',
-    $fixture['geometryKey']
-);
-$invalidTheme->testSetProperty('MapTheme', 'system');
-$invalidTheme->ApplyChanges();
-assertLocalMapLifecycle(
-    $invalidTheme->testTimerInterval('LocalMapRefresh') === 0,
-    'Unknown map theme did not fail configuration validation.'
-);
+$invalidGeometry = $fixture['package'];
+$invalidGeometry['geometry']['zones'][0]['ring'] = [[0.0, 0.0]];
+$invalidBinding = $fixture['package'];
+$invalidBinding['bindings'][0]['zoneId'] = 999;
+$invalidCases = [
+    'blank DeviceId' => [
+        'deviceId' => '',
+        'package' => $fixture['package'],
+        'geometryKey' => $fixture['geometryKey'],
+        'hidden' => '[1]',
+        'theme' => 'dark',
+    ],
+    'invalid hidden zones' => [
+        'deviceId' => 'SYNTHETIC_DEVICE',
+        'package' => $fixture['package'],
+        'geometryKey' => $fixture['geometryKey'],
+        'hidden' => '{invalid',
+        'theme' => 'dark',
+    ],
+    'invalid theme' => [
+        'deviceId' => 'SYNTHETIC_DEVICE',
+        'package' => $fixture['package'],
+        'geometryKey' => $fixture['geometryKey'],
+        'hidden' => '[1]',
+        'theme' => 'system',
+    ],
+    'invalid geometry' => [
+        'deviceId' => 'SYNTHETIC_DEVICE',
+        'package' => $invalidGeometry,
+        'geometryKey' => SAEF_CreateConfigurationHash(
+            $invalidGeometry['geometry']
+        ),
+        'hidden' => '[1]',
+        'theme' => 'dark',
+    ],
+    'invalid binding' => [
+        'deviceId' => 'SYNTHETIC_DEVICE',
+        'package' => $invalidBinding,
+        'geometryKey' => $fixture['geometryKey'],
+        'hidden' => '[1]',
+        'theme' => 'dark',
+    ],
+];
+$invalidInstanceId = 4102;
+foreach ($invalidCases as $name => $case) {
+    $invalid = new LocalMapLifecycleDevice($invalidInstanceId++);
+    $invalid->Create();
+    $invalid->testSetProperty('DeviceId', $case['deviceId']);
+    $invalid->testSetProperty('EnableLocalMap', true);
+    $invalid->testSetProperty(
+        'AcceptedMapProjection',
+        json_encode($case['package'], JSON_THROW_ON_ERROR)
+    );
+    $invalid->testSetProperty(
+        'AcceptedGeometryKey',
+        $case['geometryKey']
+    );
+    $invalid->testSetProperty('HiddenZoneSequences', $case['hidden']);
+    $invalid->testSetProperty('MapTheme', $case['theme']);
+    $requestCount = 0;
+    $invalid->testSetParentHandler(
+        static function () use (&$requestCount): string {
+            ++$requestCount;
+            return '{}';
+        }
+    );
+    $invalid->ApplyChanges();
+    assertLocalMapLifecycle(
+        $invalid->testTimerInterval('LocalMapRefresh') === 0
+            && $invalid->testReadVariable('LocalMap') === ''
+            && $invalid->RefreshLocalMap()
+                === 'Local map configuration is invalid.'
+            && $invalid->testTimerInterval('LocalMapRefresh') === 0
+            && $invalid->testReadVariable('LocalMap') === ''
+            && $requestCount === 0,
+        'Invalid configuration did not fail closed: ' . $name
+    );
+}
 
 echo "Navimow local-map Device lifecycle checks passed.\n";

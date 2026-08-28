@@ -70,6 +70,33 @@ assertLocalMapRestart(
     'Feature disable did not stop rendering while retaining bounded state.'
 );
 
+$invalidConfiguration = new LocalMapRestartDevice(4403);
+$invalidConfiguration->Create();
+$invalidConfiguration->testRestorePersistentState($snapshot);
+$invalidConfiguration->testSetProperty(
+    'HiddenZoneSequences',
+    '{invalid'
+);
+$parentRequestCount = 0;
+$invalidConfiguration->testSetParentHandler(
+    static function () use (&$parentRequestCount): string {
+        ++$parentRequestCount;
+        return '{}';
+    }
+);
+$invalidConfiguration->ApplyChanges();
+assertLocalMapRestart(
+    $invalidConfiguration->testTimerInterval('LocalMapRefresh') === 0
+        && $invalidConfiguration->testReadVariable('LocalMap') === ''
+        && $invalidConfiguration->testReadAttribute(
+            'LocalMapTrackState'
+        ) === $track
+        && $invalidConfiguration->RefreshLocalMap()
+            === 'Local map configuration is invalid.'
+        && $parentRequestCount === 0,
+    'Invalid configuration retained presentation or performed a parent read.'
+);
+
 $corrupt = new LocalMapRestartDevice(4402);
 $corrupt->Create();
 $corrupt->testRestorePersistentState($snapshot);

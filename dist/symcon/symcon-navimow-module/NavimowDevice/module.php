@@ -147,6 +147,12 @@ class NavimowDevice extends IPSModule
             $this->SetTimerInterval('LocalMapRefresh', 0);
             return 'Local map is disabled.';
         }
+        if (!$this->localMapConfigurationIsValid()) {
+            $this->SetTimerInterval('LocalMapRefresh', 0);
+            $this->SetValue('LocalMap', '');
+            $this->setLocalMapHidden(true);
+            return 'Local map configuration is invalid.';
+        }
         $lockName = 'NAVIMOW_LOCAL_MAP_' . $this->InstanceID;
         if (
             !IPS_SemaphoreEnter(
@@ -893,19 +899,54 @@ class NavimowDevice extends IPSModule
 
     private function localMapConfigurationIsValid(): bool
     {
-        if (!$this->ReadPropertyBoolean('EnableLocalMap')) {
+        if (
+            !$this->ReadPropertyBoolean('EnableLocalMap')
+            || trim($this->ReadPropertyString('DeviceId')) === ''
+        ) {
             return false;
         }
         try {
             $package = $this->acceptedLocalMapPackage();
-            $this->localMapTheme();
-            return hash_equals(
-                $this->ReadPropertyString('AcceptedGeometryKey'),
-                SAEF_CreateConfigurationHash($package['geometry'])
+            $geometryKey = $this->ReadPropertyString(
+                'AcceptedGeometryKey'
             );
+            $this->hiddenZoneSequences();
+            $this->localMapTheme();
+            if (
+                !hash_equals(
+                    $geometryKey,
+                    SAEF_CreateConfigurationHash($package['geometry'])
+                )
+            ) {
+                return false;
+            }
+            $this->validateLocalMapPackage($package, $geometryKey);
+
+            return true;
         } catch (Throwable) {
             return false;
         }
+    }
+
+    /** @param array<string, mixed> $package */
+    private function validateLocalMapPackage(
+        array $package,
+        string $geometryKey
+    ): void {
+        $this->configuredZoneAreas($package);
+        Navimow\LocalMapSceneProjector::build(
+            $package['geometry'],
+            $this->emptyLocalMapPath(),
+            $this->emptyLocalMapStatistics(),
+            $package['bindings'],
+            [
+                'currentGeometryKey' => $geometryKey,
+                'acceptedGeometryKey' => $geometryKey,
+                'pathGeometryKey' => $geometryKey,
+                'statisticsGeometryKey' => $geometryKey,
+                'frameCorrelationApproved' => true,
+            ]
+        );
     }
 
     /** @param array<string, mixed> $evidence */
@@ -1039,14 +1080,7 @@ class NavimowDevice extends IPSModule
     {
         $encoded = $this->ReadAttributeString('LocalMapStatisticsState');
         if ($encoded === '' || $encoded === '{}') {
-            return [
-                'formatVersion' => 1,
-                'authority' => 'mqtt-inference',
-                'percentageContract' => [
-                    'geometricCoveragePercent' => 'not-implemented',
-                ],
-                'zones' => [],
-            ];
+            return $this->emptyLocalMapStatistics();
         }
         $statistics = json_decode(
             $encoded,
@@ -1077,18 +1111,9 @@ class NavimowDevice extends IPSModule
         array $package,
         string $geometryKey
     ): array {
-        $emptyPath = [
-            'formatVersion' => 1,
-            'authority' => 'mqtt-inference',
-            'coordinateFrame' => 'uncalibrated-local',
-            'latest' => null,
-            'segments' => [],
-            'counters' => [],
-            'policy' => [],
-        ];
         $scene = Navimow\LocalMapSceneProjector::build(
             $package['geometry'],
-            $emptyPath,
+            $this->emptyLocalMapPath(),
             $this->restoreLocalMapStatistics(),
             $package['bindings'],
             [
@@ -1114,6 +1139,33 @@ class NavimowDevice extends IPSModule
             ]),
             'segmentCount' => $projection['segmentCount'],
             'pointCount' => $projection['pointCount'],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function emptyLocalMapPath(): array
+    {
+        return [
+            'formatVersion' => 1,
+            'authority' => 'mqtt-inference',
+            'coordinateFrame' => 'uncalibrated-local',
+            'latest' => null,
+            'segments' => [],
+            'counters' => [],
+            'policy' => [],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function emptyLocalMapStatistics(): array
+    {
+        return [
+            'formatVersion' => 1,
+            'authority' => 'mqtt-inference',
+            'percentageContract' => [
+                'geometricCoveragePercent' => 'not-implemented',
+            ],
+            'zones' => [],
         ];
     }
 
