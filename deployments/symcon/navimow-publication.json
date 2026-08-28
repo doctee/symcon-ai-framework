@@ -55,10 +55,14 @@
     "library.json",
     "libs/Navimow/ApiClient.php",
     "libs/Navimow/CommandContract.php",
+    "libs/Navimow/LocalMapSceneProjector.php",
+    "libs/Navimow/LocalMapSvgRenderer.php",
+    "libs/Navimow/MapGeometryReducer.php",
     "libs/Navimow/MqttCredentialMapper.php",
     "libs/Navimow/MqttEnvelopeException.php",
     "libs/Navimow/MqttEnvelopeParser.php",
     "libs/Navimow/MqttPartialStateAccumulator.php",
+    "libs/Navimow/MqttPathSegmenter.php",
     "libs/Navimow/MqttPayloadException.php",
     "libs/Navimow/MqttPayloadParser.php",
     "libs/Navimow/MqttPositionDiagnostic.php",
@@ -66,7 +70,10 @@
     "libs/Navimow/MqttTransportConfiguration.php",
     "libs/Navimow/OAuthHelper.php",
     "libs/Navimow/PayloadMapper.php",
-    "libs/Navimow/Profiles.php"
+    "libs/Navimow/Profiles.php",
+    "libs/Navimow/RevisionBoundedTrackStore.php",
+    "libs/Navimow/ZoneStatisticsReducer.php",
+    "libs/SAEF/helpers/diagnostics/ConfigurationHash.php"
   ],
   "privacy": {
     "forbiddenMarkers": ["/Users/", "private/navimow-capture"]

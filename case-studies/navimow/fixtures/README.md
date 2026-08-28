@@ -49,6 +49,16 @@ fixtures/
 The MQTT/WSS technical spike started in steps 85 and 86. Its first docked
 receive-only evidence is documented in step 87 and the nested MQTT README.
 
+## Synthetic Map Fixtures
+
+| Fixture | Purpose |
+| --- | --- |
+| `map/map-detail-plain-synthetic.json` | Exercises bounded private-map decoding without installation geometry. |
+| `map/local-map-scene-synthetic.json` | Composes four synthetic zones, an unassigned zone, unique obstacles, one boundary overlap, task-correlated points, pass statistics and revision replacement. |
+
+Map fixtures are entirely synthetic. They preserve only the candidate contract
+and must never be replaced with a sanitized copy of real garden geometry.
+
 ## Required REST Fixtures
 
 The REST MVP needs these sanitized fixtures before implementation moves beyond

@@ -22,6 +22,16 @@ php case-studies/navimow/tests/mqtt-receiver-scaffold.php
 php case-studies/navimow/tests/mqtt-account-ingestion.php
 php case-studies/navimow/tests/mqtt-task-observation-ledger.php
 php case-studies/navimow/tests/path-zone-prototype.php
+php case-studies/navimow/tests/map-geometry-reducer.php
+php case-studies/navimow/tests/local-map-scene-prototype.php
+php case-studies/navimow/tests/local-map-svg-renderer.php
+php case-studies/navimow/tests/revision-bounded-track-store.php
+php case-studies/navimow/tests/local-map-evidence-contract.php
+php case-studies/navimow/tests/local-map-device-lifecycle.php
+php case-studies/navimow/tests/local-map-runtime-reducer.php
+php case-studies/navimow/tests/local-map-variable-stability.php
+php case-studies/navimow/tests/local-map-restart-and-disable.php
+php case-studies/navimow/tests/local-map-distribution-fileset.php
 php case-studies/navimow/tests/mqtt-shadow-diagnostics.php
 php case-studies/navimow/tests/mqtt-pilot-checkpoints.php
 php case-studies/navimow/tests/mqtt-shadow-reconciliation.php
@@ -33,16 +43,34 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/NavimowDevice/module.php \
     case-studies/navimow/distribution/NavimowMqttReceiver/module.php \
     case-studies/navimow/distribution/libs/Navimow/ApiClient.php \
+    case-studies/navimow/distribution/libs/Navimow/LocalMapSceneProjector.php \
+    case-studies/navimow/distribution/libs/Navimow/LocalMapSvgRenderer.php \
+    case-studies/navimow/distribution/libs/Navimow/MapGeometryReducer.php \
     case-studies/navimow/distribution/libs/Navimow/MqttCredentialMapper.php \
     case-studies/navimow/distribution/libs/Navimow/MqttEnvelopeException.php \
     case-studies/navimow/distribution/libs/Navimow/MqttEnvelopeParser.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPayloadException.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPayloadParser.php \
+    case-studies/navimow/distribution/libs/Navimow/MqttPathSegmenter.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPartialStateAccumulator.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPositionDiagnostic.php \
     case-studies/navimow/distribution/libs/Navimow/MqttTaskObservationLedger.php \
     case-studies/navimow/distribution/libs/Navimow/MqttTransportConfiguration.php \
-    case-studies/navimow/distribution/libs/Navimow/PayloadMapper.php
+    case-studies/navimow/distribution/libs/Navimow/PayloadMapper.php \
+    case-studies/navimow/distribution/libs/Navimow/RevisionBoundedTrackStore.php \
+    case-studies/navimow/distribution/libs/Navimow/ZoneStatisticsReducer.php \
+    case-studies/navimow/candidate/MapGeometryReducer.php \
+    case-studies/navimow/candidate/LocalMapSceneProjector.php \
+    case-studies/navimow/candidate/LocalMapSvgRenderer.php \
+    case-studies/navimow/candidate/RevisionBoundedTrackStore.php \
+    case-studies/navimow/tests/local-map-svg-renderer.php \
+    case-studies/navimow/tests/revision-bounded-track-store.php \
+    case-studies/navimow/tests/local-map-evidence-contract.php \
+    case-studies/navimow/tests/local-map-device-lifecycle.php \
+    case-studies/navimow/tests/local-map-runtime-reducer.php \
+    case-studies/navimow/tests/local-map-variable-stability.php \
+    case-studies/navimow/tests/local-map-restart-and-disable.php \
+    case-studies/navimow/tests/local-map-distribution-fileset.php
 
 "$vendor_dir/bin/phpstan" analyse \
     --configuration=phpstan.neon \
@@ -53,10 +81,22 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/NavimowDevice/module.php \
     case-studies/navimow/distribution/NavimowMqttReceiver/module.php \
     case-studies/navimow/distribution/libs/Navimow/ApiClient.php \
+    case-studies/navimow/distribution/libs/Navimow/LocalMapSceneProjector.php \
+    case-studies/navimow/distribution/libs/Navimow/LocalMapSvgRenderer.php \
+    case-studies/navimow/distribution/libs/Navimow/MapGeometryReducer.php \
     case-studies/navimow/distribution/libs/Navimow/MqttCredentialMapper.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPayloadParser.php \
+    case-studies/navimow/distribution/libs/Navimow/MqttPathSegmenter.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPositionDiagnostic.php \
     case-studies/navimow/distribution/libs/Navimow/MqttTaskObservationLedger.php \
-    case-studies/navimow/distribution/libs/Navimow/MqttTransportConfiguration.php
+    case-studies/navimow/distribution/libs/Navimow/MqttTransportConfiguration.php \
+    case-studies/navimow/distribution/libs/Navimow/RevisionBoundedTrackStore.php \
+    case-studies/navimow/distribution/libs/Navimow/ZoneStatisticsReducer.php \
+    case-studies/navimow/candidate/MapGeometryReducer.php \
+    case-studies/navimow/candidate/LocalMapSceneProjector.php \
+    case-studies/navimow/candidate/LocalMapSvgRenderer.php \
+    case-studies/navimow/candidate/RevisionBoundedTrackStore.php \
+    case-studies/navimow/tests/local-map-svg-renderer.php \
+    case-studies/navimow/tests/revision-bounded-track-store.php
 
 printf '%s\n' "Navimow MQTT shadow offline checks passed."

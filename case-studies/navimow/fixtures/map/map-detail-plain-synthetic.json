@@ -1,0 +1,55 @@
+{
+  "map_detail": {
+    "area": "164.0",
+    "sub_maps": [
+      {
+        "id": 1,
+        "name": "Synthetic A",
+        "area": "100.0",
+        "elements": [
+          {
+            "type": "BOUNDARY",
+            "points": [
+              [0, 0, 1, 0],
+              [10, 0, 1, 1],
+              [10, 10, 2, 2],
+              [0, 10, 2, 3]
+            ]
+          },
+          {
+            "type": "CHARGING_PILE",
+            "position": [1.5, 0.5],
+            "direction": "1.5708"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "name": "Synthetic B",
+        "area": 64,
+        "elements": [
+          {
+            "type": "BOUNDARY",
+            "points": [
+              [12, 0, 1],
+              [20, 0, 1],
+              [20, 8, 1],
+              [12, 8, 1],
+              [12, 0, 1]
+            ]
+          }
+        ]
+      }
+    ],
+    "obstacles": [
+      {
+        "points": [[2, 2], [3, 2], [3, 3], [2, 3]]
+      }
+    ],
+    "vision_off_areas": [
+      {
+        "points": [[14, 2], [16, 2], [16, 4], [14, 4]]
+      }
+    ]
+  }
+}
