@@ -158,7 +158,7 @@ mower command occurred.
 | --- | --- |
 | Lifecycle correction implementation | Passed |
 | Complete offline verification | Passed |
-| SAEF branch publication and review | PR 89 published; final CI pending |
+| SAEF branch publication and review | Passed; PR 89 merged |
 | Standalone Navimow publication | Passed |
 | Guarded Symcon update | Passed |
 | Immediate and delayed read-only verification | Passed |
@@ -177,6 +177,5 @@ be conflated with the instance lifecycle status.
 
 ## Next Step
 
-Merge SAEF PR 89 after its final checks pass and verify the canonical `main`
-tree. Statistics may then accumulate during a separately authorized bounded
-receive-only MQTT observation; no transport activation is implied by this step.
+Statistics may accumulate during a separately authorized bounded receive-only
+MQTT observation. No transport activation is implied by this completed step.
