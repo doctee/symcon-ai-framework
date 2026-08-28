@@ -49,7 +49,7 @@ assertLocalMapSvg(
         && substr_count($svg, '<polygon class="obstacle') === 3
         && substr_count($svg, '<polyline class="path"') > 0
         && substr_count($svg, 'class="station station-unknown"') === 1
-        && substr_count($svg, 'class="mower"') === 1
+        && substr_count($svg, 'class="mower mower-unknown"') === 1
         && str_contains($svg, 'rotate(-180)')
         && str_contains($svg, 'data-theme="dark"')
         && str_contains($svg, '.background{fill:#171b1f}')
@@ -65,6 +65,11 @@ assertLocalMapSvg(
         && str_contains($svg, '<title>Symbollegende</title>')
         && str_contains($svg, '>Station</text>')
         && str_contains($svg, '>Mäher</text>')
+        && str_contains($svg, '>Angedockt</text>')
+        && str_contains($svg, '>Unterwegs</text>')
+        && str_contains($svg, '>Pause/Bereit</text>')
+        && str_contains($svg, '>Störung</text>')
+        && str_contains($svg, '>Offline</text>')
         && str_contains($svg, '>Fahrspur</text>')
         && str_contains($svg, '>Sperrbereich</text>')
         && str_contains($svg, '>Zuordnung prüfen</text>')
@@ -73,7 +78,7 @@ assertLocalMapSvg(
             'class="legend-station legend-station-unknown"'
         )
         && substr_count($svg, 'class="station station-') === 1
-        && substr_count($svg, 'class="mower"') === 1
+        && substr_count($svg, 'class="mower mower-unknown"') === 1
         && substr_count($svg, '<polyline class="path"') === 5
         && substr_count($svg, '<circle class="path-point') === 2
         && substr_count($svg, '<polygon class="obstacle') === 3,
@@ -148,6 +153,54 @@ assertLocalMapSvg(
             'class="station station-undocked"'
         ),
     'Docked or undocked station presentation differs.'
+);
+foreach (
+    [
+        'active',
+        'paused',
+        'returning',
+        'attention',
+        'offline',
+        'docked',
+        'unknown',
+    ] as $mowerState
+) {
+    $stateSvg = LocalMapSvgRenderer::render(
+        $scene,
+        ['mowerState' => $mowerState]
+    );
+    assertLocalMapSvg(
+        str_contains(
+            $stateSvg,
+            'class="mower mower-' . $mowerState . '"'
+        )
+            && str_contains(
+                $stateSvg,
+                'class="legend-mower legend-mower-' . $mowerState . '"'
+            ),
+        'Mower-state presentation differs for ' . $mowerState . '.'
+    );
+}
+assertLocalMapSvgRejected(
+    static fn (): string => LocalMapSvgRenderer::render(
+        $scene,
+        ['mowerState' => 'cutting']
+    ),
+    'An unknown mower state was accepted.'
+);
+assertLocalMapSvg(
+    !str_contains(
+        LocalMapSvgRenderer::render($scene, ['showMower' => false]),
+        'class="mower mower-'
+    ),
+    'A hidden current mower marker was rendered.'
+);
+assertLocalMapSvgRejected(
+    static fn (): string => LocalMapSvgRenderer::render(
+        $scene,
+        ['showMower' => 1]
+    ),
+    'A non-boolean mower visibility flag was accepted.'
 );
 assertLocalMapSvgRejected(
     static fn (): string => LocalMapSvgRenderer::render(

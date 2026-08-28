@@ -356,6 +356,33 @@ MQTT fields should not be added to the MVP just because they exist in the
 ioBroker adapter. The WSS client capability and payload stability must be
 verified first.
 
+### Revision-bound local-map statistics
+
+The optional `EnableZoneStatistics` property exposes the existing bounded
+MQTT task-pass projection without changing REST authority. These variables are
+created only for explicitly bound zones in the accepted private map package:
+
+| Ident | Type | Profile | Meaning |
+| --- | --- | --- | --- |
+| `StatisticsState` | integer | `NAVIMOW.StatisticsState` | Disabled, no data, available, stale or invalid. |
+| `StatisticsUpdatedAt` | integer | `~UnixTimestamp` | Timestamp of the last fresh accepted projection. |
+| `Zone{zoneId}PassProgress` | float | `NAVIMOW.Percentage` | Latest manufacturer task-pass progress candidate. |
+| `Zone{zoneId}ObservedArea` | float | `NAVIMOW.Area` | Observed task-area delta within retained evidence. |
+| `Zone{zoneId}LastObservedAt` | integer | `~UnixTimestamp` | Latest retained pass observation. |
+| `Zone{zoneId}StatisticsQuality` | integer | `NAVIMOW.StatisticsQuality` | Low, medium or high evidence completeness. |
+
+`zoneId` is the stable positive manufacturer zone identifier from the accepted
+private package. A display-label change or boundary edit does not create a new
+Ident while that identifier remains stable. Unbound zones expose no statistic.
+
+Pass progress and retained observed area are MQTT inference. They are not a
+geometric proof of actually covered lawn. Statistics from an older accepted
+geometry revision must not be projected onto a newer revision.
+
+Disabling statistics sets `StatisticsState` to `Disabled` but does not delete
+previously created variables. The module never enables, disables or rewrites
+Archive Control logging for these variables; logging remains installation-owned.
+
 ## 11. Verification Contract
 
 The implementation is contract-complete only when these checks pass:

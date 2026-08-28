@@ -30,6 +30,7 @@ php case-studies/navimow/tests/local-map-evidence-contract.php
 php case-studies/navimow/tests/local-map-device-lifecycle.php
 php case-studies/navimow/tests/local-map-runtime-reducer.php
 php case-studies/navimow/tests/local-map-variable-stability.php
+php case-studies/navimow/tests/local-map-statistics-variables.php
 php case-studies/navimow/tests/local-map-restart-and-disable.php
 php case-studies/navimow/tests/local-map-distribution-fileset.php
 php case-studies/navimow/tests/mqtt-shadow-diagnostics.php
@@ -69,6 +70,7 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/tests/local-map-device-lifecycle.php \
     case-studies/navimow/tests/local-map-runtime-reducer.php \
     case-studies/navimow/tests/local-map-variable-stability.php \
+    case-studies/navimow/tests/local-map-statistics-variables.php \
     case-studies/navimow/tests/local-map-restart-and-disable.php \
     case-studies/navimow/tests/local-map-distribution-fileset.php
 

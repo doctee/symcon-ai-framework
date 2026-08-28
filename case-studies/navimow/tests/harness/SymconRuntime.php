@@ -153,6 +153,21 @@ if (!class_exists('IPSModule')) {
             ];
         }
 
+        protected function RegisterVariableFloat(
+            string $ident,
+            string $name,
+            string $profile,
+            int $position
+        ): void {
+            $this->variables[$ident] ??= 0.0;
+            $this->variableDefinitions[$ident] ??= [
+                'type' => 2,
+                'name' => $name,
+                'profile' => $profile,
+                'position' => $position,
+            ];
+        }
+
         protected function RegisterVariableBoolean(
             string $ident,
             string $name,
@@ -395,6 +410,17 @@ if (!function_exists('IPS_SetVariableProfileAssociation')) {
         string $label,
         string $icon,
         int $color
+    ): void {
+    }
+
+    function IPS_SetVariableProfileDigits(string $name, int $digits): void
+    {
+    }
+
+    function IPS_SetVariableProfileText(
+        string $name,
+        string $prefix,
+        string $suffix
     ): void {
     }
 }
