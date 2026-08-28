@@ -405,6 +405,7 @@ template or a general SAEF reference implementation.
 | `377-local-map-runtime-private-activation-and-live-verification.md` | Records the installation-private Dark-Skin map activation, controlled rollback of a timer-observability false negative and the passing automatic 300-second refresh proof with MQTT still disabled. |
 | `378-local-map-symbol-legend-and-statistics-status.md` | Adds and privately verifies a semantically isolated Dark-Skin symbol legend, inventories the currently empty path/statistics evidence and preserves explicit gates for calibrated zone coverage. |
 | `379-local-map-legend-publication-and-live-rollout.md` | Records the generic standalone publication, metadata pass, private alias revision and guarded Symcon rollout of the compact symbol legend with existing variables, archives and visualization link preserved. |
+| `380-local-map-state-colors-and-zone-statistics-implementation.md` | Adds REST-authoritative station and mower color semantics plus optional revision-bound zone-statistics variables while preserving variable and Archive identity. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

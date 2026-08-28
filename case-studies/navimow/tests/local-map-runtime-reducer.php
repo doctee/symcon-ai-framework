@@ -65,6 +65,8 @@ $runtimeChecks = [
         && str_contains($svg, 'data-theme="dark"'),
     'station' => is_string($svg)
         && str_contains($svg, 'station-undocked'),
+    'mowerState' => is_string($svg)
+        && str_contains($svg, 'mower mower-active'),
     'hiddenLabel' => is_string($svg)
         && !str_contains($svg, '>Area A</text>'),
     'zones' => is_string($svg)
@@ -82,6 +84,10 @@ assertLocalMapRuntime(
         && str_contains(
             $device->testReadVariable('LocalMap'),
             'station-unknown'
+        )
+        && str_contains(
+            $device->testReadVariable('LocalMap'),
+            'mower mower-unknown'
         ),
     'Stale REST state did not render an unknown station.'
 );
@@ -105,6 +111,10 @@ assertLocalMapRuntime(
         && str_contains(
             $device->testReadVariable('LocalMap'),
             'station-docked'
+        )
+        && !str_contains(
+            $device->testReadVariable('LocalMap'),
+            'class="mower mower-'
         ),
     'Inactive MQTT did not preserve the path and update REST station state.'
 );
