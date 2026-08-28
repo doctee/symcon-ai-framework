@@ -398,6 +398,7 @@ template or a general SAEF reference implementation.
 | `370-local-map-runtime-saef-pull-request-publication.md` | Records ready-for-review SAEF PR 82, its exact initial head and scope, pending CI observation and the still separate review, merge, standalone and live gates. |
 | `371-local-map-runtime-pr-review-and-checks.md` | Records terminal green CI and one blocking medium fail-closed configuration finding in PR 82; merge remains closed pending a focused correction. |
 | `372-local-map-runtime-fail-closed-configuration-correction.md` | Corrects PR 82's configuration-first lifecycle finding by composing existing validators before visibility, timer or parent reads and verifies invalid update cleanup offline. |
+| `373-local-map-runtime-correction-re-review-and-merge-decision.md` | Closes the corrected PR finding after exact-delta re-review and fresh full validation, recommends the SAEF merge and keeps publication and live gates separate. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
