@@ -2,8 +2,8 @@
 
 ## Status
 
-Implementation and offline verification complete. Standalone publication and
-the final guarded Symcon verification are pending at the time of this commit.
+Complete. The corrected module is published, installed and verified through
+immediate and delayed read-only postflights.
 
 ## Scope
 
@@ -115,16 +115,53 @@ The isolated worktree intentionally contains no `vendor/` directory. Tooling
 was resolved through the canonical checkout's lock-identical vendor directory;
 no source or generated artifact was taken from another worktree.
 
+## Publication Evidence
+
+The generic manifest-driven publisher created and integrated standalone PR 6.
+Independent post-merge verification established:
+
+- standalone `main`: `3926bbdf5211b32fc315ac5d4eacda06e1a8a3cf`;
+- candidate head: `d1cbbfef43b6f5eb1e5f0c670d6cdc14e2203cbb`;
+- files: 42;
+- fileset SHA-256:
+  `e711fa5220d81a915478c38833184e943cd6e5fd8afa7e71d08c6d0d52f23d4c`;
+- publication SHA-256:
+  `5b0411a3bebcae92094417bce2d6414b4866faf23db466e8511305559f4ce1b5`;
+- reported standalone checks: none configured, represented explicitly as
+  `checkCount: 0`.
+
+## Final Live Evidence
+
+The final live mutation performed exactly one module update and no explicit
+Device `ApplyChanges()`. The module update itself reconciled the instances.
+Transport succeeded, PHP execution had no error and output was not truncated.
+
+Both the immediate and delayed read-only postflights passed. They confirmed:
+
+- exact installed standalone commit prefix `3926bbdf` on clean, valid `main`;
+- Account, Configurator, Device and Receiver status `102`;
+- native MQTT and WebSocket transport inactive at status `104`;
+- MQTT disabled and both native transport instances credential-free;
+- statistics enabled with all 14 variables present;
+- no statistics variable for the unbound zone;
+- statistics state `No Data`, expected without fresh MQTT evidence;
+- unchanged established variable-identity and Archive-logging hashes;
+- exactly one expanded legend with all station and mower meanings;
+- no retained path endpoint rendered as a current mower marker.
+
+No OAuth action, MQTT credential request, MQTT activation, Symcon restart or
+mower command occurred.
+
 ## Gates
 
 | Gate | Status |
 | --- | --- |
 | Lifecycle correction implementation | Passed |
 | Complete offline verification | Passed |
-| SAEF branch publication and review | Pending |
-| Standalone Navimow publication | Pending |
-| Guarded Symcon update | Pending |
-| Immediate and delayed read-only verification | Pending |
+| SAEF branch publication and review | PR 89 published; final CI pending |
+| Standalone Navimow publication | Passed |
+| Guarded Symcon update | Passed |
+| Immediate and delayed read-only verification | Passed |
 
 ## Architecture Decision
 
@@ -140,6 +177,6 @@ be conflated with the instance lifecycle status.
 
 ## Next Step
 
-Publish the hash-pinned candidate through the generic pull-request publisher,
-integrate it only after checks pass, update the installed module once and repeat
-the bounded immediate and delayed read-only verification.
+Merge SAEF PR 89 after its final checks pass and verify the canonical `main`
+tree. Statistics may then accumulate during a separately authorized bounded
+receive-only MQTT observation; no transport activation is implied by this step.
