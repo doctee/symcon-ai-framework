@@ -36,6 +36,11 @@ $device->testSetProperty(
 $device->testSetProperty('AcceptedGeometryKey', $fixture['geometryKey']);
 $device->ApplyChanges();
 
+assertLocalMapStatistics(
+    $device->testStatus() === IS_ACTIVE,
+    'Successful ApplyChanges did not finalize the active instance status.'
+);
+
 $definitions = $device->testVariableDefinitions();
 $expected = [
     'StatisticsState' => [1, 'NAVIMOW.StatisticsState'],
