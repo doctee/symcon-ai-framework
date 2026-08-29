@@ -20,6 +20,11 @@ Version `0.8.13` keeps that compact top-aligned fallback below 70 CSS pixels
 and vertically centers the complete chart in taller Web Content viewports. This
 uses the viewport height rather than a device-name check, so the narrow iPhone
 tile remains unchanged while the taller iPad tile uses its available space.
+Version `0.8.14` refines the absolute color scale below `1.0 mm/h`, where the
+previous broad blue and green bands made moderate local maxima difficult to
+recognize. It deliberately does not normalize colors to the maximum of the
+current forecast, so identical intensities retain identical meanings over time
+and between locations.
 
 ## Purpose
 
@@ -70,10 +75,14 @@ forecast independently:
 | Intensity in `mm/h` | Color |
 | --- | --- |
 | Below the configured rain threshold | dark gray |
-| At or above the threshold and `< 0.1` | light blue |
-| `>= 0.1` and `< 0.5` | blue |
-| `>= 0.5` and `< 1.0` | green |
-| `>= 1.0` and `< 2.5` | yellow |
+| At or above the threshold and `< 0.1` | pale blue |
+| `>= 0.1` and `< 0.2` | light blue |
+| `>= 0.2` and `< 0.3` | blue |
+| `>= 0.3` and `< 0.4` | turquoise |
+| `>= 0.4` and `< 0.5` | green |
+| `>= 0.5` and `< 0.75` | lime |
+| `>= 0.75` and `< 1.0` | yellow |
+| `>= 1.0` and `< 2.5` | amber |
 | `>= 2.5` and `< 5.0` | orange |
 | `>= 5.0` | red |
 
@@ -82,7 +91,9 @@ and segment colors. Trace echoes below it stay dark gray, but their measured
 intensity remains available in the tooltip. Interpolation is not allowed to
 cross the threshold between native five-minute intervals; the first and last
 colored segments therefore retain the authoritative rain-start and rain-end
-boundaries.
+boundaries. The additional fixed bands below `1.0 mm/h` improve differentiation
+of light and moderate rain without exaggerating weak forecasts through
+forecast-relative scaling.
 
 ## Module Lifecycle
 

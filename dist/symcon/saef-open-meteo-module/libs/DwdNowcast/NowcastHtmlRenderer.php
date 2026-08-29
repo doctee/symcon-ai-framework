@@ -135,12 +135,16 @@ final class NowcastHtmlRenderer
 
         return match (true) {
             $intensity < $rainThresholdMmPerHour => '#4b5563',
-            $intensity < 0.1 => '#38bdf8',
-            $intensity < 0.5 => '#1677ff',
-            $intensity < 1.0 => '#00c853',
-            $intensity < 2.5 => '#ffd600',
-            $intensity < 5.0 => '#ff9100',
-            default => '#e00000',
+            $intensity < 0.1 => '#7dd3fc',
+            $intensity < 0.2 => '#60a5fa',
+            $intensity < 0.3 => '#3b82f6',
+            $intensity < 0.4 => '#22d3ee',
+            $intensity < 0.5 => '#4ade80',
+            $intensity < 0.75 => '#a3e635',
+            $intensity < 1.0 => '#facc15',
+            $intensity < 2.5 => '#f59e0b',
+            $intensity < 5.0 => '#f97316',
+            default => '#ef4444',
         };
     }
 
