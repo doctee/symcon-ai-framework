@@ -111,26 +111,59 @@ same(
     array_slice($chartColors[1], 0, 15),
     'DWD chart color starts before the authoritative rain interval.'
 );
-same('#ffd600', $chartColors[1][15], 'DWD chart color does not start with the rain interval.');
+same('#f59e0b', $chartColors[1][15], 'DWD chart color does not start with the rain interval.');
 same(
     '#4b5563',
     NowcastHtmlRenderer::colorForIntensity(0.099, 0.1),
     'DWD below-threshold color differs.'
 );
+$colorBoundaries = [
+    [0.05, 0.02, '#7dd3fc', 'sub-0.1 trace'],
+    [0.1, 0.1, '#60a5fa', 'light-blue'],
+    [0.2, 0.1, '#3b82f6', 'blue'],
+    [0.3, 0.1, '#22d3ee', 'turquoise'],
+    [0.4, 0.1, '#4ade80', 'green'],
+    [0.5, 0.1, '#a3e635', 'lime'],
+    [0.75, 0.1, '#facc15', 'yellow'],
+    [1.0, 0.1, '#f59e0b', 'amber'],
+    [2.5, 0.1, '#f97316', 'orange'],
+    [5.0, 0.1, '#ef4444', 'red'],
+];
+foreach ($colorBoundaries as [$intensity, $threshold, $expectedColor, $band]) {
+    same(
+        $expectedColor,
+        NowcastHtmlRenderer::colorForIntensity($intensity, $threshold),
+        sprintf('DWD %s color band differs.', $band)
+    );
+}
+
+$fineRamp = $projected60;
+foreach ($fineRamp['windowPoints'] as &$point) {
+    $point['intensityMmPerHour'] = 0.0;
+}
+unset($point);
+$fineRamp['windowPoints'][0]['intensityMmPerHour'] = 0.32;
+$fineRamp['windowPoints'][1]['intensityMmPerHour'] = 0.38;
+$fineRamp['windowPoints'][2]['intensityMmPerHour'] = 0.43;
+$fineRamp['windowPoints'][3]['intensityMmPerHour'] = 0.48;
+$fineRamp['windowPoints'][4]['intensityMmPerHour'] = 0.6;
+$fineRamp['summary']['rainExpected'] = true;
+$fineRamp['summary']['rainStartsInMinutes'] = 0;
+$fineRampChart = NowcastHtmlRenderer::render($fineRamp, 'Europe/Berlin', $chartLabels);
 same(
-    '#1677ff',
-    NowcastHtmlRenderer::colorForIntensity(0.1, 0.1),
-    'DWD threshold color differs.'
+    true,
+    str_contains($fineRampChart, 'background:#22d3ee'),
+    'DWD fine ramp does not expose the turquoise band.'
 );
 same(
-    '#00c853',
-    NowcastHtmlRenderer::colorForIntensity(0.5, 0.1),
-    'DWD green color band differs.'
+    true,
+    str_contains($fineRampChart, 'background:#4ade80'),
+    'DWD fine ramp does not expose the green band.'
 );
 same(
-    '#e00000',
-    NowcastHtmlRenderer::colorForIntensity(8.0, 0.1),
-    'DWD heavy-rain color differs.'
+    true,
+    str_contains($fineRampChart, 'background:#a3e635'),
+    'DWD fine ramp does not expose the lime band.'
 );
 
 same(

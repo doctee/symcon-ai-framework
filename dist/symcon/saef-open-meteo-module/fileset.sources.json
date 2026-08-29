@@ -103,7 +103,7 @@
         {
             "source": "case-studies/open-meteo/distribution/library.json",
             "target": "library.json",
-            "sha256": "2c6ef47e2c2932d0c93a7d27f4dea277d37e5f5ad0631f1bea547c02050efe49",
+            "sha256": "10a75fbd8b4b73ff0a7ea0ce08ed0ba79fffea88770766a1c037cf63446055e7",
             "bytes": 257
         },
         {
@@ -115,8 +115,8 @@
         {
             "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/NowcastHtmlRenderer.php",
             "target": "libs/DwdNowcast/NowcastHtmlRenderer.php",
-            "sha256": "7ebf51e2d9e84427377961232fb8a9de3d0ecb1a448c928529e97bfaaf8f4179",
-            "bytes": 10604
+            "sha256": "6bba83d4688c4af162840d4b21bae7932e76a37aa1f7a378c53d7a57d4d3a2d5",
+            "bytes": 10777
         },
         {
             "source": "case-studies/open-meteo/distribution/libs/DwdNowcast/Profiles.php",
@@ -245,7 +245,7 @@
             "bytes": 3308
         }
     ],
-    "filesetSha256": "5aff1882845f59b3eb57b4a079ada1249d09a91238af2cd30b2d62d1d5af16eb",
+    "filesetSha256": "0dbebf397861bc7ecc0b66bae132b1e148a5d5aa362197525c99360a5650c542",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",
