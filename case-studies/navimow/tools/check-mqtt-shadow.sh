@@ -18,6 +18,7 @@ php case-studies/navimow/tests/mqtt-parser.php
 php case-studies/navimow/tests/mqtt-symcon-probe.php
 php case-studies/navimow/tests/mqtt-shadow-payload.php
 php case-studies/navimow/tests/mqtt-position-diagnostics.php
+php case-studies/navimow/tests/mqtt-position-path-contract.php
 php case-studies/navimow/tests/mqtt-receiver-scaffold.php
 php case-studies/navimow/tests/mqtt-account-ingestion.php
 php case-studies/navimow/tests/mqtt-task-observation-ledger.php
@@ -72,7 +73,8 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/tests/local-map-variable-stability.php \
     case-studies/navimow/tests/local-map-statistics-variables.php \
     case-studies/navimow/tests/local-map-restart-and-disable.php \
-    case-studies/navimow/tests/local-map-distribution-fileset.php
+    case-studies/navimow/tests/local-map-distribution-fileset.php \
+    case-studies/navimow/tests/mqtt-position-path-contract.php
 
 "$vendor_dir/bin/phpstan" analyse \
     --configuration=phpstan.neon \
@@ -99,6 +101,7 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/candidate/LocalMapSvgRenderer.php \
     case-studies/navimow/candidate/RevisionBoundedTrackStore.php \
     case-studies/navimow/tests/local-map-svg-renderer.php \
-    case-studies/navimow/tests/revision-bounded-track-store.php
+    case-studies/navimow/tests/revision-bounded-track-store.php \
+    case-studies/navimow/tests/mqtt-position-path-contract.php
 
 printf '%s\n' "Navimow MQTT shadow offline checks passed."

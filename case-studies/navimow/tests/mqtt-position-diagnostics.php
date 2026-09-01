@@ -50,12 +50,14 @@ $state = MqttPositionDiagnostic::initialState();
 $state = MqttPositionDiagnostic::reduce(
     $state,
     positionPose(12.5, -8.25, 0.5, 1700000000000, 4),
-    1700000000
+    1700000000,
+    3
 );
 assertPositionDiagnostic(
     $state['sampleSequence'] === 1
         && count($state['track']) === 1
-        && $state['latest']['sampleSequence'] === 1,
+        && $state['latest']['sampleSequence'] === 1
+        && $state['latest']['sessionSequence'] === 3,
     'First complete position sample was not retained.'
 );
 
@@ -145,6 +147,15 @@ assertPositionDiagnostic(
     'Position track retention, serialization or restoration is not bounded.'
 );
 
+assertPositionDiagnosticThrows(
+    static fn (): array => MqttPositionDiagnostic::reduce(
+        MqttPositionDiagnostic::initialState(),
+        positionPose(0.0, 0.0, 0.0, 1700000000000, 4),
+        1700000000,
+        -1
+    ),
+    'Negative transport session sequence was accepted.'
+);
 assertPositionDiagnosticThrows(
     static fn (): array => MqttPositionDiagnostic::reduce(
         MqttPositionDiagnostic::initialState(),

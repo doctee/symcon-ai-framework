@@ -249,6 +249,10 @@ assertMqttAccount(
     'MQTT ingestion changed a public Account variable.'
 );
 
+$account->testSetAttribute(
+    'MqttPilotObservationRegistry',
+    json_encode(['sessionSequence' => 12], JSON_THROW_ON_ERROR)
+);
 $positionResult = $account->IngestMqttEnvelope(
     MQTT_TEST_RECEIVER_ID,
     mqttAccountLocationEnvelope()
@@ -265,6 +269,7 @@ assertMqttAccount(
         && $position['observation']['latest']['localX'] === 12.5
         && $position['observation']['latest']['localY'] === -8.25
         && $position['observation']['latest']['orientation'] === 0.5
+        && $position['observation']['latest']['sessionSequence'] === 12
         && $position['observation']['counters']['retainedSampleCount'] === 1
         && $account->testSnapshotPersistentState()['variables']
             === $afterVariables,
