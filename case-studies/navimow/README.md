@@ -410,6 +410,7 @@ template or a general SAEF reference implementation.
 | `383-position-sequence-contract-correction.md` | Corrects retained path segmentation so transport-session changes cannot merge unrelated movement into one visible segment. |
 | `384-position-sequence-contract-publication-and-disabled-rollout.md` | Records the reviewed publication, metadata conformance and disabled credential-free Symcon rollout of the corrected position-session contract. |
 | `385-pilot-automation-isolation-and-map-visual-refinement.md` | Diagnoses the premature pilot closure as a stale cleanup-automation collision, binds future cleanup to one exact run and implements the approved Dark-Skin map symbol and warning refinements. |
+| `386-local-map-visual-refinement-publication-and-disabled-rollout.md` | Records the reviewed publication, disabled credential-free Symcon rollout and docked-state live verification of the refined Local Map presentation. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
