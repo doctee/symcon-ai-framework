@@ -407,6 +407,9 @@ template or a general SAEF reference implementation.
 | `379-local-map-legend-publication-and-live-rollout.md` | Records the generic standalone publication, metadata pass, private alias revision and guarded Symcon rollout of the compact symbol legend with existing variables, archives and visualization link preserved. |
 | `380-local-map-state-colors-and-zone-statistics-implementation.md` | Adds REST-authoritative station and mower color semantics plus optional revision-bound zone-statistics variables while preserving variable and Archive identity. |
 | `381-local-map-statistics-publication-and-live-rollout.md` | Records the guarded publication and rollout of map-state colors and zone statistics, including the Device lifecycle-status correction found by the first live activation. |
+| `383-position-sequence-contract-correction.md` | Corrects retained path segmentation so transport-session changes cannot merge unrelated movement into one visible segment. |
+| `384-position-sequence-contract-publication-and-disabled-rollout.md` | Records the reviewed publication, metadata conformance and disabled credential-free Symcon rollout of the corrected position-session contract. |
+| `385-pilot-automation-isolation-and-map-visual-refinement.md` | Diagnoses the premature pilot closure as a stale cleanup-automation collision, binds future cleanup to one exact run and implements the approved Dark-Skin map symbol and warning refinements. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
