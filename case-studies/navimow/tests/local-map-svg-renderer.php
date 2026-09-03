@@ -50,13 +50,30 @@ assertLocalMapSvg(
         && substr_count($svg, '<polyline class="path"') > 0
         && substr_count($svg, 'class="station station-unknown"') === 1
         && substr_count($svg, 'class="mower mower-unknown"') === 1
+        && str_contains($svg, 'class="station-base"')
+        && str_contains($svg, 'class="station-occupancy"')
+        && str_contains($svg, 'class="mower-body"')
+        && str_contains($svg, 'class="mower-direction"')
+        && str_contains($svg, 'data-heading-degrees="')
         && str_contains($svg, 'rotate(-180)')
         && str_contains($svg, 'data-theme="dark"')
+        && str_contains($svg, 'width="100%" height="100%"')
+        && str_contains($svg, 'html,body{margin:0;padding:0')
         && str_contains($svg, '.background{fill:#171b1f}')
-        && str_contains($svg, 'station-docked rect{fill:#22a06b')
-        && str_contains($svg, 'station-docking rect{fill:#d98b22')
-        && str_contains($svg, 'station-undocked rect{fill:#75818a')
-        && str_contains($svg, 'fill-opacity:.08')
+        && str_contains(
+            $svg,
+            'station-docked .station-occupancy'
+        )
+        && str_contains($svg, 'display:inline;fill:#39d98a')
+        && str_contains($svg, 'station-docking .station-base')
+        && str_contains($svg, 'fill:#7a3f00;stroke:#ff9f1c')
+        && str_contains($svg, 'station-undocked .station-base')
+        && str_contains($svg, 'fill:#303a42;stroke:#a7b1b8')
+        && str_contains($svg, 'station-unknown .station-base')
+        && str_contains($svg, 'fill:#701a75;stroke:#f0abfc')
+        && str_contains($svg, 'mower-unknown .mower-body')
+        && str_contains($svg, 'fill:#d946ef;stroke:#701a75')
+        && str_contains($svg, 'fill-opacity:.06')
         && str_contains($svg, 'stroke-dasharray:1.1 .8'),
     'Expected map layers are missing.'
 );
@@ -76,6 +93,10 @@ assertLocalMapSvg(
         && str_contains(
             $svg,
             'class="legend-station legend-station-unknown"'
+        )
+        && str_contains(
+            $svg,
+            'class="legend-mower legend-mower-unknown"'
         )
         && substr_count($svg, 'class="station station-') === 1
         && substr_count($svg, 'class="mower mower-unknown"') === 1
@@ -139,18 +160,26 @@ assertLocalMapSvg(
 );
 assertLocalMapSvg(
     str_contains(
-        LocalMapSvgRenderer::render(
+        $dockedSvg = LocalMapSvgRenderer::render(
             $scene,
             ['stationState' => 'docked']
         ),
         'class="station station-docked"'
     )
         && str_contains(
-            LocalMapSvgRenderer::render(
+            $dockedSvg,
+            'station-docked .station-occupancy'
+        )
+        && str_contains(
+            $undockedSvg = LocalMapSvgRenderer::render(
                 $scene,
                 ['stationState' => 'undocked']
             ),
             'class="station station-undocked"'
+        )
+        && str_contains(
+            $undockedSvg,
+            '.station .station-occupancy,.legend-station .station-occupancy{display:none}'
         ),
     'Docked or undocked station presentation differs.'
 );
@@ -181,6 +210,17 @@ foreach (
         'Mower-state presentation differs for ' . $mowerState . '.'
     );
 }
+$headingMatched = preg_match(
+    '/data-heading-degrees="(-?[0-9]+(?:\.[0-9]+)?)"/',
+    $svg,
+    $heading
+) === 1;
+assertLocalMapSvg(
+    $headingMatched
+        && is_finite((float) $heading[1])
+        && abs((float) $heading[1]) > 0.01,
+    'The mower marker has no path-derived orientation.'
+);
 assertLocalMapSvgRejected(
     static fn (): string => LocalMapSvgRenderer::render(
         $scene,

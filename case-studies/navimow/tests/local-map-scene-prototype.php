@@ -87,7 +87,9 @@ assertLocalMapScene(
     $scene['viewport']['minimumX'] < -1.0
         && $scene['viewport']['maximumX'] > 40.0
         && $scene['viewport']['width'] > 40.0
-        && $scene['viewport']['height'] > 40.0,
+        && $scene['viewport']['height'] > 40.0
+        && $scene['viewport']['paddingLocal'] >= 0.75
+        && $scene['viewport']['paddingLocal'] < 1.5,
     'Viewport does not contain geometry, station and retained path.'
 );
 assertLocalMapScene(
