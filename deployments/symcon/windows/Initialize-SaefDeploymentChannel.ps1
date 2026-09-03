@@ -54,6 +54,9 @@ param(
     [int] $RuntimeHealthProbeScriptID = 0,
 
     [Parameter()]
+    [string] $StandaloneModuleTargetsPath,
+
+    [Parameter()]
     [string] $StatusPath
 )
 
@@ -178,6 +181,86 @@ function Assert-PowerShellSourceSyntax {
     }
 }
 
+function Get-BytesSha256 {
+    param([Parameter(Mandatory = $true)][byte[]] $Bytes)
+
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    try {
+        return ([BitConverter]::ToString($algorithm.ComputeHash($Bytes))).Replace('-', '').ToLowerInvariant()
+    } finally {
+        $algorithm.Dispose()
+    }
+}
+
+function Read-StandaloneModuleTargets {
+    param([Parameter()][string] $Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return @()
+    }
+    if (-not [IO.Path]::IsPathRooted($Path) -or -not (Test-Path -LiteralPath $Path -PathType Leaf) -or
+        (Get-Item -LiteralPath $Path).Length -gt 1048576 -or
+        (((Get-Item -LiteralPath $Path).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
+        throw [System.IO.FileNotFoundException]::new('Standalone module target policy is missing or invalid.')
+    }
+    $record = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    $targets = @($record.targets)
+    if ($record.formatVersion -ne 1 -or $targets.Count -gt 16) {
+        throw [System.InvalidOperationException]::new('Standalone module target policy format is invalid.')
+    }
+    $targetIds = @{}
+    $validated = @()
+    foreach ($target in $targets) {
+        $targetId = [string] $target.targetId
+        if ($targetId -notmatch '^saef-[a-z0-9][a-z0-9.-]{0,63}$' -or $targetIds.ContainsKey($targetId) -or
+            [string] $target.adapterProfile -notmatch '^saef-[a-z0-9][a-z0-9.-]{0,63}$' -or
+            [string] $target.libraryGuid -notmatch '^\{[A-Fa-f0-9]{8}(?:-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}\}$' -or
+            -not [IO.Path]::IsPathRooted([string] $target.adapterPath) -or
+            -not [IO.Path]::IsPathRooted([string] $target.adapterPolicyPath)) {
+            throw [System.InvalidOperationException]::new('Standalone module target entry is invalid.')
+        }
+        foreach ($dependencyPath in @([string] $target.adapterPath, [string] $target.adapterPolicyPath)) {
+            if (-not (Test-Path -LiteralPath $dependencyPath -PathType Leaf) -or
+                ((Get-Item -LiteralPath $dependencyPath).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+                throw [System.IO.FileNotFoundException]::new('Standalone module target dependency is missing.')
+            }
+        }
+        $adapterFile = Get-Item -LiteralPath ([string] $target.adapterPath)
+        $adapterPolicyFile = Get-Item -LiteralPath ([string] $target.adapterPolicyPath)
+        if ($adapterFile.Length -gt 4194304 -or $adapterPolicyFile.Length -gt 1048576) {
+            throw [System.InvalidOperationException]::new('Standalone module target dependency exceeds its byte limit.')
+        }
+        $adapterBytes = [IO.File]::ReadAllBytes([string] $target.adapterPath)
+        $adapterPolicyBytes = [IO.File]::ReadAllBytes([string] $target.adapterPolicyPath)
+        $adapterPolicy = [Text.UTF8Encoding]::new($false, $true).GetString($adapterPolicyBytes) | ConvertFrom-Json
+        if ($adapterPolicy.formatVersion -ne 1 -or
+            [string] $adapterPolicy.adapterProfile -ne [string] $target.adapterProfile) {
+            throw [System.InvalidOperationException]::new('Standalone module adapter policy identity is invalid.')
+        }
+        $tokens = $null
+        $parseErrors = $null
+        [Management.Automation.Language.Parser]::ParseInput(
+            [Text.UTF8Encoding]::new($false, $true).GetString($adapterBytes),
+            [ref] $tokens,
+            [ref] $parseErrors
+        ) | Out-Null
+        if (@($parseErrors).Count -ne 0) {
+            throw [System.InvalidOperationException]::new('Standalone module adapter syntax is invalid.')
+        }
+        $targetIds[$targetId] = $true
+        $validated += [ordered]@{
+            targetId = $targetId
+            adapterProfile = [string] $target.adapterProfile
+            libraryGuid = ([string] $target.libraryGuid).ToUpperInvariant()
+            adapterBytes = $adapterBytes
+            adapterSha256 = Get-BytesSha256 -Bytes $adapterBytes
+            adapterPolicyBytes = $adapterPolicyBytes
+            adapterPolicySha256 = Get-BytesSha256 -Bytes $adapterPolicyBytes
+        }
+    }
+    return @($validated)
+}
+
 function Set-RestrictedAcl {
     param(
         [Parameter(Mandatory = $true)][string] $Path,
@@ -297,6 +380,8 @@ try {
     Assert-SourceChecksums
     $failedStep = 'source_syntax'
     Assert-PowerShellSourceSyntax
+    $failedStep = 'standalone_module_targets'
+    $standaloneModuleTargets = @(Read-StandaloneModuleTargets -Path $StandaloneModuleTargetsPath)
 
     if ([string]::IsNullOrWhiteSpace($ManagedFilesetRoot)) {
         $ManagedFilesetRoot = Join-Path $SymconScriptsRoot '.saef-filesets'
@@ -400,8 +485,27 @@ try {
         (Join-Path $InstallRoot 'SaefRuntimeSourceMirror.php'),
         (Join-Path $InstallRoot 'restart-policy.json')
     )
+    $installedStandaloneModuleTargets = @()
+    $standaloneModuleTargetPaths = @()
+    foreach ($target in $standaloneModuleTargets) {
+        $targetRoot = Join-Path (Join-Path $InstallRoot 'standalone-modules') ([string] $target.targetId)
+        $adapterPath = Join-Path $targetRoot 'adapter.ps1'
+        $adapterPolicyPath = Join-Path $targetRoot 'adapter-policy.local.json'
+        $standaloneModuleTargetPaths += @($adapterPath, $adapterPolicyPath)
+        $installedStandaloneModuleTargets += [ordered]@{
+            targetId = [string] $target.targetId
+            adapterProfile = [string] $target.adapterProfile
+            libraryGuid = [string] $target.libraryGuid
+            adapterPath = $adapterPath
+            expectedAdapterSha256 = [string] $target.adapterSha256
+            adapterPolicyPath = $adapterPolicyPath
+            expectedAdapterPolicySha256 = [string] $target.adapterPolicySha256
+        }
+    }
     $failedStep = 'rollback_snapshot'
-    foreach ($path in @($runtimeArtifactPaths + @($credentialPath, $legacyCredentialPath, $policyPath, $authorizedKeyPath))) {
+    foreach ($path in @($runtimeArtifactPaths + $standaloneModuleTargetPaths + @(
+        $credentialPath, $legacyCredentialPath, $policyPath, $authorizedKeyPath
+    ))) {
         $fileSnapshots += Get-FileSnapshot -Path $path
     }
     $mutationsStarted = $true
@@ -415,6 +519,27 @@ try {
     Set-RestrictedAcl -Path $InstallRoot -Identity $deploymentAclIdentity -IdentityRights '(OI)(CI)RX'
     Set-RestrictedAcl -Path $ManagedFilesetRoot -Identity $deploymentAclIdentity -IdentityRights '(OI)(CI)F'
     Set-RestrictedAcl -Path $StateRoot -Identity $deploymentAclIdentity -IdentityRights '(OI)(CI)F'
+    if ($standaloneModuleTargets.Count -gt 0) {
+        $moduleTargetsRoot = Join-Path $InstallRoot 'standalone-modules'
+        if (-not (Test-Path -LiteralPath $moduleTargetsRoot -PathType Container)) {
+            [IO.Directory]::CreateDirectory($moduleTargetsRoot) | Out-Null
+        }
+        Set-RestrictedAcl -Path $moduleTargetsRoot -Identity $deploymentAclIdentity -IdentityRights '(OI)(CI)RX'
+        foreach ($target in $standaloneModuleTargets) {
+            $targetRoot = Join-Path $moduleTargetsRoot ([string] $target.targetId)
+            if (-not (Test-Path -LiteralPath $targetRoot -PathType Container)) {
+                [IO.Directory]::CreateDirectory($targetRoot) | Out-Null
+            }
+            Set-RestrictedAcl -Path $targetRoot -Identity $deploymentAclIdentity -IdentityRights '(OI)(CI)RX'
+            [IO.File]::WriteAllBytes((Join-Path $targetRoot 'adapter.ps1'), [byte[]] $target.adapterBytes)
+            [IO.File]::WriteAllBytes(
+                (Join-Path $targetRoot 'adapter-policy.local.json'),
+                [byte[]] $target.adapterPolicyBytes
+            )
+            Set-RestrictedFileAcl -Path (Join-Path $targetRoot 'adapter.ps1')
+            Set-RestrictedFileAcl -Path (Join-Path $targetRoot 'adapter-policy.local.json')
+        }
+    }
 
     $failedStep = 'runtime_artifacts'
     foreach ($name in @(
@@ -454,6 +579,7 @@ try {
         runtimeMirrorIdent = $RuntimeMirrorIdent
         runtimeMirrorName = $RuntimeMirrorName
         runtimeMirrorPosition = $RuntimeMirrorPosition
+        standaloneModuleTargets = $installedStandaloneModuleTargets
         credentialPath = $credentialPath
         rpcUri = $RpcUri.AbsoluteUri
         serviceName = $ServiceName

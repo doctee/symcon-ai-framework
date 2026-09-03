@@ -83,6 +83,7 @@ function Get-Inventory {
     $filesetDirectories = @(Get-ChildItem -LiteralPath $FilesetRoot -Directory -Force | Sort-Object Name)
     $deploymentToFileset = @{}
     $filesetToDeployment = @{}
+    $deploymentKinds = @{}
 
     foreach ($directory in $stateDirectories) {
         Assert-SafeName -Value $directory.Name
@@ -94,6 +95,14 @@ function Get-Inventory {
         $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
         $deployment = [string] $manifest.deploymentId
         $fileset = [string] $manifest.targetDirectoryName
+        $deploymentKind = if ($manifest.PSObject.Properties.Name -notcontains 'deploymentKind') {
+            'runtime-fileset'
+        } else {
+            [string] $manifest.deploymentKind
+        }
+        if ($deploymentKind -notin @('runtime-fileset', 'standalone-module')) {
+            throw [System.InvalidOperationException]::new("Unsupported deployment kind: $deployment")
+        }
         Assert-SafeName -Value $deployment
         Assert-SafeName -Value $fileset
         if ($deployment -ne $directory.Name) {
@@ -107,6 +116,7 @@ function Get-Inventory {
         }
         $deploymentToFileset[$deployment] = $fileset
         $filesetToDeployment[$fileset] = $deployment
+        $deploymentKinds[$deployment] = $deploymentKind
     }
 
     $filesetNames = @()
@@ -128,6 +138,7 @@ function Get-Inventory {
         filesetCount = $filesetDirectories.Count
         deploymentToFileset = $deploymentToFileset
         filesetToDeployment = $filesetToDeployment
+        deploymentKinds = $deploymentKinds
     }
 }
 
@@ -220,6 +231,11 @@ try {
         if (-not $inventory.deploymentToFileset.ContainsKey($deployment) -or
             [string] $inventory.deploymentToFileset[$deployment] -ne $fileset) {
             throw [System.InvalidOperationException]::new("Candidate is not an exact manifest pair: $deployment")
+        }
+        if ([string] $inventory.deploymentKinds[$deployment] -eq 'standalone-module') {
+            throw [System.InvalidOperationException]::new(
+                'Standalone module cleanup requires its adapter-owned retention workflow.'
+            )
         }
         $candidateDeployments += $deployment
         $candidateFilesets += $fileset

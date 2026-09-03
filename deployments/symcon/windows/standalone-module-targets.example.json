@@ -1,0 +1,12 @@
+{
+    "formatVersion": 1,
+    "targets": [
+        {
+            "targetId": "saef-example-module",
+            "adapterProfile": "saef-example-module-v1",
+            "libraryGuid": "{00000000-0000-0000-0000-000000000000}",
+            "adapterPath": "<private-absolute-reviewed-adapter-path>",
+            "adapterPolicyPath": "<private-absolute-reviewed-adapter-policy-path>"
+        }
+    ]
+}

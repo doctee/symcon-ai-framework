@@ -1,0 +1,15 @@
+{
+    "formatVersion": 1,
+    "adapterProfile": "saef-example-module-v1",
+    "configuration": {
+        "requireByteExactReadback": true
+    },
+    "quiescence": {
+        "required": true
+    },
+    "state": {
+        "candidateFormat": 2,
+        "rollbackFormat": 1,
+        "rollbackPreparation": "adapter-required"
+    }
+}
