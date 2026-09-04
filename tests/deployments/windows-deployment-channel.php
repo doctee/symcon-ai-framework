@@ -117,6 +117,7 @@ $requiredGatewayFragments = [
     'standaloneModuleTargets',
     'Standalone module target is not uniquely allowlisted.',
     'Standalone module adapter status contract is invalid.',
+    '-not (Test-SafeIdentifier -Value ([string] $manifest.module.targetId)) -or',
     "'-AdapterPolicyPath'",
     "'-TransactionContractPath'",
     'runtime-source-mirror.local.json',
@@ -174,6 +175,13 @@ foreach ($requiredGatewayFragments as $fragment) {
         "Required gateway contract fragment is missing: {$fragment}"
     );
 }
+assertDeploymentChannel(
+    substr_count(
+        $gateway,
+        '-not (Test-SafeIdentifier -Value ([string] $manifest.module.targetId)) -or'
+    ) === 2,
+    'Standalone module target validation must remain parseable at both manifest boundaries.'
+);
 assertDeploymentChannel(
     substr_count($gateway, '$mirrorExit = -1') === 2,
     'Gateway does not contain both bounded runtime-mirror launch failure paths.'

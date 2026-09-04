@@ -632,7 +632,7 @@ function Read-DeploymentManifest {
             $manifest.PSObject.Properties.Name -contains 'runtimeHealth') {
             throw [System.InvalidOperationException]::new('Standalone module manifest contains a runtime fileset contract.')
         }
-        if (-not (Test-SafeIdentifier -Value ([string] $manifest.module.targetId) -or
+        if (-not (Test-SafeIdentifier -Value ([string] $manifest.module.targetId)) -or
             -not (Test-SymconGuid -Value ([string] $manifest.module.libraryGuid)) -or
             -not (Test-HexSha256 -Value ([string] $manifest.module.packageIdentitySha256)) -or
             -not (Test-HexSha256 -Value ([string] $manifest.module.transactionContractSha256))) {
@@ -1254,7 +1254,7 @@ function Receive-Package {
                         'Standalone module package contains a runtime fileset contract.'
                     )
                 }
-                if (-not (Test-SafeIdentifier -Value ([string] $manifest.module.targetId) -or
+                if (-not (Test-SafeIdentifier -Value ([string] $manifest.module.targetId)) -or
                     -not (Test-SymconGuid -Value ([string] $manifest.module.libraryGuid)) -or
                     -not (Test-HexSha256 -Value ([string] $manifest.module.packageIdentitySha256)) -or
                     -not (Test-HexSha256 -Value ([string] $manifest.module.transactionContractSha256))) {
