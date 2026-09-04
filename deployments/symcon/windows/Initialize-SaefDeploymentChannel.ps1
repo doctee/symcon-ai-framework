@@ -423,6 +423,22 @@ try {
     if (-not (Test-Path -LiteralPath $sshdConfigPath -PathType Leaf)) {
         throw [System.IO.FileNotFoundException]::new('OpenSSH server configuration is missing.')
     }
+    $gatewayPath = Join-Path $InstallRoot 'Invoke-SaefDeploymentGateway.ps1'
+    $normalizedDeploymentUser = $DeploymentUser.ToLowerInvariant()
+    $deploymentMatchUsers = $normalizedDeploymentUser + ',.\' + $normalizedDeploymentUser
+    $matchBlock = @"
+$markerStart
+Match User $deploymentMatchUsers
+    AuthenticationMethods publickey
+    PasswordAuthentication no
+    PubkeyAuthentication yes
+    AuthorizedKeysFile __PROGRAMDATA__/ssh/saef_deploy_authorized_keys
+    PermitTTY no
+    AllowTcpForwarding no
+    PermitOpen none
+    ForceCommand powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$gatewayPath`"
+$markerEnd
+"@
     $sshdConfig = Get-Content -LiteralPath $sshdConfigPath -Raw
     $saefBlockPattern = '(?ms)^[\t ]*' + [regex]::Escape($markerStart) +
         '[\t ]*\r?\n.*?^[\t ]*' + [regex]::Escape($markerEnd) + '[\t ]*(?:\r?\n)?'
@@ -435,6 +451,8 @@ try {
     $firstActiveMatch = [regex]::Match($sshdConfig, '(?mi)^[\t ]*Match[\t ]+')
     $matchOrderValid = $saefBlockMatches.Count -eq 1 -and
         (-not $firstActiveMatch.Success -or $saefBlockMatches[0].Index -le $firstActiveMatch.Index)
+    $matchContentValid = $saefBlockMatches.Count -eq 1 -and
+        $saefBlockMatches[0].Value.TrimEnd([char[]] @("`r", "`n")) -ceq $matchBlock
     $baseSshdConfig = if ($saefBlockMatches.Count -eq 1) {
         $saefBlockRegex.Replace($sshdConfig, '', 1)
     } else {
@@ -447,7 +465,8 @@ try {
                 mutationAttempted = $false
                 sshdRestartAttempted = $false
                 existingConfiguration = $saefBlockMatches.Count -eq 1
-                repairRequired = $saefBlockMatches.Count -eq 1 -and -not $matchOrderValid
+                repairRequired = $saefBlockMatches.Count -eq 1 -and
+                    (-not $matchOrderValid -or -not $matchContentValid)
             }
         exit $ExitSuccess
     }
@@ -476,7 +495,6 @@ try {
     $legacyCredentialPath = Join-Path $InstallRoot 'rpc-credential.local.xml'
     $policyPath = Join-Path $InstallRoot 'deployment-channel.local.json'
     $authorizedKeyPath = Join-Path $env:ProgramData 'ssh\saef_deploy_authorized_keys'
-    $gatewayPath = Join-Path $InstallRoot 'Invoke-SaefDeploymentGateway.ps1'
     $runtimeArtifactPaths = @(
         $gatewayPath,
         (Join-Path $InstallRoot 'Invoke-SaefRuntimeMirror.ps1'),
@@ -607,19 +625,6 @@ try {
     Set-RestrictedFileAcl -Path $authorizedKeyPath
 
     $failedStep = 'sshd_configuration'
-    $matchBlock = @"
-$markerStart
-Match User $($DeploymentUser.ToLowerInvariant())
-    AuthenticationMethods publickey
-    PasswordAuthentication no
-    PubkeyAuthentication yes
-    AuthorizedKeysFile __PROGRAMDATA__/ssh/saef_deploy_authorized_keys
-    PermitTTY no
-    AllowTcpForwarding no
-    PermitOpen none
-    ForceCommand powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$gatewayPath`"
-$markerEnd
-"@
     $firstBaseMatch = [regex]::Match($baseSshdConfig, '(?mi)^[\t ]*Match[\t ]+')
     if ($firstBaseMatch.Success) {
         $configPrefix = $baseSshdConfig.Substring(0, $firstBaseMatch.Index).TrimEnd([char[]] @("`r", "`n"))

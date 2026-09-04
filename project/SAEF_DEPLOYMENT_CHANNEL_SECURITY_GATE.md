@@ -1,9 +1,10 @@
 # SAEF Deployment Channel Security Gate
 
-**Result:** Transport security PASS through channel version 7; corrected
-runtime activation PASS after successful rollback of the first candidate
+**Result:** Original transport PASS superseded by Windows account-alias
+finding; active boundary hotfixed, permanent channel fix pending revalidation
 
-**Date:** 2026-07-22; version 7 reverified 2026-07-23
+**Date:** 2026-07-22; version 7 reverified 2026-07-23; alias boundary
+reassessed 2026-09-04
 
 **Scope:** Restricted Windows OpenSSH deployment channel
 
@@ -69,9 +70,34 @@ The operator-provided local audit confirmed:
 - valid hashes for the installed gateway and restart coordinator.
 
 The deployment account remains a local administrator because the current
-restart coordinator must control the IP-Symcon service. This privilege is not
-exposed as a shell: the account has no password SSH, TTY, forwarding, local
-logon or Remote Desktop path through the reviewed channel.
+restart coordinator must control the IP-Symcon service. The original review
+concluded that this privilege was not exposed as a shell. The reassessment
+below supersedes that conclusion for the previous bare-only configuration.
+
+### Windows Account-Alias Reassessment
+
+The later channel-version-8 Windows gate tested real SSH negotiation with all
+accepted local-account spellings. The short and machine-qualified spellings
+advertised only public-key authentication and reached the restricted boundary.
+The `.\`-qualified spelling was also accepted by Windows OpenSSH but did not
+match the original bare-only `Match User` pattern. It therefore inherited the
+global password, keyboard-interactive, TTY, forwarding, key-file and command
+defaults.
+
+This was a high-severity boundary defect because the dedicated account remains
+a local administrator. The vulnerable configuration shape had existed since
+the restricted channel was introduced; the available evidence does not by
+itself demonstrate exploitation. A separately authorized live hotfix replaced
+only the SAEF user pattern with one block covering the short and `.\`-qualified
+spellings, retained a byte-exact protected backup and restarted only `sshd`.
+Unauthenticated postflight negotiation then confirmed public-key-only handling
+for every tested spelling. No Symcon restart, deployment activation or object
+mutation occurred.
+
+The permanent repository correction generates the alias-complete block and
+adds a source regression. Windows release gates must retain real negotiation
+tests because parser success and `sshd -T` account resolution alone did not
+expose the bypass.
 
 ## Credential Migration
 
@@ -104,6 +130,7 @@ The freshly installed channel passed these external tests:
 | Command separator injection | Sanitized rejection, exit code `10` | PASS |
 | Forced TTY allocation | SSH rejection, exit code `255` | PASS |
 | Wrong client key | Public-key authentication rejection | PASS |
+| Short, machine and `.\`-qualified account spelling | Same public-key-only boundary | PASS after hotfix |
 | Invalid package hash | Sanitized rejection without staging | PASS |
 | Missing deployment status | Sanitized rejection | PASS |
 | Ordered bounded package chunks | Exact reconstruction and package hash | PASS |
@@ -148,6 +175,7 @@ The repository checks cover:
 - serialized mutating operations and persistent storage budgets;
 - machine-scoped credential handling and mutually exclusive credential sources;
 - initializer account, ACL, SSH ordering and rollback contracts;
+- alias-complete local-account matching for the forced-command boundary;
 - deterministic package construction; and
 - restart coordinator policy and state traces.
 
@@ -172,19 +200,21 @@ gate and independent verification.
 - Mobile use inherits the key storage, host-key verification and local-file
   security of the selected SSH terminal.
 
-These risks are accepted for the live-tested channel version 7. Version 7
-additionally preserves explicit deployment status when the optional mirror
-coordinator cannot start. A future version should reduce the Windows
-service-control privilege or add a separate local activation authorization
-mechanism before expanding network exposure.
+The active installation has the alias bypass hotfixed, but the original
+version-7 transport PASS is superseded until the permanent repository fix has
+completed its Windows parser, ACL and real-negotiation gate. A future version
+should reduce the Windows service-control privilege or add a separate local
+activation authorization mechanism before expanding network exposure.
 
 ## Gate Decision
 
-The restricted transport channel version 7 is **PASS** for supervised SAEF use
-on the reviewed private network. The first runtime activation remains recorded
-as **FAIL with successful rollback**; the corrected immutable candidate is
-**PASS** after preflight, explicit authorization, post-restart runtime-health
-verification and source-mirror reconciliation.
+The original restricted transport decision for channel version 7 is
+**SUPERSEDED** by the account-alias finding. The active Windows boundary is
+**TEMPORARILY REMEDIATED** by the separately verified hotfix. Permanent
+acceptance requires repository integration followed by the distinct Windows
+parser, ACL and real-negotiation gate. The historical first runtime activation
+remains recorded as **FAIL with successful rollback**; the corrected immutable
+runtime candidate remains **PASS**.
 
 ## Related Artifacts
 

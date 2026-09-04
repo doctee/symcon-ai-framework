@@ -33,6 +33,10 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Hardened the Windows OpenSSH deployment identity against the accepted
+  `.\`-qualified local-account spelling by binding both aliases to the same
+  public-key-only, non-interactive forced-command block and documenting real
+  negotiation as a mandatory Windows gate.
 - Corrected both standalone-module target validation expressions so the
   channel-version-8 gateway remains parseable by Windows PowerShell 5.1, and
   added a regression for both manifest validation boundaries.

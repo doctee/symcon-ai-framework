@@ -396,15 +396,17 @@ does not remain on a mixed artifact generation.
 The SAEF `Match User` block is reconciled before the first other active `Match`
 block. OpenSSH keeps the first value obtained for a setting, so this ordering is
 required when the deployment identity is also covered by Windows' default
-`Match Group administrators` block. A repeated initializer run replaces and
-repositions exactly one well-formed SAEF block; duplicate or partial markers
-fail closed.
+`Match Group administrators` block. The same block contains the short local
+account name and its `.\`-qualified spelling. Windows OpenSSH may authenticate
+either spelling, while a bare-only user pattern does not reliably constrain the
+qualified form. A repeated initializer run replaces and repositions exactly one
+well-formed SAEF block; duplicate or partial markers fail closed.
 
 For review, the initializer appends this bounded `Match User` shape to
 `%ProgramData%\ssh\sshd_config`:
 
 ```text
-Match User <private-deployment-user>
+Match User <private-deployment-user>,.\<private-deployment-user>
     AuthenticationMethods publickey
     PasswordAuthentication no
     PubkeyAuthentication yes
@@ -418,8 +420,12 @@ Match User <private-deployment-user>
 `ForceCommand` is enforced by Windows OpenSSH only for non-PTY sessions;
 `PermitTTY no` is therefore part of the security boundary. The initializer
 validates the complete SSH configuration before restarting `sshd` and restores
-the prior configuration if validation or restart fails. Keep an independent
-administrative recovery session available during the first test.
+the prior configuration if validation or restart fails. Windows acceptance
+must additionally exercise real client negotiation for the short,
+machine-qualified and `.\`-qualified account spellings; parser success and one
+`sshd -T` spelling do not prove that every accepted login spelling reaches the
+same block. Keep an independent administrative recovery session available
+during the first test.
 
 `ExecutionPolicy Bypass` applies only to the forced PowerShell processes. It is
 needed on hosts whose machine policy otherwise blocks all scripts. It does not
