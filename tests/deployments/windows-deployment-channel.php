@@ -319,6 +319,11 @@ foreach (
         'repairRequired',
         "Get-Service -Name 'sshd'",
         '& $sshdExecutable \'-t\' \'-f\' $sshdConfigPath',
+        '$normalizedDeploymentUser = $DeploymentUser.ToLowerInvariant()',
+        '$deploymentMatchUsers = $normalizedDeploymentUser + \',.\\\' + $normalizedDeploymentUser',
+        'Match User $deploymentMatchUsers',
+        '$matchContentValid = $saefBlockMatches.Count -eq 1 -and',
+        '(-not $matchOrderValid -or -not $matchContentValid)',
         'AuthenticationMethods publickey',
         'PasswordAuthentication no',
         'PermitTTY no',
@@ -346,6 +351,14 @@ foreach (
 assertDeploymentChannel(
     !str_contains($initializer, '[IO.File]::AppendAllText($sshdConfigPath'),
     'Initializer appends the SAEF block without reconciling Match order.'
+);
+assertDeploymentChannel(
+    !str_contains($initializer, 'Match User $($DeploymentUser.ToLowerInvariant())'),
+    'Initializer still emits a bare-only Windows OpenSSH Match User block.'
+);
+assertDeploymentChannel(
+    substr_count($initializer, 'Match User $deploymentMatchUsers') === 1,
+    'Initializer does not emit exactly one alias-complete Match User block.'
 );
 assertDeploymentChannel(
     str_contains(

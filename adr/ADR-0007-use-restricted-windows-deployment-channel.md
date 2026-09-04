@@ -28,7 +28,10 @@ a non-interactive forced-command dispatcher.
 The contract is:
 
 1. A dedicated SSH identity is limited by `Match User`, `ForceCommand` and
-   `PermitTTY no` to `Invoke-SaefDeploymentGateway.ps1`.
+   `PermitTTY no` to `Invoke-SaefDeploymentGateway.ps1`. The Windows local
+   account is matched in both its short and `.\`-qualified spelling because
+   OpenSSH may authenticate either spelling without applying a bare-only user
+   pattern.
 2. TCP forwarding, PTY access and password authentication are disabled for
    that identity; Windows OpenSSH exposes no X11 path in this channel.
 3. The dispatcher accepts exactly `probe`, `stage`, `preflight`, `activate`
@@ -54,9 +57,10 @@ The contract is:
 11. The forced gateway and its hash-pinned restart child use process-local
     `ExecutionPolicy Bypass` so a restrictive host policy cannot silently
     disable the channel. No persistent user or machine policy is changed.
-12. The dedicated `Match User` block precedes broader active `Match` blocks.
-    This preserves its key-file setting for an account that is also covered by
-    Windows OpenSSH's default `Match Group administrators` block.
+12. The dedicated alias-complete `Match User` block precedes broader active
+    `Match` blocks. This preserves its key-file setting for an account that is
+    also covered by Windows OpenSSH's default `Match Group administrators`
+    block.
 13. Package limits are enforced while reading every decompressed stream, not
     only from ZIP header metadata. Installation validates credential protection
     before mutation and restores replaced channel artifacts after later errors.
