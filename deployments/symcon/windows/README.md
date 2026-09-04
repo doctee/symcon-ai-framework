@@ -324,6 +324,26 @@ mapping. Deployment-only or fileset-only cleanup is intentionally unsupported.
 Standalone-module candidates are also rejected here: their target adapter must
 provide a separate state-aware retention workflow before any deletion gate.
 
+### OwnTracks Position Map pilot adapter
+
+The first repository-only target profile is documented in
+`case-studies/owntracks-position-map/82-channel-v8-deployment-adapter.md` and
+implemented under `deployments/symcon/windows/adapters/`. Its public policy is
+an intentionally non-runnable placeholder: private positive instance IDs,
+configuration and active-package hashes, protected paths and the Module Control
+binding must be supplied only in excluded local configuration.
+
+The adapter composes the existing standalone package and status contract. It
+adds no remote verb. Its OwnTracks-specific boundary is exactly one pinned
+module instance, five runtime lock files, zero active request leases, a fresh
+format-2 authoritative-state snapshot, one targeted `MC_ReloadModule` per
+activation/rollback direction and adapter-owned package/state retention.
+Format changes fail closed. The companion retention command defaults to the
+read-only `plan` operation; `apply` is a later local-administrator gate.
+
+Adding this source does not populate `standaloneModuleTargets`, install the
+adapter on Windows or authorize a live preflight or activation.
+
 ```powershell
 & .\Invoke-SaefDeploymentRetentionCleanup.ps1 `
     -PlanPath '.\deployment-retention-plan.local.json'

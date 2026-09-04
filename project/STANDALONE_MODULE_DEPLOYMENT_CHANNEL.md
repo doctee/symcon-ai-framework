@@ -146,7 +146,10 @@ public-key-only SSH handling and bounded rejection of invalid target contracts.
 The installed standalone-module target count is zero. No standalone-module
 package was staged, preflighted or activated during the channel installation.
 
-A concrete module adapter and its private target binding are the next module
-workstream, not a generic helper. Their installation, package preflight,
-activation, postflight and retention cleanup remain separately authorized
-gates.
+The first repository adapter candidate is the OwnTracks Position Map profile
+under `deployments/symcon/windows/adapters/`. It keeps its five runtime locks,
+lease inspection, format-2 state snapshot and retention logic local to that
+module; it is not a generic helper. Its Windows transaction verification,
+private target binding, installation, package preflight, activation, postflight
+and retention cleanup remain separately authorized gates. The installed target
+allowlist is still empty.

@@ -41,6 +41,12 @@
         "navimow:fileset-check": [
             "@php tools/build-symcon-module-fileset.php --check deployments/symcon/navimow-module.fileset.json"
         ],
+        "owntracks-position-map:fileset-build": [
+            "@php tools/build-symcon-module-fileset.php deployments/symcon/owntracks-position-map-module.fileset.json"
+        ],
+        "owntracks-position-map:fileset-check": [
+            "@php tools/build-symcon-module-fileset.php --check deployments/symcon/owntracks-position-map-module.fileset.json"
+        ],
         "open-meteo:publication-check": [
             "@php tools/publish-open-meteo-module.php --check"
         ],
@@ -138,6 +144,30 @@
         "test:navimow-pilot": [
             "@php case-studies/navimow/tests/pilot-observation-harness.php"
         ],
+        "test:owntracks-position-map": [
+            "@php case-studies/owntracks-position-map/tests/track-core.php",
+            "@php case-studies/owntracks-position-map/tests/motion-aware-target-resolver.php",
+            "@php case-studies/owntracks-position-map/tests/symcon-archive-adapter.php",
+            "@php case-studies/owntracks-position-map/tests/provider-policy.php",
+            "@php case-studies/owntracks-position-map/tests/tile-access-policy.php",
+            "@php case-studies/owntracks-position-map/tests/tile-directory-authority.php",
+            "@php case-studies/owntracks-position-map/tests/tile-miss-resolver.php",
+            "@php case-studies/owntracks-position-map/tests/osm-tile-transport.php",
+            "@php case-studies/owntracks-position-map/tests/system-tile-transport.php",
+            "@php case-studies/owntracks-position-map/tests/security-regressions.php",
+            "@php case-studies/owntracks-position-map/tests/provider-tile-cache.php",
+            "@php case-studies/owntracks-position-map/tests/provider-tile-runtime.php",
+            "@php case-studies/owntracks-position-map/tests/tile-gateway.php",
+            "@php case-studies/owntracks-position-map/tests/tile-webhook-adapter.php",
+            "@php case-studies/owntracks-position-map/tests/runtime-module.php",
+            "@php case-studies/owntracks-position-map/tests/packaged-runtime.php",
+            "@php case-studies/owntracks-position-map/tests/performance.php",
+            "@php case-studies/owntracks-position-map/tests/offline-renderer.php",
+            "@php case-studies/owntracks-position-map/tests/openlayers-renderer.php",
+            "@php case-studies/owntracks-position-map/tools/validate-distribution.php",
+            "@php case-studies/owntracks-position-map/tests/module-fileset.php",
+            "@php tests/deployments/owntracks-position-map-module-adapter.php"
+        ],
         "test:navimow-mqtt": [
             "case-studies/navimow/tools/check-mqtt-shadow.sh"
         ],
@@ -176,6 +206,7 @@
             "@control-light:fileset-check",
             "@media-carousel:fileset-check",
             "@navimow:fileset-check",
+            "@owntracks-position-map:fileset-check",
             "@open-meteo:publication-check",
             "@media-carousel:publication-check",
             "@navimow:publication-check",
@@ -206,6 +237,7 @@
             "@test:hue-wall-topology",
             "@test:navimow-rest-auth",
             "@test:navimow-pilot",
+            "@test:owntracks-position-map",
             "@test:navimow-mqtt",
             "@test:navimow-distribution",
             "@test:media-carousel",

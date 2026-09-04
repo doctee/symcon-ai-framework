@@ -1,0 +1,31 @@
+<div class="ot-map" data-owntracks-map>
+    <canvas class="ot-map__canvas" data-map-canvas tabindex="0"
+        aria-label="Synthetic OwnTracks position map"></canvas>
+    <div class="ot-map__controls" aria-label="Map selection">
+        <label>
+            <span>Source</span>
+            <select data-source-select></select>
+        </label>
+        <label>
+            <span>Day</span>
+            <input data-day-select type="date">
+        </label>
+        <label>
+            <span>Path</span>
+            <select data-mode-select>
+                <option value="timestamp-points">Timestamp points</option>
+                <option value="segmented-line">Segmented line</option>
+                <option value="line-with-sampled-timestamps" selected>Line + timestamps</option>
+            </select>
+        </label>
+    </div>
+    <div class="ot-map__navigation" aria-label="Map navigation">
+        <button type="button" data-zoom-in aria-label="Zoom in">+</button>
+        <button type="button" data-zoom-out aria-label="Zoom out">−</button>
+        <button type="button" data-fit-all>Fit all</button>
+    </div>
+    <output class="ot-map__eta" data-eta aria-live="polite"></output>
+    <output class="ot-map__point" data-point-detail aria-live="polite"></output>
+    <div class="ot-map__attribution">Diagnostic view · no map tiles</div>
+    <div class="ot-map__status" data-status role="status" aria-live="polite"></div>
+</div>

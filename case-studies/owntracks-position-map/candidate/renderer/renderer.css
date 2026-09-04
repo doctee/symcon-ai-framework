@@ -1,0 +1,327 @@
+:root {
+    color-scheme: light dark;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+.ot-map {
+    --ot-host-chrome-height: 46px;
+    --ot-panel-frame-top: 6px;
+    --ot-surface: var(--card-color, light-dark(#eef2f3, #172026));
+    --ot-grid: light-dark(rgba(47, 65, 74, 0.16), rgba(218, 229, 235, 0.14));
+    --ot-grid-strong: light-dark(rgba(47, 65, 74, 0.32), rgba(218, 229, 235, 0.28));
+    --ot-text: var(--content-color, light-dark(#172026, #f1f5f7));
+    --ot-panel: var(--card-color, light-dark(#ffffff, #182127));
+    --ot-panel-border: light-dark(rgba(23, 32, 38, 0.2), rgba(241, 245, 247, 0.22));
+    --ot-accent: var(--accent-color, light-dark(#086788, #55c1e7));
+    --ot-track: var(--ot-accent);
+    --ot-point: light-dark(#b54a20, #ff9d76);
+    --ot-target: light-dark(#4f6f2f, #a9d37c);
+    --ot-shadow: light-dark(rgba(23, 32, 38, 0.18), rgba(0, 0, 0, 0.35));
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 320px;
+    overflow: hidden;
+    background: var(--ot-surface);
+    color: var(--ot-text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    touch-action: auto;
+    overscroll-behavior: contain;
+    user-select: auto;
+    isolation: isolate;
+}
+
+.ot-map .ol-viewport {
+    touch-action: none;
+    overscroll-behavior: contain;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ot-map__canvas {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    color: var(--ot-text);
+    border-top-color: var(--ot-grid);
+    border-right-color: var(--ot-grid-strong);
+    border-bottom-color: var(--ot-track);
+    border-left-color: var(--ot-point);
+    outline-color: var(--ot-target);
+    outline-offset: -3px;
+}
+
+.ot-map__canvas:active {
+    cursor: grabbing;
+}
+
+.ot-map__controls,
+.ot-map__navigation,
+.ot-map__eta,
+.ot-map__tooltip,
+.ot-map__attribution,
+.ot-map__status {
+    position: absolute;
+    z-index: 3;
+    box-sizing: border-box;
+    background: var(--ot-panel);
+    border: 1px solid var(--ot-panel-border);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px var(--ot-shadow);
+}
+
+.ot-map__controls {
+    top: var(--ot-panel-frame-top);
+    left: 8px;
+    display: grid;
+    grid-template-columns: minmax(0, 81px) minmax(0, 77px)
+        minmax(0, 116px);
+    gap: 3px;
+    width: min(290px, calc(100% - 108px));
+    max-width: none;
+    padding: 29px 4px 3px;
+    pointer-events: auto;
+    touch-action: auto;
+    user-select: auto;
+    -webkit-user-select: auto;
+}
+
+.ot-map__controls label {
+    display: grid;
+    min-width: 0;
+    gap: 1px;
+    font-size: 9px;
+    line-height: 1.1;
+}
+
+.ot-map__controls label > span {
+    padding-left: 3px;
+}
+
+.ot-map__controls select,
+.ot-map__controls input,
+.ot-map__navigation button {
+    box-sizing: border-box;
+    height: 26px;
+    min-height: 26px;
+    max-height: 26px;
+    border: 1px solid var(--ot-panel-border);
+    border-radius: 6px;
+    background: var(--ot-panel);
+    color: var(--ot-text);
+    font: inherit;
+    line-height: 1.2;
+    pointer-events: auto;
+    touch-action: auto;
+    user-select: auto;
+    -webkit-user-select: auto;
+    accent-color: var(--ot-accent);
+}
+
+.ot-map__controls select,
+.ot-map__controls input {
+    width: 100%;
+    min-width: 0;
+    min-inline-size: 0;
+    max-width: 100%;
+    max-inline-size: 100%;
+    padding: 1px 5px;
+    font-size: 12px;
+    cursor: default;
+}
+
+.ot-map__controls input[type="date"]::-webkit-date-and-time-value {
+    min-height: 0;
+    text-align: left;
+}
+
+.ot-map__controls input[type="date"] {
+    width: calc(100% - 14px);
+    max-width: calc(100% - 14px);
+    justify-self: start;
+}
+
+.ot-map__controls select:disabled,
+.ot-map__controls input:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
+.ot-map__navigation {
+    top: var(--ot-host-chrome-height);
+    right: 8px;
+    display: grid;
+    grid-template-columns: 34px 34px;
+    gap: 3px;
+    padding: 3px;
+    pointer-events: auto;
+    touch-action: auto;
+    user-select: auto;
+    -webkit-user-select: auto;
+}
+
+.ot-map__navigation button {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    max-height: 34px;
+    padding: 3px 6px;
+    cursor: pointer;
+}
+
+.ot-map__navigation [data-fit-all] {
+    grid-column: 1 / -1;
+    width: auto;
+    min-width: 0;
+}
+
+.ot-map__eta {
+    left: 6px;
+    bottom: 6px;
+    max-width: min(420px, calc(100% - 16px));
+    padding: 4px 6px;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 500;
+}
+
+.ot-map__eta[hidden] {
+    display: none;
+}
+
+.ot-map__tooltip {
+    top: 0;
+    left: 0;
+    z-index: 3;
+    max-width: min(300px, calc(100% - 16px));
+    padding: 6px 8px;
+    font-size: 12px;
+    pointer-events: none;
+}
+
+.ot-map__tooltip[hidden] {
+    display: none;
+}
+
+.ot-map__attribution {
+    right: 6px;
+    bottom: 6px;
+    padding: 2px 4px;
+    font-size: 9px;
+    line-height: 1.2;
+}
+
+.ot-map__attribution a {
+    color: inherit;
+}
+
+.ot-map__status {
+    top: 13px;
+    left: 8px;
+    width: min(290px, calc(100% - 108px));
+    padding: 0;
+    font-size: 11px;
+    line-height: 1.2;
+    text-align: center;
+    pointer-events: none;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.ot-map__status:empty {
+    display: none;
+}
+
+@media (pointer: coarse) {
+    .ot-map__controls select,
+    .ot-map__controls input,
+    .ot-map__navigation button {
+        height: 28px;
+        min-height: 28px;
+        max-height: 28px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 720px) {
+    .ot-map__controls {
+        width: min(290px, calc(100% - 108px));
+    }
+}
+
+@media (max-width: 560px) {
+    .ot-map__controls {
+        top: var(--ot-panel-frame-top);
+        right: auto;
+        left: 6px;
+        width: min(286px, calc(100% - 64px));
+        max-width: none;
+        display: grid;
+        grid-template-columns: minmax(0, 81px) minmax(0, 71px)
+            minmax(0, 118px);
+        gap: 3px;
+        padding: 29px 4px 3px;
+        border-radius: 7px;
+    }
+
+    .ot-map__controls label {
+        min-width: 0;
+        gap: 1px;
+        font-size: 9px;
+    }
+
+    .ot-map__controls select,
+    .ot-map__controls input {
+        width: 100%;
+        min-width: 0;
+        height: 26px;
+        min-height: 26px;
+        max-height: 26px;
+        padding: 1px 4px;
+        font-size: 12px;
+    }
+
+    .ot-map__navigation {
+        top: var(--ot-host-chrome-height);
+        right: 6px;
+        grid-template-columns: 30px 30px;
+        gap: 3px;
+        padding: 3px;
+        border-radius: 7px;
+    }
+
+    .ot-map__navigation button {
+        width: 30px;
+        min-width: 30px;
+        height: 30px;
+        min-height: 30px;
+        max-height: 30px;
+        padding: 2px 4px;
+        font-size: 13px;
+    }
+
+    .ot-map__attribution {
+        right: 6px;
+        bottom: 6px;
+    }
+
+    .ot-map__status {
+        left: 6px;
+        width: min(286px, calc(100% - 64px));
+    }
+
+}

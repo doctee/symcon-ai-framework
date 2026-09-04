@@ -1,0 +1,47 @@
+{
+    "formatVersion": 1,
+    "adapterProfile": "saef-owntracks-position-map-v1",
+    "targetId": "saef-owntracks-position-map",
+    "libraryGuid": "{C1B6C0DD-88B1-4360-95C3-F7F542EBC7DD}",
+    "moduleGuid": "{7698CC84-EB18-40EC-B594-F403F50966A1}",
+    "libraryName": "SAEF OwnTracks Position Map",
+    "moduleName": "OwnTracksPositionMap",
+    "libraryUrl": "https://github.com/doctee/symcon-ai-framework",
+    "moduleControlInstanceId": 0,
+    "moduleDirectoryName": "saef-owntracks-position-map",
+    "activeModulePath": "<private-absolute-package-managed-module-path>",
+    "adapterStateRoot": "<private-absolute-owntracks-adapter-state-root>",
+    "runtimeStateRoots": {
+        "dayCache": "<private-absolute-instance-day-cache-root>",
+        "providerCache": "<private-absolute-instance-provider-cache-root>",
+        "tileBudget": "<private-absolute-instance-tile-budget-root>",
+        "providerBudget": "<private-absolute-instance-provider-budget-root>",
+        "missState": "<private-absolute-instance-miss-state-root>"
+    },
+    "runtimeLockFiles": {
+        "dayCache": ".lock",
+        "providerCache": ".metadata.lock",
+        "tileBudget": "budget.lock",
+        "providerBudget": "budget.lock",
+        "missState": ".state.lock"
+    },
+    "mutexName": "Global\\SAEF.OwnTracksPositionMap.ModuleAdapter",
+    "expectedReadyRunlevel": 10103,
+    "rpcTimeoutSeconds": 30,
+    "reloadTimeoutSeconds": 60,
+    "healthPollMilliseconds": 500,
+    "quiescenceTimeoutSeconds": 30,
+    "allowedInstanceStatuses": [102],
+    "requiredInstanceCount": 1,
+    "expectedInstanceId": 0,
+    "expectedConfigurationSha256": "<private-sha256-of-byte-exact-instance-configuration>",
+    "expectedActivePackageIdentitySha256": "<private-sha256-of-active-module-tree>",
+    "maximumCandidateBytes": 67108864,
+    "maximumStateBytes": 1048576,
+    "retention": {
+        "minimumAgeHours": 168,
+        "keepSuccessfulRollbackCount": 2,
+        "keepFailedCandidateCount": 2,
+        "maximumArtifactCount": 16
+    }
+}

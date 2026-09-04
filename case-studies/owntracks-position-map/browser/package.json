@@ -1,0 +1,16 @@
+{
+  "name": "saef-owntracks-position-map-browser",
+  "version": "0.0.0-private",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build-openlayers.mjs",
+    "check": "node build-openlayers.mjs --check"
+  },
+  "dependencies": {
+    "ol": "10.10.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

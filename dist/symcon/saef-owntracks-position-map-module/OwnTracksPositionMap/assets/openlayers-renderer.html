@@ -1,0 +1,31 @@
+<div class="ot-map" data-owntracks-openlayers-map>
+    <div class="ot-map__canvas" data-map-surface tabindex="0"
+        aria-label="Synthetic OwnTracks OpenLayers position map"></div>
+    <div class="ot-map__controls" aria-label="Map selection">
+        <label>
+            <span>View</span>
+            <select data-mode-select>
+                <option value="current-overview" selected>Positions</option>
+                <option value="path">Path</option>
+            </select>
+        </label>
+        <label>
+            <span>Source</span>
+            <select data-source-select></select>
+        </label>
+        <label>
+            <span>Day</span>
+            <input data-day-select type="date">
+        </label>
+    </div>
+    <div class="ot-map__navigation" aria-label="Map navigation">
+        <button type="button" data-zoom-in aria-label="Zoom in">+</button>
+        <button type="button" data-zoom-out aria-label="Zoom out">−</button>
+        <button type="button" data-fit-all>Fit all</button>
+    </div>
+    <output class="ot-map__eta" data-eta aria-live="polite"></output>
+    <output class="ot-map__tooltip" data-point-tooltip role="tooltip"
+        aria-live="polite" hidden></output>
+    <div class="ot-map__attribution" data-attribution>OpenLayers · no map tiles</div>
+    <div class="ot-map__status" data-status role="status" aria-live="polite"></div>
+</div>
