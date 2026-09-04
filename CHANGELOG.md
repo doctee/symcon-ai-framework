@@ -33,6 +33,9 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Corrected both standalone-module target validation expressions so the
+  channel-version-8 gateway remains parseable by Windows PowerShell 5.1, and
+  added a regression for both manifest validation boundaries.
 - Reconciled the project overview and v0.4 scope, repository and readiness
   records with the published annotated tag, exact-revision CI and successful
   GitHub Release.
