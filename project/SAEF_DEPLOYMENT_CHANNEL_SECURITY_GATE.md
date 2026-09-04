@@ -1,15 +1,16 @@
 # SAEF Deployment Channel Security Gate
 
-**Result:** Original transport PASS superseded by Windows account-alias
-finding; active boundary hotfixed, permanent channel fix pending revalidation
+**Result:** PASS; permanent account-alias hardening, deterministic early
+preflight status and channel version 8 are installed and independently verified
 
 **Date:** 2026-07-22; version 7 reverified 2026-07-23; alias boundary
-reassessed 2026-09-04
+reassessed and version 8 verified 2026-09-04
 
 **Scope:** Restricted Windows OpenSSH deployment channel
 
-**Behavior state:** Corrected managed fileset active; runtime function contract
-and source mirror verified
+**Behavior state:** Corrected managed fileset active; runtime function contract,
+source mirror and version-8 transport boundary verified; standalone-module
+target allowlist empty
 
 ## Scope
 
@@ -95,9 +96,11 @@ for every tested spelling. No Symcon restart, deployment activation or object
 mutation occurred.
 
 The permanent repository correction generates the alias-complete block and
-adds a source regression. Windows release gates must retain real negotiation
-tests because parser success and `sshd -T` account resolution alone did not
-expose the bypass.
+adds a source regression. It passed the complete Windows release gate, replaced
+the live hotfix during the guarded version-8 installation and passed independent
+postflight negotiation for all tested spellings. Future Windows release gates
+must retain real negotiation tests because parser success and `sshd -T` account
+resolution alone did not expose the bypass.
 
 ### Early Preflight Status Reassessment
 
@@ -113,8 +116,9 @@ The repository correction keeps the snapshot parameter mandatory but
 explicitly permits an empty collection as a no-op. This preserves rejection of
 missing cleanup input while restoring deterministic exit code `10`, failure
 status and no-rollback evidence for every validation error before snapshot
-creation. Channel commands, target policy and version remain unchanged. Final
-acceptance still requires the complete Windows gate to pass.
+creation. Channel commands, target policy and version remain unchanged. The
+complete Windows gate subsequently passed all six negative target-policy cases
+with deterministic status, exit-code and no-rollback evidence.
 
 ## Credential Migration
 
@@ -155,6 +159,8 @@ The freshly installed channel passed these external tests:
 | First real package activation | Preserve required runtime functions | **FAIL; rolled back** |
 | Corrected managed-path package preflight | Exact target path, 74-function sentinel and mirror preconditions | PASS |
 | Corrected managed-path package activation | Restart, 74-function sentinel, rollback readiness and source mirror | PASS |
+| Channel version 8 installation | Protected backup, credential preflight, empty module target allowlist and OpenSSH-only restart | PASS |
+| Channel version 8 postflight | Exact alias boundary, real SSH negotiation, negative target-policy cases and external probe | PASS |
 
 The successful probe validated the server-pinned policy, machine credential,
 active bootstrap identity, IP-Symcon service state, authenticated loopback RPC
@@ -180,6 +186,27 @@ incomplete stage command with sanitized command failures. A forced TTY request
 was rejected by SSH with exit code `255`. A final deep probe still returned
 ready state, confirming that the rejection checks did not alter channel state.
 
+### Channel Version 8 Installation and Postflight
+
+The permanent repository corrections passed the Windows PowerShell parser,
+protected ACL, exact SSH block and real-negotiation gate without active channel
+mutation. Six invalid standalone-module target-policy fixtures failed closed
+with deterministic bounded status, including validation before rollback
+snapshot creation.
+
+A separately authorized installation retained a protected, hash-verified
+channel backup, completed the authenticated credential preflight at the ready
+Symcon runlevel and installed channel version 8. The only service restart was
+OpenSSH. The active policy intentionally contains no standalone-module target,
+so the new deployment kind is visible but no module adapter or activation is
+enabled.
+
+Independent postflight from macOS returned ready state, channel version 8, the
+unchanged five operations and both supported deployment kinds. The complete
+Windows gate then passed again against the installed channel without active
+mutation or another restart, followed by a final successful external probe. No
+standalone-module package was staged, preflighted or activated.
+
 ## Repository Verification
 
 The repository checks cover:
@@ -198,8 +225,9 @@ The repository checks cover:
 
 `make check`, the dedicated deployment-channel test, runtime health probe test
 and restart-coordinator test pass after the repository hardening. The corrected
-live activation passed its non-mutating preflight, post-restart compatibility
-gate and independent verification.
+runtime-fileset activation passed its non-mutating preflight, post-restart
+compatibility gate and independent verification. The version-8 Windows and live
+postflight gates also pass with an empty standalone-module target allowlist.
 
 ## Residual Risks
 
@@ -217,21 +245,23 @@ gate and independent verification.
 - Mobile use inherits the key storage, host-key verification and local-file
   security of the selected SSH terminal.
 
-The active installation has the alias bypass hotfixed, but the original
-version-7 transport PASS is superseded until the permanent repository fix has
-completed its Windows parser, ACL and real-negotiation gate. A future version
-should reduce the Windows service-control privilege or add a separate local
-activation authorization mechanism before expanding network exposure.
+The permanent alias correction is now installed and has completed its Windows
+parser, ACL and real-negotiation gate. The retained installation and repair
+backups remain subject to a later, separately authorized observation and
+retention decision. A future version should reduce the Windows service-control
+privilege or add a separate local activation authorization mechanism before
+expanding network exposure.
 
 ## Gate Decision
 
-The original restricted transport decision for channel version 7 is
-**SUPERSEDED** by the account-alias finding. The active Windows boundary is
-**TEMPORARILY REMEDIATED** by the separately verified hotfix. Permanent
-acceptance requires repository integration followed by the distinct Windows
-parser, ACL and real-negotiation gate. The historical first runtime activation
-remains recorded as **FAIL with successful rollback**; the corrected immutable
-runtime candidate remains **PASS**.
+The original restricted transport decision for channel version 7 remains
+**SUPERSEDED** by the account-alias finding. The permanent repository correction
+and active channel version 8 boundary are **PASS** after the distinct Windows
+parser, ACL, real-negotiation, installation and independent postflight gates.
+The historical first runtime activation remains recorded as **FAIL with
+successful rollback**; the corrected immutable runtime candidate remains
+**PASS**. Standalone-module activation remains disabled until a concrete target
+adapter passes its own separately authorized installation and activation gates.
 
 ## Related Artifacts
 

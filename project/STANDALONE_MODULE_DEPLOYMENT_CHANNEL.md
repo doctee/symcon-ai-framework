@@ -1,7 +1,8 @@
 # Standalone Symcon module deployment channel
 
-**Status:** Repository implementation complete; Windows and live activation
-remain separate gates.
+**Status:** Channel version 8 is installed and live-verified. The standalone
+module target allowlist remains intentionally empty, so module activation is
+not enabled.
 
 ## Shared-impact inventory
 
@@ -19,15 +20,17 @@ module publication is separate repository tooling and does not contact a live
 installation.
 
 No helper API, PHP autoload boundary or application runtime is changed. The
-repository implementation does not restart Symcon or OpenSSH and does not
-alter an active observation or pilot. Before any later live channel update,
-active pilots and restart constraints must be inventoried again.
+separately authorized channel installation restarted only OpenSSH; it did not
+restart Symcon, activate a module or alter an active observation or pilot.
+Before any later live channel update, active pilots and restart constraints
+must be inventoried again.
 
 Command-free regression coverage includes the original runtime-fileset package,
 chunk-client reconstruction, strict command grammar, source checksums,
 forbidden shell patterns and a deterministic synthetic standalone-module
-package. Windows syntax, ACL and adapter transaction tests remain mandatory
-before live use.
+package. Windows syntax, ACL, real SSH negotiation and adapter transaction
+tests passed before the version-8 installation and remain mandatory for later
+channel changes.
 
 ## Package contract
 
@@ -134,5 +137,16 @@ backup is not rollback.
 This work implements the provider-neutral package, transport, staging,
 allowlist and adapter-dispatch contracts. It deliberately introduces no map
 abstraction and contains no module-specific paths, ObjectIDs, configuration or
-state converter. A concrete module adapter is the next module workstream, not a
-generic helper.
+state converter.
+
+The installed channel reports both `runtime-fileset` and `standalone-module`
+as supported deployment kinds. Independent macOS and Windows postflight checks
+confirmed channel version 8, the unchanged five-command boundary, alias-complete
+public-key-only SSH handling and bounded rejection of invalid target contracts.
+The installed standalone-module target count is zero. No standalone-module
+package was staged, preflighted or activated during the channel installation.
+
+A concrete module adapter and its private target binding are the next module
+workstream, not a generic helper. Their installation, package preflight,
+activation, postflight and retention cleanup remain separately authorized
+gates.

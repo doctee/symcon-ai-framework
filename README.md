@@ -163,7 +163,11 @@ The Diagnostics helper set covers configuration hashes, Registry metadata,
 Statistics and bounded error ring buffers; `RI-002` demonstrates their
 composition. The restricted deployment channel uses a hash-pinned OpenSSH
 forced command on Windows and the same SSH protocol from macOS or a suitable
-iPhone/iPad terminal. It does not expose a general remote PowerShell session.
+iPhone/iPad terminal. Channel version 8 is installed and live-verified; it
+preserves runtime-fileset deployments and advertises the target-bound
+standalone-module capability. Its module target allowlist is intentionally
+empty, so no standalone-module activation is enabled. The channel does not
+expose a general remote PowerShell session.
 
 ## Licensing
 

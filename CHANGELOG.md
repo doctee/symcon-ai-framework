@@ -33,6 +33,11 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Completed the Windows parser, protected-ACL, real-negotiation and guarded live
+  installation gates for restricted deployment channel version 8. Independent
+  postflight confirmed both deployment kinds and the unchanged five-command
+  boundary; the standalone-module target allowlist remains intentionally empty,
+  so no module was staged or activated.
 - Restored deterministic Windows deployment-channel status for validation
   failures before rollback snapshot creation by allowing the mandatory
   snapshot cleanup to accept an explicit empty collection as a no-op.
