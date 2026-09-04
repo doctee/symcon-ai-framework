@@ -72,6 +72,7 @@ $initializerPath = $root . '/deployments/symcon/windows/Initialize-SaefDeploymen
 $clientPath = $root . '/deployments/symcon/windows/saef-deploy';
 $policyExamplePath = $root . '/deployments/symcon/windows/deployment-channel-policy.example.json';
 $builderPath = $root . '/tools/build-symcon-deployment-package.php';
+$moduleBuilderPath = $root . '/tools/build-symcon-module-deployment-package.php';
 $checksumPath = $root . '/deployments/symcon/windows/SHA256SUMS';
 
 $gateway = file_get_contents($gatewayPath);
@@ -98,7 +99,7 @@ assertDeploymentChannel(
 
 $requiredGatewayFragments = [
     "@('probe', 'stage', 'preflight', 'activate', 'status')",
-    '$ChannelVersion = 7',
+    '$ChannelVersion = 8',
     'channelVersion = $ChannelVersion',
     '[string] $env:SSH_ORIGINAL_COMMAND',
     'maxPackageBytes',
@@ -111,6 +112,13 @@ $requiredGatewayFragments = [
     'expectedRuntimeMirrorCoordinatorSha256',
     'expectedRuntimeMirrorReconcilerSha256',
     'Invoke-RuntimeMirrorCoordinator',
+    'Invoke-StandaloneModuleAdapter',
+    "@('runtime-fileset', 'standalone-module')",
+    'standaloneModuleTargets',
+    'Standalone module target is not uniquely allowlisted.',
+    'Standalone module adapter status contract is invalid.',
+    "'-AdapterPolicyPath'",
+    "'-TransactionContractPath'",
     'runtime-source-mirror.local.json',
     'mirrorFailureCode',
     'allowedMirrorFailureCodes',
@@ -293,6 +301,11 @@ foreach (
         "'Invoke-SaefRuntimeMirror.ps1'",
         "'SaefRuntimeSourceMirror.php'",
         'runtimeMirrorEnabled = $RuntimeMirrorParentID -gt 0',
+        '[string] $StandaloneModuleTargetsPath',
+        'Read-StandaloneModuleTargets',
+        '[Management.Automation.Language.Parser]::ParseInput',
+        "Join-Path \$InstallRoot 'standalone-modules'",
+        'expectedAdapterPolicySha256',
         'SAEF deployment SSH block is malformed.',
         '$saefBlockRegex.Replace($sshdConfig, \'\', 1)',
         'repairRequired',
@@ -378,6 +391,7 @@ $requiredPolicyKeys = [
     'runtimeMirrorIdent',
     'runtimeMirrorName',
     'runtimeMirrorPosition',
+    'standaloneModuleTargets',
     'runtimeHealthProbeEnabled',
     'runtimeHealthProbeScriptID',
     'expectedRuntimeHealthProbeSha256',
@@ -424,6 +438,10 @@ $expectedChecksumFiles = [
     'deployment-retention-plan.example.json',
     'restart-policy.json',
     'saef-deploy',
+    'standalone-module-adapter-policy.example.json',
+    'standalone-module-deployment-plan.example.json',
+    'standalone-module-targets.example.json',
+    'standalone-module-transaction.example.json',
 ];
 $actualChecksumFiles = [];
 foreach ($checksumLines as $line) {
@@ -599,6 +617,131 @@ try {
     } finally {
         $archive->close();
     }
+
+    $moduleRoot = $temporaryRoot . '/module';
+    mkdir($moduleRoot . '/ExampleModule', 0700, true);
+    $libraryGuid = '{11111111-2222-3333-4444-555555555555}';
+    file_put_contents(
+        $moduleRoot . '/library.json',
+        json_encode(['id' => $libraryGuid, 'name' => 'Synthetic'], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n"
+    );
+    file_put_contents(
+        $moduleRoot . '/ExampleModule/module.json',
+        json_encode(['id' => '{AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE}'], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n"
+    );
+    file_put_contents($moduleRoot . '/ExampleModule/module.php', "<?php\ndeclare(strict_types=1);\n");
+    $transactionPath = $temporaryRoot . '/module-transaction.local.json';
+    file_put_contents(
+        $transactionPath,
+        json_encode(
+            [
+                'formatVersion' => 1,
+                'adapterProfile' => 'saef-synthetic-module-v1',
+                'state' => ['rollbackPreparation' => 'adapter-required'],
+            ],
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+        ) . "\n"
+    );
+    $modulePackages = [];
+    for ($index = 0; $index < 2; $index++) {
+        $modulePackagePath = $temporaryRoot . "/module-candidate-{$index}.zip";
+        $modulePlanPath = $temporaryRoot . "/module-plan-{$index}.local.json";
+        file_put_contents(
+            $modulePlanPath,
+            json_encode(
+                [
+                    'formatVersion' => 1,
+                    'deploymentId' => 'saef-synthetic-module-release',
+                    'targetDirectoryName' => 'saef-synthetic-module-package',
+                    'modulePath' => $moduleRoot,
+                    'moduleTargetId' => 'saef-synthetic-module',
+                    'libraryGuid' => strtolower($libraryGuid),
+                    'transactionContractPath' => $transactionPath,
+                    'outputPath' => $modulePackagePath,
+                ],
+                JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+            ) . "\n"
+        );
+        $moduleBuild = runDeploymentChannelProcess([PHP_BINARY, $moduleBuilderPath, $modulePlanPath]);
+        assertDeploymentChannel(
+            $moduleBuild['exitCode'] === 0,
+            'Standalone module deployment package build failed: ' . trim($moduleBuild['stderr'])
+        );
+        $moduleResult = json_decode($moduleBuild['stdout'], true, flags: JSON_THROW_ON_ERROR);
+        assertDeploymentChannel(
+            $moduleResult['deploymentKind'] === 'standalone-module'
+                && $moduleResult['moduleTargetId'] === 'saef-synthetic-module'
+                && $moduleResult['fileCount'] === 3
+                && $moduleResult['packageSha256'] === hash_file('sha256', $modulePackagePath),
+            'Standalone module deployment builder returned an invalid identity.'
+        );
+        $modulePackages[] = $modulePackagePath;
+    }
+    assertDeploymentChannel(
+        file_get_contents($modulePackages[0]) === file_get_contents($modulePackages[1]),
+        'Independent standalone module deployment package builds are not deterministic.'
+    );
+
+    $moduleArchive = new ZipArchive();
+    assertDeploymentChannel(
+        $moduleArchive->open($modulePackages[0]) === true,
+        'Cannot open generated standalone module deployment package.'
+    );
+    try {
+        $moduleNames = [];
+        for ($index = 0; $index < $moduleArchive->numFiles; $index++) {
+            $name = $moduleArchive->getNameIndex($index);
+            assertDeploymentChannel(is_string($name), 'Standalone module package contains an unnamed entry.');
+            $moduleNames[] = $name;
+        }
+        assertDeploymentChannel(
+            $moduleNames === [
+                'deployment.json',
+                'module-transaction.json',
+                'module/ExampleModule/module.json',
+                'module/ExampleModule/module.php',
+                'module/library.json',
+            ],
+            'Standalone module package membership or order is invalid.'
+        );
+        $moduleManifest = json_decode(
+            (string) $moduleArchive->getFromName('deployment.json'),
+            true,
+            flags: JSON_THROW_ON_ERROR
+        );
+        assertDeploymentChannel(
+            $moduleManifest['deploymentKind'] === 'standalone-module'
+                && $moduleManifest['module']['targetId'] === 'saef-synthetic-module'
+                && $moduleManifest['module']['libraryGuid'] === $libraryGuid
+                && preg_match('/^[a-f0-9]{64}$/', $moduleManifest['module']['packageIdentitySha256']) === 1
+                && $moduleManifest['module']['transactionContractSha256'] === hash(
+                    'sha256',
+                    (string) $moduleArchive->getFromName('module-transaction.json')
+                ),
+            'Standalone module manifest is invalid.'
+        );
+    } finally {
+        $moduleArchive->close();
+    }
+
+    $invalidModulePlanPath = $temporaryRoot . '/invalid-module-plan.local.json';
+    $invalidModulePackagePath = $temporaryRoot . '/invalid-module.zip';
+    $invalidModulePlan = json_decode(
+        (string) file_get_contents($temporaryRoot . '/module-plan-1.local.json'),
+        true,
+        flags: JSON_THROW_ON_ERROR
+    );
+    $invalidModulePlan['libraryGuid'] = '{99999999-2222-3333-4444-555555555555}';
+    $invalidModulePlan['outputPath'] = $invalidModulePackagePath;
+    file_put_contents(
+        $invalidModulePlanPath,
+        json_encode($invalidModulePlan, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n"
+    );
+    $invalidModuleBuild = runDeploymentChannelProcess([PHP_BINARY, $moduleBuilderPath, $invalidModulePlanPath]);
+    assertDeploymentChannel(
+        $invalidModuleBuild['exitCode'] !== 0 && !file_exists($invalidModulePackagePath),
+        'Standalone module builder accepted a divergent library identity.'
+    );
 } finally {
     removeDeploymentChannelTree($temporaryRoot);
 }

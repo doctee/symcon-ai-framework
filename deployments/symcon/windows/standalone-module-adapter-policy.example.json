@@ -1,0 +1,7 @@
+{
+    "formatVersion": 1,
+    "adapterProfile": "saef-example-module-v1",
+    "settings": {
+        "note": "Replace with the private, adapter-specific transaction policy."
+    }
+}

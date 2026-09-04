@@ -17,7 +17,7 @@ $ExitStageFailed = 20
 $ExitPreflightFailed = 30
 $ExitActivationFailed = 40
 $ExitManualRecovery = 50
-$ChannelVersion = 7
+$ChannelVersion = 8
 $ChannelMutexName = 'Global\SAEF.DeploymentChannel'
 $UploadChunkBytes = 4096
 $script:failureCode = 'request'
@@ -51,6 +51,25 @@ function Test-SafeIdentifier {
     param([Parameter(Mandatory = $true)][string] $Value)
 
     return $Value -match '^saef-[a-z0-9][a-z0-9.-]{0,63}$'
+}
+
+function Get-DeploymentKind {
+    param([Parameter(Mandatory = $true)] $Manifest)
+
+    if ($Manifest.PSObject.Properties.Name -notcontains 'deploymentKind') {
+        return 'runtime-fileset'
+    }
+    $kind = [string] $Manifest.deploymentKind
+    if ($kind -notin @('runtime-fileset', 'standalone-module')) {
+        throw [System.InvalidOperationException]::new('Deployment kind is unsupported.')
+    }
+    return $kind
+}
+
+function Test-SymconGuid {
+    param([Parameter(Mandatory = $true)][string] $Value)
+
+    return $Value -match '^\{[A-Fa-f0-9]{8}(?:-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}\}$'
 }
 
 function Test-SafeRelativePath {
@@ -333,6 +352,7 @@ function Read-ChannelPolicy {
         'runtimeMirrorIdent',
         'runtimeMirrorName',
         'runtimeMirrorPosition',
+        'standaloneModuleTargets',
         'credentialPath',
         'rpcUri',
         'serviceName',
@@ -414,6 +434,43 @@ function Read-ChannelPolicy {
         -not (Test-HexSha256 -Value ([string] $policy.expectedRuntimeHealthProbeSha256))) {
         throw [System.InvalidOperationException]::new('Runtime health probe policy is invalid.')
     }
+    $moduleTargets = @($policy.standaloneModuleTargets)
+    if ($moduleTargets.Count -gt 16) {
+        throw [System.InvalidOperationException]::new('Standalone module target policy exceeds its hard bound.')
+    }
+    $moduleTargetIds = @{}
+    foreach ($target in $moduleTargets) {
+        $targetId = [string] $target.targetId
+        if (-not (Test-SafeIdentifier -Value $targetId) -or $moduleTargetIds.ContainsKey($targetId) -or
+            -not [IO.Path]::IsPathRooted([string] $target.adapterPath) -or
+            -not [IO.Path]::IsPathRooted([string] $target.adapterPolicyPath) -or
+            -not (Test-HexSha256 -Value ([string] $target.expectedAdapterSha256)) -or
+            -not (Test-HexSha256 -Value ([string] $target.expectedAdapterPolicySha256)) -or
+            -not (Test-SymconGuid -Value ([string] $target.libraryGuid)) -or
+            [string] $target.adapterProfile -notmatch '^saef-[a-z0-9][a-z0-9.-]{0,63}$') {
+            throw [System.InvalidOperationException]::new('Standalone module target policy is invalid.')
+        }
+        foreach ($path in @([string] $target.adapterPath, [string] $target.adapterPolicyPath)) {
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or
+                (((Get-Item -LiteralPath $path).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
+                throw [System.IO.FileNotFoundException]::new('Standalone module target dependency is missing.')
+            }
+        }
+        if ((Get-Item -LiteralPath ([string] $target.adapterPath)).Length -gt 4194304 -or
+            (Get-Item -LiteralPath ([string] $target.adapterPolicyPath)).Length -gt 1048576) {
+            throw [System.InvalidOperationException]::new('Standalone module target dependency exceeds its byte limit.')
+        }
+        if ((Get-Sha256 -Path ([string] $target.adapterPath)) -ne [string] $target.expectedAdapterSha256 -or
+            (Get-Sha256 -Path ([string] $target.adapterPolicyPath)) -ne [string] $target.expectedAdapterPolicySha256) {
+            throw [System.InvalidOperationException]::new('Standalone module target dependency hash mismatch.')
+        }
+        $adapterPolicy = Get-Content -LiteralPath ([string] $target.adapterPolicyPath) -Raw | ConvertFrom-Json
+        if ($adapterPolicy.formatVersion -ne 1 -or
+            [string] $adapterPolicy.adapterProfile -ne [string] $target.adapterProfile) {
+            throw [System.InvalidOperationException]::new('Standalone module adapter policy identity is invalid.')
+        }
+        $moduleTargetIds[$targetId] = $true
+    }
     $uri = [Uri] ([string] $policy.rpcUri)
     if ($uri.Scheme -notin @('http', 'https') -or $uri.Host -notin @('127.0.0.1', 'localhost', '::1')) {
         throw [System.InvalidOperationException]::new('RPC URI must use an HTTP loopback endpoint.')
@@ -446,6 +503,27 @@ function Read-ChannelPolicy {
         throw [System.InvalidOperationException]::new('Pinned deployment dependency hash mismatch.')
     }
     return $policy
+}
+
+function Get-StandaloneModuleTarget {
+    param(
+        [Parameter(Mandatory = $true)] $Policy,
+        [Parameter(Mandatory = $true)][string] $TargetId
+    )
+
+    if (-not (Test-SafeIdentifier -Value $TargetId)) {
+        throw [System.InvalidOperationException]::new('Standalone module target identity is invalid.')
+    }
+    $matches = @($Policy.standaloneModuleTargets | Where-Object { [string] $_.targetId -eq $TargetId })
+    if ($matches.Count -ne 1) {
+        throw [System.InvalidOperationException]::new('Standalone module target is not uniquely allowlisted.')
+    }
+    $target = $matches[0]
+    if ((Get-Sha256 -Path ([string] $target.adapterPath)) -ne [string] $target.expectedAdapterSha256 -or
+        (Get-Sha256 -Path ([string] $target.adapterPolicyPath)) -ne [string] $target.expectedAdapterPolicySha256) {
+        throw [System.InvalidOperationException]::new('Standalone module target dependency drift detected.')
+    }
+    return $target
 }
 
 function Get-TokenReplacement {
@@ -535,15 +613,32 @@ function Read-DeploymentManifest {
         -not (Test-SafeIdentifier -Value ([string] $manifest.targetDirectoryName))) {
         throw [System.InvalidOperationException]::new('Deployment manifest identity is invalid.')
     }
-    foreach ($hashName in @('expectedActiveSha256', 'expectedCandidateSha256')) {
-        if (-not (Test-HexSha256 -Value ([string] $manifest.bootstrap.$hashName))) {
-            throw [System.InvalidOperationException]::new('Deployment manifest contains an invalid bootstrap hash.')
+    $deploymentKind = Get-DeploymentKind -Manifest $manifest
+    if ($deploymentKind -eq 'runtime-fileset') {
+        if ($manifest.PSObject.Properties.Name -contains 'module') {
+            throw [System.InvalidOperationException]::new('Runtime fileset manifest contains a module contract.')
+        }
+        foreach ($hashName in @('expectedActiveSha256', 'expectedCandidateSha256')) {
+            if (-not (Test-HexSha256 -Value ([string] $manifest.bootstrap.$hashName))) {
+                throw [System.InvalidOperationException]::new('Deployment manifest contains an invalid bootstrap hash.')
+            }
+        }
+        if ($manifest.bootstrap.oldToken -isnot [string] -or $manifest.bootstrap.newToken -isnot [string]) {
+            throw [System.InvalidOperationException]::new('Deployment manifest bootstrap tokens are invalid.')
+        }
+        $null = Assert-RuntimeHealthContract -RuntimeHealth $manifest.runtimeHealth
+    } else {
+        if ($manifest.PSObject.Properties.Name -contains 'bootstrap' -or
+            $manifest.PSObject.Properties.Name -contains 'runtimeHealth') {
+            throw [System.InvalidOperationException]::new('Standalone module manifest contains a runtime fileset contract.')
+        }
+        if (-not (Test-SafeIdentifier -Value ([string] $manifest.module.targetId) -or
+            -not (Test-SymconGuid -Value ([string] $manifest.module.libraryGuid)) -or
+            -not (Test-HexSha256 -Value ([string] $manifest.module.packageIdentitySha256)) -or
+            -not (Test-HexSha256 -Value ([string] $manifest.module.transactionContractSha256))) {
+            throw [System.InvalidOperationException]::new('Standalone module manifest contract is invalid.')
         }
     }
-    if ($manifest.bootstrap.oldToken -isnot [string] -or $manifest.bootstrap.newToken -isnot [string]) {
-        throw [System.InvalidOperationException]::new('Deployment manifest bootstrap tokens are invalid.')
-    }
-    $null = Assert-RuntimeHealthContract -RuntimeHealth $manifest.runtimeHealth
     return [ordered]@{ manifest = $manifest; text = $manifestText }
 }
 
@@ -563,6 +658,8 @@ function Get-DeploymentPaths {
         statusPath = Join-Path $stateDirectory 'status.json'
         restartStatusPath = Join-Path $stateDirectory 'restart-status.json'
         mirrorStatusPath = Join-Path $stateDirectory 'runtime-mirror-status.json'
+        moduleAdapterStatusPath = Join-Path $stateDirectory 'module-adapter-status.json'
+        transactionContractPath = Join-Path $stateDirectory 'module-transaction.json'
         rollbackPath = Join-Path $stateDirectory 'rollback-bootstrap.bin'
     }
 }
@@ -608,23 +705,26 @@ function Assert-StagedDeployment {
     if (-not (Test-Path -LiteralPath $targetDirectory -PathType Container)) {
         throw [System.IO.DirectoryNotFoundException]::new('Staged fileset directory is missing.')
     }
-    $expectedNewToken = Get-ManagedFilesetBootstrapToken -Policy $Policy `
-        -TargetDirectoryName ([string] $manifest.targetDirectoryName)
-    if ([string] $manifest.bootstrap.newToken -ne $expectedNewToken) {
-        throw [System.InvalidOperationException]::new('Candidate token does not select the managed fileset bootstrap.')
-    }
+    $deploymentKind = Get-DeploymentKind -Manifest $manifest
+    $pathPrefix = if ($deploymentKind -eq 'runtime-fileset') { 'fileset/' } else { 'module/' }
     $files = @($manifest.files)
     if ($files.Count -lt 1 -or $files.Count -gt [int] $Policy.maxFileCount) {
         throw [System.InvalidOperationException]::new('Staged file count is outside policy.')
     }
     $expectedRelativePaths = @{}
+    $previousManifestPath = $null
+    $identityText = [Text.StringBuilder]::new()
     foreach ($file in $files) {
         $relative = [string] $file.path
-        if (-not (Test-SafeRelativePath -Value $relative) -or $relative.StartsWith('fileset/') -eq $false -or
+        if (-not (Test-SafeRelativePath -Value $relative) -or -not $relative.StartsWith($pathPrefix) -or
             -not (Test-HexSha256 -Value ([string] $file.sha256)) -or [long] $file.size -lt 0) {
             throw [System.InvalidOperationException]::new('Staged file contract is invalid.')
         }
-        $filesetRelative = $relative.Substring('fileset/'.Length)
+        if ($null -ne $previousManifestPath -and [string]::CompareOrdinal($previousManifestPath, $relative) -ge 0) {
+            throw [System.InvalidOperationException]::new('Staged file contract must be sorted and unique.')
+        }
+        $previousManifestPath = $relative
+        $filesetRelative = $relative.Substring($pathPrefix.Length)
         if ($expectedRelativePaths.ContainsKey($filesetRelative)) {
             throw [System.InvalidOperationException]::new('Staged file contract contains a duplicate path.')
         }
@@ -634,6 +734,11 @@ function Assert-StagedDeployment {
             (Get-Item -LiteralPath $targetPath).Length -ne [long] $file.size -or
             (Get-Sha256 -Path $targetPath) -ne [string] $file.sha256) {
             throw [System.InvalidOperationException]::new('Staged file hash or size mismatch.')
+        }
+        if ($deploymentKind -eq 'standalone-module') {
+            $null = $identityText.Append($filesetRelative).Append([char] 0).Append([long] $file.size).Append([char] 0).Append(
+                [string] $file.sha256
+            ).Append("`n")
         }
     }
     $actualFiles = @(Get-ChildItem -LiteralPath $targetDirectory -File -Recurse)
@@ -646,6 +751,48 @@ function Assert-StagedDeployment {
             throw [System.InvalidOperationException]::new('Staged fileset contains an unlisted file.')
         }
     }
+    $result = [ordered]@{
+        paths = $paths
+        manifest = $manifest
+        manifestHash = Get-BytesSha256 -Bytes ([Text.Encoding]::UTF8.GetBytes($manifestRecord.text))
+        deploymentKind = $deploymentKind
+        targetDirectory = $targetDirectory
+    }
+    if ($deploymentKind -eq 'standalone-module') {
+        if ((Get-BytesSha256 -Bytes ([Text.Encoding]::UTF8.GetBytes($identityText.ToString()))) -ne
+            [string] $manifest.module.packageIdentitySha256) {
+            throw [System.InvalidOperationException]::new('Standalone module package identity mismatch.')
+        }
+        if (-not (Test-Path -LiteralPath $paths.transactionContractPath -PathType Leaf) -or
+            (Get-Item -LiteralPath $paths.transactionContractPath).Length -gt 1048576 -or
+            (Get-Sha256 -Path $paths.transactionContractPath) -ne [string] $manifest.module.transactionContractSha256) {
+            throw [System.InvalidOperationException]::new('Standalone module transaction contract drift detected.')
+        }
+        $transaction = Get-Content -LiteralPath $paths.transactionContractPath -Raw | ConvertFrom-Json
+        $moduleTarget = Get-StandaloneModuleTarget -Policy $Policy -TargetId ([string] $manifest.module.targetId)
+        if ([string] $manifest.module.libraryGuid -ne [string] $moduleTarget.libraryGuid -or
+            $transaction.formatVersion -ne 1 -or
+            [string] $transaction.adapterProfile -ne [string] $moduleTarget.adapterProfile) {
+            throw [System.InvalidOperationException]::new('Standalone module adapter profile mismatch.')
+        }
+        $libraryPath = Join-Path $targetDirectory 'library.json'
+        if (-not (Test-Path -LiteralPath $libraryPath -PathType Leaf) -or
+            (Get-Item -LiteralPath $libraryPath).Length -gt 1048576) {
+            throw [System.InvalidOperationException]::new('Standalone module library manifest is missing or invalid.')
+        }
+        $library = Get-Content -LiteralPath $libraryPath -Raw | ConvertFrom-Json
+        if ([string] $library.id -ne [string] $manifest.module.libraryGuid) {
+            throw [System.InvalidOperationException]::new('Standalone module library identity mismatch.')
+        }
+        $result['moduleTarget'] = $moduleTarget
+        return $result
+    }
+
+    $expectedNewToken = Get-ManagedFilesetBootstrapToken -Policy $Policy `
+        -TargetDirectoryName ([string] $manifest.targetDirectoryName)
+    if ([string] $manifest.bootstrap.newToken -ne $expectedNewToken) {
+        throw [System.InvalidOperationException]::new('Candidate token does not select the managed fileset bootstrap.')
+    }
     $bootstrapPath = Get-FullPathInsideRoot -Root ([string] $Policy.scriptsRoot) -RelativePath ([string] $Policy.activeBootstrapRelativePath)
     if (-not (Test-Path -LiteralPath $bootstrapPath -PathType Leaf) -or
         (Get-Sha256 -Path $bootstrapPath) -ne [string] $manifest.bootstrap.expectedActiveSha256) {
@@ -656,15 +803,10 @@ function Assert-StagedDeployment {
     if ((Get-BytesSha256 -Bytes $candidateBytes) -ne [string] $manifest.bootstrap.expectedCandidateSha256) {
         throw [System.InvalidOperationException]::new('Candidate bootstrap hash mismatch.')
     }
-    return [ordered]@{
-        paths = $paths
-        manifest = $manifest
-        manifestHash = Get-BytesSha256 -Bytes ([Text.Encoding]::UTF8.GetBytes($manifestRecord.text))
-        targetDirectory = $targetDirectory
-        bootstrapPath = $bootstrapPath
-        activeBytes = $activeBytes
-        candidateBytes = $candidateBytes
-    }
+    $result['bootstrapPath'] = $bootstrapPath
+    $result['activeBytes'] = $activeBytes
+    $result['candidateBytes'] = $candidateBytes
+    return $result
 }
 
 function Invoke-RestartCoordinator {
@@ -750,6 +892,75 @@ function Invoke-RuntimeMirrorCoordinator {
     }
     & $powerShellExecutable @arguments | Out-Null
     return [int] $LASTEXITCODE
+}
+
+function Invoke-StandaloneModuleAdapter {
+    param(
+        [Parameter(Mandatory = $true)] $Policy,
+        [Parameter(Mandatory = $true)] $Deployment,
+        [Parameter(Mandatory = $true)][ValidateSet('preflight', 'activate')][string] $Operation
+    )
+
+    $target = Get-StandaloneModuleTarget -Policy $Policy `
+        -TargetId ([string] $Deployment.manifest.module.targetId)
+    $statusPath = [string] $Deployment.paths.moduleAdapterStatusPath
+    if (Test-Path -LiteralPath $statusPath -PathType Leaf) {
+        Remove-Item -LiteralPath $statusPath -Force
+    }
+    $startedUtc = [DateTime]::UtcNow
+    $powerShellExecutable = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $arguments = @(
+        '-NoLogo',
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', [string] $target.adapterPath,
+        '-Operation', $Operation,
+        '-ManifestPath', [string] $Deployment.paths.manifestPath,
+        '-CandidatePath', [string] $Deployment.targetDirectory,
+        '-TransactionContractPath', [string] $Deployment.paths.transactionContractPath,
+        '-AdapterPolicyPath', [string] $target.adapterPolicyPath,
+        '-RpcUri', [string] $Policy.rpcUri,
+        '-CredentialPath', [string] $Policy.credentialPath,
+        '-StatusPath', $statusPath
+    )
+    & $powerShellExecutable @arguments | Out-Null
+    $adapterExitCode = [int] $LASTEXITCODE
+    if (-not (Test-Path -LiteralPath $statusPath -PathType Leaf) -or
+        (Get-Item -LiteralPath $statusPath).Length -gt 65536) {
+        throw [System.InvalidOperationException]::new('Standalone module adapter status is missing or invalid.')
+    }
+    $status = Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
+    $statusTime = [DateTime]::Parse([string] $status.timestampUtc).ToUniversalTime()
+    if ($status.PSObject.Properties.Name -notcontains 'exitCode' -or
+        $status.formatVersion -ne 1 -or [string] $status.operation -ne $Operation -or
+        [string] $status.deploymentId -ne [string] $Deployment.manifest.deploymentId -or
+        [string] $status.manifestSha256 -ne [string] $Deployment.manifestHash -or
+        [string] $status.packageIdentitySha256 -ne [string] $Deployment.manifest.module.packageIdentitySha256 -or
+        [int] $status.exitCode -ne $adapterExitCode -or
+        $statusTime -lt $startedUtc.AddSeconds(-1) -or $statusTime -gt [DateTime]::UtcNow.AddMinutes(1) -or
+        $status.activationAttempted -isnot [bool] -or $status.rollbackAttempted -isnot [bool] -or
+        $status.rollbackSucceeded -isnot [bool]) {
+        throw [System.InvalidOperationException]::new('Standalone module adapter status contract is invalid.')
+    }
+    if ($Operation -eq 'preflight') {
+        if ($adapterExitCode -ne 0 -or [string] $status.outcome -ne 'passed' -or
+            [bool] $status.activationAttempted -or [bool] $status.rollbackAttempted -or
+            [bool] $status.rollbackSucceeded) {
+            throw [System.InvalidOperationException]::new('Standalone module adapter preflight failed.')
+        }
+    } elseif (($adapterExitCode -eq 0 -and [string] $status.outcome -ne 'activated') -or
+        ($adapterExitCode -ne 0 -and [string] $status.outcome -notin @('rolled_back', 'manual_recovery_required')) -or
+        -not [bool] $status.activationAttempted -or
+        ([string] $status.outcome -eq 'activated' -and
+            ([bool] $status.rollbackAttempted -or [bool] $status.rollbackSucceeded)) -or
+        ([string] $status.outcome -eq 'rolled_back' -and
+            (-not [bool] $status.rollbackAttempted -or -not [bool] $status.rollbackSucceeded)) -or
+        ([string] $status.outcome -eq 'manual_recovery_required' -and
+            (-not [bool] $status.rollbackAttempted -or [bool] $status.rollbackSucceeded))) {
+        throw [System.InvalidOperationException]::new('Standalone module adapter activation status is invalid.')
+    }
+    return [ordered]@{ exitCode = $adapterExitCode; status = $status }
 }
 
 function Get-ManagedDeploymentUsage {
@@ -1012,29 +1223,71 @@ function Receive-Package {
                 -not (Test-SafeIdentifier -Value ([string] $manifest.targetDirectoryName))) {
                 throw [System.InvalidOperationException]::new('Package manifest identity is invalid.')
             }
-            foreach ($hashName in @('expectedActiveSha256', 'expectedCandidateSha256')) {
-                if (-not (Test-HexSha256 -Value ([string] $manifest.bootstrap.$hashName))) {
-                    throw [System.InvalidOperationException]::new('Package bootstrap hash is invalid.')
+            $deploymentKind = Get-DeploymentKind -Manifest $manifest
+            $pathPrefix = if ($deploymentKind -eq 'runtime-fileset') { 'fileset/' } else { 'module/' }
+            $transactionText = $null
+            $extraEntryCount = 1
+            if ($deploymentKind -eq 'runtime-fileset') {
+                if ($manifest.PSObject.Properties.Name -contains 'module') {
+                    throw [System.InvalidOperationException]::new('Runtime fileset package contains a module contract.')
                 }
-            }
-            if ($manifest.bootstrap.oldToken -isnot [string] -or $manifest.bootstrap.newToken -isnot [string]) {
-                throw [System.InvalidOperationException]::new('Package bootstrap token is invalid.')
-            }
-            $null = Assert-RuntimeHealthContract -RuntimeHealth $manifest.runtimeHealth
-            if (-not ([string] $manifest.bootstrap.newToken).Contains([string] $manifest.targetDirectoryName)) {
-                throw [System.InvalidOperationException]::new('Candidate token does not identify the staged fileset.')
-            }
-            $expectedNewToken = Get-ManagedFilesetBootstrapToken -Policy $Policy `
-                -TargetDirectoryName ([string] $manifest.targetDirectoryName)
-            if ([string] $manifest.bootstrap.newToken -ne $expectedNewToken) {
-                throw [System.InvalidOperationException]::new(
-                    'Candidate token does not select the managed fileset bootstrap.'
-                )
+                foreach ($hashName in @('expectedActiveSha256', 'expectedCandidateSha256')) {
+                    if (-not (Test-HexSha256 -Value ([string] $manifest.bootstrap.$hashName))) {
+                        throw [System.InvalidOperationException]::new('Package bootstrap hash is invalid.')
+                    }
+                }
+                if ($manifest.bootstrap.oldToken -isnot [string] -or $manifest.bootstrap.newToken -isnot [string]) {
+                    throw [System.InvalidOperationException]::new('Package bootstrap token is invalid.')
+                }
+                $null = Assert-RuntimeHealthContract -RuntimeHealth $manifest.runtimeHealth
+                $expectedNewToken = Get-ManagedFilesetBootstrapToken -Policy $Policy `
+                    -TargetDirectoryName ([string] $manifest.targetDirectoryName)
+                if ([string] $manifest.bootstrap.newToken -ne $expectedNewToken) {
+                    throw [System.InvalidOperationException]::new(
+                        'Candidate token does not select the managed fileset bootstrap.'
+                    )
+                }
+            } else {
+                if ($manifest.PSObject.Properties.Name -contains 'bootstrap' -or
+                    $manifest.PSObject.Properties.Name -contains 'runtimeHealth') {
+                    throw [System.InvalidOperationException]::new(
+                        'Standalone module package contains a runtime fileset contract.'
+                    )
+                }
+                if (-not (Test-SafeIdentifier -Value ([string] $manifest.module.targetId) -or
+                    -not (Test-SymconGuid -Value ([string] $manifest.module.libraryGuid)) -or
+                    -not (Test-HexSha256 -Value ([string] $manifest.module.packageIdentitySha256)) -or
+                    -not (Test-HexSha256 -Value ([string] $manifest.module.transactionContractSha256))) {
+                    throw [System.InvalidOperationException]::new('Standalone module package contract is invalid.')
+                }
+                $moduleTarget = Get-StandaloneModuleTarget -Policy $Policy -TargetId ([string] $manifest.module.targetId)
+                $transactionEntries = @($entries | Where-Object { $_.FullName -eq 'module-transaction.json' })
+                if ($transactionEntries.Count -ne 1 -or $transactionEntries[0].Length -gt 1048576) {
+                    throw [System.InvalidOperationException]::new('Standalone module transaction contract is missing or invalid.')
+                }
+                $transactionStream = $transactionEntries[0].Open()
+                try {
+                    $transactionBytes = Read-BoundedStreamBytes -Stream $transactionStream `
+                        -ExpectedBytes ([long] $transactionEntries[0].Length) -MaximumBytes 1048576
+                    if ((Get-BytesSha256 -Bytes $transactionBytes) -ne [string] $manifest.module.transactionContractSha256) {
+                        throw [System.InvalidOperationException]::new('Standalone module transaction contract hash mismatch.')
+                    }
+                    $transactionText = [Text.UTF8Encoding]::new($false, $true).GetString($transactionBytes)
+                    $transaction = $transactionText | ConvertFrom-Json
+                } finally {
+                    $transactionStream.Dispose()
+                }
+                if ([string] $manifest.module.libraryGuid -ne [string] $moduleTarget.libraryGuid -or
+                    $transaction.formatVersion -ne 1 -or
+                    [string] $transaction.adapterProfile -ne [string] $moduleTarget.adapterProfile) {
+                    throw [System.InvalidOperationException]::new('Standalone module adapter profile mismatch.')
+                }
+                $extraEntryCount = 2
             }
             $script:failureCode = 'stage_archive_contract'
             $files = @($manifest.files)
             if ($files.Count -lt 1 -or $files.Count -gt [int] $Policy.maxFileCount -or
-                $entries.Count -ne $files.Count + 1) {
+                $entries.Count -ne $files.Count + $extraEntryCount) {
                 throw [System.InvalidOperationException]::new('Package file count is outside its exact contract.')
             }
             $entryMap = @{}
@@ -1058,16 +1311,21 @@ function Receive-Package {
             }
             $script:failureCode = 'stage_entry_hashes'
             $manifestFilePaths = @{}
+            $previousManifestPath = $null
+            $identityText = [Text.StringBuilder]::new()
             foreach ($file in $files) {
                 $relative = [string] $file.path
-                if (-not $relative.StartsWith('fileset/') -or -not (Test-SafeRelativePath -Value $relative) -or
+                if (-not $relative.StartsWith($pathPrefix) -or -not (Test-SafeRelativePath -Value $relative) -or
                     -not (Test-HexSha256 -Value ([string] $file.sha256)) -or [long] $file.size -lt 0 -or
                     -not $entryMap.ContainsKey($relative)) {
                     throw [System.InvalidOperationException]::new('Package file contract is invalid.')
                 }
-                if ($manifestFilePaths.ContainsKey($relative)) {
-                    throw [System.InvalidOperationException]::new('Package file contract contains a duplicate path.')
+                if ($manifestFilePaths.ContainsKey($relative) -or
+                    ($null -ne $previousManifestPath -and
+                        [string]::CompareOrdinal($previousManifestPath, $relative) -ge 0)) {
+                    throw [System.InvalidOperationException]::new('Package file contract must be sorted and unique.')
                 }
+                $previousManifestPath = $relative
                 $manifestFilePaths[$relative] = $true
                 $entry = $entryMap[$relative]
                 if ([long] $entry.Length -ne [long] $file.size) {
@@ -1083,6 +1341,47 @@ function Receive-Package {
                 if ($entryHash -ne [string] $file.sha256) {
                     throw [System.InvalidOperationException]::new('Package entry hash mismatch.')
                 }
+                if ($deploymentKind -eq 'standalone-module') {
+                    $moduleRelative = $relative.Substring($pathPrefix.Length)
+                    $null = $identityText.Append($moduleRelative).Append([char] 0).Append([long] $file.size).Append(
+                        [char] 0
+                    ).Append([string] $file.sha256).Append("`n")
+                }
+            }
+            if ($deploymentKind -eq 'standalone-module' -and
+                (Get-BytesSha256 -Bytes ([Text.Encoding]::UTF8.GetBytes($identityText.ToString()))) -ne
+                    [string] $manifest.module.packageIdentitySha256) {
+                throw [System.InvalidOperationException]::new('Standalone module package identity mismatch.')
+            }
+            if ($deploymentKind -eq 'standalone-module') {
+                if (-not $entryMap.ContainsKey('module/library.json') -or
+                    [long] $entryMap['module/library.json'].Length -gt 1048576) {
+                    throw [System.InvalidOperationException]::new(
+                        'Standalone module library manifest is missing or invalid.'
+                    )
+                }
+                $moduleMetadataEntries = @($manifestFilePaths.Keys | Where-Object {
+                    $_ -match '^module/[^/]+/module\.json$'
+                })
+                if ($moduleMetadataEntries.Count -lt 1) {
+                    throw [System.InvalidOperationException]::new(
+                        'Standalone module package contains no module metadata.'
+                    )
+                }
+                $libraryStream = $entryMap['module/library.json'].Open()
+                try {
+                    $libraryBytes = Read-BoundedStreamBytes -Stream $libraryStream `
+                        -ExpectedBytes ([long] $entryMap['module/library.json'].Length) -MaximumBytes 1048576
+                    $libraryText = [Text.UTF8Encoding]::new($false, $true).GetString($libraryBytes)
+                    $library = $libraryText | ConvertFrom-Json
+                } finally {
+                    $libraryStream.Dispose()
+                }
+                if ([string] $library.id -ne [string] $manifest.module.libraryGuid) {
+                    throw [System.InvalidOperationException]::new(
+                        'Standalone module library identity mismatch.'
+                    )
+                }
             }
 
             $script:failureCode = 'stage_identity'
@@ -1096,7 +1395,7 @@ function Receive-Package {
             $temporaryTarget = Join-Path ([string] $Policy.managedFilesetRoot) ('.saef-stage-' + [Guid]::NewGuid().ToString('N'))
             [IO.Directory]::CreateDirectory($temporaryTarget) | Out-Null
             foreach ($file in $files) {
-                $relative = ([string] $file.path).Substring('fileset/'.Length)
+                $relative = ([string] $file.path).Substring($pathPrefix.Length)
                 $destination = Get-FullPathInsideRoot -Root $temporaryTarget -RelativePath $relative
                 [IO.Directory]::CreateDirectory((Split-Path -Parent $destination)) | Out-Null
                 $entryStream = $entryMap[[string] $file.path].Open()
@@ -1113,10 +1412,18 @@ function Receive-Package {
             [IO.Directory]::Move($temporaryTarget, $targetDirectory)
             $temporaryTarget = $null
             [IO.Directory]::CreateDirectory($stateDirectory) | Out-Null
+            if ($deploymentKind -eq 'standalone-module') {
+                Write-AtomicText -Path (Join-Path $stateDirectory 'module-transaction.json') -Text $transactionText
+            }
             Write-AtomicText -Path (Join-Path $stateDirectory 'deployment.json') -Text ($manifestText + [Environment]::NewLine)
             $status = Write-DeploymentStatus -Path (Join-Path $stateDirectory 'status.json') `
                 -DeploymentId ([string] $manifest.deploymentId) -Phase 'stage' -Outcome 'staged' -ExitCode $ExitSuccess `
-                -Details @{ packageSha256 = $ExpectedPackageSha256; fileCount = $files.Count; activationAttempted = $false }
+                -Details @{
+                    packageSha256 = $ExpectedPackageSha256
+                    deploymentKind = $deploymentKind
+                    fileCount = $files.Count
+                    activationAttempted = $false
+                }
             $stageCommitted = $true
             return $status
         } finally {
@@ -1146,6 +1453,31 @@ function Invoke-DeploymentPreflight {
     )
 
     $deployment = Assert-StagedDeployment -Policy $Policy -DeploymentId $DeploymentId
+    if ([string] $deployment.deploymentKind -eq 'standalone-module') {
+        try {
+            $adapter = Invoke-StandaloneModuleAdapter -Policy $Policy -Deployment $deployment -Operation 'preflight'
+        } catch {
+            return Write-DeploymentStatus -Path $deployment.paths.statusPath -DeploymentId $DeploymentId `
+                -Phase 'preflight' -Outcome 'failed' -ExitCode $ExitPreflightFailed `
+                -Details @{
+                    deploymentKind = 'standalone-module'
+                    manifestSha256 = $deployment.manifestHash
+                    activationAttempted = $false
+                }
+        }
+        $postAdapterDeployment = Assert-StagedDeployment -Policy $Policy -DeploymentId $DeploymentId
+        if ([string] $postAdapterDeployment.manifestHash -ne [string] $deployment.manifestHash) {
+            throw [System.InvalidOperationException]::new('Standalone module candidate changed during preflight.')
+        }
+        return Write-DeploymentStatus -Path $deployment.paths.statusPath -DeploymentId $DeploymentId `
+            -Phase 'preflight' -Outcome 'passed' -ExitCode $ExitSuccess `
+            -Details @{
+                deploymentKind = 'standalone-module'
+                manifestSha256 = $deployment.manifestHash
+                packageIdentitySha256 = [string] $deployment.manifest.module.packageIdentitySha256
+                activationAttempted = $false
+            }
+    }
     $requiredRuntimeFunctions = Assert-RuntimeHealthContract -RuntimeHealth $deployment.manifest.runtimeHealth
     $restartExit = Invoke-RestartCoordinator -Policy $Policy -StatusPath $deployment.paths.restartStatusPath `
         -ActiveBootstrapPath $deployment.bootstrapPath `
@@ -1195,11 +1527,60 @@ function Invoke-DeploymentActivation {
         throw [System.InvalidOperationException]::new('Deployment requires a fresh successful preflight.')
     }
     $deployment = Assert-StagedDeployment -Policy $Policy -DeploymentId $DeploymentId
-    $requiredRuntimeFunctions = Assert-RuntimeHealthContract -RuntimeHealth $deployment.manifest.runtimeHealth
     if ([string] $preflightStatus.manifestSha256 -ne $deployment.manifestHash) {
         throw [System.InvalidOperationException]::new('Deployment manifest changed after preflight.')
     }
+    if ([string] $deployment.deploymentKind -eq 'standalone-module') {
+        if ([string] $preflightStatus.deploymentKind -ne 'standalone-module' -or
+            [string] $preflightStatus.packageIdentitySha256 -ne
+                [string] $deployment.manifest.module.packageIdentitySha256) {
+            throw [System.InvalidOperationException]::new('Standalone module preflight identity changed.')
+        }
+        try {
+            $adapter = Invoke-StandaloneModuleAdapter -Policy $Policy -Deployment $deployment -Operation 'activate'
+        } catch {
+            return Write-DeploymentStatus -Path $paths.statusPath -DeploymentId $DeploymentId `
+                -Phase 'activation' -Outcome 'manual_recovery_required' -ExitCode $ExitManualRecovery `
+                -Details @{
+                    deploymentKind = 'standalone-module'
+                    activationAttempted = $true
+                    rollbackAttempted = $true
+                    rollbackSucceeded = $false
+                }
+        }
+        $postAdapterDeployment = Assert-StagedDeployment -Policy $Policy -DeploymentId $DeploymentId
+        if ([string] $postAdapterDeployment.manifestHash -ne [string] $deployment.manifestHash) {
+            return Write-DeploymentStatus -Path $paths.statusPath -DeploymentId $DeploymentId `
+                -Phase 'activation' -Outcome 'manual_recovery_required' -ExitCode $ExitManualRecovery `
+                -Details @{
+                    deploymentKind = 'standalone-module'
+                    activationAttempted = $true
+                    rollbackAttempted = $true
+                    rollbackSucceeded = $false
+                }
+        }
+        $adapterStatus = $adapter.status
+        $adapterOutcome = [string] $adapterStatus.outcome
+        $moduleExitCode = if ($adapterOutcome -eq 'activated') {
+            $ExitSuccess
+        } elseif ($adapterOutcome -eq 'rolled_back') {
+            $ExitActivationFailed
+        } else {
+            $ExitManualRecovery
+        }
+        return Write-DeploymentStatus -Path $paths.statusPath -DeploymentId $DeploymentId `
+            -Phase 'activation' -Outcome $adapterOutcome -ExitCode $moduleExitCode `
+            -Details @{
+                deploymentKind = 'standalone-module'
+                packageIdentitySha256 = [string] $deployment.manifest.module.packageIdentitySha256
+                adapterExitCode = [int] $adapter.exitCode
+                activationAttempted = [bool] $adapterStatus.activationAttempted
+                rollbackAttempted = [bool] $adapterStatus.rollbackAttempted
+                rollbackSucceeded = [bool] $adapterStatus.rollbackSucceeded
+            }
+    }
 
+    $requiredRuntimeFunctions = Assert-RuntimeHealthContract -RuntimeHealth $deployment.manifest.runtimeHealth
     [IO.File]::WriteAllBytes($paths.rollbackPath, $deployment.activeBytes)
     $rollbackSha256 = Get-Sha256 -Path $paths.rollbackPath
     if ($rollbackSha256 -ne [string] $deployment.manifest.bootstrap.expectedActiveSha256) {
@@ -1323,6 +1704,8 @@ try {
             -Details @{
                 channelVersion = $ChannelVersion
                 allowedOperations = @('probe', 'stage', 'preflight', 'activate', 'status')
+                deploymentKinds = @('runtime-fileset', 'standalone-module')
+                standaloneModuleTargetCount = @($policy.standaloneModuleTargets).Count
             }
         exit $ExitSuccess
     }
@@ -1379,6 +1762,7 @@ try {
             Write-JsonResponse -Success $true -Operation $operation -Outcome 'staged' -ExitCode $ExitSuccess `
                 -Details @{
                     deploymentId = $status.deploymentId
+                    deploymentKind = $status.deploymentKind
                     packageSha256 = $status.packageSha256
                     fileCount = $status.fileCount
                 }
@@ -1419,6 +1803,10 @@ try {
         phase = [string] $status.phase
         deploymentExitCode = [int] $status.exitCode
         statusTimestampUtc = [string] $status.timestampUtc
+    }
+    if ($status.PSObject.Properties.Name -contains 'deploymentKind' -and
+        [string] $status.deploymentKind -in @('runtime-fileset', 'standalone-module')) {
+        $statusDetails['deploymentKind'] = [string] $status.deploymentKind
     }
     if (Test-Path -LiteralPath $paths.mirrorStatusPath -PathType Leaf) {
         $mirrorStatusFile = Get-Item -LiteralPath $paths.mirrorStatusPath

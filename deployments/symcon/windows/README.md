@@ -277,6 +277,41 @@ The default local policy permits at most 16 staged deployments and 512 MiB of
 managed files. Reaching either limit fails closed and requires deliberate local
 retention cleanup; no remote delete operation exists.
 
+### Standalone module packages
+
+Channel version 8 also accepts deterministic packages built with
+`tools/build-symcon-module-deployment-package.php`. This reuses the same
+`stage`, `preflight`, `activate` and `status` protocol; the SSH client and
+forced-command grammar do not gain a module-specific command.
+
+The generic gateway verifies the module `library.json` identity, canonical
+package hash, complete `module/` inventory and the exact
+`module-transaction.json` hash. It stages the candidate below the existing
+managed root without selecting or loading it.
+
+Module activation is available only when the protected server policy contains
+one matching entry in `standaloneModuleTargets`. The entry binds a target ID
+and adapter profile to a local PowerShell adapter and private adapter policy,
+including both hashes. A client cannot provide any of those paths. An empty
+target list disables standalone-module activation.
+
+Create the private target input from `standalone-module-targets.example.json`
+and pass it only to a separately authorized initializer preflight/install:
+
+```powershell
+& .\Initialize-SaefDeploymentChannel.ps1 `
+    -PreflightOnly `
+    -DeploymentUser '<private-deployment-user>' `
+    -StandaloneModuleTargetsPath '<private-absolute-targets-path>'
+```
+
+The adapter contract and required transaction behavior are defined in
+`project/STANDALONE_MODULE_DEPLOYMENT_CHANNEL.md`. In particular, the adapter,
+not the generic gateway, must prove module ownership, quiescence,
+configuration/state preservation, targeted Module Control reload and either
+successful postflight or rollback. The framework never guesses a state
+conversion.
+
 Retention cleanup must preserve the one-deployment-to-one-fileset invariant.
 Create a private plan from `deployment-retention-plan.example.json` and run the
 cleanup script without `-Apply` first. The preflight reads every retained
@@ -286,6 +321,8 @@ pairs and writes a machine-readable status. A later, separately authorized
 `-Apply` run requires a local administrator, creates and SHA-256-verifies a
 private backup, removes only the declared pairs and revalidates the complete
 mapping. Deployment-only or fileset-only cleanup is intentionally unsupported.
+Standalone-module candidates are also rejected here: their target adapter must
+provide a separate state-aware retention workflow before any deletion gate.
 
 ```powershell
 & .\Invoke-SaefDeploymentRetentionCleanup.ps1 `

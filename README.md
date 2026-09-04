@@ -78,6 +78,7 @@ Important current artifacts include:
 - `project/SAEF_V0_4_RELEASE_READINESS.md`
 - `project/SAEF_V0_5_INVENTORY.md`
 - `project/SAEF_DEPLOYMENT_CHANNEL_SECURITY_GATE.md`
+- `project/STANDALONE_MODULE_DEPLOYMENT_CHANNEL.md`
 - `adr/ADR-0005-generate-symcon-helper-bundles.md`
 - `bundles/symcon/ensure-variable.bundle.json`
 - `principles/ENGINEERING_PRINCIPLES.md`
@@ -96,10 +97,12 @@ Important current artifacts include:
 - `knowledge/EK-007-managed-runtime-mirrors.md`
 - `adr/ADR-0006-managed-symcon-runtime-mirrors.md`
 - `adr/ADR-0007-use-restricted-windows-deployment-channel.md`
+- `adr/ADR-0009-use-target-bound-standalone-module-deployment.md`
 - `deployments/symcon/windows/Invoke-SaefDeploymentGateway.ps1`
 - `deployments/symcon/windows/Invoke-SaefRuntimeMirror.ps1`
 - `deployments/symcon/windows/SaefRuntimeSourceMirror.php`
 - `deployments/symcon/windows/saef-deploy`
+- `tools/build-symcon-module-deployment-package.php`
 - `tools/publish-symcon-module.php`
 - `deployments/symcon/publication/README.md`
 - `adr/ADR-0008-use-manifest-driven-module-publication.md`

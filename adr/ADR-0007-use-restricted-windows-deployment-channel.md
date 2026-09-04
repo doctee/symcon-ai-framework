@@ -69,6 +69,10 @@ The contract is:
     `.saef-filesets/<targetDirectoryName>/bootstrap.php` path relative to the
     Symcon scripts root. The builder and gateway reject merely name-matching
     or otherwise divergent paths.
+17. Standalone module packages reuse the same five verbs and transfer protocol.
+    Their activation is delegated only to a server-local target adapter whose
+    path, private policy, profile and hashes are pinned outside the client
+    package, as specified by ADR-0009.
 
 Possession of the transport key does not replace SAEF's operational approval
 gates. Agents still require explicit approval before `activate`.
@@ -135,3 +139,4 @@ authentication, replay protection, certificate handling and exposure model.
 - `deployments/symcon/windows/Invoke-SaefSymconRestart.ps1`
 - `project/SAEF_V0_2_SYMCON_ROLLOUT_PLAN.md`
 - `adr/ADR-0005-generate-symcon-helper-bundles.md`
+- `adr/ADR-0009-use-target-bound-standalone-module-deployment.md`

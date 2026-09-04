@@ -63,6 +63,7 @@ foreach (
         'one-deployment-to-one-fileset invariant',
         'Candidate is not an exact manifest pair',
         'Runtime file references a deletion candidate',
+        'Standalone module cleanup requires its adapter-owned retention workflow.',
         'Copy-VerifiedDirectory',
         'Apply requires an elevated local administrator',
         'Get-Inventory -StateRoot $stateRoot -FilesetRoot $filesetRoot',

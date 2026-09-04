@@ -11,6 +11,10 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Extended the restricted Windows deployment channel with deterministic,
+  manifest-driven standalone-module packages and hash-pinned server-local
+  transaction adapters while preserving the existing five-command transport,
+  explicit activation gate and separate retention boundary.
 - Added the V05-001 repository-only latest-command-wins implementation with
   immutable event payloads, bounded Registry-backed generation arbitration,
   supersession Statistics, explicit confirmation and lock timing bounds,
