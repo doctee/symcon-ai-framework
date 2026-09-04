@@ -393,6 +393,12 @@ replaced channel artifact and its ACL. A later failure restores those files
 together with `sshd_config`, so the previously active forced-command channel
 does not remain on a mixed artifact generation.
 
+Validation failures before snapshot creation still pass an explicit empty
+snapshot collection through the same cleanup path. The cleanup treats that
+collection as a valid no-op while continuing to require the parameter. Early
+preflight failures therefore retain the documented exit code `10`, write a
+bounded failure status and never enter rollback or mutation handling.
+
 The SAEF `Match User` block is reconciled before the first other active `Match`
 block. OpenSSH keeps the first value obtained for a setting, so this ordering is
 required when the deployment identity is also covered by Windows' default
