@@ -33,6 +33,9 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Restored deterministic Windows deployment-channel status for validation
+  failures before rollback snapshot creation by allowing the mandatory
+  snapshot cleanup to accept an explicit empty collection as a no-op.
 - Hardened the Windows OpenSSH deployment identity against the accepted
   `.\`-qualified local-account spelling by binding both aliases to the same
   public-key-only, non-interactive forced-command block and documenting real

@@ -348,7 +348,11 @@ function Restore-FileSnapshots {
 }
 
 function Clear-FileSnapshots {
-    param([Parameter(Mandatory = $true)][array] $Snapshots)
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [array] $Snapshots
+    )
 
     foreach ($snapshot in $Snapshots) {
         if ($null -ne $snapshot.Bytes) {

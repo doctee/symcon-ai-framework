@@ -348,6 +348,18 @@ foreach (
         "Initializer security fragment is missing: {$fragment}"
     );
 }
+$emptySnapshotCleanupContract = <<<'POWERSHELL'
+function Clear-FileSnapshots {
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [array] $Snapshots
+    )
+POWERSHELL;
+assertDeploymentChannel(
+    str_contains($initializer, $emptySnapshotCleanupContract),
+    'Initializer cleanup does not accept an empty preflight snapshot collection.'
+);
 assertDeploymentChannel(
     !str_contains($initializer, '[IO.File]::AppendAllText($sshdConfigPath'),
     'Initializer appends the SAEF block without reconciling Match order.'

@@ -99,6 +99,23 @@ adds a source regression. Windows release gates must retain real negotiation
 tests because parser success and `sshd -T` account resolution alone did not
 expose the bypass.
 
+### Early Preflight Status Reassessment
+
+The subsequent Windows gate confirmed the exact alias-complete block and
+public-key-only negotiation for all three tested account spellings without an
+active mutation. Its synthetic duplicate-target check then exposed a separate
+failure-reporting defect: target validation failed before rollback snapshots
+existed, and the cleanup function rejected the empty snapshot collection
+during PowerShell parameter binding. The process therefore exited with code
+`1` before writing the intended bounded preflight status.
+
+The repository correction keeps the snapshot parameter mandatory but
+explicitly permits an empty collection as a no-op. This preserves rejection of
+missing cleanup input while restoring deterministic exit code `10`, failure
+status and no-rollback evidence for every validation error before snapshot
+creation. Channel commands, target policy and version remain unchanged. Final
+acceptance still requires the complete Windows gate to pass.
+
 ## Credential Migration
 
 The first deep probe exposed that a `CurrentUser` DPAPI CLIXML credential
