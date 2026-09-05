@@ -59,7 +59,9 @@ version 8 readiness and one valid standalone-module target. Package staging
 and every target-bound module operation remain separately gated. The exact
 [inactive package candidate](94-inactive-module-package-candidate.md) is now
 reproducibly built and offline-verified with module identity equal to the
-active package; it has not been transferred or staged.
+active package. Its separately authorized
+[inactive channel stage](95-inactive-module-stage.md) completed with exact hash,
+fileset and target binding while leaving the active module untouched.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -245,6 +247,7 @@ inside the server grace window. Live activation is recorded separately.
 | `92-target-allowlist-live-installation.md` | Records the hash-bound zero-to-one live target installation, preserved channel identity, one OpenSSH restart and still-closed adapter and module gates. |
 | `93-channel-probe-postflight.md` | Records the external channel-v8 readiness probe, validated single target dependency and the precise deployment-read-only diagnostic boundary. |
 | `94-inactive-module-package-candidate.md` | Records the reproducible, offline-verified standalone-module ZIP whose package identity equals the active OwnTracks module while keeping transfer and staging closed. |
+| `95-inactive-module-stage.md` | Records the exact-hash chunked transfer and server-side validation of the inactive OwnTracks package while keeping adapter preflight and activation closed. |
 
 ## Architectural Boundary
 
