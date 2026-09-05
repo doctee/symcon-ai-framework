@@ -1,7 +1,7 @@
 # Gate 84 — target-allowlist preflight and ACL classifier correction
 
-**Status:** Repository correction and private Windows preflight revision
-prepared; target installation and live module gates remain closed, 2026-09-05.
+**Status:** Repository corrections and private Windows initializer preflight
+complete; target installation and live module gates remain closed, 2026-09-05.
 
 ## Scope
 
@@ -63,13 +63,23 @@ and whitespace check pass.
 
 The private revision adds the same positive and negative ACL scenarios plus the
 ordinal identity vector before inspecting installation-local paths. Its
-internal fourteen-file digest and ZIP integrity are verified. Windows
-PowerShell 5.1 parsing and the actual read-only target preflight still require
-execution on the approved target.
+internal fourteen-file digest and ZIP integrity are verified.
+
+The approved Windows run passed both classifiers, verified the active
+37-file package identity and completed the existing channel-v8 initializer in
+`-PreflightOnly` mode. The installed channel policy remained byte-identical,
+its standalone-module target count remained zero and neither the initializer
+nor the wrapper attempted a system mutation or OpenSSH restart. No module
+preflight, activation or provider contact occurred.
+
+The run also confirmed authoritative miss-state format 1 and therefore
+reported the expected `miss_state_format_1` blocker. The generated private
+policy and target-definition hashes remain installation-local evidence for a
+future separately approved gate.
 
 ## Remaining boundary
 
-Passing this preflight will not make the adapter activation-ready while the
+The passed preflight does not make the adapter activation-ready while the
 authoritative miss-state remains format 1. State adoption to format 2 needs a
 separate reviewed gate with byte-exact rollback semantics. Target installation,
 channel `probe`, inactive `stage`, adapter `preflight`, `activate`, health/UI
