@@ -32,8 +32,11 @@ provider security clearance.
 The version-8 continuation records the read-only retained-worktree and UI
 reconciliation in [Gate 81](81-channel-v8-pilot-inventory.md) and the
 repository-only OwnTracks target adapter in
-[Gate 82](82-channel-v8-deployment-adapter.md). The target allowlist remains
-empty; no Windows or live operation is authorized by these documents.
+[Gate 82](82-channel-v8-deployment-adapter.md). Its separately authorized
+[Windows qualification](83-channel-v8-windows-adapter-qualification.md) proves
+PowerShell 5.1 transaction and integrated Symcon-PHP lock interoperability.
+The target allowlist remains empty; no channel installation or live module
+operation is authorized by these documents.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -207,6 +210,7 @@ inside the server grace window. Live activation is recorded separately.
 | `80-security-correction-live-activation.md` | Records the exact security-correction activation, one-request transport acceptance, independent postflight, cleanup and state-aware rollback boundary. |
 | `81-channel-v8-pilot-inventory.md` | Reconciles all retained OwnTracks worktrees, handovers and historical Safari/UI findings with current `origin/main`. |
 | `82-channel-v8-deployment-adapter.md` | Defines and implements the target-bound ownership, quiescence, state, reload, health, rollback and retention contract for channel version 8. |
+| `83-channel-v8-windows-adapter-qualification.md` | Records the sanitized Windows PowerShell 5.1 transaction and integrated Symcon-PHP lock interoperability result while keeping installation and live module gates closed. |
 
 ## Architectural Boundary
 

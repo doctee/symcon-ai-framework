@@ -1,7 +1,8 @@
 # Gate 82 — channel-v8 OwnTracks deployment adapter
 
-**Status:** Repository implementation and offline contract verification; all
-Windows and live gates closed, 2026-09-04.
+**Status:** Repository implementation and offline contract verification;
+Windows qualification is recorded separately in Gate 83 and all installation
+and live module gates remain closed, 2026-09-05.
 
 ## Reuse before extend
 
@@ -91,8 +92,8 @@ The generic channel retention tool remains prohibited for standalone modules.
 | Gate | State |
 | --- | --- |
 | repository adapter and deterministic package contract | complete |
-| Windows PowerShell 5.1 parse and synthetic transaction test | closed |
-| PHP `flock()` / Windows range-lock interoperability test | closed |
+| Windows PowerShell 5.1 parse and synthetic transaction test | complete in Gate 83 |
+| PHP `flock()` / Windows range-lock interoperability test | complete in Gate 83 |
 | private policy creation and target-allowlist initializer preflight | closed |
 | channel target installation | closed |
 | live `probe` | closed |
