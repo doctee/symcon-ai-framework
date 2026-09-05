@@ -211,6 +211,7 @@ inside the server grace window. Live activation is recorded separately.
 | `81-channel-v8-pilot-inventory.md` | Reconciles all retained OwnTracks worktrees, handovers and historical Safari/UI findings with current `origin/main`. |
 | `82-channel-v8-deployment-adapter.md` | Defines and implements the target-bound ownership, quiescence, state, reload, health, rollback and retention contract for channel version 8. |
 | `83-channel-v8-windows-adapter-qualification.md` | Records the sanitized Windows PowerShell 5.1 transaction and integrated Symcon-PHP lock interoperability result while keeping installation and live module gates closed. |
+| `84-target-allowlist-preflight.md` | Corrects the mutation-only ACL classifier, records the non-mutating diagnostic boundary and prepares the private target-bound initializer preflight. |
 
 ## Architectural Boundary
 

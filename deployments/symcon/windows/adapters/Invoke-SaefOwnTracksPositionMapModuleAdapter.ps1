@@ -208,16 +208,28 @@ function Assert-SafeDirectoryTree {
     }
 }
 
+function Test-BroadWriteAccess {
+    param([Parameter(Mandatory = $true)][Security.AccessControl.FileSystemRights] $Rights)
+
+    $mutationRights = [Security.AccessControl.FileSystemRights]::WriteData -bor
+        [Security.AccessControl.FileSystemRights]::AppendData -bor
+        [Security.AccessControl.FileSystemRights]::WriteExtendedAttributes -bor
+        [Security.AccessControl.FileSystemRights]::WriteAttributes -bor
+        [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles -bor
+        [Security.AccessControl.FileSystemRights]::Delete -bor
+        [Security.AccessControl.FileSystemRights]::ChangePermissions -bor
+        [Security.AccessControl.FileSystemRights]::TakeOwnership
+
+    return ($Rights -band $mutationRights) -ne 0
+}
+
 function Assert-ProtectedAcl {
     param([Parameter(Mandatory = $true)][string] $Path)
     $acl = Get-Acl -LiteralPath $Path
     foreach ($entry in @($acl.Access)) {
         $sid = $entry.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value
-        $dangerous = [Security.AccessControl.FileSystemRights]::Write -bor
-            [Security.AccessControl.FileSystemRights]::Modify -bor
-            [Security.AccessControl.FileSystemRights]::FullControl
         if ($entry.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow -and
-            (($entry.FileSystemRights -band $dangerous) -ne 0) -and
+            (Test-BroadWriteAccess -Rights $entry.FileSystemRights) -and
             $sid -in @('S-1-1-0', 'S-1-5-11', 'S-1-5-32-545')) {
             throw [UnauthorizedAccessException]::new('Adapter path grants write access to a broad principal.')
         }

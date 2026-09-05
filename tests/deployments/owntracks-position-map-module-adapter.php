@@ -129,6 +129,16 @@ $requiredAdapterFragments = [
     "Write-AdapterStatus -Outcome 'manual_recovery_required'",
     "Write-AdapterStatus -Outcome 'rolled_back'",
     "packageIdentitySha256 = \$script:packageIdentitySha256",
+    'function Test-BroadWriteAccess',
+    '[Security.AccessControl.FileSystemRights]::WriteData',
+    '[Security.AccessControl.FileSystemRights]::AppendData',
+    '[Security.AccessControl.FileSystemRights]::WriteExtendedAttributes',
+    '[Security.AccessControl.FileSystemRights]::WriteAttributes',
+    '[Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles',
+    '[Security.AccessControl.FileSystemRights]::Delete',
+    '[Security.AccessControl.FileSystemRights]::ChangePermissions',
+    '[Security.AccessControl.FileSystemRights]::TakeOwnership',
+    '(Test-BroadWriteAccess -Rights $entry.FileSystemRights)',
     'exit $script:finalExitCode',
 ];
 foreach ($requiredAdapterFragments as $fragment) {
@@ -153,6 +163,24 @@ assertOwnTracksPositionMapAdapter(
         && !str_contains($adapter, 'exit $ExitPreflightFailed'),
     'Adapter must emit its native process exit code once after cleanup.'
 );
+assertOwnTracksPositionMapAdapter(
+    !str_contains($adapter, '[Security.AccessControl.FileSystemRights]::Modify -bor')
+        && !str_contains($adapter, '[Security.AccessControl.FileSystemRights]::FullControl'),
+    'ACL classifier must not treat the composite FullControl mask as a mutation-only mask.'
+);
+$aclMutationMask = 2 | 4 | 16 | 64 | 256 | 65_536 | 262_144 | 524_288;
+foreach ([131_209, 131_241, 1, 8, 128, 131_072, 1_048_576] as $readOnlyRights) {
+    assertOwnTracksPositionMapAdapter(
+        ($readOnlyRights & $aclMutationMask) === 0,
+        'Read-only ACL rights intersect the mutation-only mask.'
+    );
+}
+foreach ([278, 197_055, 2_032_127, 2, 4, 16, 64, 256, 65_536, 262_144, 524_288] as $mutableRights) {
+    assertOwnTracksPositionMapAdapter(
+        ($mutableRights & $aclMutationMask) !== 0,
+        'Mutable ACL rights escape the mutation-only mask.'
+    );
+}
 assertOwnTracksPositionMapAdapter(
     strpos($adapter, 'Copy-CandidateToTransaction')
         < strpos($adapter, '[IO.Directory]::Move([string] $script:policy.activeModulePath, $script:rollbackPath)'),
