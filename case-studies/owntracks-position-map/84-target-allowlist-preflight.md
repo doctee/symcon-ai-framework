@@ -1,7 +1,10 @@
 # Gate 84 — target-allowlist preflight and ACL classifier correction
 
 **Status:** Repository corrections and private Windows initializer preflight
-complete; target installation and live module gates remain closed, 2026-09-05.
+complete. After the separately authorized state adoption, the repeated
+read-only readiness preflight passed in
+[Gate 89](89-target-allowlist-readiness-preflight.md); target installation and
+live module gates remain closed, 2026-09-05.
 
 ## Scope
 
@@ -79,8 +82,10 @@ future separately approved gate.
 
 ## Remaining boundary
 
-The passed preflight does not make the adapter activation-ready while the
-authoritative miss-state remains format 1. State adoption to format 2 needs a
-separate reviewed gate with byte-exact rollback semantics. Target installation,
-channel `probe`, inactive `stage`, adapter `preflight`, `activate`, health/UI
-postflight, retention, publication and cleanup remain independently gated.
+The original passed preflight did not make the adapter activation-ready while
+the authoritative miss state remained format 1. Gate 88 completed the separate
+reviewed format-2 adoption with byte-exact rollback semantics, and Gate 89
+subsequently removed this readiness blocker without changing the installed
+target count. Target installation, channel `probe`, inactive `stage`, adapter
+`preflight`, `activate`, health/UI postflight, retention, publication and
+cleanup remain independently gated.

@@ -53,8 +53,8 @@ future rollback after format-2 runtime writes.
 
 ## Remaining gates
 
-1. Repeat the target-allowlist preflight against the now-authoritative format-2
-   state and require `adapterPreflightReady: true`.
+1. The repeated read-only target-allowlist readiness preflight is complete in
+   [Gate 89](89-target-allowlist-readiness-preflight.md).
 2. Treat target allowlist installation as a separate mutation gate.
 3. Keep channel `probe`, inactive `stage`, module `preflight`, `activate`,
    independent UI/Safari health, rollback retention, publication and cleanup as
