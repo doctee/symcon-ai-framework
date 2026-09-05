@@ -53,8 +53,10 @@ then proved the exact zero-to-one plan against the installed channel while
 leaving the channel, OpenSSH and Symcon unchanged. The separately authorized
 [live installation](92-target-allowlist-live-installation.md) then installed
 exactly one OwnTracks target with preserved channel identity, one bounded
-OpenSSH restart and no Symcon restart or module operation. Channel `probe`,
-package staging and every module operation remain separately gated.
+OpenSSH restart and no Symcon restart or module operation. The external
+[channel probe](93-channel-probe-postflight.md) subsequently confirmed channel
+version 8 readiness and one valid standalone-module target. Package staging
+and every target-bound module operation remain separately gated.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -238,6 +240,7 @@ inside the server grace window. Live activation is recorded separately.
 | `90-target-allowlist-installation-windows-qualification.md` | Records the protected synthetic Windows qualification of the exact current initializer and adapter for empty-to-one target installation, fail-closed harness correction and automatic rollback. |
 | `91-target-allowlist-live-installation-preflight.md` | Records the read-only installed-channel preflight and exact zero-to-one target plan while keeping installation and OpenSSH restart closed. |
 | `92-target-allowlist-live-installation.md` | Records the hash-bound zero-to-one live target installation, preserved channel identity, one OpenSSH restart and still-closed adapter and module gates. |
+| `93-channel-probe-postflight.md` | Records the external channel-v8 readiness probe, validated single target dependency and the precise deployment-read-only diagnostic boundary. |
 
 ## Architectural Boundary
 
