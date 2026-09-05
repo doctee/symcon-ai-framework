@@ -1,0 +1,47 @@
+{
+    "formatVersion": 1,
+    "adapterProfile": "saef-owntracks-position-map-miss-state-adoption-v1",
+    "targetId": "saef-owntracks-position-map",
+    "sourceFormat": 1,
+    "candidateFormat": 2,
+    "maximumStateBytes": 262144,
+    "runtimeCompatibility": {
+        "relativePath": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileMissStateStore.php",
+        "sha256": "1f3de77041faba15cf5f062dc742474a52aded6f7d75b1eef03efaa3b1a8fc6f"
+    },
+    "quiescence": {
+        "writerModel": "five-runtime-file-locks-and-zero-active-leases",
+        "guard": "named-adapter-mutex-plus-runtime-lock-set",
+        "lockOrder": ["dayCache", "providerCache", "tileBudget", "providerBudget", "missState"]
+    },
+    "transformation": {
+        "preserve": [
+            "selectionFingerprint",
+            "updatedAt",
+            "upstreamRequests",
+            "upstreamSuccesses",
+            "upstreamBytes",
+            "negativeCacheHits",
+            "rejectedOutsideAllowlist",
+            "budgetRejections",
+            "negativeCache"
+        ],
+        "initialize": "empty-pending-reservations-map",
+        "counterResetAllowed": false,
+        "selectionRemovalAllowed": false
+    },
+    "transaction": {
+        "rootLeafName": "saef-owntracks-position-map-state-adoption",
+        "statusLocation": "transaction-root",
+        "backup": "source-bytes-before-replace",
+        "switch": "same-volume-atomic-file-replace",
+        "postcondition": "format-2-hash-and-semantics",
+        "failureRollback": "byte-exact-source-restore",
+        "staleBackupRestoreAllowed": false
+    },
+    "retention": {
+        "owner": "owntracks-position-map-state-adoption",
+        "automaticCleanupAllowed": false,
+        "cleanupRequiresSeparateAuthorization": true
+    }
+}

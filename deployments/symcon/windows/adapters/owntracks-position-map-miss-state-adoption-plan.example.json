@@ -1,0 +1,10 @@
+{
+    "formatVersion": 1,
+    "adapterProfile": "saef-owntracks-position-map-miss-state-adoption-v1",
+    "operation": "preflight",
+    "transactionRoot": "<private-absolute-parent>\\saef-owntracks-position-map-state-adoption",
+    "expectedSourceSha256": "<private-sha256-of-byte-exact-format-1-state>",
+    "expectedCandidateSha256": "<preflight-candidate-sha256-or-zeroes>",
+    "expectedActivePackageIdentitySha256": "<private-sha256-of-active-module-tree>",
+    "confirmation": "preflight-only"
+}
