@@ -129,6 +129,7 @@ $requiredAdapterFragments = [
     "Write-AdapterStatus -Outcome 'manual_recovery_required'",
     "Write-AdapterStatus -Outcome 'rolled_back'",
     "packageIdentitySha256 = \$script:packageIdentitySha256",
+    'exit $script:finalExitCode',
 ];
 foreach ($requiredAdapterFragments as $fragment) {
     assertOwnTracksPositionMapAdapter(str_contains($adapter, $fragment), "Adapter fragment is missing: {$fragment}");
@@ -143,6 +144,14 @@ assertOwnTracksPositionMapAdapter(
 assertOwnTracksPositionMapAdapter(
     !str_contains($adapter, '.PSObject.Properties.Value'),
     'Adapter must iterate empty JSON maps without strict-mode member enumeration.'
+);
+assertOwnTracksPositionMapAdapter(
+    substr_count($adapter, 'exit $script:finalExitCode') === 1
+        && !str_contains($adapter, 'exit $ExitSuccess')
+        && !str_contains($adapter, 'exit $ExitRolledBack')
+        && !str_contains($adapter, 'exit $ExitManualRecovery')
+        && !str_contains($adapter, 'exit $ExitPreflightFailed'),
+    'Adapter must emit its native process exit code once after cleanup.'
 );
 assertOwnTracksPositionMapAdapter(
     strpos($adapter, 'Copy-CandidateToTransaction')

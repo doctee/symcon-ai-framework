@@ -40,6 +40,7 @@ $script:activationAttempted = ($Operation -eq 'activate')
 $script:rollbackAttempted = $false
 $script:rollbackSucceeded = $false
 $script:failureCode = 'initialization'
+$script:finalExitCode = $ExitManualRecovery
 $script:activeMoved = $false
 $script:candidateActivated = $false
 $script:rollbackPath = $null
@@ -869,10 +870,9 @@ try {
     if ($Operation -eq 'preflight') {
         $script:failureCode = 'none'
         Write-AdapterStatus -Outcome 'passed' -ExitCode $ExitSuccess
-        exit $ExitSuccess
-    }
-
-    $script:failureCode = 'rollback_preparation'
+        $script:finalExitCode = $ExitSuccess
+    } else {
+        $script:failureCode = 'rollback_preparation'
     $activeStatePath = Join-Path ([string] $script:policy.adapterStateRoot) 'active.json'
     if (Test-Path -LiteralPath $activeStatePath -PathType Leaf) {
         if ((Get-Item -LiteralPath $activeStatePath).Length -gt [int] $script:policy.maximumStateBytes) {
@@ -922,9 +922,10 @@ try {
     })
     Write-AtomicJson -Path $activeStatePath -Value $activeRecord
     $script:activeStateWritten = $true
-    $script:failureCode = 'none'
-    Write-AdapterStatus -Outcome 'activated' -ExitCode $ExitSuccess
-    exit $ExitSuccess
+        $script:failureCode = 'none'
+        Write-AdapterStatus -Outcome 'activated' -ExitCode $ExitSuccess
+        $script:finalExitCode = $ExitSuccess
+    }
 } catch {
     if ($Operation -eq 'activate' -and $script:activationAttempted) {
         $originalFailureCode = $script:failureCode
@@ -944,25 +945,27 @@ try {
                 })
             }
             Write-AdapterStatus -Outcome 'rolled_back' -ExitCode $ExitRolledBack
-            exit $ExitRolledBack
+            $script:finalExitCode = $ExitRolledBack
+        } else {
+            if ($null -ne $script:transactionRoot -and
+                (Test-Path -LiteralPath $script:transactionRoot -PathType Container)) {
+                Write-AtomicJson -Path (Join-Path $script:transactionRoot 'transaction.json') -Value ([ordered]@{
+                    formatVersion = 1
+                    adapterProfile = 'saef-owntracks-position-map-v1'
+                    transactionDirectoryName = Split-Path -Leaf $script:transactionRoot
+                    deploymentId = [string] $script:manifest.deploymentId
+                    packageIdentitySha256 = $script:packageIdentitySha256
+                    completedUtc = [DateTime]::UtcNow.ToString('o')
+                    outcome = 'manual_recovery_required'
+                })
+            }
+            Write-AdapterStatus -Outcome 'manual_recovery_required' -ExitCode $ExitManualRecovery
+            $script:finalExitCode = $ExitManualRecovery
         }
-        if ($null -ne $script:transactionRoot -and
-            (Test-Path -LiteralPath $script:transactionRoot -PathType Container)) {
-            Write-AtomicJson -Path (Join-Path $script:transactionRoot 'transaction.json') -Value ([ordered]@{
-                formatVersion = 1
-                adapterProfile = 'saef-owntracks-position-map-v1'
-                transactionDirectoryName = Split-Path -Leaf $script:transactionRoot
-                deploymentId = [string] $script:manifest.deploymentId
-                packageIdentitySha256 = $script:packageIdentitySha256
-                completedUtc = [DateTime]::UtcNow.ToString('o')
-                outcome = 'manual_recovery_required'
-            })
-        }
-        Write-AdapterStatus -Outcome 'manual_recovery_required' -ExitCode $ExitManualRecovery
-        exit $ExitManualRecovery
+    } else {
+        Write-AdapterStatus -Outcome 'failed' -ExitCode $ExitPreflightFailed
+        $script:finalExitCode = $ExitPreflightFailed
     }
-    Write-AdapterStatus -Outcome 'failed' -ExitCode $ExitPreflightFailed
-    exit $ExitPreflightFailed
 } finally {
     Exit-RuntimeQuiescence
     if ($script:mutexAcquired -and $null -ne $script:mutex) {
@@ -973,3 +976,5 @@ try {
     }
     $script:credential = $null
 }
+
+exit $script:finalExitCode
