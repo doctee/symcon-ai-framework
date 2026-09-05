@@ -35,7 +35,11 @@ repository-only OwnTracks target adapter in
 [Gate 82](82-channel-v8-deployment-adapter.md). Its separately authorized
 [Windows qualification](83-channel-v8-windows-adapter-qualification.md) proves
 PowerShell 5.1 transaction and integrated Symcon-PHP lock interoperability.
-The target allowlist remains empty; no channel installation or live module
+The separate miss-state adoption is defined in
+[Gate 85](85-miss-state-format-adoption.md) and its protected synthetic Windows
+qualification passed in
+[Gate 86](86-miss-state-adoption-windows-qualification.md). The target allowlist
+remains empty; no channel installation, live state adoption or live module
 operation is authorized by these documents.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
@@ -213,6 +217,7 @@ inside the server grace window. Live activation is recorded separately.
 | `83-channel-v8-windows-adapter-qualification.md` | Records the sanitized Windows PowerShell 5.1 transaction and integrated Symcon-PHP lock interoperability result while keeping installation and live module gates closed. |
 | `84-target-allowlist-preflight.md` | Corrects the mutation-only ACL classifier, records the non-mutating diagnostic boundary and prepares the private target-bound initializer preflight. |
 | `85-miss-state-format-adoption.md` | Defines the separate lossless format-1-to-format-2 adoption with shared quiescence, hash-pinned two-phase authorization, byte-exact rollback and independent retention. |
+| `86-miss-state-adoption-windows-qualification.md` | Records the protected Windows PowerShell 5.1 preflight, lossless adoption, lock-contention recovery and byte-exact automatic rollback qualification. |
 
 ## Architectural Boundary
 

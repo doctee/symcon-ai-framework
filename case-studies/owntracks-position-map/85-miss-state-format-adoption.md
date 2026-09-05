@@ -1,8 +1,9 @@
 # Gate 85 — lossless miss-state format adoption
 
 **Status:** Repository implementation and synthetic contract verification
-complete; Windows qualification and every installation or live-state gate
-remain closed, 2026-09-05.
+complete; the separate Windows qualification passed in
+[Gate 86](86-miss-state-adoption-windows-qualification.md), while every
+installation or live-state gate remains closed, 2026-09-05.
 
 ## Decision
 
@@ -123,15 +124,15 @@ the four explicit exit outcomes.
 
 ## Remaining gates
 
-1. Parse and execute the new adapter with Windows PowerShell 5.1 against a
-   synthetic protected directory tree, including lock contention and forced
-   rollback. This may not touch the installed channel or live state.
-2. Materialize a fresh private live preflight plan and run only `preflight`.
-3. Review its source, candidate and active-package hashes, then authorize
+The Windows PowerShell 5.1 synthetic qualification, including lock contention
+and forced rollback, is complete in Gate 86. The remaining gates are:
+
+1. Materialize a fresh private live preflight plan and run only `preflight`.
+2. Review its source, candidate and active-package hashes, then authorize
    `adopt` separately.
-4. Repeat the target-allowlist preflight and require
+3. Repeat the target-allowlist preflight and require
    `adapterPreflightReady: true` before considering target installation.
-5. Keep target installation, channel `probe`, inactive `stage`, module
+4. Keep target installation, channel `probe`, inactive `stage`, module
    `preflight`, `activate`, independent UI/Safari health, retention,
    publication and cleanup as separate gates.
 
