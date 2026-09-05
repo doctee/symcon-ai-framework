@@ -2,8 +2,10 @@
 
 **Status:** Corrected Windows PowerShell 5.1 qualification passed against an
 exclusively synthetic protected tree; the separate read-only live preflight
-then passed in [Gate 87](87-miss-state-live-preflight.md), while adoption,
-allowlist installation and module activation remain closed, 2026-09-05.
+then passed in [Gate 87](87-miss-state-live-preflight.md), and the separately
+authorized live adoption completed in
+[Gate 88](88-miss-state-live-adoption.md). Allowlist installation and module
+activation remain closed, 2026-09-05.
 
 ## Scope
 
@@ -68,12 +70,9 @@ coordinate, tracker identifier or movement history is retained here.
 
 ## Remaining gates
 
-1. Review the retained private source, candidate, semantic and active-package
-   hashes from the completed Gate 87 preflight; authorize the actual `adopt`
-   operation separately.
-2. Repeat the target-allowlist preflight and require
+1. Repeat the target-allowlist preflight and require
    `adapterPreflightReady: true` before considering target installation.
-3. Keep target installation, channel `probe`, inactive `stage`, module
+2. Keep target installation, channel `probe`, inactive `stage`, module
    `preflight`, `activate`, independent UI/Safari health, retention,
    publication and cleanup as separate gates.
 

@@ -39,9 +39,11 @@ The separate miss-state adoption is defined in
 [Gate 85](85-miss-state-format-adoption.md) and its protected synthetic Windows
 qualification passed in
 [Gate 86](86-miss-state-adoption-windows-qualification.md). Its corrected,
-non-mutating [live preflight](87-miss-state-live-preflight.md) also passed. The
-target allowlist remains empty; no channel installation, live state adoption or
-live module operation is authorized by these documents.
+non-mutating [live preflight](87-miss-state-live-preflight.md) also passed, and
+the separately authorized lossless
+[live adoption](88-miss-state-live-adoption.md) completed with retained private
+rollback evidence. The target allowlist remains empty; no channel installation
+or live module operation is authorized by these documents.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -220,6 +222,7 @@ inside the server grace window. Live activation is recorded separately.
 | `85-miss-state-format-adoption.md` | Defines the separate lossless format-1-to-format-2 adoption with shared quiescence, hash-pinned two-phase authorization, byte-exact rollback and independent retention. |
 | `86-miss-state-adoption-windows-qualification.md` | Records the protected Windows PowerShell 5.1 preflight, lossless adoption, lock-contention recovery and byte-exact automatic rollback qualification. |
 | `87-miss-state-live-preflight.md` | Records the corrected read-only live format-1-to-format-2 preflight, PHP-empty-map diagnosis and negative-mutation postflight. |
+| `88-miss-state-live-adoption.md` | Records the separately authorized lossless live format-1-to-format-2 adoption, independent postflight and retained rollback evidence. |
 
 ## Architectural Boundary
 

@@ -1,8 +1,9 @@
 # Gate 87 — miss-state live preflight
 
 **Status:** The corrected read-only live format-1-to-format-2 preflight passed
-on the first attempt; adoption and every installation or module-operation gate
-remain closed, 2026-09-05.
+on the first attempt. The separately authorized live adoption is complete in
+[Gate 88](88-miss-state-live-adoption.md); every installation and
+module-operation gate remains closed, 2026-09-05.
 
 ## Scope
 
@@ -59,12 +60,11 @@ protected Windows evidence and are intentionally omitted here.
 
 ## Remaining gates
 
-1. Review and bind a private adoption plan to the retained source, candidate,
-   semantic and active-package evidence, then authorize `adopt` separately.
-2. After successful adoption, repeat the target-allowlist preflight and require
+1. Repeat the target-allowlist preflight and require
    `adapterPreflightReady: true` before considering target installation.
-3. Keep target installation, channel `probe`, inactive `stage`, module
+2. Keep target installation, channel `probe`, inactive `stage`, module
    `preflight`, `activate`, independent UI/Safari health, rollback retention,
    publication and evidence cleanup as separate authorizations.
 
-Gate 87 does not authorize any of those later actions.
+Gate 87 did not authorize the later adoption recorded by Gate 88 or any of the
+remaining actions.
