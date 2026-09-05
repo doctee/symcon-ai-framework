@@ -56,7 +56,10 @@ exactly one OwnTracks target with preserved channel identity, one bounded
 OpenSSH restart and no Symcon restart or module operation. The external
 [channel probe](93-channel-probe-postflight.md) subsequently confirmed channel
 version 8 readiness and one valid standalone-module target. Package staging
-and every target-bound module operation remain separately gated.
+and every target-bound module operation remain separately gated. The exact
+[inactive package candidate](94-inactive-module-package-candidate.md) is now
+reproducibly built and offline-verified with module identity equal to the
+active package; it has not been transferred or staged.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -241,6 +244,7 @@ inside the server grace window. Live activation is recorded separately.
 | `91-target-allowlist-live-installation-preflight.md` | Records the read-only installed-channel preflight and exact zero-to-one target plan while keeping installation and OpenSSH restart closed. |
 | `92-target-allowlist-live-installation.md` | Records the hash-bound zero-to-one live target installation, preserved channel identity, one OpenSSH restart and still-closed adapter and module gates. |
 | `93-channel-probe-postflight.md` | Records the external channel-v8 readiness probe, validated single target dependency and the precise deployment-read-only diagnostic boundary. |
+| `94-inactive-module-package-candidate.md` | Records the reproducible, offline-verified standalone-module ZIP whose package identity equals the active OwnTracks module while keeping transfer and staging closed. |
 
 ## Architectural Boundary
 
