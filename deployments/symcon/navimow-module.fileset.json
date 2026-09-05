@@ -26,6 +26,7 @@
     {"source": "case-studies/navimow/distribution/libs/Navimow/LocalMapSceneProjector.php", "target": "libs/Navimow/LocalMapSceneProjector.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/LocalMapSvgRenderer.php", "target": "libs/Navimow/LocalMapSvgRenderer.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/MapGeometryReducer.php", "target": "libs/Navimow/MapGeometryReducer.php"},
+    {"source": "case-studies/navimow/distribution/libs/Navimow/MqttContinuousOperationReducer.php", "target": "libs/Navimow/MqttContinuousOperationReducer.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/MqttCredentialMapper.php", "target": "libs/Navimow/MqttCredentialMapper.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/MqttEnvelopeException.php", "target": "libs/Navimow/MqttEnvelopeException.php"},
     {"source": "case-studies/navimow/distribution/libs/Navimow/MqttEnvelopeParser.php", "target": "libs/Navimow/MqttEnvelopeParser.php"},

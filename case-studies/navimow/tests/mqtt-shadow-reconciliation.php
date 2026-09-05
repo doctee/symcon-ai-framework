@@ -85,6 +85,18 @@ function decodeReconciliation(string $json): array
     return $decoded;
 }
 
+function reconciliationLegacyVariables(array $variables): array
+{
+    return array_intersect_key($variables, array_flip([
+        'ConnectionState',
+        'ReauthRequired',
+        'TokenExpiresAt',
+        'LastDiscovery',
+        'LastRestSuccess',
+        'RestErrorCount',
+    ]));
+}
+
 function reconciliationEnvelope(): string
 {
     $fixture = decodeReconciliation((string) file_get_contents(
@@ -256,9 +268,13 @@ assertReconciliation(
     'Reconciliation timer did not retain the first due time.'
 );
 assertReconciliation(
-    $accountVariables
-        === $account->testSnapshotPersistentState()['variables'],
-    'MQTT ingestion changed an Account variable.'
+    reconciliationLegacyVariables($accountVariables)
+        === reconciliationLegacyVariables(
+            $account->testSnapshotPersistentState()['variables']
+        )
+        && $account->testReadVariable('MqttLastMessageAt')
+            === 1700000102,
+    'MQTT ingestion changed REST state or lost its accepted timestamp.'
 );
 
 $clock->set(1700000129);

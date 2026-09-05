@@ -17,6 +17,8 @@ php case-studies/navimow/tests/mqtt-envelope.php
 php case-studies/navimow/tests/mqtt-parser.php
 php case-studies/navimow/tests/mqtt-symcon-probe.php
 php case-studies/navimow/tests/mqtt-shadow-payload.php
+php case-studies/navimow/tests/mqtt-continuous-operation.php
+php case-studies/navimow/tests/mqtt-continuous-account.php
 php case-studies/navimow/tests/mqtt-position-diagnostics.php
 php case-studies/navimow/tests/mqtt-position-path-contract.php
 php case-studies/navimow/tests/mqtt-receiver-scaffold.php
@@ -49,6 +51,7 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/libs/Navimow/LocalMapSvgRenderer.php \
     case-studies/navimow/distribution/libs/Navimow/MapGeometryReducer.php \
     case-studies/navimow/distribution/libs/Navimow/MqttCredentialMapper.php \
+    case-studies/navimow/distribution/libs/Navimow/MqttContinuousOperationReducer.php \
     case-studies/navimow/distribution/libs/Navimow/MqttEnvelopeException.php \
     case-studies/navimow/distribution/libs/Navimow/MqttEnvelopeParser.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPayloadException.php \
@@ -74,7 +77,9 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/tests/local-map-statistics-variables.php \
     case-studies/navimow/tests/local-map-restart-and-disable.php \
     case-studies/navimow/tests/local-map-distribution-fileset.php \
-    case-studies/navimow/tests/mqtt-position-path-contract.php
+    case-studies/navimow/tests/mqtt-position-path-contract.php \
+    case-studies/navimow/tests/mqtt-continuous-operation.php \
+    case-studies/navimow/tests/mqtt-continuous-account.php
 
 "$vendor_dir/bin/phpstan" analyse \
     --configuration=phpstan.neon \
@@ -89,6 +94,7 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/libs/Navimow/LocalMapSvgRenderer.php \
     case-studies/navimow/distribution/libs/Navimow/MapGeometryReducer.php \
     case-studies/navimow/distribution/libs/Navimow/MqttCredentialMapper.php \
+    case-studies/navimow/distribution/libs/Navimow/MqttContinuousOperationReducer.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPayloadParser.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPathSegmenter.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPositionDiagnostic.php \
@@ -102,6 +108,7 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/candidate/RevisionBoundedTrackStore.php \
     case-studies/navimow/tests/local-map-svg-renderer.php \
     case-studies/navimow/tests/revision-bounded-track-store.php \
-    case-studies/navimow/tests/mqtt-position-path-contract.php
+    case-studies/navimow/tests/mqtt-position-path-contract.php \
+    case-studies/navimow/tests/mqtt-continuous-operation.php
 
 printf '%s\n' "Navimow MQTT shadow offline checks passed."

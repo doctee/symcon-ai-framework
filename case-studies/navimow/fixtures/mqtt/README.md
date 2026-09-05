@@ -39,7 +39,7 @@ The mower remained docked. The client:
 | `symcon-envelope-state.json` | Synthetic native Symcon receive envelope carrying a direct-state payload string. |
 | `symcon-envelope-retained.json` | Synthetic retained-envelope classification case; not evidence that Navimow sends retained state. |
 | `symcon-envelope-invalid-data-id.json` | Synthetic negative case for exact native receive-interface validation. |
-| `bounded-diagnostics-shadow-active.json` | Synthetic exact version-2 contract for the privacy-safe `ShadowActive` diagnostic projection, including one identity-free semantic hint. |
+| `bounded-diagnostics-shadow-active.json` | Synthetic exact version-3 contract for the privacy-safe `ShadowActive` diagnostic projection, including operation state and one identity-free semantic hint. |
 | `episode-accounting-reconciled.json` | Sanitized aggregate regression evidence separating 12 disconnect observations from 8 distinct transport episodes and 4 duplicates. |
 | `position-accounting-segments.json` | Synthetic coordinate-free proof that pilot-wide position counters remain monotonic across ephemeral transport-segment cleanup. |
 | `core-resume-transient-core-readiness.json` | Synthetic runtime contract for an active Core whose configuration is temporarily unreadable before `KR_READY`. |

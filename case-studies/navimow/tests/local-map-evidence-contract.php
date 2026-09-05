@@ -97,6 +97,30 @@ assertLocalMapEvidence(
         === 'unavailable',
     'A mismatched device received retained map evidence.'
 );
+$account->now += 120;
+assertLocalMapEvidence(
+    requestLocalMapEvidence($account, 'SYNTHETIC_DEVICE')['status']
+        === 'ok',
+    'The exact Fresh boundary is not inclusive.'
+);
+$account->now += 1;
+assertLocalMapEvidence(
+    requestLocalMapEvidence($account, 'SYNTHETIC_DEVICE')['status']
+        === 'delayed',
+    'The Delayed interval does not start after 120 seconds.'
+);
+$account->now += 479;
+assertLocalMapEvidence(
+    requestLocalMapEvidence($account, 'SYNTHETIC_DEVICE')['status']
+        === 'delayed',
+    'The exact Delayed boundary is not inclusive.'
+);
+$account->now += 1;
+assertLocalMapEvidence(
+    requestLocalMapEvidence($account, 'SYNTHETIC_DEVICE')['status']
+        === 'stale',
+    'The Stale interval does not start after 600 seconds.'
+);
 $root = json_decode(
     $account->testReadAttribute('MqttPositionDiagnostic'),
     true,

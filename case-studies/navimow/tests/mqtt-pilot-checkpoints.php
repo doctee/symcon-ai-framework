@@ -68,6 +68,18 @@ function decodePilotCheckpoint(string $json): array
     return $decoded;
 }
 
+function pilotLegacyAccountVariables(array $variables): array
+{
+    return array_intersect_key($variables, array_flip([
+        'ConnectionState',
+        'ReauthRequired',
+        'TokenExpiresAt',
+        'LastDiscovery',
+        'LastRestSuccess',
+        'RestErrorCount',
+    ]));
+}
+
 function invokePilotPrivate(
     NavimowAccount $account,
     string $method,
@@ -112,7 +124,7 @@ assertPilotCheckpoint(
         && $account->testTimerInterval('MqttPilotCheckpoint') === 0
         && count(
             $account->testSnapshotPersistentState()['variables']
-        ) === 6,
+        ) === 11,
     'Disabled pilot diagnostics changed the public contract.'
 );
 
@@ -697,7 +709,7 @@ assertPilotCheckpoint(
         && $restarted->testTimerInterval('MqttPilotCheckpoint') === 0
         && count(
             $restarted->testSnapshotPersistentState()['variables']
-        ) === 6,
+        ) === 11,
     'Disabling MQTT did not close the migrated internal schedule.'
 );
 assertPilotCheckpoint(
@@ -926,8 +938,9 @@ assertPilotCheckpoint(
         && $deadlineAccount->testOwnApplyChangesCount() === 1
         && $deadlineAccount->testTimerInterval('MqttPilotDeadline') === 0
         && $deadlineAccount->testTimerInterval('MqttPilotClosure') === 0
-        && $deadlineAccount->testSnapshotPersistentState()['variables']
-            === $deadlineVariables
+        && pilotLegacyAccountVariables(
+            $deadlineAccount->testSnapshotPersistentState()['variables']
+        ) === pilotLegacyAccountVariables($deadlineVariables)
         && $deadlineAccount->testReadAttribute(
             'MqttTaskObservationLedger'
         ) === $deadlineLedgerEncoded

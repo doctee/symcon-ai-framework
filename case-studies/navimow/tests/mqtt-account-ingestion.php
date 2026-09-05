@@ -71,6 +71,18 @@ function decodeMqttAccount(string $json): array
     return $decoded;
 }
 
+function mqttLegacyAccountVariables(array $variables): array
+{
+    return array_intersect_key($variables, array_flip([
+        'ConnectionState',
+        'ReauthRequired',
+        'TokenExpiresAt',
+        'LastDiscovery',
+        'LastRestSuccess',
+        'RestErrorCount',
+    ]));
+}
+
 function mqttAccountEnvelope(): string
 {
     $fixture = decodeMqttAccount((string) file_get_contents(
@@ -245,8 +257,12 @@ assertMqttAccount(
 );
 $afterVariables = $account->testSnapshotPersistentState()['variables'];
 assertMqttAccount(
-    $beforeVariables === $afterVariables,
-    'MQTT ingestion changed a public Account variable.'
+    mqttLegacyAccountVariables($beforeVariables)
+        === mqttLegacyAccountVariables($afterVariables)
+        && ($afterVariables['MqttLastMessageAt'] ?? 0) > 0
+        && ($afterVariables['MqttLastPositionAt'] ?? null) === 0
+        && ($afterVariables['MqttPositionFreshness'] ?? null) === 0,
+    'MQTT ingestion changed REST-owned Account variables or timestamps.'
 );
 
 $account->testSetAttribute(
@@ -271,9 +287,12 @@ assertMqttAccount(
         && $position['observation']['latest']['orientation'] === 0.5
         && $position['observation']['latest']['sessionSequence'] === 12
         && $position['observation']['counters']['retainedSampleCount'] === 1
-        && $account->testSnapshotPersistentState()['variables']
-            === $afterVariables,
-    'Position ingestion changed public state or lost bounded local pose.'
+        && mqttLegacyAccountVariables(
+            $account->testSnapshotPersistentState()['variables']
+        ) === mqttLegacyAccountVariables($afterVariables)
+        && $account->testReadVariable('MqttLastPositionAt') > 0
+        && $account->testReadVariable('MqttPositionFreshness') === 1,
+    'Position ingestion changed REST state or lost bounded local pose.'
 );
 $positionJson = $account->GetMqttPositionDiagnostics();
 assertMqttAccount(

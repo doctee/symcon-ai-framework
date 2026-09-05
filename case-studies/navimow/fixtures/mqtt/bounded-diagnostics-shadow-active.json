@@ -5,9 +5,32 @@
     "sourceEvidence": "215-native-mqtt-private-pilot-shadow-diagnostics-implementation.md"
   },
   "diagnostics": {
-    "formatVersion": 2,
+    "formatVersion": 3,
     "featureEnabled": true,
     "configurationStatus": "ready",
+    "operation": {
+      "effectiveMode": "BoundedPilot",
+      "state": "Inactive",
+      "sessionSequence": 0,
+      "startedAt": 0,
+      "leaseExpiresAt": 0,
+      "renewalEligibleAt": 0,
+      "lastLeaseRenewedAt": 0,
+      "renewalCount": 0,
+      "circuitReason": "",
+      "halfOpenProbeCount": 0,
+      "nextProbeAt": 0,
+      "probeDeadlineAt": 0,
+      "recoveryHealthySince": 0,
+      "stopReason": "",
+      "stopRequestedAt": 0,
+      "credentialsClearedAt": 0,
+      "stoppedAt": 0,
+      "configurationMatches": false,
+      "positionFreshness": "unavailable",
+      "lastAcceptedMessageAt": 1700000000,
+      "lastAcceptedPositionAt": 0
+    },
     "lifecycle": {
       "state": "ShadowActive",
       "stateChangedAt": 1700000000,
@@ -52,7 +75,16 @@
       "lastReconciliationAt": 0,
       "lastComparisonAt": 0,
       "lastReconciliationResult": "none",
-      "lastComparisonResult": "none"
+      "lastComparisonResult": "none",
+      "continuousStarts": 0,
+      "continuousLeaseRenewals": 0,
+      "continuousLeaseExpirations": 0,
+      "continuousCircuitOpenings": 0,
+      "continuousHalfOpenProbes": 0,
+      "continuousHalfOpenRecoveries": 0,
+      "continuousHalfOpenFailures": 0,
+      "continuousSuspensions": 0,
+      "continuousStops": 0
     },
     "errors": {
       "count": 0,
