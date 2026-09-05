@@ -250,6 +250,12 @@ function Get-DirectoryPackageIdentity {
 
 function Get-PropertyNames {
     param([Parameter(Mandatory = $true)] $Value)
+    if ($Value -is [Array]) {
+        if (@($Value).Count -eq 0) {
+            return @()
+        }
+        throw [InvalidOperationException]::new('JSON map cannot be a non-empty array.')
+    }
     [string[]] $names = @()
     foreach ($property in @($Value.PSObject.Properties)) {
         $names += [string] $property.Name
@@ -259,7 +265,13 @@ function Get-PropertyNames {
 
 function Assert-JsonMap {
     param([Parameter(Mandatory = $true)] $Value, [Parameter(Mandatory = $true)][string] $Message)
-    if ($null -eq $Value -or $Value -is [Array] -or $Value -is [string] -or
+    if ($Value -is [Array]) {
+        if (@($Value).Count -eq 0) {
+            return
+        }
+        throw [InvalidOperationException]::new($Message)
+    }
+    if ($null -eq $Value -or $Value -is [string] -or
         $Value -is [ValueType]) {
         throw [InvalidOperationException]::new($Message)
     }
@@ -405,8 +417,9 @@ function Get-SemanticStateSha256 {
 function New-Format2Candidate {
     param([Parameter(Mandatory = $true)] $Source)
     $Source.version = 2
-    foreach ($selectionProperty in @($Source.selections.PSObject.Properties)) {
-        $selectionProperty.Value.state | Add-Member -MemberType NoteProperty `
+    foreach ($fingerprint in @(Get-PropertyNames -Value $Source.selections)) {
+        $entry = $Source.selections.PSObject.Properties[$fingerprint].Value
+        $entry.state | Add-Member -MemberType NoteProperty `
             -Name 'pendingReservations' -Value ([pscustomobject]@{})
     }
     Assert-MissState -Store $Source -Format 2
@@ -438,11 +451,13 @@ function Assert-ZeroActiveLeases {
             throw [InvalidOperationException]::new('Request-budget state format is unsupported.')
         }
         Assert-JsonMap -Value $state.clients -Message 'Request-budget clients map is invalid.'
-        foreach ($clientProperty in @($state.clients.PSObject.Properties)) {
-            Assert-JsonMap -Value $clientProperty.Value.leases -Message 'Request-budget leases map is invalid.'
-            foreach ($leaseProperty in @($clientProperty.Value.leases.PSObject.Properties)) {
-                if (-not (Test-NonNegativeInteger -Value $leaseProperty.Value) -or
-                    [long] $leaseProperty.Value -gt $now) {
+        foreach ($clientKey in @(Get-PropertyNames -Value $state.clients)) {
+            $client = $state.clients.PSObject.Properties[$clientKey].Value
+            Assert-JsonMap -Value $client.leases -Message 'Request-budget leases map is invalid.'
+            foreach ($leaseKey in @(Get-PropertyNames -Value $client.leases)) {
+                $expiresAt = $client.leases.PSObject.Properties[$leaseKey].Value
+                if (-not (Test-NonNegativeInteger -Value $expiresAt) -or
+                    [long] $expiresAt -gt $now) {
                     throw [InvalidOperationException]::new('OwnTracks runtime still has an active request lease.')
                 }
             }

@@ -637,6 +637,23 @@ function Read-BoundedStateJson {
     return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
 }
 
+function Get-JsonMapProperties {
+    param(
+        [Parameter(Mandatory = $true)] $Value,
+        [Parameter(Mandatory = $true)][string] $Message
+    )
+    if ($Value -is [Array]) {
+        if (@($Value).Count -eq 0) {
+            return @()
+        }
+        throw [InvalidOperationException]::new($Message)
+    }
+    if ($null -eq $Value -or $Value -is [string] -or $Value -is [ValueType]) {
+        throw [InvalidOperationException]::new($Message)
+    }
+    return @($Value.PSObject.Properties)
+}
+
 function Assert-ZeroActiveLeases {
     $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     foreach ($name in @('tileBudget', 'providerBudget')) {
@@ -647,9 +664,11 @@ function Assert-ZeroActiveLeases {
         if ([int] $state.version -ne 1) {
             throw [InvalidOperationException]::new('OwnTracks request-budget state format is unsupported.')
         }
-        foreach ($clientProperty in $state.clients.PSObject.Properties) {
+        foreach ($clientProperty in @(Get-JsonMapProperties -Value $state.clients `
+            -Message 'OwnTracks request-budget clients map is invalid.')) {
             $client = $clientProperty.Value
-            foreach ($leaseProperty in $client.leases.PSObject.Properties) {
+            foreach ($leaseProperty in @(Get-JsonMapProperties -Value $client.leases `
+                -Message 'OwnTracks request-budget leases map is invalid.')) {
                 if ([long] $leaseProperty.Value -gt $now) {
                     throw [InvalidOperationException]::new('OwnTracks runtime still has an active request lease.')
                 }
@@ -663,9 +682,12 @@ function Assert-ZeroActiveLeases {
     if ([int] $missState.version -ne 2) {
         throw [InvalidOperationException]::new('OwnTracks miss-state requires format 2 before adapter adoption.')
     }
-    foreach ($selectionProperty in $missState.selections.PSObject.Properties) {
+    foreach ($selectionProperty in @(Get-JsonMapProperties -Value $missState.selections `
+        -Message 'OwnTracks miss-state selections map is invalid.')) {
         $selection = $selectionProperty.Value
-        foreach ($reservationProperty in $selection.state.pendingReservations.PSObject.Properties) {
+        foreach ($reservationProperty in @(Get-JsonMapProperties `
+            -Value $selection.state.pendingReservations `
+            -Message 'OwnTracks pending-reservations map is invalid.')) {
             if ([long] $reservationProperty.Value.expiresAt -gt $now) {
                 throw [InvalidOperationException]::new('OwnTracks miss-state still has an active reservation.')
             }

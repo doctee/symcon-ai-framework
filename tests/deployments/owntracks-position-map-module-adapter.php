@@ -115,8 +115,9 @@ $requiredAdapterFragments = [
     '[IO.FileShare]::ReadWrite',
     '$stream.Lock(0, 1)',
     'Assert-ZeroActiveLeases',
-    'foreach ($clientProperty in $state.clients.PSObject.Properties)',
-    'foreach ($selectionProperty in $missState.selections.PSObject.Properties)',
+    'function Get-JsonMapProperties',
+    "Get-JsonMapProperties -Value \$state.clients `",
+    "Get-JsonMapProperties -Value \$missState.selections `",
     'Get-RuntimeStateSnapshot',
     'Restore-RuntimeStateSnapshot -Snapshot $script:runtimeStateSnapshot',
     'expectedActivePackageIdentitySha256',
@@ -154,6 +155,17 @@ assertOwnTracksPositionMapAdapter(
 assertOwnTracksPositionMapAdapter(
     !str_contains($adapter, '.PSObject.Properties.Value'),
     'Adapter must iterate empty JSON maps without strict-mode member enumeration.'
+);
+assertOwnTracksPositionMapAdapter(
+    str_contains($adapter, 'function Get-JsonMapProperties')
+        && !str_contains($adapter, 'foreach ($clientProperty in $state.clients.PSObject.Properties)')
+        && !str_contains($adapter, 'foreach ($leaseProperty in $client.leases.PSObject.Properties)')
+        && !str_contains($adapter, 'foreach ($selectionProperty in $missState.selections.PSObject.Properties)')
+        && !str_contains(
+            $adapter,
+            'foreach ($reservationProperty in $selection.state.pendingReservations.PSObject.Properties)'
+        ),
+    'Adapter must accept PHP-empty JSON maps without enumerating array properties.'
 );
 assertOwnTracksPositionMapAdapter(
     substr_count($adapter, 'exit $script:finalExitCode') === 1

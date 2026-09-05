@@ -142,6 +142,7 @@ $requiredFragments = [
     "[ValidateSet('preflight', 'adopt')]",
     "[Threading.Mutex]::new(\$false, [string] \$script:policy.mutexName)",
     'Enter-RuntimeQuiescence',
+    'JSON map cannot be a non-empty array.',
     'function Test-PathOverlap',
     '[IO.FileShare]::ReadWrite',
     '$stream.Lock(0, 1)',
@@ -182,6 +183,11 @@ foreach (['MC_ReloadModule', 'MC_UpdateModule', 'Restart-Service', 'Invoke-WebRe
         "State adoption contains an out-of-scope action: {$forbidden}"
     );
 }
+assertOwnTracksMissStateAdoption(
+    !str_contains($script, 'foreach ($clientProperty in @($state.clients.PSObject.Properties))')
+        && !str_contains($script, 'foreach ($leaseProperty in @($client.leases.PSObject.Properties))'),
+    'State adoption must not enumerate PHP-empty JSON maps as array properties.'
+);
 assertOwnTracksMissStateAdoption(
     strpos($script, 'New-AdoptionTransaction')
         < strpos($script, 'Write-AtomicBytes -Path $statePath -Bytes $script:candidateBytes'),
