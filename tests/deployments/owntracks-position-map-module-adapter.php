@@ -181,6 +181,41 @@ foreach ([278, 197_055, 2_032_127, 2, 4, 16, 64, 256, 65_536, 262_144, 524_288] 
         'Mutable ACL rights escape the mutation-only mask.'
     );
 }
+$directoryIdentityStart = strpos($adapter, 'function Get-DirectoryPackageIdentity');
+$directoryIdentityEnd = strpos($adapter, 'function Assert-ModuleTreeIdentity');
+assertOwnTracksPositionMapAdapter(
+    is_int($directoryIdentityStart)
+        && is_int($directoryIdentityEnd)
+        && $directoryIdentityStart < $directoryIdentityEnd,
+    'Directory identity function boundary is missing.'
+);
+$directoryIdentitySource = substr(
+    $adapter,
+    $directoryIdentityStart,
+    $directoryIdentityEnd - $directoryIdentityStart
+);
+assertOwnTracksPositionMapAdapter(
+    str_contains($directoryIdentitySource, '[StringComparer]::Ordinal')
+        && str_contains($directoryIdentitySource, '[Array]::Sort($relativePaths, [StringComparer]::Ordinal)')
+        && !str_contains($directoryIdentitySource, 'Sort-Object'),
+    'Active package identity paths are not sorted with the ordinal PHP contract.'
+);
+$ordinalIdentityRecords = [
+    'OwnTracksPositionMap/module.php' => [11, str_repeat('0', 64)],
+    'OwnTracksPositionMap/libs/a.php' => [12, str_repeat('1', 64)],
+    'OwnTracksPositionMap/libs/Z.php' => [13, str_repeat('2', 64)],
+    'library.json' => [14, str_repeat('3', 64)],
+];
+ksort($ordinalIdentityRecords, SORT_STRING);
+$ordinalIdentityText = '';
+foreach ($ordinalIdentityRecords as $relativePath => [$size, $sha256]) {
+    $ordinalIdentityText .= $relativePath . "\0" . $size . "\0" . $sha256 . "\n";
+}
+assertOwnTracksPositionMapAdapter(
+    hash('sha256', $ordinalIdentityText)
+        === '3594d5f44856bf252f26e98d8470763123d9fdfabe5b450d8d0389de7e899e64',
+    'Mixed-case ordinal package identity vector differs.'
+);
 assertOwnTracksPositionMapAdapter(
     strpos($adapter, 'Copy-CandidateToTransaction')
         < strpos($adapter, '[IO.Directory]::Move([string] $script:policy.activeModulePath, $script:rollbackPath)'),

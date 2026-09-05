@@ -37,18 +37,35 @@ allowlist and fail-closed behavior are unchanged.
 The correction stays inside the OwnTracks adapter and private gate; it does
 not introduce a shared helper or public API.
 
+## Cross-runtime package identity
+
+The corrected ACL preflight then reached the active package identity and
+exposed a second portability defect. The Symcon-PHP inventory and package
+builder order relative paths bytewise with case sensitivity, while the adapter
+used the culture-dependent, normally case-insensitive `Sort-Object` default.
+Mixed-case module paths could therefore produce a different aggregate identity
+for the same files.
+
+The Windows adapter now stores files under their normalized relative paths and
+orders an explicit string array with `StringComparer.Ordinal`. This matches the
+PHP `SORT_STRING` contract without changing file contents, accepted paths or
+hash inputs. A fixed mixed-case four-file vector has the same canonical digest
+in the repository test and private Windows preflight.
+
 ## Verification
 
 Repository regression tests pin every mutation bit, the absence of the former
-composite mask, acceptance of representative read-only values and rejection
-of `Write`, `Modify`, `FullControl`, delete and security-control values. The
-complete OwnTracks test suite, PHP syntax/style checks, distribution check,
-module fileset check and whitespace check pass.
+composite mask, acceptance of representative read-only values, rejection of
+`Write`, `Modify`, `FullControl`, delete and security-control values, explicit
+ordinal sorting and the mixed-case identity vector. The complete OwnTracks
+test suite, PHP syntax/style checks, distribution check, module fileset check
+and whitespace check pass.
 
-The private revision adds the same positive and negative classifier scenarios
-before inspecting installation-local paths. Its internal fourteen-file digest
-and ZIP integrity are verified. Windows PowerShell 5.1 parsing and the actual
-read-only target preflight still require execution on the approved target.
+The private revision adds the same positive and negative ACL scenarios plus the
+ordinal identity vector before inspecting installation-local paths. Its
+internal fourteen-file digest and ZIP integrity are verified. Windows
+PowerShell 5.1 parsing and the actual read-only target preflight still require
+execution on the approved target.
 
 ## Remaining boundary
 

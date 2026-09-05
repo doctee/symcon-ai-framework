@@ -427,16 +427,22 @@ function Get-DirectoryPackageIdentity {
     param([Parameter(Mandatory = $true)][string] $Path)
     Assert-SafeDirectoryTree -Path $Path
     $root = [IO.Path]::GetFullPath($Path).TrimEnd([char[]] @('\', '/')) + [IO.Path]::DirectorySeparatorChar
-    $files = @(Get-ChildItem -LiteralPath $Path -File -Recurse | Sort-Object {
-        $_.FullName.Substring($root.Length).Replace('\', '/')
-    })
-    if ($files.Count -lt 1) {
+    $filesByRelativePath = [Collections.Generic.Dictionary[string,IO.FileInfo]]::new(
+        [StringComparer]::Ordinal
+    )
+    foreach ($file in @(Get-ChildItem -LiteralPath $Path -File -Recurse)) {
+        $relative = $file.FullName.Substring($root.Length).Replace('\', '/')
+        $filesByRelativePath.Add($relative, $file)
+    }
+    [string[]] $relativePaths = @($filesByRelativePath.Keys)
+    [Array]::Sort($relativePaths, [StringComparer]::Ordinal)
+    if ($relativePaths.Count -lt 1) {
         throw [InvalidOperationException]::new('Module tree is empty.')
     }
     $identity = [Text.StringBuilder]::new()
     $totalBytes = 0L
-    foreach ($file in $files) {
-        $relative = $file.FullName.Substring($root.Length).Replace('\', '/')
+    foreach ($relative in $relativePaths) {
+        $file = $filesByRelativePath[$relative]
         $totalBytes += [long] $file.Length
         if ($totalBytes -gt [long] $script:policy.maximumCandidateBytes) {
             throw [InvalidOperationException]::new('Module tree exceeds the adapter byte limit.')
