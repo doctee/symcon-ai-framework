@@ -1,9 +1,10 @@
 # Gate 85 — lossless miss-state format adoption
 
-**Status:** Repository implementation and synthetic contract verification
-complete; the separate Windows qualification passed in
-[Gate 86](86-miss-state-adoption-windows-qualification.md), while every
-installation or live-state gate remains closed, 2026-09-05.
+**Status:** Repository implementation, corrected Windows qualification and the
+read-only live preflight are complete in
+[Gate 86](86-miss-state-adoption-windows-qualification.md) and
+[Gate 87](87-miss-state-live-preflight.md); adoption and every installation or
+module-operation gate remain closed, 2026-09-05.
 
 ## Decision
 
@@ -124,15 +125,16 @@ the four explicit exit outcomes.
 
 ## Remaining gates
 
-The Windows PowerShell 5.1 synthetic qualification, including lock contention
-and forced rollback, is complete in Gate 86. The remaining gates are:
+The corrected Windows PowerShell 5.1 qualification, including the PHP-empty-map
+interoperability case, lock contention and forced rollback, is complete in Gate
+86. The read-only live preflight is complete in Gate 87. The remaining gates
+are:
 
-1. Materialize a fresh private live preflight plan and run only `preflight`.
-2. Review its source, candidate and active-package hashes, then authorize
-   `adopt` separately.
-3. Repeat the target-allowlist preflight and require
+1. Review the retained private source, candidate, semantic and active-package
+   hashes, then authorize `adopt` separately.
+2. Repeat the target-allowlist preflight and require
    `adapterPreflightReady: true` before considering target installation.
-4. Keep target installation, channel `probe`, inactive `stage`, module
+3. Keep target installation, channel `probe`, inactive `stage`, module
    `preflight`, `activate`, independent UI/Safari health, retention,
    publication and cleanup as separate gates.
 
