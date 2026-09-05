@@ -628,9 +628,10 @@ function Assert-ZeroActiveLeases {
         if ([int] $state.version -ne 1) {
             throw [InvalidOperationException]::new('OwnTracks request-budget state format is unsupported.')
         }
-        foreach ($client in @($state.clients.PSObject.Properties.Value)) {
-            foreach ($expiresAt in @($client.leases.PSObject.Properties.Value)) {
-                if ([long] $expiresAt -gt $now) {
+        foreach ($clientProperty in $state.clients.PSObject.Properties) {
+            $client = $clientProperty.Value
+            foreach ($leaseProperty in $client.leases.PSObject.Properties) {
+                if ([long] $leaseProperty.Value -gt $now) {
                     throw [InvalidOperationException]::new('OwnTracks runtime still has an active request lease.')
                 }
             }
@@ -643,9 +644,10 @@ function Assert-ZeroActiveLeases {
     if ([int] $missState.version -ne 2) {
         throw [InvalidOperationException]::new('OwnTracks miss-state requires format 2 before adapter adoption.')
     }
-    foreach ($selection in @($missState.selections.PSObject.Properties.Value)) {
-        foreach ($reservation in @($selection.state.pendingReservations.PSObject.Properties.Value)) {
-            if ([long] $reservation.expiresAt -gt $now) {
+    foreach ($selectionProperty in $missState.selections.PSObject.Properties) {
+        $selection = $selectionProperty.Value
+        foreach ($reservationProperty in $selection.state.pendingReservations.PSObject.Properties) {
+            if ([long] $reservationProperty.Value.expiresAt -gt $now) {
                 throw [InvalidOperationException]::new('OwnTracks miss-state still has an active reservation.')
             }
         }

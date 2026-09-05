@@ -115,6 +115,8 @@ $requiredAdapterFragments = [
     '[IO.FileShare]::ReadWrite',
     '$stream.Lock(0, 1)',
     'Assert-ZeroActiveLeases',
+    'foreach ($clientProperty in $state.clients.PSObject.Properties)',
+    'foreach ($selectionProperty in $missState.selections.PSObject.Properties)',
     'Get-RuntimeStateSnapshot',
     'Restore-RuntimeStateSnapshot -Snapshot $script:runtimeStateSnapshot',
     'expectedActivePackageIdentitySha256',
@@ -137,6 +139,10 @@ foreach (['MC_UpdateModule', 'Restart-Service', 'Stop-Service', 'Start-Service',
 assertOwnTracksPositionMapAdapter(
     substr_count($adapter, "-Method 'MC_ReloadModule'") === 1,
     'Adapter must have one targeted reload call site.'
+);
+assertOwnTracksPositionMapAdapter(
+    !str_contains($adapter, '.PSObject.Properties.Value'),
+    'Adapter must iterate empty JSON maps without strict-mode member enumeration.'
 );
 assertOwnTracksPositionMapAdapter(
     strpos($adapter, 'Copy-CandidateToTransaction')
