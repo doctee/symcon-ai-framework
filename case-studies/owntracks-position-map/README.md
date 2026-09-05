@@ -44,8 +44,12 @@ the separately authorized lossless
 [live adoption](88-miss-state-live-adoption.md) completed with retained private
 rollback evidence. The subsequent read-only
 [target readiness preflight](89-target-allowlist-readiness-preflight.md) passed
-without changing the empty target allowlist. No target installation, channel
-mutation or live module operation is authorized by these documents.
+without changing the empty target allowlist. The subsequent synthetic
+[target-installation Windows qualification](90-target-allowlist-installation-windows-qualification.md)
+passed for the exact current initializer and corrected adapter, including an
+empty-to-one target transition and automatic rollback. No live target
+installation, channel mutation or module operation is authorized by these
+documents.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -226,6 +230,7 @@ inside the server grace window. Live activation is recorded separately.
 | `87-miss-state-live-preflight.md` | Records the corrected read-only live format-1-to-format-2 preflight, PHP-empty-map diagnosis and negative-mutation postflight. |
 | `88-miss-state-live-adoption.md` | Records the separately authorized lossless live format-1-to-format-2 adoption, independent postflight and retained rollback evidence. |
 | `89-target-allowlist-readiness-preflight.md` | Records the repeated read-only target-bound initializer preflight after format-2 adoption and the removal of the adapter-readiness blocker without installing a target. |
+| `90-target-allowlist-installation-windows-qualification.md` | Records the protected synthetic Windows qualification of the exact current initializer and adapter for empty-to-one target installation, fail-closed harness correction and automatic rollback. |
 
 ## Architectural Boundary
 
