@@ -167,6 +167,7 @@
             "@php case-studies/owntracks-position-map/tools/validate-distribution.php",
             "@php case-studies/owntracks-position-map/tests/module-fileset.php",
             "@php tests/deployments/owntracks-position-map-module-adapter.php",
+            "@php tests/deployments/owntracks-position-map-adapter-state.php",
             "@php tests/deployments/owntracks-position-map-miss-state-adoption.php"
         ],
         "test:navimow-mqtt": [

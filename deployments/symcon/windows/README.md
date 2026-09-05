@@ -341,8 +341,21 @@ activation/rollback direction and adapter-owned package/state retention.
 Format changes fail closed. The companion retention command defaults to the
 read-only `plan` operation; `apply` is a later local-administrator gate.
 
+The adapter never creates its own transaction/rollback state root during
+module `preflight` or `activate`. Provision that target-owned root separately
+with `Initialize-SaefOwnTracksPositionMapAdapterState.ps1`. Its `preflight`
+operation validates the hash-pinned private adapter policy, deployment account,
+path separation, parent ACL and shared adapter mutex without creating a
+directory. A separately authorized `install` operation requires the exact
+confirmation phrase, creates only the configured missing leaf, applies the
+same non-inheriting `SYSTEM`/Administrators/deployment-account ACL pattern as
+the channel initializer and removes the still-empty leaf automatically if
+post-creation verification fails. Existing roots are verified but never
+rewritten by this command.
+
 Adding this source does not populate `standaloneModuleTargets`, install the
-adapter on Windows or authorize a live preflight or activation.
+adapter or its state root on Windows, or authorize a live preflight or
+activation.
 
 ```powershell
 & .\Invoke-SaefDeploymentRetentionCleanup.ps1 `

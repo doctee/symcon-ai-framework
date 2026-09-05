@@ -105,6 +105,16 @@ protected ACL, reparse-point rejection, writer locks and leases, state schema,
 targeted reload, health checks and rollback retention. These responsibilities
 cannot be inferred by the generic gateway.
 
+Adapter-owned writable roots are a prerequisite, not a side effect of module
+preflight. The generic gateway and the adapter must fail closed when such a
+root is absent; neither may infer or create a private path while checking a
+candidate. A target-specific initializer may provision an absent root in a
+separate mutation gate only after a hash-bound read-only preflight. It must
+validate path separation and the complete existing parent chain, coordinate
+with the adapter's own mutex, create exactly one configured leaf, apply a
+protected least-authority ACL, verify the result and roll back only the empty
+leaf that it created. Existing roots must not be silently re-ACL'd.
+
 ## Approval and rollback boundaries
 
 The gates remain distinct:

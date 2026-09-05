@@ -55,13 +55,20 @@ leaving the channel, OpenSSH and Symcon unchanged. The separately authorized
 exactly one OwnTracks target with preserved channel identity, one bounded
 OpenSSH restart and no Symcon restart or module operation. The external
 [channel probe](93-channel-probe-postflight.md) subsequently confirmed channel
-version 8 readiness and one valid standalone-module target. Package staging
-and every target-bound module operation remain separately gated. The exact
+version 8 readiness and one valid standalone-module target. At that checkpoint,
+package staging and every target-bound module operation remained separately
+gated. The exact
 [inactive package candidate](94-inactive-module-package-candidate.md) is now
 reproducibly built and offline-verified with module identity equal to the
 active package. Its separately authorized
 [inactive channel stage](95-inactive-module-stage.md) completed with exact hash,
 fileset and target binding while leaving the active module untouched.
+The first target-bound module preflight then failed closed because its
+adapter-owned transaction state root was absent. The repository-only
+[state-root provisioning correction](96-module-preflight-state-root-provisioning.md)
+keeps candidate preflight non-mutating and introduces a separately gated,
+target-specific initializer; Windows qualification and live provisioning are
+still pending.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -248,6 +255,7 @@ inside the server grace window. Live activation is recorded separately.
 | `93-channel-probe-postflight.md` | Records the external channel-v8 readiness probe, validated single target dependency and the precise deployment-read-only diagnostic boundary. |
 | `94-inactive-module-package-candidate.md` | Records the reproducible, offline-verified standalone-module ZIP whose package identity equals the active OwnTracks module while keeping transfer and staging closed. |
 | `95-inactive-module-stage.md` | Records the exact-hash chunked transfer and server-side validation of the inactive OwnTracks package while keeping adapter preflight and activation closed. |
+| `96-module-preflight-state-root-provisioning.md` | Records the fail-closed first module preflight and the repository-only, separately gated initializer for the missing adapter-owned state root. |
 
 ## Architectural Boundary
 
