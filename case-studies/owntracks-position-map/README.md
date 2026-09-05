@@ -47,9 +47,11 @@ rollback evidence. The subsequent read-only
 without changing the empty target allowlist. The subsequent synthetic
 [target-installation Windows qualification](90-target-allowlist-installation-windows-qualification.md)
 passed for the exact current initializer and corrected adapter, including an
-empty-to-one target transition and automatic rollback. No live target
-installation, channel mutation or module operation is authorized by these
-documents.
+empty-to-one target transition and automatic rollback. Its read-only
+[live-installation preflight](91-target-allowlist-live-installation-preflight.md)
+then proved the exact zero-to-one plan against the installed channel while
+leaving the channel, OpenSSH and Symcon unchanged. No live target installation,
+channel mutation or module operation is authorized by these documents.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -231,6 +233,7 @@ inside the server grace window. Live activation is recorded separately.
 | `88-miss-state-live-adoption.md` | Records the separately authorized lossless live format-1-to-format-2 adoption, independent postflight and retained rollback evidence. |
 | `89-target-allowlist-readiness-preflight.md` | Records the repeated read-only target-bound initializer preflight after format-2 adoption and the removal of the adapter-readiness blocker without installing a target. |
 | `90-target-allowlist-installation-windows-qualification.md` | Records the protected synthetic Windows qualification of the exact current initializer and adapter for empty-to-one target installation, fail-closed harness correction and automatic rollback. |
+| `91-target-allowlist-live-installation-preflight.md` | Records the read-only installed-channel preflight and exact zero-to-one target plan while keeping installation and OpenSSH restart closed. |
 
 ## Architectural Boundary
 
