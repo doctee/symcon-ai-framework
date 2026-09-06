@@ -250,15 +250,19 @@ function Assert-Elevated {
 }
 
 try {
-    $script:failureCode = 'contract'
+    $script:failureCode = 'adapter_policy_file'
     Assert-RootedLeaf -Path $AdapterPolicyPath -MaximumBytes 1048576
+    $script:failureCode = 'adapter_policy_hash'
     if ((Get-Sha256 -Path $AdapterPolicyPath) -cne $ExpectedAdapterPolicySha256) {
         throw [Security.SecurityException]::new('Adapter policy hash differs.')
     }
+    $script:failureCode = 'status_path'
     if (-not [IO.Path]::IsPathRooted($StatusPath)) {
         throw [InvalidOperationException]::new('Status path must be absolute.')
     }
+    $script:failureCode = 'status_ancestor'
     Assert-PlainAncestorChain -Path (Split-Path -Parent $StatusPath)
+    $script:failureCode = 'confirmation'
     if ($Operation -eq 'install' -and $Confirmation -cne $ExpectedConfirmation) {
         throw [Security.SecurityException]::new('Explicit state-root provisioning confirmation is missing.')
     }
