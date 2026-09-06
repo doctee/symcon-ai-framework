@@ -39,6 +39,7 @@ foreach (
         'Adapter-state migration path contract is invalid.',
         'Get-StateTreeIdentity',
         'Assert-GenericDeploymentInventory',
+        '-ExcludedStateRoot $script:sourceRoot',
         'Configured deployment count leaves no post-migration staging capacity.',
         '[IO.Directory]::Move($script:sourceRoot, $script:destinationRoot)',
         '$adapterPolicy.adapterStateRoot = $script:destinationRoot',

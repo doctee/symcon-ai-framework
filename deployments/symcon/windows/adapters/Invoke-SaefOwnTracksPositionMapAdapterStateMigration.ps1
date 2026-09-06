@@ -269,9 +269,13 @@ function ConvertTo-Utf8JsonBytes {
 }
 
 function Assert-GenericDeploymentInventory {
-    param([Parameter(Mandatory = $true)] $ChannelPolicy)
+    param(
+        [Parameter(Mandatory = $true)] $ChannelPolicy,
+        [Parameter(Mandatory = $true)][string] $ExcludedStateRoot
+    )
 
-    $stateDirectories = @(Get-ChildItem -LiteralPath ([string] $ChannelPolicy.stateRoot) -Directory -Force)
+    $stateDirectories = @(Get-ChildItem -LiteralPath ([string] $ChannelPolicy.stateRoot) -Directory -Force |
+        Where-Object { -not (Test-SamePath -Left $_.FullName -Right $ExcludedStateRoot) })
     $filesetDirectories = @(Get-ChildItem -LiteralPath ([string] $ChannelPolicy.managedFilesetRoot) -Directory -Force)
     $filesetNames = @{}
     foreach ($directory in $filesetDirectories) {
@@ -439,7 +443,9 @@ try {
 
     $script:failureCode = 'source_inventory'
     $script:sourceIdentity = Get-StateTreeIdentity -Root $script:sourceRoot
-    $genericDeploymentCount = Assert-GenericDeploymentInventory -ChannelPolicy $channelPolicy
+    $genericDeploymentCount = Assert-GenericDeploymentInventory `
+        -ChannelPolicy $channelPolicy `
+        -ExcludedStateRoot $script:sourceRoot
     if ($genericDeploymentCount -ge [int] $channelPolicy.maxDeploymentCount) {
         throw [InvalidOperationException]::new('Configured deployment count leaves no post-migration staging capacity.')
     }
@@ -493,7 +499,9 @@ try {
             -not (Test-Path -LiteralPath $script:destinationRoot -PathType Container) -or
             (Get-Sha256 -Path $script:adapterPolicyPath) -cne
                 [string] $target.expectedAdapterPolicySha256 -or
-            (Assert-GenericDeploymentInventory -ChannelPolicy $channelPolicy) -ne $genericDeploymentCount) {
+            (Assert-GenericDeploymentInventory `
+                -ChannelPolicy $channelPolicy `
+                -ExcludedStateRoot $script:sourceRoot) -ne $genericDeploymentCount) {
             throw [InvalidOperationException]::new('Adapter-state migration postflight differs.')
         }
         Assert-ProtectedAcl -Path $script:destinationRoot -DeploymentSid $deploymentSid
