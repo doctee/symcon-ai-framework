@@ -370,6 +370,17 @@ policy hash in the channel policy. Its `preflight` is read-only; `apply`
 requires an explicit confirmation and restores both policies plus the original
 directory on a recoverable failure. It never reloads or activates the module.
 
+After an activation changes the active OwnTracks package identity, the private
+policy still pins the package that formed the reviewed rollback baseline.
+Before a later package preflight,
+Invoke-SaefOwnTracksPositionMapActiveIdentityReseal.ps1 must verify the
+completed activation, active adapter record, active/staged package and retained
+rollback package. Its read-only preflight computes the exact policy delta. Its
+separately confirmed elevated apply changes only the active-package identity
+pin and the resulting target-policy hash binding, with byte-exact rollback of
+both policies. It does not reload a module, restart a service, contact Symcon
+or a provider, move state, publish or clean up artifacts.
+
 Adding these sources does not populate `standaloneModuleTargets`, install the
 adapter or its state root on Windows, migrate legacy state, change a capacity
 limit, or authorize a live preflight or activation.

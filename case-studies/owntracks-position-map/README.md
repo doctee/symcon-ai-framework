@@ -291,6 +291,7 @@ inside the server grace window. Live activation is recorded separately.
 | `104-safari-picker-and-intermittent-tile-diagnosis.md` | Records physical Safari acceptance of the known problem datasets, classifies the native-picker dismissal and isolated tile residuals, and defines a bounded repository-only correction gate. |
 | `105-safari-picker-and-tile-rearm-correction.md` | Records the scoped native-picker focus release, bounded same-viewport Fit-all tile rearm, aggregate failure classes and provider-free synthetic acceptance. |
 | `106-channel-state-separation-correction.md` | Records the fail-closed `stage_usage` discovery and defines the disjoint adapter-state root, bounded capacity input and byte-exact migration/reseal correction. |
+| `107-post-activation-identity-reseal.md` | Defines the administrator-controlled post-activation reseal of the private active-package trust anchor without weakening the target adapter or adding a channel verb. |
 
 ## Architectural Boundary
 
