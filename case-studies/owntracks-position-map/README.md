@@ -89,7 +89,11 @@ confirmed the end-to-end renderer path but retained two missing tiles. Physical
 Safari testing then accepted the known historical problem datasets; the
 [read-only residual diagnosis](104-safari-picker-and-intermittent-tile-diagnosis.md)
 classifies native-picker dismissal and occasional isolated tile misses while
-keeping every correction and live operation separately gated.
+keeping every correction and live operation separately gated. The subsequent
+[repository correction](105-safari-picker-and-tile-rearm-correction.md) adds a
+scoped picker-focus release, one bounded same-viewport `Fit all` rearm and
+aggregate failure classes; Windows qualification and every live operation
+remain closed.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -285,6 +289,7 @@ inside the server grace window. Live activation is recorded separately.
 | `102-independent-live-health-postflight.md` | Records the independent bounded Symcon-MCP verification of active and rollback packages, configuration preservation and quiescent format-2 runtime state. |
 | `103-synthetic-live-browser-postflight.md` | Records the authorized internal-browser baseline, successful live renderer/provider path and two residual missing tiles after the single bounded recovery and one Fit-all check. |
 | `104-safari-picker-and-intermittent-tile-diagnosis.md` | Records physical Safari acceptance of the known problem datasets, classifies the native-picker dismissal and isolated tile residuals, and defines a bounded repository-only correction gate. |
+| `105-safari-picker-and-tile-rearm-correction.md` | Records the scoped native-picker focus release, bounded same-viewport Fit-all tile rearm, aggregate failure classes and provider-free synthetic acceptance. |
 
 ## Architectural Boundary
 

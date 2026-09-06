@@ -30,6 +30,9 @@ $viewportGeneration = $_SERVER['HTTP_X_SAEF_TILE_VIEWPORT'] ?? '';
 $rejectedViewportGeneration = getenv(
     'OWNTRACKS_BROWSER_REJECT_VIEWPORT_GENERATION'
 );
+$rejectedFirstRequestViewportGeneration = getenv(
+    'OWNTRACKS_BROWSER_REJECT_FIRST_REQUEST_VIEWPORT_GENERATION'
+);
 $delayMilliseconds = getenv('OWNTRACKS_BROWSER_TILE_DELAY_MILLISECONDS');
 if (
     !in_array($method, ['GET', 'HEAD'], true)
@@ -56,6 +59,29 @@ if (
     header('Cache-Control: no-store');
     exit('Not found');
 }
+$root = getenv('OWNTRACKS_BROWSER_AUTHORITY_ROOT');
+if (
+    is_string($rejectedFirstRequestViewportGeneration)
+    && $rejectedFirstRequestViewportGeneration !== ''
+    && hash_equals(
+        $rejectedFirstRequestViewportGeneration,
+        $viewportGeneration
+    )
+    && is_string($root)
+    && is_dir($root)
+    && !is_link($root)
+) {
+    $rejectionMarker = $root . '/.first-request-rejected-viewport-'
+        . $viewportGeneration;
+    $markerHandle = @fopen($rejectionMarker, 'x');
+    if (is_resource($markerHandle)) {
+        fclose($markerHandle);
+        @chmod($rejectionMarker, 0600);
+        http_response_code(404);
+        header('Cache-Control: no-store');
+        exit('Not found');
+    }
+}
 $zoom = (int) $match[1];
 $x = (int) $match[2];
 $y = (int) $match[3];
@@ -66,7 +92,6 @@ if ($zoom > 18 || $x >= $side || $y >= $side) {
     exit('Not found');
 }
 
-$root = getenv('OWNTRACKS_BROWSER_AUTHORITY_ROOT');
 if (!is_string($root) || !is_dir($root) || is_link($root)) {
     http_response_code(500);
     exit('Fixture authority unavailable');

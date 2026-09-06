@@ -52,6 +52,7 @@ import 'ol/ol.css';
     const tileViewportHeader = 'X-SAEF-Tile-Viewport';
     const tileRetryDelaysMilliseconds = [3000, 60000];
     const tileRetryDrainPollMilliseconds = 250;
+    const tileManualRearmCooldownMilliseconds = 3000;
     let baseLayer = null;
     const state = {
         generation: 0,
@@ -87,10 +88,23 @@ import 'ol/ol.css';
         tileRequestsSucceeded: 0,
         tileRequestsFailed: 0,
         tileMissingCount: 0,
+        tileViewportFailureCount: 0,
+        tileFailureCounts: {
+            network: 0,
+            httpClient: 0,
+            httpServer: 0,
+            httpOther: 0,
+            contentType: 0,
+            payload: 0,
+            decode: 0,
+        },
         tileRetryTimer: null,
         tileRetryCount: 0,
         tileRetryDrainWaitCount: 0,
         tileRetryViewportGeneration: 0,
+        tileManualRearmCount: 0,
+        tileManualRearmViewportGeneration: 0,
+        tileManualRearmLastAt: 0,
         tileBasemapConfigureTimer: null,
         tileBasemapDrainWaitCount: 0,
         tileCapabilityRefreshCount: 0,
@@ -216,6 +230,24 @@ import 'ol/ol.css';
             window.clearTimeout(state.tileBasemapConfigureTimer);
             state.tileBasemapConfigureTimer = null;
         }
+    }
+
+    function tileFailure(failureClass, message) {
+        const error = new Error(message);
+        error.tileFailureClass = failureClass;
+        return error;
+    }
+
+    function recordTileFailure(failureClass) {
+        const normalized = Object.prototype.hasOwnProperty.call(
+            state.tileFailureCounts,
+            failureClass
+        )
+            ? failureClass
+            : 'network';
+        state.tileFailureCounts[normalized] += 1;
+        document.documentElement.dataset.openlayersTileFailureCounts =
+            JSON.stringify(state.tileFailureCounts);
     }
 
     function resetTileRetry() {
@@ -371,12 +403,20 @@ import 'ol/ol.css';
                 referrerPolicy: 'no-referrer',
                 signal: controller.signal,
             }).then(function (response) {
-                if (
-                    !response.ok
-                    || response.status !== 200
-                    || response.headers.get('content-type') !== 'image/png'
-                ) {
-                    throw new Error('Tile response rejected.');
+                if (!response.ok || response.status !== 200) {
+                    const failureClass = response.status >= 400
+                        && response.status < 500
+                        ? 'httpClient'
+                        : response.status >= 500 && response.status < 600
+                            ? 'httpServer'
+                            : 'httpOther';
+                    throw tileFailure(failureClass, 'Tile response rejected.');
+                }
+                if (response.headers.get('content-type') !== 'image/png') {
+                    throw tileFailure(
+                        'contentType',
+                        'Tile content type rejected.'
+                    );
                 }
                 return response.blob();
             }).then(function (blob) {
@@ -385,7 +425,7 @@ import 'ol/ol.css';
                     || blob.size <= 0
                     || blob.size > 512 * 1024
                 ) {
-                    throw new Error('Tile payload rejected.');
+                    throw tileFailure('payload', 'Tile payload rejected.');
                 }
                 return new Promise(function (resolve, reject) {
                     const objectUrl = URL.createObjectURL(blob);
@@ -408,7 +448,7 @@ import 'ol/ol.css';
                     image.addEventListener('error', function () {
                         URL.revokeObjectURL(objectUrl);
                         state.tileObjectUrlsRevoked += 1;
-                        reject(new Error('Tile image rejected.'));
+                        reject(tileFailure('decode', 'Tile image rejected.'));
                     }, {once: true});
                     image.src = objectUrl;
                     document.documentElement.dataset.openlayersTileObjectUrlBalance =
@@ -433,6 +473,16 @@ import 'ol/ol.css';
                 state.tileMissingCount += 1;
                 document.documentElement.dataset.openlayersTileMissingCount =
                     String(state.tileMissingCount);
+                if (
+                    queued.viewportGeneration
+                    === state.tileViewportAcceptedGeneration
+                ) {
+                    state.tileViewportFailureCount += 1;
+                    document.documentElement.dataset
+                        .openlayersTileViewportFailureCount =
+                        String(state.tileViewportFailureCount);
+                }
+                recordTileFailure(error.tileFailureClass || 'network');
                 scheduleTileRetry();
                 queued.reject(error);
             }).finally(function () {
@@ -1168,7 +1218,7 @@ import 'ol/ol.css';
             String(occluded);
     }
 
-    function fitAll() {
+    function fitAll(options = {}) {
         if (!state.result || !state.result.fitBounds) {
             return;
         }
@@ -1214,7 +1264,9 @@ import 'ol/ol.css';
         rebuildTimestampLabels();
         updateFitOcclusionDiagnostics();
         state.lastAction = 'fit-all';
-        scheduleTileViewport();
+        scheduleTileViewport({
+            rearmMissingTiles: options.rearmMissingTiles === true,
+        });
     }
 
     function clearTileViewportTimer() {
@@ -1258,16 +1310,40 @@ import 'ol/ol.css';
             + [bounds.west, bounds.south, bounds.east, bounds.north]
                 .map(function (value) { return value.toFixed(5); })
                 .join(':');
+        const sameViewport = fingerprint === state.tileViewportFingerprint;
+        let manualRearm = false;
+        if (options.rearmMissingTiles === true && sameViewport) {
+            const now = Date.now();
+            if (
+                state.tileViewportReady
+                && state.tileViewportFailureCount > 0
+                && state.tileManualRearmViewportGeneration
+                    !== state.tileViewportGeneration
+                && now - state.tileManualRearmLastAt
+                    >= tileManualRearmCooldownMilliseconds
+            ) {
+                manualRearm = true;
+                state.tileManualRearmViewportGeneration =
+                    state.tileViewportGeneration;
+                state.tileManualRearmLastAt = now;
+                state.tileManualRearmCount += 1;
+                document.documentElement.dataset.openlayersTileManualRearmCount =
+                    String(state.tileManualRearmCount);
+            } else {
+                return;
+            }
+        }
         if (
             options.force !== true
-            && fingerprint === state.tileViewportFingerprint
+            && !manualRearm
+            && sameViewport
         ) {
             return;
         }
         state.tileViewportFingerprint = fingerprint;
         state.tileViewportGeneration += 1;
         state.tileViewportReady = false;
-        if (options.preserveRetryCount === true) {
+        if (options.preserveRetryCount === true || manualRearm) {
             clearTileRetryTimer();
             state.tileRetryViewportGeneration = state.tileViewportGeneration;
         } else {
@@ -1275,6 +1351,9 @@ import 'ol/ol.css';
         }
         document.documentElement.dataset.openlayersTileAuthState =
             'requesting-viewport';
+        if (manualRearm) {
+            state.lastAction = 'fit-all-tile-rearm';
+        }
         try {
             requestAction('RequestTileViewport', JSON.stringify({
                 requestGeneration: state.generation,
@@ -1289,12 +1368,39 @@ import 'ol/ol.css';
         }
     }
 
-    function scheduleTileViewport() {
+    function scheduleTileViewport(options = {}) {
         clearTileViewportTimer();
         state.tileViewportTimer = window.setTimeout(function () {
             state.tileViewportTimer = null;
-            requestTileViewport();
+            requestTileViewport(options);
         }, 120);
+    }
+
+    function releaseCommittedPickerFocus(control) {
+        window.requestAnimationFrame(function () {
+            if (document.activeElement !== control) {
+                return;
+            }
+            let pickerOpen = false;
+            try {
+                pickerOpen = control.matches(':open');
+            } catch (error) {
+                pickerOpen = false;
+            }
+            if (
+                pickerOpen
+                || window.matchMedia(
+                    '(hover: none) and (pointer: coarse)'
+                ).matches
+            ) {
+                control.blur();
+            }
+        });
+    }
+
+    function handleSelectionChange(event) {
+        releaseCommittedPickerFocus(event.currentTarget);
+        requestSelection();
     }
 
     function renderEta() {
@@ -1528,6 +1634,9 @@ import 'ol/ol.css';
             }
             state.tileViewportAcceptedGeneration = payload.viewportGeneration;
             state.tileViewportReady = true;
+            state.tileViewportFailureCount = 0;
+            document.documentElement.dataset
+                .openlayersTileViewportFailureCount = '0';
             if (state.tileRetryCount > 0) {
                 document.documentElement.dataset.openlayersTileRetryState =
                     'viewport-refreshed';
@@ -1678,10 +1787,13 @@ import 'ol/ol.css';
         view.setZoom((view.getZoom() || 0) - 1);
         state.lastAction = 'zoom';
     });
-    root.querySelector('[data-fit-all]').addEventListener('click', fitAll);
-    sourceSelect.addEventListener('change', requestSelection);
-    daySelect.addEventListener('change', requestSelection);
-    modeSelect.addEventListener('change', function () {
+    root.querySelector('[data-fit-all]').addEventListener('click', function () {
+        fitAll({rearmMissingTiles: true});
+    });
+    sourceSelect.addEventListener('change', handleSelectionChange);
+    daySelect.addEventListener('change', handleSelectionChange);
+    modeSelect.addEventListener('change', function (event) {
+        releaseCommittedPickerFocus(event.currentTarget);
         state.selectedOverviewSourceKey = null;
         requestSelection();
     });
@@ -1739,11 +1851,14 @@ import 'ol/ol.css';
                 tileRequestsSucceeded: state.tileRequestsSucceeded,
                 tileRequestsFailed: state.tileRequestsFailed,
                 tileMissingCount: state.tileMissingCount,
+                tileViewportFailureCount: state.tileViewportFailureCount,
+                tileFailureCounts: Object.assign({}, state.tileFailureCounts),
                 tileRetryCount: state.tileRetryCount,
                 tileRetryDrainWaitCount: state.tileRetryDrainWaitCount,
                 tileBasemapDrainWaitCount: state.tileBasemapDrainWaitCount,
                 tileRetryState:
                     document.documentElement.dataset.openlayersTileRetryState,
+                tileManualRearmCount: state.tileManualRearmCount,
                 tileCapabilityRefreshCount: state.tileCapabilityRefreshCount,
                 tileViewportGeneration: state.tileViewportGeneration,
                 tileViewportAcceptedGeneration:

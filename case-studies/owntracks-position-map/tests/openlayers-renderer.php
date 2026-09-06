@@ -208,6 +208,9 @@ foreach (
         'tileCapabilityRefreshCount',
         'tileRetryCount',
         'tileRetryDrainWaitCount',
+        'tileViewportFailureCount',
+        'tileFailureCounts',
+        'tileManualRearmCount',
         'configureBasemapWhenIdle',
         'waiting-for-basemap-drain',
         'tileBasemapDrainWaitCount',
@@ -215,9 +218,12 @@ foreach (
         "'waiting-for-queue'",
         'const tileRetryDelaysMilliseconds = [3000, 60000]',
         'const tileRetryDrainPollMilliseconds = 250',
+        'const tileManualRearmCooldownMilliseconds = 3000',
         'requestTileViewport({',
         'force: true',
         'preserveRetryCount: true',
+        'rearmMissingTiles',
+        "state.lastAction = 'fit-all-tile-rearm'",
         "'requesting-viewport'",
         "'viewport-refreshed'",
         "'ready-pending-fit'",
@@ -228,6 +234,11 @@ foreach (
         "addEventListener('pointerleave'",
         'setTimeout(hidePointTooltip, 4000)',
         'openlayersTooltipState',
+        'releaseCommittedPickerFocus',
+        "control.matches(':open')",
+        "'(hover: none) and (pointer: coarse)'",
+        'control.blur()',
+        'handleSelectionChange',
         '__ownTracksOpenLayersDiagnostics',
     ] as $required
 ) {
@@ -305,7 +316,7 @@ if (
             . 'the viewport source.'
     );
 }
-$fitAllStart = strpos($source, 'function fitAll()');
+$fitAllStart = strpos($source, 'function fitAll(options = {})');
 $fitAllEnd = $fitAllStart === false
     ? false
     : strpos($source, 'function clearTileViewportTimer()', $fitAllStart);
@@ -314,12 +325,66 @@ if (
     || $fitAllEnd === false
     || !str_contains(
         substr($source, $fitAllStart, $fitAllEnd - $fitAllStart),
-        'scheduleTileViewport();'
+        'rearmMissingTiles: options.rearmMissingTiles === true'
     )
 ) {
     throw new RuntimeException(
-        'Fit all must schedule authorization for its final viewport.'
+        'Fit all must preserve user-requested missing-tile rearming.'
     );
+}
+$viewportStart = strpos($source, 'function requestTileViewport(');
+$viewportEnd = $viewportStart === false
+    ? false
+    : strpos($source, 'function scheduleTileViewport(', $viewportStart);
+$viewportSection = $viewportStart === false || $viewportEnd === false
+    ? ''
+    : substr($source, $viewportStart, $viewportEnd - $viewportStart);
+foreach (
+    [
+        'state.tileViewportFailureCount > 0',
+        'state.tileManualRearmViewportGeneration',
+        'tileManualRearmCooldownMilliseconds',
+        'state.tileManualRearmCount += 1',
+        'options.preserveRetryCount === true || manualRearm',
+    ] as $manualRearmToken
+) {
+    if (!str_contains($viewportSection, $manualRearmToken)) {
+        throw new RuntimeException(
+            'Manual tile rearm is missing its bounded guard: '
+                . $manualRearmToken
+        );
+    }
+}
+$pickerStart = strpos($source, 'function releaseCommittedPickerFocus(');
+$pickerEnd = $pickerStart === false
+    ? false
+    : strpos($source, 'function renderEta()', $pickerStart);
+$pickerSection = $pickerStart === false || $pickerEnd === false
+    ? ''
+    : substr($source, $pickerStart, $pickerEnd - $pickerStart);
+if (
+    !str_contains($pickerSection, 'window.requestAnimationFrame(function ()')
+    || !str_contains($pickerSection, 'document.activeElement !== control')
+    || !str_contains($pickerSection, "control.matches(':open')")
+    || !str_contains($pickerSection, 'control.blur()')
+) {
+    throw new RuntimeException(
+        'Committed picker focus release is not deferred and scoped.'
+    );
+}
+foreach (
+    [
+        "sourceSelect.addEventListener('change', handleSelectionChange)",
+        "daySelect.addEventListener('change', handleSelectionChange)",
+        'releaseCommittedPickerFocus(event.currentTarget)',
+    ] as $pickerBinding
+) {
+    if (!str_contains($source, $pickerBinding)) {
+        throw new RuntimeException(
+            'Native selection control lacks committed focus release: '
+                . $pickerBinding
+        );
+    }
 }
 if (str_contains($source, 'new RegularShape')) {
     throw new RuntimeException(
