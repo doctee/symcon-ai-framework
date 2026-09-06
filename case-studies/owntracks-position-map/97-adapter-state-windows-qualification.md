@@ -1,8 +1,9 @@
 # Gate 90-H — adapter-state Windows qualification
 
-**Status:** The exact OwnTracks adapter-state initializer passed its protected
-Windows PowerShell 5.1 qualification, including absent-root preflight,
-installation, idempotence, mutex contention and automatic rollback. Live
+**Status:** The preceding OwnTracks adapter-state initializer passed its
+protected Windows PowerShell 5.1 qualification. A later read-only live
+preflight exposed an inspection defect for hidden Windows directory ancestors;
+the narrowly corrected initializer awaits repeat Windows qualification. Live
 state-root preflight, provisioning and every module operation remain closed,
 2026-09-06.
 
@@ -37,6 +38,22 @@ final private harness therefore placed its random tree directly below the
 extracted bundle after independently checking that complete ancestor chain.
 The production initializer and its reparse-point rejection remained unchanged.
 Earlier private bundles were retained rather than rewritten.
+
+## Hidden-ancestor correction awaiting repeat qualification
+
+The later read-only live preflight stopped before reading the installed target
+binding. A local Windows probe established that the complete channel ancestor
+chain existed, contained no reparse point and differed from the passing bundle
+chain only by the hidden standard `ProgramData` directory. The initializer's
+directory validator used `Get-Item` without `-Force`, which cannot reliably
+inspect that hidden ancestor in Windows PowerShell 5.1.
+
+The correction adds `-Force` only to that read-only attribute inspection. It
+does not create an object, follow or permit a reparse point, change an ACL,
+contact Symcon or weaken any path boundary. The exact corrected bytes require a
+new protected Windows qualification before another live preflight. The failed
+live wrapper created only its private evidence and reported every channel,
+state-root, module, service, provider and publication mutation flag as false.
 
 ## Result
 

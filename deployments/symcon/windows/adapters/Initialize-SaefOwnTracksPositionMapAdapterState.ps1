@@ -139,7 +139,7 @@ function Assert-PlainDirectory {
         -not (Test-Path -LiteralPath $Path -PathType Container)) {
         throw [IO.DirectoryNotFoundException]::new('Required directory is missing.')
     }
-    $item = Get-Item -LiteralPath $Path
+    $item = Get-Item -LiteralPath $Path -Force
     if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
         throw [InvalidOperationException]::new('Directory is a reparse point.')
     }

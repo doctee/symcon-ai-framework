@@ -39,6 +39,7 @@ $requiredFragments = [
     "\$script:failureCode = 'status_ancestor'",
     "\$script:failureCode = 'confirmation'",
     'Adapter state-root path boundary is invalid.',
+    'Get-Item -LiteralPath $Path -Force',
     'Assert-PlainAncestorChain -Path $stateParent',
     "Get-LocalUser -Name \$DeploymentUser",
     "Get-LocalGroup -SID 'S-1-5-32-544'",
@@ -89,6 +90,10 @@ foreach (
     );
 }
 
+assertOwnTracksAdapterState(
+    substr_count($initializer, 'Get-Item -LiteralPath $Path -Force') === 1,
+    'Directory validation must inspect hidden Windows ancestors with Force exactly once.'
+);
 assertOwnTracksAdapterState(
     substr_count($initializer, '[IO.Directory]::CreateDirectory($script:stateRoot)') === 1,
     'Adapter state-root must have exactly one creation call site.'
