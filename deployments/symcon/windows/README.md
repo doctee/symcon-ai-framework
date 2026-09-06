@@ -274,8 +274,10 @@ Staging never selects the fileset, restarts Symcon or executes PHP.
 `stage`, `preflight` and `activate` share a host-wide non-blocking mutex, so two
 sessions cannot race package accounting, bootstrap validation or activation.
 The default local policy permits at most 16 staged deployments and 512 MiB of
-managed files. Reaching either limit fails closed and requires deliberate local
-retention cleanup; no remote delete operation exists.
+managed files. `-MaxDeploymentCount` may set a reviewed installation-specific
+limit from 1 through the unchanged hard maximum of 64. Reaching either limit
+fails closed and requires either deliberate local retention cleanup or a
+separately reviewed bounded policy change; no remote delete operation exists.
 
 ### Standalone module packages
 
@@ -341,8 +343,14 @@ activation/rollback direction and adapter-owned package/state retention.
 Format changes fail closed. The companion retention command defaults to the
 read-only `plan` operation; `apply` is a later local-administrator gate.
 
+The channel provisions a distinct `.saef-adapter-states` root beside, never
+inside, its generic deployment-state and managed-fileset roots. A target's
+private `adapterStateRoot` must be one target-owned child of that protected
+root. This separation keeps adapter transaction history out of the generic
+one-deployment-to-one-fileset inventory.
+
 The adapter never creates its own transaction/rollback state root during
-module `preflight` or `activate`. Provision that target-owned root separately
+module `preflight` or `activate`. Provision that target-owned leaf separately
 with `Initialize-SaefOwnTracksPositionMapAdapterState.ps1`. Its `preflight`
 operation validates the hash-pinned private adapter policy, deployment account,
 path separation, parent ACL and shared adapter mutex without creating a
@@ -353,9 +361,18 @@ the channel initializer and removes the still-empty leaf automatically if
 post-creation verification fails. Existing roots are verified but never
 rewritten by this command.
 
-Adding this source does not populate `standaloneModuleTargets`, install the
-adapter or its state root on Windows, or authorize a live preflight or
-activation.
+Installations created before the separate adapter-state root existed must not
+silently ignore the legacy directory. The target-specific
+`Invoke-SaefOwnTracksPositionMapAdapterStateMigration.ps1` acquires the channel
+and adapter mutexes in channel order, verifies a byte-exact bounded state-tree
+identity, moves the tree on the same volume and atomically reseals the adapter-
+policy hash in the channel policy. Its `preflight` is read-only; `apply`
+requires an explicit confirmation and restores both policies plus the original
+directory on a recoverable failure. It never reloads or activates the module.
+
+Adding these sources does not populate `standaloneModuleTargets`, install the
+adapter or its state root on Windows, migrate legacy state, change a capacity
+limit, or authorize a live preflight or activation.
 
 ```powershell
 & .\Invoke-SaefDeploymentRetentionCleanup.ps1 `

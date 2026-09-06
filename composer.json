@@ -70,7 +70,8 @@
         ],
         "test:deployment-channel": [
             "@php tests/deployments/windows-deployment-channel.php",
-            "@php tests/deployments/windows-retention.php"
+            "@php tests/deployments/windows-retention.php",
+            "@php tests/deployments/owntracks-position-map-adapter-state-migration.php"
         ],
         "test:runtime-source-mirror": [
             "@php tests/deployments/runtime-source-mirror.php"

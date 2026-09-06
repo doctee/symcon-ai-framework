@@ -1,8 +1,9 @@
 # Standalone Symcon module deployment channel
 
-**Status:** Channel version 8 is installed and live-verified. The standalone
-module target allowlist remains intentionally empty, so module activation is
-not enabled.
+**Status:** Channel version 8 is installed and live-verified. The initial empty
+standalone-module allowlist was later extended by the separately gated
+OwnTracks pilot target; further target changes remain independent channel
+mutations.
 
 ## Shared-impact inventory
 
@@ -106,14 +107,23 @@ targeted reload, health checks and rollback retention. These responsibilities
 cannot be inferred by the generic gateway.
 
 Adapter-owned writable roots are a prerequisite, not a side effect of module
-preflight. The generic gateway and the adapter must fail closed when such a
-root is absent; neither may infer or create a private path while checking a
-candidate. A target-specific initializer may provision an absent root in a
-separate mutation gate only after a hash-bound read-only preflight. It must
-validate path separation and the complete existing parent chain, coordinate
-with the adapter's own mutex, create exactly one configured leaf, apply a
-protected least-authority ACL, verify the result and roll back only the empty
-leaf that it created. Existing roots must not be silently re-ACL'd.
+preflight. Channel policy therefore defines a protected adapter-state root
+that is pairwise disjoint from both the generic deployment-state root and the
+managed-fileset root. Each target owns one child below it; adapter transaction
+directories must never share the generic one-deployment-to-one-fileset
+namespace.
+
+The generic gateway and the adapter must fail closed when such a root is
+absent; neither may infer or create a private path while checking a candidate.
+A target-specific initializer may provision an absent root in a separate
+mutation gate only after a hash-bound read-only preflight. It must validate
+path separation and the complete existing parent chain, coordinate with the
+adapter's own mutex, create exactly one configured leaf, apply a protected
+least-authority ACL, verify the result and roll back only the empty leaf that it
+created. Existing roots must not be silently re-ACL'd. A legacy root migration
+must additionally acquire the channel mutex first, preserve a bounded byte-
+exact tree identity, update the target-policy hash atomically and prove the
+generic deployment inventory is clean afterward.
 
 ## Approval and rollback boundaries
 
@@ -153,13 +163,14 @@ The installed channel reports both `runtime-fileset` and `standalone-module`
 as supported deployment kinds. Independent macOS and Windows postflight checks
 confirmed channel version 8, the unchanged five-command boundary, alias-complete
 public-key-only SSH handling and bounded rejection of invalid target contracts.
-The installed standalone-module target count is zero. No standalone-module
-package was staged, preflighted or activated during the channel installation.
+The initial channel installation staged, preflighted and activated no
+standalone-module package. The later OwnTracks pilot target, package and
+activation are recorded by that case study's separate gates.
 
-The first repository adapter candidate is the OwnTracks Position Map profile
+The first repository adapter is the OwnTracks Position Map profile
 under `deployments/symcon/windows/adapters/`. It keeps its five runtime locks,
 lease inspection, format-2 state snapshot and retention logic local to that
-module; it is not a generic helper. Its Windows transaction verification,
-private target binding, installation, package preflight, activation, postflight
-and retention cleanup remain separately authorized gates. The installed target
-allowlist is still empty.
+module; it is not a generic helper. Windows transaction verification, private
+target binding, installation, package preflight, activation and postflight were
+each handled as separate gates. Further activation, state migration and
+retention cleanup remain separately controlled operations.
