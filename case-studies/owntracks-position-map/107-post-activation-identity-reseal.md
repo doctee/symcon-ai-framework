@@ -1,8 +1,8 @@
 # Gate 107 — post-activation active-package identity reseal
 
-**Status:** Repository implementation and offline contract verification;
-Windows qualification and both live reseal gates remain separate,
-2026-09-06.
+**Status:** Repository implementation, offline contract verification and
+Windows PowerShell 5.1 qualification passed; both live reseal gates remain
+separate, 2026-09-06.
 
 ## Observation
 
@@ -49,12 +49,19 @@ The command has no module reload, Symcon RPC, service restart, state movement,
 provider request, publication or cleanup call site. The active module,
 adapter-owned transaction history and rollback package remain unchanged.
 
+## Windows qualification
+
+The private Windows gate passed checksum and Windows PowerShell 5.1 parsing,
+read-only preflight, missing and wrong confirmation, channel-mutex contention,
+the exact two-field reseal and byte-exact automatic rollback scenarios. Its
+negative boundary confirmed that it did not touch the installed channel,
+target allowlist, live adapter policy, OwnTracks state, Symcon, a service or a
+provider.
+
 ## Remaining gates
 
-1. qualify the exact command with Windows PowerShell 5.1 synthetic success,
-   contention and byte-exact rollback scenarios;
-2. run a read-only live preflight and review its exact proposed hashes;
-3. perform the separately authorized live reseal;
-4. repeat independent channel and adapter readiness checks; and
-5. retain the active and rollback transactions. Publication and cleanup remain
+1. run a read-only live preflight and review its exact proposed hashes;
+2. perform the separately authorized live reseal;
+3. repeat independent channel and adapter readiness checks; and
+4. retain the active and rollback transactions. Publication and cleanup remain
    separate.
