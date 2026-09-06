@@ -75,7 +75,9 @@ the state root absent and every live mutation flag false. The separately
 authorized [live installation](99-adapter-state-live-installation.md) then
 created and verified exactly that empty state-root leaf with its restricted
 ACL while leaving the channel, target binding, packages and Symcon unchanged.
-The repeated channel-bound module preflight remains pending.
+The repeated [channel-bound module preflight](100-channel-bound-module-preflight.md)
+subsequently passed every ownership, quiescence, configuration/state and
+identity precondition while keeping the staged candidate inactive.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -266,6 +268,7 @@ inside the server grace window. Live activation is recorded separately.
 | `97-adapter-state-windows-qualification.md` | Records the exact initializer's protected Windows PowerShell 5.1 qualification, fail-closed scratch-path correction, idempotence, mutex recovery and automatic rollback. |
 | `98-adapter-state-live-preflight.md` | Records the exact initializer's corrected read-only live-policy preflight, absent-root result and negative-mutation postflight. |
 | `99-adapter-state-live-installation.md` | Records the one-time creation and ACL verification of the empty adapter state root, idempotent postflight and unchanged channel/module boundary. |
+| `100-channel-bound-module-preflight.md` | Records the successful repeated target-bound adapter preflight, independent channel-status readback and still-inactive staged package. |
 
 ## Architectural Boundary
 
