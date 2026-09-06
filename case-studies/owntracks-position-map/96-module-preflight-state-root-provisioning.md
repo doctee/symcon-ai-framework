@@ -3,8 +3,9 @@
 **Status:** The first target-bound OwnTracks module preflight failed closed on
 the missing adapter-owned transaction/rollback state root. A repository-only,
 non-activating provisioning command and its local contract verification are
-complete; Windows qualification and every live mutation remain closed,
-2026-09-05.
+complete. Its separate Windows qualification passed in
+[Gate 90-H](97-adapter-state-windows-qualification.md); every live mutation
+remains closed, 2026-09-06.
 
 ## First preflight result
 
@@ -61,9 +62,10 @@ operations. The complete OwnTracks test suite also passed, covering runtime,
 gateway, WebHook, security, distribution, package, adapter and miss-state
 contracts.
 
-This macOS-side result cannot prove Windows PowerShell 5.1 parsing, localized
-ACL behavior, real mutex interoperability or rollback cleanup. Those require a
-separate protected Windows scratch-tree gate before any live provisioning.
+The subsequent protected Windows scratch-tree qualification in
+[Gate 90-H](97-adapter-state-windows-qualification.md) proved Windows
+PowerShell 5.1 parsing, localized ACL behavior, mutex contention and rollback
+cleanup for the exact initializer without touching the live installation.
 
 ## Decision boundary
 
@@ -73,13 +75,10 @@ provider, publish or remove retained evidence.
 
 The remaining sequence stays separately gated:
 
-1. qualify the exact initializer on Windows PowerShell 5.1 in a protected,
-   disposable scratch tree, including absent-root preflight, installation,
-   idempotence, lock contention and injected post-create rollback;
-2. run the exact initializer in read-only mode against the private live policy;
-3. separately authorize creation of the one reviewed live state-root leaf;
-4. rerun the channel-bound module preflight; and
-5. keep activation, independent health/Safari acceptance and retention as later
+1. run the exact initializer in read-only mode against the private live policy;
+2. separately authorize creation of the one reviewed live state-root leaf;
+3. rerun the channel-bound module preflight; and
+4. keep activation, independent health/Safari acceptance and retention as later
    gates.
 
 Gate 90-G authorizes none of those later actions.

@@ -67,8 +67,10 @@ The first target-bound module preflight then failed closed because its
 adapter-owned transaction state root was absent. The repository-only
 [state-root provisioning correction](96-module-preflight-state-root-provisioning.md)
 keeps candidate preflight non-mutating and introduces a separately gated,
-target-specific initializer; Windows qualification and live provisioning are
-still pending.
+target-specific initializer. Its protected synthetic
+[Windows qualification](97-adapter-state-windows-qualification.md) passed with
+automatic rollback and no live contact; read-only live-policy preflight and
+live provisioning are still pending.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -256,6 +258,7 @@ inside the server grace window. Live activation is recorded separately.
 | `94-inactive-module-package-candidate.md` | Records the reproducible, offline-verified standalone-module ZIP whose package identity equals the active OwnTracks module while keeping transfer and staging closed. |
 | `95-inactive-module-stage.md` | Records the exact-hash chunked transfer and server-side validation of the inactive OwnTracks package while keeping adapter preflight and activation closed. |
 | `96-module-preflight-state-root-provisioning.md` | Records the fail-closed first module preflight and the repository-only, separately gated initializer for the missing adapter-owned state root. |
+| `97-adapter-state-windows-qualification.md` | Records the exact initializer's protected Windows PowerShell 5.1 qualification, fail-closed scratch-path correction, idempotence, mutex recovery and automatic rollback. |
 
 ## Architectural Boundary
 
