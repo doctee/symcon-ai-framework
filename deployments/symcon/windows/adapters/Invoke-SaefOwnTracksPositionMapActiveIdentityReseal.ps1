@@ -213,6 +213,50 @@ function Assert-ProtectedAcl {
     }
 }
 
+function Assert-ProtectedPolicyAcl {
+    param(
+        [Parameter(Mandatory = $true)][string] $Path,
+        [Parameter(Mandatory = $true)][string] $DeploymentSid
+    )
+
+    $acl = Get-Acl -LiteralPath $Path
+    if (-not $acl.AreAccessRulesProtected) {
+        throw [Security.SecurityException]::new('Managed policy path ACL inherits from its parent.')
+    }
+    $systemSid = 'S-1-5-18'
+    $administratorsSid = 'S-1-5-32-544'
+    $requiredSids = @($systemSid, $administratorsSid, $DeploymentSid)
+    $trustedWriteSids = @{}
+    $deploymentReadAndExecute = $false
+    foreach ($entry in @($acl.Access)) {
+        $sid = $entry.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value
+        if ($entry.AccessControlType -ne [Security.AccessControl.AccessControlType]::Allow -or
+            $sid -notin $requiredSids -or
+            ($entry.InheritanceFlags -band [Security.AccessControl.InheritanceFlags]::ContainerInherit) -eq 0 -or
+            ($entry.InheritanceFlags -band [Security.AccessControl.InheritanceFlags]::ObjectInherit) -eq 0) {
+            throw [Security.SecurityException]::new('Managed policy path ACL contains an unexpected rule.')
+        }
+        if ($sid -in @($systemSid, $administratorsSid)) {
+            if (($entry.FileSystemRights -band [Security.AccessControl.FileSystemRights]::FullControl) -ne
+                [Security.AccessControl.FileSystemRights]::FullControl) {
+                throw [Security.SecurityException]::new('Managed policy path lacks trusted full control.')
+            }
+            $trustedWriteSids[$sid] = $true
+        } elseif ((Test-BroadWriteAccess -Rights $entry.FileSystemRights) -or
+            ($entry.FileSystemRights -band [Security.AccessControl.FileSystemRights]::ReadAndExecute) -ne
+                [Security.AccessControl.FileSystemRights]::ReadAndExecute) {
+            throw [Security.SecurityException]::new('Deployment principal policy access differs.')
+        } else {
+            $deploymentReadAndExecute = $true
+        }
+    }
+    if (-not $trustedWriteSids.ContainsKey($systemSid) -or
+        -not $trustedWriteSids.ContainsKey($administratorsSid) -or
+        -not $deploymentReadAndExecute) {
+        throw [Security.SecurityException]::new('Managed policy ACL lacks a required principal rule.')
+    }
+}
+
 function Assert-SafeDirectoryTree {
     param([Parameter(Mandatory = $true)][string] $Path)
 
@@ -454,11 +498,18 @@ try {
         throw [Security.SecurityException]::new('Deployment account must be a local administrator.')
     }
     $deploymentSid = [string] $deploymentAccount.SID.Value
-    Assert-ProtectedAcl -Path (Split-Path -Parent $ChannelPolicyPath) -DeploymentSid $deploymentSid
-    Assert-ProtectedAcl -Path (Split-Path -Parent $script:adapterPolicyPath) -DeploymentSid $deploymentSid
+    $script:failureCode = 'channel_policy_acl'
+    Assert-ProtectedPolicyAcl -Path (Split-Path -Parent $ChannelPolicyPath) `
+        -DeploymentSid $deploymentSid
+    $script:failureCode = 'adapter_policy_acl'
+    Assert-ProtectedPolicyAcl -Path (Split-Path -Parent $script:adapterPolicyPath) `
+        -DeploymentSid $deploymentSid
+    $script:failureCode = 'adapter_state_acl'
     Assert-ProtectedAcl -Path ([string] $adapterPolicy.adapterStateRoot) -DeploymentSid $deploymentSid
+    $script:failureCode = 'active_module_acl'
     Assert-NoBroadWriteAcl -Path ([string] $adapterPolicy.activeModulePath)
 
+    $script:failureCode = 'quiescence'
     $script:channelMutex = [Threading.Mutex]::new($false, 'Global\SAEF.DeploymentChannel')
     try {
         $script:channelMutexAcquired = $script:channelMutex.WaitOne(0)

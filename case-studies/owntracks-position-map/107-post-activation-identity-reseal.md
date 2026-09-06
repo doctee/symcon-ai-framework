@@ -30,6 +30,9 @@ Its read-only preflight:
 
 - binds the exact installed channel-policy hash;
 - requires the unique hash-pinned OwnTracks target and private adapter policy;
+- enforces the channel installer's policy ACL split: full control for SYSTEM
+  and Administrators, read-and-execute for the deployment principal, and no
+  other principal;
 - keeps its status evidence outside all managed channel, state and module roots;
 - acquires the channel mutex before the OwnTracks adapter mutex;
 - verifies the completed activation status, adapter status and manifest;
