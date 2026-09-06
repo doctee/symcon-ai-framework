@@ -163,7 +163,12 @@ final class OwnTracksPinnedHttpsTileTransport
 
     public static function systemTransportSupported(): bool
     {
-        if (!function_exists('curl_version') || !defined('CURLOPT_PREREQFUNCTION')) {
+        if (
+            !function_exists('curl_version')
+            || !defined('CURLOPT_PREREQFUNCTION')
+            || !defined('CURL_PREREQFUNC_ABORT')
+            || !defined('CURL_PREREQFUNC_OK')
+        ) {
             return false;
         }
         $version = curl_version();
@@ -410,6 +415,19 @@ final class OwnTracksPinnedHttpsTileTransport
         ) . '$#D';
     }
 
+    private static function requiredCurlIntegerConstant(string $name): int
+    {
+        if (!defined($name)) {
+            throw new RuntimeException('Tile transport cURL peer authorization is unavailable.');
+        }
+        $value = constant($name);
+        if (!is_int($value)) {
+            throw new RuntimeException('Tile transport cURL peer authorization is invalid.');
+        }
+
+        return $value;
+    }
+
     /**
      * @param array<string, mixed> $plan
      * @return array<string, mixed>
@@ -419,6 +437,9 @@ final class OwnTracksPinnedHttpsTileTransport
         if (!function_exists('curl_init')) {
             throw new RuntimeException('Tile transport cURL is unavailable.');
         }
+        $prerequisiteOption = self::requiredCurlIntegerConstant('CURLOPT_PREREQFUNCTION');
+        $prerequisiteAbort = self::requiredCurlIntegerConstant('CURL_PREREQFUNC_ABORT');
+        $prerequisiteOk = self::requiredCurlIntegerConstant('CURL_PREREQFUNC_OK');
         $handle = curl_init($plan['url']);
         if ($handle === false) {
             throw new RuntimeException('Tile transport cURL initialization failed.');
@@ -445,7 +466,7 @@ final class OwnTracksPinnedHttpsTileTransport
             CURLOPT_NOPROXY => '*',
             CURLOPT_FRESH_CONNECT => true,
             CURLOPT_FORBID_REUSE => true,
-            CURLOPT_PREREQFUNCTION => static function (
+            $prerequisiteOption => static function (
                 mixed $unusedHandle,
                 string $primaryAddress,
                 string $localAddress,
@@ -453,16 +474,18 @@ final class OwnTracksPinnedHttpsTileTransport
                 int $localPort
             ) use (
                 &$authorizedAddress,
-                $plan
+                $plan,
+                $prerequisiteAbort,
+                $prerequisiteOk
 ): int {
                 if (
                     $primaryPort !== 443 || !self::isPublicAddress($primaryAddress)
                     || (is_string($plan['pinnedAddress']) && $primaryAddress !== $plan['pinnedAddress'])
                 ) {
-                    return CURL_PREREQFUNC_ABORT;
+                    return $prerequisiteAbort;
                 }
                 $authorizedAddress = $primaryAddress;
-                return CURL_PREREQFUNC_OK;
+                return $prerequisiteOk;
             },
             CURLOPT_WRITEFUNCTION => static function (
                 mixed $unusedHandle,

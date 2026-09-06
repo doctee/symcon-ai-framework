@@ -76,7 +76,11 @@ function curl_getinfo(object $handle, int $option): mixed
     };
 }
 
-if (!defined('CURLOPT_PREREQFUNCTION')) {
+if (
+    !defined('CURLOPT_PREREQFUNCTION')
+    || !defined('CURL_PREREQFUNC_ABORT')
+    || !defined('CURL_PREREQFUNC_OK')
+) {
     // Legacy PHP may serve offline tiles, but cannot activate this native path.
     assertTrue(!OwnTracksPinnedHttpsTileTransport::systemTransportSupported(), 'Unsupported runtime accepted.');
     echo "System tile transport correctly unavailable on legacy PHP.\n";

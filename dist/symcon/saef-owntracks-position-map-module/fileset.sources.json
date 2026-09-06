@@ -31,8 +31,8 @@
         {
             "source": "case-studies/owntracks-position-map/candidate/OwnTracksPinnedHttpsTileTransport.php",
             "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksPinnedHttpsTileTransport.php",
-            "sha256": "aa76c2d88688dadbe1c3b1837488b669d86daf122660a8fa933e58989273695d",
-            "bytes": 22872
+            "sha256": "80b2cbdadee5ee1cafff5d06626f7622d0b7a5c16d5d528c8b85b90b93f7d238",
+            "bytes": 23744
         },
         {
             "source": "case-studies/owntracks-position-map/candidate/OwnTracksProviderPolicy.php",
@@ -215,7 +215,7 @@
             "bytes": 268
         }
     ],
-    "filesetSha256": "1c26e75c1e359685d64bdbe4d9c7cee1232734f2479a25fe60ad770bc2065333",
+    "filesetSha256": "7f817af5a67d6d7c0da5b6621f62bd03d46e1340bc843d78ed3d94b7feebbabe",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",
