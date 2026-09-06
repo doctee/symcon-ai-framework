@@ -1,0 +1,99 @@
+{
+  "description": "Synthetic WGS84 day track; no installation data",
+  "query": {
+    "requestGeneration": 7,
+    "sourceKey": "synthetic-a",
+    "from": 1704067200,
+    "to": 1704153600,
+    "renderMode": "line-with-sampled-timestamps",
+    "maxArchiveRecords": 20,
+    "maxRenderedPoints": 5,
+    "archiveLimitReached": false,
+    "maximumGapSeconds": 900,
+    "maximumReceptionDelaySeconds": 600,
+    "maximumAccuracyAgeSeconds": 1800,
+    "maximumAccuracyMeters": 100.0,
+    "maximumStepDistanceMeters": 50000.0,
+    "excludePoorAccuracyFromLine": true
+  },
+  "positionRecordsNewestFirst": [
+    {
+      "TimeStamp": 1704153605,
+      "Value": "{\"tst\":1704153600,\"lat\":11.0,\"lon\":21.0}"
+    },
+    {
+      "TimeStamp": 1704075005,
+      "Value": "{\"tst\":1704075000,\"lat\":10.020,\"lon\":20.020,\"alt\":130}"
+    },
+    {
+      "TimeStamp": 1704074705,
+      "Value": "{\"tst\":1704074700,\"lat\":10.015,\"lon\":20.015,\"alt\":128}"
+    },
+    {
+      "TimeStamp": 1704074405,
+      "Value": "{\"tst\":1704074400,\"lat\":10.010,\"lon\":20.010,\"alt\":127}"
+    },
+    {
+      "TimeStamp": 1704069600,
+      "Value": "{\"tst\":1704068100,\"lat\":10.004,\"lon\":20.004,\"alt\":124}"
+    },
+    {
+      "TimeStamp": 1704069125,
+      "Value": "{\"tst\":1704069120,\"lat\":10.007,\"lon\":20.007,\"alt\":126}"
+    },
+    {
+      "TimeStamp": 1704069065,
+      "Value": "{\"tst\":1704069060,\"lat\":10.006,\"lon\":20.006,\"alt\":125}"
+    },
+    {
+      "TimeStamp": 1704069005,
+      "Value": "{\"tst\":1704069000,\"lat\":10.005,\"lon\":20.005,\"alt\":125}"
+    },
+    {
+      "TimeStamp": 1704067805,
+      "Value": "{\"tst\":1704067800,\"lat\":10.003,\"lon\":20.003,\"alt\":123}"
+    },
+    {
+      "TimeStamp": 1704067505,
+      "Value": "{\"tst\":1704067500,\"lat\":10.002,\"lon\":20.002,\"alt\":122}"
+    },
+    {
+      "TimeStamp": 1704067205,
+      "Value": "{\"tst\":1704067200,\"lat\":10.001,\"lon\":20.001,\"alt\":121}"
+    },
+    {
+      "TimeStamp": 1704067195,
+      "Value": "{not-json}"
+    }
+  ],
+  "accuracyRecordsNewestFirst": [
+    {
+      "TimeStamp": 1704074390,
+      "Value": 8.0
+    },
+    {
+      "TimeStamp": 1704069030,
+      "Value": 250.0
+    },
+    {
+      "TimeStamp": 1704067190,
+      "Value": 12.0
+    }
+  ],
+  "target": {
+    "targetKey": "synthetic-destination",
+    "latitude": 10.030,
+    "longitude": 20.030
+  },
+  "expected": {
+    "validObservations": 10,
+    "invalidRecords": 1,
+    "outsideWindowRecords": 1,
+    "fitObservationCount": 10,
+    "renderedPoints": 5,
+    "fitSouth": 10.001,
+    "fitWest": 20.001,
+    "fitNorth": 10.020,
+    "fitEast": 20.020
+  }
+}

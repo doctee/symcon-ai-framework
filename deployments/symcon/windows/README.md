@@ -274,8 +274,10 @@ Staging never selects the fileset, restarts Symcon or executes PHP.
 `stage`, `preflight` and `activate` share a host-wide non-blocking mutex, so two
 sessions cannot race package accounting, bootstrap validation or activation.
 The default local policy permits at most 16 staged deployments and 512 MiB of
-managed files. Reaching either limit fails closed and requires deliberate local
-retention cleanup; no remote delete operation exists.
+managed files. `-MaxDeploymentCount` may set a reviewed installation-specific
+limit from 1 through the unchanged hard maximum of 64. Reaching either limit
+fails closed and requires either deliberate local retention cleanup or a
+separately reviewed bounded policy change; no remote delete operation exists.
 
 ### Standalone module packages
 
@@ -323,6 +325,65 @@ private backup, removes only the declared pairs and revalidates the complete
 mapping. Deployment-only or fileset-only cleanup is intentionally unsupported.
 Standalone-module candidates are also rejected here: their target adapter must
 provide a separate state-aware retention workflow before any deletion gate.
+
+### OwnTracks Position Map pilot adapter
+
+The first repository-only target profile is documented in
+`case-studies/owntracks-position-map/82-channel-v8-deployment-adapter.md` and
+implemented under `deployments/symcon/windows/adapters/`. Its public policy is
+an intentionally non-runnable placeholder: private positive instance IDs,
+configuration and active-package hashes, protected paths and the Module Control
+binding must be supplied only in excluded local configuration.
+
+The adapter composes the existing standalone package and status contract. It
+adds no remote verb. Its OwnTracks-specific boundary is exactly one pinned
+module instance, five runtime lock files, zero active request leases, a fresh
+format-2 authoritative-state snapshot, one targeted `MC_ReloadModule` per
+activation/rollback direction and adapter-owned package/state retention.
+Format changes fail closed. The companion retention command defaults to the
+read-only `plan` operation; `apply` is a later local-administrator gate.
+
+The channel provisions a distinct `.saef-adapter-states` root beside, never
+inside, its generic deployment-state and managed-fileset roots. A target's
+private `adapterStateRoot` must be one target-owned child of that protected
+root. This separation keeps adapter transaction history out of the generic
+one-deployment-to-one-fileset inventory.
+
+The adapter never creates its own transaction/rollback state root during
+module `preflight` or `activate`. Provision that target-owned leaf separately
+with `Initialize-SaefOwnTracksPositionMapAdapterState.ps1`. Its `preflight`
+operation validates the hash-pinned private adapter policy, deployment account,
+path separation, parent ACL and shared adapter mutex without creating a
+directory. A separately authorized `install` operation requires the exact
+confirmation phrase, creates only the configured missing leaf, applies the
+same non-inheriting `SYSTEM`/Administrators/deployment-account ACL pattern as
+the channel initializer and removes the still-empty leaf automatically if
+post-creation verification fails. Existing roots are verified but never
+rewritten by this command.
+
+Installations created before the separate adapter-state root existed must not
+silently ignore the legacy directory. The target-specific
+`Invoke-SaefOwnTracksPositionMapAdapterStateMigration.ps1` acquires the channel
+and adapter mutexes in channel order, verifies a byte-exact bounded state-tree
+identity, moves the tree on the same volume and atomically reseals the adapter-
+policy hash in the channel policy. Its `preflight` is read-only; `apply`
+requires an explicit confirmation and restores both policies plus the original
+directory on a recoverable failure. It never reloads or activates the module.
+
+After an activation changes the active OwnTracks package identity, the private
+policy still pins the package that formed the reviewed rollback baseline.
+Before a later package preflight,
+Invoke-SaefOwnTracksPositionMapActiveIdentityReseal.ps1 must verify the
+completed activation, active adapter record, active/staged package and retained
+rollback package. Its read-only preflight computes the exact policy delta. Its
+separately confirmed elevated apply changes only the active-package identity
+pin and the resulting target-policy hash binding, with byte-exact rollback of
+both policies. It does not reload a module, restart a service, contact Symcon
+or a provider, move state, publish or clean up artifacts.
+
+Adding these sources does not populate `standaloneModuleTargets`, install the
+adapter or its state root on Windows, migrate legacy state, change a capacity
+limit, or authorize a live preflight or activation.
 
 ```powershell
 & .\Invoke-SaefDeploymentRetentionCleanup.ps1 `

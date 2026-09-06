@@ -1,0 +1,12 @@
+{
+  "id": "{C1B6C0DD-88B1-4360-95C3-F7F542EBC7DD}",
+  "author": "SAEF",
+  "name": "SAEF OwnTracks Position Map",
+  "url": "https://github.com/doctee/symcon-ai-framework",
+  "version": "0.1.0",
+  "build": 0,
+  "date": 0,
+  "compatibility": {
+    "version": "8.1"
+  }
+}

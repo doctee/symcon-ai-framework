@@ -29,6 +29,13 @@ param(
     [string] $StateRoot,
 
     [Parameter()]
+    [string] $AdapterStateRoot,
+
+    [Parameter()]
+    [ValidateRange(1, 64)]
+    [int] $MaxDeploymentCount = 16,
+
+    [Parameter()]
     [Uri] $RpcUri = 'http://127.0.0.1:3777/api/',
 
     [Parameter()]
@@ -393,7 +400,17 @@ try {
     if ([string]::IsNullOrWhiteSpace($StateRoot)) {
         $StateRoot = Join-Path $SymconScriptsRoot '.saef-deployments'
     }
-    foreach ($path in @($SymconScriptsRoot, $InstallRoot, $ManagedFilesetRoot, $StateRoot, $StatusPath)) {
+    if ([string]::IsNullOrWhiteSpace($AdapterStateRoot)) {
+        $AdapterStateRoot = Join-Path $SymconScriptsRoot '.saef-adapter-states'
+    }
+    foreach ($path in @(
+        $SymconScriptsRoot,
+        $InstallRoot,
+        $ManagedFilesetRoot,
+        $StateRoot,
+        $AdapterStateRoot,
+        $StatusPath
+    )) {
         if (-not [IO.Path]::IsPathRooted($path)) {
             throw [System.InvalidOperationException]::new('Bootstrap paths must be absolute.')
         }
@@ -407,6 +424,31 @@ try {
     if (-not $activeBootstrapPath.StartsWith($scriptsPrefix, [StringComparison]::OrdinalIgnoreCase) -or
         -not (Test-Path -LiteralPath $activeBootstrapPath -PathType Leaf)) {
         throw [System.IO.FileNotFoundException]::new('Active bootstrap is missing or outside the scripts root.')
+    }
+    $managedRoots = @(
+        [IO.Path]::GetFullPath($ManagedFilesetRoot).TrimEnd([char[]] @('\', '/')),
+        [IO.Path]::GetFullPath($StateRoot).TrimEnd([char[]] @('\', '/')),
+        [IO.Path]::GetFullPath($AdapterStateRoot).TrimEnd([char[]] @('\', '/'))
+    )
+    foreach ($managedRoot in $managedRoots) {
+        if (-not $managedRoot.StartsWith($scriptsPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw [System.InvalidOperationException]::new(
+                'Managed deployment roots must be below the Symcon scripts root.'
+            )
+        }
+    }
+    for ($leftIndex = 0; $leftIndex -lt $managedRoots.Count; $leftIndex++) {
+        for ($rightIndex = $leftIndex + 1; $rightIndex -lt $managedRoots.Count; $rightIndex++) {
+            $left = $managedRoots[$leftIndex]
+            $right = $managedRoots[$rightIndex]
+            if ($left.Equals($right, [StringComparison]::OrdinalIgnoreCase) -or
+                $left.StartsWith($right + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -or
+                $right.StartsWith($left + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+                throw [System.InvalidOperationException]::new(
+                    'Deployment, fileset and adapter-state roots must be pairwise disjoint.'
+                )
+            }
+        }
     }
     if ($RpcUri.Scheme -notin @('http', 'https') -or $RpcUri.Host -notin @('127.0.0.1', 'localhost', '::1')) {
         throw [System.InvalidOperationException]::new('RPC URI must use an HTTP loopback endpoint.')
@@ -482,12 +524,6 @@ $markerEnd
     if ($null -eq $RpcCredential) {
         throw [System.InvalidOperationException]::new('RPC credential is required for installation.')
     }
-    foreach ($managedRoot in @($ManagedFilesetRoot, $StateRoot)) {
-        $managedRootFullPath = [IO.Path]::GetFullPath($managedRoot)
-        if (-not $managedRootFullPath.StartsWith($scriptsPrefix, [StringComparison]::OrdinalIgnoreCase)) {
-            throw [System.InvalidOperationException]::new('Managed deployment roots must be below the Symcon scripts root.')
-        }
-    }
     $publicKeyLines = @(Get-Content -LiteralPath $PublicKeyPath | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     if ($publicKeyLines.Count -ne 1 -or $publicKeyLines[0] -notmatch '^(?:ssh-ed25519|sk-ssh-ed25519@openssh.com) [A-Za-z0-9+/]+={0,3}(?: .*)?$') {
         throw [System.InvalidOperationException]::new('SSH public key must contain exactly one Ed25519 key.')
@@ -533,7 +569,7 @@ $markerEnd
     $mutationsStarted = $true
 
     $failedStep = 'managed_directories'
-    foreach ($directory in @($InstallRoot, $ManagedFilesetRoot, $StateRoot)) {
+    foreach ($directory in @($InstallRoot, $ManagedFilesetRoot, $StateRoot, $AdapterStateRoot)) {
         if (-not (Test-Path -LiteralPath $directory -PathType Container)) {
             [IO.Directory]::CreateDirectory($directory) | Out-Null
         }
@@ -541,6 +577,7 @@ $markerEnd
     Set-RestrictedAcl -Path $InstallRoot -Identity $deploymentAclIdentity -IdentityRights '(OI)(CI)RX'
     Set-RestrictedAcl -Path $ManagedFilesetRoot -Identity $deploymentAclIdentity -IdentityRights '(OI)(CI)F'
     Set-RestrictedAcl -Path $StateRoot -Identity $deploymentAclIdentity -IdentityRights '(OI)(CI)F'
+    Set-RestrictedAcl -Path $AdapterStateRoot -Identity $deploymentAclIdentity -IdentityRights '(OI)(CI)F'
     if ($standaloneModuleTargets.Count -gt 0) {
         $moduleTargetsRoot = Join-Path $InstallRoot 'standalone-modules'
         if (-not (Test-Path -LiteralPath $moduleTargetsRoot -PathType Container)) {
@@ -584,6 +621,7 @@ $markerEnd
         scriptsRoot = [IO.Path]::GetFullPath($SymconScriptsRoot)
         managedFilesetRoot = [IO.Path]::GetFullPath($ManagedFilesetRoot)
         stateRoot = [IO.Path]::GetFullPath($StateRoot)
+        adapterStateRoot = [IO.Path]::GetFullPath($AdapterStateRoot)
         activeBootstrapRelativePath = $ActiveBootstrapRelativePath.Replace('\', '/')
         restartCoordinatorPath = Join-Path $InstallRoot 'Invoke-SaefSymconRestart.ps1'
         expectedRestartCoordinatorSha256 = (Get-FileHash -LiteralPath (Join-Path $InstallRoot 'Invoke-SaefSymconRestart.ps1') -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -609,7 +647,7 @@ $markerEnd
         maxExpandedBytes = 67108864
         maxFileCount = 256
         maxPreflightAgeSeconds = 900
-        maxDeploymentCount = 16
+        maxDeploymentCount = $MaxDeploymentCount
         maxManagedBytes = 536870912
     }
     [IO.File]::WriteAllText(

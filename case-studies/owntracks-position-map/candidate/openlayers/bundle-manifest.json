@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "entry": "browser/src/openlayers-renderer.js",
+  "runtimePackages": [
+    {
+      "name": "ol",
+      "version": "10.10.0",
+      "license": "BSD-2-Clause",
+      "licenseFile": "licenses/ol.txt"
+    },
+    {
+      "name": "quickselect",
+      "version": "3.0.0",
+      "license": "ISC",
+      "licenseFile": "licenses/quickselect.txt"
+    },
+    {
+      "name": "rbush",
+      "version": "4.0.1",
+      "license": "MIT",
+      "licenseFile": "licenses/rbush.txt"
+    }
+  ],
+  "buildTool": {
+    "name": "esbuild",
+    "version": "0.28.2",
+    "license": "MIT",
+    "licenseFile": "licenses/esbuild-build-tool.txt"
+  },
+  "artifacts": [
+    {
+      "file": "licenses/esbuild-build-tool.txt",
+      "bytes": 1069,
+      "sha256": "b40ec5baec7bb34fa5b1c09521fa3cd52d5fad7adafed74932a2010d3612a681"
+    },
+    {
+      "file": "licenses/ol.txt",
+      "bytes": 1337,
+      "sha256": "6c4347b83a8c9feef18d57b18e3b6c44cf901b3c344a4a1fbd837e421555ab8e"
+    },
+    {
+      "file": "licenses/quickselect.txt",
+      "bytes": 750,
+      "sha256": "238ddb00e12a420a54e060afa19bdab4f70bf49e0e2a8ebb1a5e851f9ef447df"
+    },
+    {
+      "file": "licenses/rbush.txt",
+      "bytes": 1076,
+      "sha256": "bf20b07b8e41f306d22b73bfa6b0e248e81ee8caaa6a04285acb0b8e963c01ec"
+    },
+    {
+      "file": "openlayers-renderer.bundle.css",
+      "bytes": 5349,
+      "sha256": "67e64fbd199fb0405d0bafc19305b6164d976d25839fda0ed735f2c943d174e9"
+    },
+    {
+      "file": "openlayers-renderer.bundle.js",
+      "bytes": 375488,
+      "sha256": "07c939fbeb890e66c8eef6ef32c40ce231b7be553b9bd5ad1172002b44c3bc49"
+    }
+  ]
+}

@@ -9,8 +9,23 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+### Security
+
+- Activated the OwnTracks position-map security correction after targeted
+  Windows ACL hardening, with bounded package transfer, quiescent atomic switch,
+  fresh negative-request and one-tile transport acceptance, independent
+  postflight and state-version-aware rollback documentation.
+- Raised the PHP_CodeSniffer development-tool floor to 3.13.6 and locked the
+  patched 3.x release for GHSA-hmqg-cxww-wqhq. PHPStan and runtime dependencies
+  remain unchanged; shared vendor activation requires matching lockfiles.
+
 ### Added
 
+- Added the repository-only OwnTracks Position Map pilot adapter for deployment
+  channel version 8, with exact ownership/configuration/package pins, bounded
+  five-lock quiescence, format-2 state preservation, targeted Module Control
+  reload, verified rollback and adapter-owned retention planning. Windows,
+  target allowlisting and live activation remain separate closed gates.
 - Extended the restricted Windows deployment channel with deterministic,
   manifest-driven standalone-module packages and hash-pinned server-local
   transaction adapters while preserving the existing five-command transport,

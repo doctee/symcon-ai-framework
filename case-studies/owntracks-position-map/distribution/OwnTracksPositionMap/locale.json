@@ -1,0 +1,31 @@
+{
+  "translations": {
+    "de": {
+      "OwnTracks sources": "OwnTracks-Quellen",
+      "Source key": "Quellschlüssel",
+      "Display label": "Anzeigename",
+      "Selector value": "Auswahlwert",
+      "Source instance": "Quellinstanz",
+      "Position ident": "Positions-Ident",
+      "Accuracy ident": "Genauigkeits-Ident",
+      "Motion activity ident": "Bewegungsart-Ident",
+      "External path anchor instance": "Instanz des externen Pfadankers",
+      "External anchor position ident": "Positions-Ident des externen Ankers",
+      "Calendar time zone": "Kalenderzeitzone",
+      "Selectable history in days": "Auswählbarer Verlauf in Tagen",
+      "Maximum archive records per variable": "Maximale Archivwerte je Variable",
+      "Maximum rendered points": "Maximal dargestellte Punkte",
+      "Maximum path gap in seconds": "Maximale Pfadlücke in Sekunden",
+      "Maximum reception delay in seconds": "Maximale Empfangsverzögerung in Sekunden",
+      "Maximum accuracy age in seconds": "Maximales Alter der Genauigkeit in Sekunden",
+      "Maximum horizontal accuracy in meters": "Maximale horizontale Genauigkeit in Metern",
+      "Maximum accepted step distance in meters": "Maximal akzeptierte Schrittdistanz in Metern",
+      "Shared ETA target locations": "Gemeinsame ETA-Zielstandorte",
+      "Shared location instance": "Gemeinsame Standortinstanz",
+      "Allow diagnostic geodesic ETA": "Diagnostische geodätische ETA erlauben",
+      "Maximum motion activity age in seconds": "Maximales Alter der Bewegungsart in Sekunden",
+      "This module reads existing OwnTracks archives and an optional external anchor. It creates no WebHook, logging, archive data, provider request or visualization link.": "Dieses Modul liest bestehende OwnTracks-Archive und optional einen externen Anker. Es erzeugt weder WebHook, Logging, Archivdaten, Provideranfrage noch Visualisierungslink.",
+      "Object references, target coordinates and source labels are private configuration and must not be committed.": "Objektreferenzen, Zielkoordinaten und Quellnamen sind private Konfiguration und dürfen nicht committed werden."
+    }
+  }
+}

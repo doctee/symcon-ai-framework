@@ -410,6 +410,7 @@ $requiredPolicyKeys = [
     'scriptsRoot',
     'managedFilesetRoot',
     'stateRoot',
+    'adapterStateRoot',
     'activeBootstrapRelativePath',
     'restartCoordinatorPath',
     'expectedRestartCoordinatorSha256',
@@ -455,6 +456,18 @@ foreach (
 ) {
     assertDeploymentChannel(is_int($policy[$key]) && $policy[$key] > 0, "Policy limit is invalid: {$key}");
 }
+assertDeploymentChannel(
+    str_contains($initializer, '[ValidateRange(1, 64)]')
+        && str_contains($initializer, '[int] $MaxDeploymentCount = 16')
+        && str_contains($initializer, 'maxDeploymentCount = $MaxDeploymentCount'),
+    'Initializer does not expose a bounded deployment-count policy input.'
+);
+assertDeploymentChannel(
+    str_contains($initializer, "Join-Path \$SymconScriptsRoot '.saef-adapter-states'")
+        && str_contains($initializer, 'Deployment, fileset and adapter-state roots must be pairwise disjoint.')
+        && str_contains($gateway, 'Deployment, fileset and adapter-state roots must be pairwise disjoint.'),
+    'Channel does not isolate adapter-owned state from generic deployment state.'
+);
 
 $checksumLines = file($checksumPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 assertDeploymentChannel(is_array($checksumLines), 'Windows deployment checksums are unreadable.');
