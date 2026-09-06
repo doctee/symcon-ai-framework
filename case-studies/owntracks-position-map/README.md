@@ -278,6 +278,7 @@ inside the server grace window. Live activation is recorded separately.
 | `100-channel-bound-module-preflight.md` | Records the successful repeated target-bound adapter preflight, independent channel-status readback and still-inactive staged package. |
 | `101-channel-bound-module-activation.md` | Records the successful hash-bound activation, targeted module reload, immediate adapter health contract and retained rollback boundary. |
 | `102-independent-live-health-postflight.md` | Records the independent bounded Symcon-MCP verification of active and rollback packages, configuration preservation and quiescent format-2 runtime state. |
+| `103-synthetic-live-browser-postflight.md` | Records the authorized internal-browser baseline, successful live renderer/provider path and two residual missing tiles after the single bounded recovery and one Fit-all check. |
 
 ## Architectural Boundary
 
