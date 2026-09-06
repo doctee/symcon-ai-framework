@@ -292,6 +292,7 @@ inside the server grace window. Live activation is recorded separately.
 | `105-safari-picker-and-tile-rearm-correction.md` | Records the scoped native-picker focus release, bounded same-viewport Fit-all tile rearm, aggregate failure classes and provider-free synthetic acceptance. |
 | `106-channel-state-separation-correction.md` | Records the fail-closed `stage_usage` discovery and defines the disjoint adapter-state root, bounded capacity input and byte-exact migration/reseal correction. |
 | `107-post-activation-identity-reseal.md` | Defines the administrator-controlled post-activation reseal of the private active-package trust anchor without weakening the target adapter or adding a channel verb. |
+| `108-post-activation-identity-reseal-live-closure.md` | Records the exact live reseal, independent MCP health postflight and repeated channel-bound adapter readiness without reload or activation. |
 
 ## Architectural Boundary
 
