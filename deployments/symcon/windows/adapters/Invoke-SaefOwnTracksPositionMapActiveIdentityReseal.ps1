@@ -59,6 +59,9 @@ $script:channelPolicyMutationAttempted = $false
 $script:rollbackAttempted = $false
 $script:rollbackSucceeded = $false
 $script:failureCode = 'initialization'
+$script:failureDetail = ''
+$script:failureType = ''
+$script:failureHResult = $null
 $script:finalOutcome = 'failed'
 $script:finalExitCode = $ExitManualRecovery
 $script:adapterPolicyPath = ''
@@ -323,6 +326,9 @@ function Write-ResealStatus {
         outcome = $script:finalOutcome
         exitCode = $script:finalExitCode
         failureCode = $script:failureCode
+        failureDetail = $script:failureDetail
+        failureType = $script:failureType
+        failureHResult = $script:failureHResult
         activeDeploymentId = $ExpectedActiveDeploymentId
         previousPackageIdentitySha256 = $ExpectedPreviousPackageIdentitySha256
         activePackageIdentitySha256 = $ExpectedActivePackageIdentitySha256
@@ -589,6 +595,10 @@ try {
         $script:finalExitCode = $ExitSuccess
     }
 } catch {
+    $failureException = $_.Exception
+    $script:failureDetail = $failureException.Message
+    $script:failureType = $failureException.GetType().FullName
+    $script:failureHResult = $failureException.HResult
     if ($script:mutationAttempted) {
         $script:rollbackAttempted = $true
         try {

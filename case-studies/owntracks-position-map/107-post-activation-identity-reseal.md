@@ -43,7 +43,9 @@ changes only expectedActivePackageIdentitySha256 in the private adapter policy
 and the resulting expectedAdapterPolicySha256 in the channel target binding.
 Both files are written atomically. Any recoverable failure restores their
 previous bytes and reports rolled_back; an unprovable rollback reports
-manual_recovery_required.
+manual_recovery_required. Every failed status includes the exception message,
+type and HRESULT needed to distinguish a contract, ACL and filesystem failure
+without weakening the fail-closed result.
 
 The command has no module reload, Symcon RPC, service restart, state movement,
 provider request, publication or cleanup call site. The active module,
