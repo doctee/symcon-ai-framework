@@ -81,7 +81,10 @@ identity precondition while keeping the staged candidate inactive. The
 separately authorized [channel-bound activation](101-channel-bound-module-activation.md)
 then completed the adapter-owned package switch, one targeted Module Control
 reload and immediate health contract without rollback. Independent live health
-and physical browser acceptance remain separately gated.
+was subsequently confirmed by the bounded
+[Symcon-MCP postflight](102-independent-live-health-postflight.md), including
+the retained rollback package, unchanged configuration and quiescent format-2
+state. Physical browser acceptance remains separately gated.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -274,6 +277,7 @@ inside the server grace window. Live activation is recorded separately.
 | `99-adapter-state-live-installation.md` | Records the one-time creation and ACL verification of the empty adapter state root, idempotent postflight and unchanged channel/module boundary. |
 | `100-channel-bound-module-preflight.md` | Records the successful repeated target-bound adapter preflight, independent channel-status readback and still-inactive staged package. |
 | `101-channel-bound-module-activation.md` | Records the successful hash-bound activation, targeted module reload, immediate adapter health contract and retained rollback boundary. |
+| `102-independent-live-health-postflight.md` | Records the independent bounded Symcon-MCP verification of active and rollback packages, configuration preservation and quiescent format-2 runtime state. |
 
 ## Architectural Boundary
 
