@@ -91,6 +91,8 @@ class IPSModule
 
 class IPSModuleStrict extends IPSModule
 {
+    protected function RegisterHook(string $address): bool {}
+    protected function UnregisterHook(string $address): bool {}
 }
 
 function IPS_ObjectExists(int $id): bool {}

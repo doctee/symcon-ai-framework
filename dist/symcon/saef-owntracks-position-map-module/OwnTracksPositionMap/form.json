@@ -1,0 +1,191 @@
+{
+  "elements": [
+    {
+      "type": "List",
+      "name": "Sources",
+      "caption": "OwnTracks sources",
+      "rowCount": 3,
+      "add": true,
+      "delete": true,
+      "columns": [
+        {
+          "name": "sourceKey",
+          "caption": "Source key",
+          "width": "160px",
+          "add": "source",
+          "edit": {
+            "type": "ValidationTextBox"
+          }
+        },
+        {
+          "name": "label",
+          "caption": "Display label",
+          "width": "200px",
+          "add": "Source",
+          "edit": {
+            "type": "ValidationTextBox"
+          }
+        },
+        {
+          "name": "selectorValue",
+          "caption": "Selector value",
+          "width": "110px",
+          "add": 0,
+          "edit": {
+            "type": "NumberSpinner"
+          }
+        },
+        {
+          "name": "sourceRootId",
+          "caption": "Source instance",
+          "width": "auto",
+          "add": 0,
+          "edit": {
+            "type": "SelectObject"
+          }
+        },
+        {
+          "name": "positionIdent",
+          "caption": "Position ident",
+          "width": "140px",
+          "add": "position",
+          "edit": {
+            "type": "ValidationTextBox"
+          }
+        },
+        {
+          "name": "accuracyIdent",
+          "caption": "Accuracy ident",
+          "width": "140px",
+          "add": "acc",
+          "edit": {
+            "type": "ValidationTextBox"
+          }
+        },
+        {
+          "name": "activityIdent",
+          "caption": "Motion activity ident",
+          "width": "160px",
+          "add": "motionactivities",
+          "edit": {
+            "type": "ValidationTextBox"
+          }
+        }
+      ]
+    },
+    {
+      "type": "SelectObject",
+      "name": "ExternalAnchorID",
+      "caption": "External path source instance (separate selection)"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "ExternalAnchorPositionIdent",
+      "caption": "External path position ident"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "SelectedTimeZone",
+      "caption": "Calendar time zone"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "HistoryDays",
+      "caption": "Selectable history in days",
+      "minimum": 1,
+      "maximum": 3660
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "MaxArchiveRecords",
+      "caption": "Maximum archive records per variable",
+      "minimum": 1,
+      "maximum": 2500
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "MaxRenderedPoints",
+      "caption": "Maximum rendered points",
+      "minimum": 2,
+      "maximum": 500
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "MaximumGapSeconds",
+      "caption": "Maximum path gap in seconds",
+      "minimum": 1,
+      "maximum": 86400
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "MaximumReceptionDelaySeconds",
+      "caption": "Maximum reception delay in seconds",
+      "minimum": 0,
+      "maximum": 86400
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "MaximumAccuracyAgeSeconds",
+      "caption": "Maximum accuracy age in seconds",
+      "minimum": 0,
+      "maximum": 86400
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "MaximumAccuracyMeters",
+      "caption": "Maximum horizontal accuracy in meters",
+      "minimum": 0.1,
+      "maximum": 10000,
+      "digits": 1
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "MaximumStepDistanceMeters",
+      "caption": "Maximum accepted step distance in meters",
+      "minimum": 1,
+      "maximum": 1000000,
+      "digits": 1
+    },
+    {
+      "type": "List",
+      "name": "EtaTargetLocations",
+      "caption": "Shared ETA target locations",
+      "rowCount": 2,
+      "add": true,
+      "delete": true,
+      "columns": [
+        {
+          "name": "locationInstanceId",
+          "caption": "Shared location instance",
+          "width": "auto",
+          "add": 0,
+          "edit": {
+            "type": "SelectObject"
+          }
+        }
+      ]
+    },
+    {
+      "type": "CheckBox",
+      "name": "AllowGeodesicEta",
+      "caption": "Allow diagnostic geodesic ETA"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "MaximumActivityAgeSeconds",
+      "caption": "Maximum motion activity age in seconds",
+      "minimum": 1,
+      "maximum": 86400
+    }
+  ],
+  "actions": [
+    {
+      "type": "Label",
+      "caption": "OwnTracks mode reads only the selected OwnTracks archive. The optional external path reference is reserved for a separate explicit selection."
+    },
+    {
+      "type": "Label",
+      "caption": "Object references, target coordinates and source labels are private configuration and must not be committed."
+    }
+  ]
+}

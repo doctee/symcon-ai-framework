@@ -164,6 +164,8 @@ final class SaefSymconModuleFilesetBuilder
             !str_starts_with($path, 'case-studies/open-meteo/distribution/')
             && !str_starts_with($path, 'case-studies/media-carousel/distribution/')
             && !str_starts_with($path, 'case-studies/navimow/distribution/')
+            && !str_starts_with($path, 'case-studies/owntracks-position-map/candidate/')
+            && !str_starts_with($path, 'case-studies/owntracks-position-map/distribution/')
             && !in_array($path, [
                 'helpers/common/Validation.php',
                 'helpers/diagnostics/ConfigurationHash.php',
@@ -179,7 +181,7 @@ final class SaefSymconModuleFilesetBuilder
     private function validateTargetPath(string $path): string
     {
         $path = $this->validateRelativePath($path, 'target');
-        if (!preg_match('/\.(html|js|json|php)$/', $path)) {
+        if (!preg_match('/\.(css|html|js|json|php|txt)$/', $path)) {
             throw new RuntimeException('Module fileset target type is unsupported.');
         }
 

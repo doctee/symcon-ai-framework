@@ -335,6 +335,7 @@ function Read-ChannelPolicy {
         'scriptsRoot',
         'managedFilesetRoot',
         'stateRoot',
+        'adapterStateRoot',
         'activeBootstrapRelativePath',
         'restartCoordinatorPath',
         'expectedRestartCoordinatorSha256',
@@ -384,6 +385,7 @@ function Read-ChannelPolicy {
         'scriptsRoot',
         'managedFilesetRoot',
         'stateRoot',
+        'adapterStateRoot',
         'restartCoordinatorPath',
         'restartPolicyPath',
         'runtimeMirrorCoordinatorPath',
@@ -395,15 +397,30 @@ function Read-ChannelPolicy {
         }
     }
     if (-not (Test-PathInsideRoot -Root ([string] $policy.scriptsRoot) -Path ([string] $policy.managedFilesetRoot)) -or
-        -not (Test-PathInsideRoot -Root ([string] $policy.scriptsRoot) -Path ([string] $policy.stateRoot))) {
+        -not (Test-PathInsideRoot -Root ([string] $policy.scriptsRoot) -Path ([string] $policy.stateRoot)) -or
+        -not (Test-PathInsideRoot -Root ([string] $policy.scriptsRoot) -Path ([string] $policy.adapterStateRoot))) {
         throw [System.InvalidOperationException]::new('Managed deployment roots must be below the Symcon scripts root.')
     }
-    $managedRoot = [IO.Path]::GetFullPath([string] $policy.managedFilesetRoot).TrimEnd([char[]] @('\', '/'))
-    $stateRoot = [IO.Path]::GetFullPath([string] $policy.stateRoot).TrimEnd([char[]] @('\', '/'))
-    if ($managedRoot.Equals($stateRoot, [StringComparison]::OrdinalIgnoreCase) -or
-        (Test-PathInsideRoot -Root $managedRoot -Path $stateRoot) -or
-        (Test-PathInsideRoot -Root $stateRoot -Path $managedRoot)) {
-        throw [System.InvalidOperationException]::new('Managed fileset and state roots must be disjoint.')
+    $managedRoots = @(
+        [IO.Path]::GetFullPath([string] $policy.managedFilesetRoot).TrimEnd([char[]] @('\', '/')),
+        [IO.Path]::GetFullPath([string] $policy.stateRoot).TrimEnd([char[]] @('\', '/')),
+        [IO.Path]::GetFullPath([string] $policy.adapterStateRoot).TrimEnd([char[]] @('\', '/'))
+    )
+    $managedRoot = $managedRoots[0]
+    $stateRoot = $managedRoots[1]
+    $adapterStateRoot = $managedRoots[2]
+    for ($leftIndex = 0; $leftIndex -lt $managedRoots.Count; $leftIndex++) {
+        for ($rightIndex = $leftIndex + 1; $rightIndex -lt $managedRoots.Count; $rightIndex++) {
+            $left = $managedRoots[$leftIndex]
+            $right = $managedRoots[$rightIndex]
+            if ($left.Equals($right, [StringComparison]::OrdinalIgnoreCase) -or
+                (Test-PathInsideRoot -Root $left -Path $right) -or
+                (Test-PathInsideRoot -Root $right -Path $left)) {
+                throw [System.InvalidOperationException]::new(
+                    'Deployment, fileset and adapter-state roots must be pairwise disjoint.'
+                )
+            }
+        }
     }
     if (-not (Test-SafeRelativePath -Value ([string] $policy.activeBootstrapRelativePath))) {
         throw [System.InvalidOperationException]::new('Configured bootstrap path must be relative and safe.')
@@ -411,7 +428,8 @@ function Read-ChannelPolicy {
     $configuredBootstrapPath = Get-FullPathInsideRoot -Root ([string] $policy.scriptsRoot) `
         -RelativePath ([string] $policy.activeBootstrapRelativePath)
     if ((Test-PathInsideRoot -Root $managedRoot -Path $configuredBootstrapPath) -or
-        (Test-PathInsideRoot -Root $stateRoot -Path $configuredBootstrapPath)) {
+        (Test-PathInsideRoot -Root $stateRoot -Path $configuredBootstrapPath) -or
+        (Test-PathInsideRoot -Root $adapterStateRoot -Path $configuredBootstrapPath)) {
         throw [System.InvalidOperationException]::new('Active bootstrap must be outside managed deployment roots.')
     }
     if (-not (Test-HexSha256 -Value ([string] $policy.expectedRestartCoordinatorSha256)) -or

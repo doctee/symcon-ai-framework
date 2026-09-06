@@ -29,6 +29,10 @@
     <file>case-studies/navimow/tools</file>
     <file>case-studies/media-carousel/distribution</file>
     <file>case-studies/media-carousel/tools</file>
+    <file>case-studies/owntracks-position-map/candidate</file>
+    <file>case-studies/owntracks-position-map/distribution</file>
+    <file>case-studies/owntracks-position-map/tests</file>
+    <file>case-studies/owntracks-position-map/tools</file>
 
     <rule ref="PSR1.Classes.ClassDeclaration.MultipleClasses">
         <exclude-pattern>case-studies/navimow/distribution/libs/Navimow/ApiClient.php</exclude-pattern>
@@ -36,4 +40,6 @@
 
     <exclude-pattern>vendor/*</exclude-pattern>
     <exclude-pattern>case-studies/media-carousel/distribution/MediaCarousel/carousel.js</exclude-pattern>
+    <exclude-pattern>case-studies/owntracks-position-map/candidate/renderer/renderer.js</exclude-pattern>
+    <exclude-pattern>case-studies/owntracks-position-map/candidate/openlayers/*</exclude-pattern>
 </ruleset>

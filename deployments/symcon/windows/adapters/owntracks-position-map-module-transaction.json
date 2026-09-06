@@ -1,0 +1,57 @@
+{
+    "formatVersion": 1,
+    "adapterProfile": "saef-owntracks-position-map-v1",
+    "ownership": {
+        "mode": "exactly-one-positive-module-instance",
+        "repositoryMetadataAllowed": false,
+        "activePackageOwner": "owntracks-position-map-adapter"
+    },
+    "configuration": {
+        "snapshot": "fresh-byte-exact-utf8",
+        "requirePrivatePinnedSha256": true,
+        "requireByteExactReadback": true
+    },
+    "quiescence": {
+        "required": true,
+        "writerModel": "five-runtime-file-locks-and-zero-active-leases",
+        "guard": "named-adapter-mutex-plus-runtime-lock-set",
+        "timeout": "bounded"
+    },
+    "state": {
+        "candidateFormat": 2,
+        "rollbackFormat": 2,
+        "authoritative": ["miss-state", "tile-budget", "provider-budget"],
+        "rebuildable": ["day-cache", "provider-cache"],
+        "preserveDuringActivation": ["day-cache", "provider-cache"],
+        "rollbackPreparation": "fresh-v2-snapshot-byte-exact-restore",
+        "formatChangeAllowed": false
+    },
+    "reload": {
+        "method": "MC_ReloadModule",
+        "scope": "single-module-directory",
+        "serviceRestartAllowed": false,
+        "maximumCallsPerDirection": 1
+    },
+    "health": {
+        "requireReadyRunlevel": true,
+        "requireLibraryAndModuleIdentity": true,
+        "requireExactlyOneConfiguredInstance": true,
+        "requireConfigurationPreserved": true,
+        "requireStateSchemaAccepted": true,
+        "requireZeroActiveLeases": true
+    },
+    "rollback": {
+        "switch": "same-volume-directory-rename",
+        "reloadPreviousPackage": true,
+        "restoreFreshConfigurationOnDrift": true,
+        "stateSwitch": "same-transaction-package-and-state",
+        "requirePostRollbackHealth": true
+    },
+    "retention": {
+        "owner": "owntracks-position-map-adapter",
+        "genericCleanupAllowed": false,
+        "protectActiveAndDirectRollback": true,
+        "protectPackageStatePairs": true,
+        "applyRequiresSeparateAuthorization": true
+    }
+}

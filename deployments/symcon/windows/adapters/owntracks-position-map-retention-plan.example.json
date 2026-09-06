@@ -1,0 +1,7 @@
+{
+    "formatVersion": 1,
+    "adapterProfile": "saef-owntracks-position-map-v1",
+    "mode": "plan",
+    "inventorySha256": "<sha256-from-fresh-read-only-retention-plan>",
+    "artifactDirectoryNames": []
+}

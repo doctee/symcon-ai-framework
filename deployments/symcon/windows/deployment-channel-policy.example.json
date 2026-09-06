@@ -3,6 +3,7 @@
     "scriptsRoot": "<private-absolute-symcon-scripts-root>",
     "managedFilesetRoot": "<private-absolute-managed-fileset-root>",
     "stateRoot": "<private-absolute-deployment-state-root>",
+    "adapterStateRoot": "<private-absolute-adapter-state-root>",
     "activeBootstrapRelativePath": "<private-relative-bootstrap-path>",
     "restartCoordinatorPath": "<private-absolute-restart-coordinator-path>",
     "expectedRestartCoordinatorSha256": "<reviewed-lowercase-sha256>",

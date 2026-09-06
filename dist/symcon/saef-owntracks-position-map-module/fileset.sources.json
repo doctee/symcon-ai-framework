@@ -1,0 +1,224 @@
+{
+    "formatVersion": 1,
+    "manifest": "deployments/symcon/owntracks-position-map-module.fileset.json",
+    "name": "saef-owntracks-position-map-module",
+    "phpMinimum": "8.2",
+    "files": [
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksDayWindow.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksDayWindow.php",
+            "sha256": "020af583fbc4e16456ec4deb9a6114420e2ee235025bccb18af366a4665a043f",
+            "bytes": 2114
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksEtaProjector.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksEtaProjector.php",
+            "sha256": "174d4ba0660dd2be5fc2a7fb731210a3bfcd4d18a86b086eb9106c94fbe90d09",
+            "bytes": 16657
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksMotionAwareTargetResolver.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksMotionAwareTargetResolver.php",
+            "sha256": "960f4ce9e4d6f71240da84bf20280a58efc4abef307a15e51fabd202653b07b6",
+            "bytes": 16787
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksOsmTileProviderPolicy.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksOsmTileProviderPolicy.php",
+            "sha256": "9ce4c505cfc82ce8f79bd276c02dd92893aaf9e0be0fd4722040743079084be6",
+            "bytes": 5779
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksPinnedHttpsTileTransport.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksPinnedHttpsTileTransport.php",
+            "sha256": "80b2cbdadee5ee1cafff5d06626f7622d0b7a5c16d5d528c8b85b90b93f7d238",
+            "bytes": 23744
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksProviderPolicy.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksProviderPolicy.php",
+            "sha256": "54b5e271cca872222a76c7a6e6f00e33588524cf87f3b7e7893b31d199fdd06e",
+            "bytes": 7322
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksProviderTileCache.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksProviderTileCache.php",
+            "sha256": "83371f6ed0345ea6865992927a44291a09bd602503afc2a0d5937129e78bdf59",
+            "bytes": 21658
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksProviderTileRuntime.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksProviderTileRuntime.php",
+            "sha256": "231c52452979b606aa6e3c993ac2f819738621d7c8648fdd8625e5ca4be9c4b1",
+            "bytes": 6186
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksSymconArchiveAdapter.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksSymconArchiveAdapter.php",
+            "sha256": "6976b8d5d708106415e2780576547b8438c9d620c110eccaeaaddc9007fdd6ff",
+            "bytes": 17633
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileAccessPolicy.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileAccessPolicy.php",
+            "sha256": "dc9f44906d2ff6913f35e0600879964e822932546a27b84cb8363c3bd6cf6f72",
+            "bytes": 4543
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileCapability.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileCapability.php",
+            "sha256": "b7f78d763c29df27ad155a30a1b65bc86912e571ea4e44d33c74d1206658536b",
+            "bytes": 7019
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileDeadline.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileDeadline.php",
+            "sha256": "b06f5eb9f1945e4773a95aa8e0cdde4e99eb95b2a6701b3984587e26ed61a7f7",
+            "bytes": 1303
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileDirectoryAuthority.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileDirectoryAuthority.php",
+            "sha256": "15628db364426290c42dda2f2d5e91d40ef2e0bab9359a7c7a639f0130581c50",
+            "bytes": 9613
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileFileCache.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileFileCache.php",
+            "sha256": "d6278a70659921718b5b093a7470aa6b5b7ad932425de5ae33c9fb61d4142dcd",
+            "bytes": 18290
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileGateway.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileGateway.php",
+            "sha256": "aacd1832f1a4480ae26f50021b67b72a618bf20cc8f740f4d1c50a76bf82bb70",
+            "bytes": 10674
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileMissResolver.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileMissResolver.php",
+            "sha256": "430127b5de4f92b22d3e9be114fb4ff044a0552a3bf8f47be18ceaab8703903a",
+            "bytes": 13615
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileMissStateStore.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileMissStateStore.php",
+            "sha256": "1f3de77041faba15cf5f062dc742474a52aded6f7d75b1eef03efaa3b1a8fc6f",
+            "bytes": 13792
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileRequestBudget.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileRequestBudget.php",
+            "sha256": "ea5332a02b9ee21de3ad045c755b08690e87e67dd7a480ca21bc1095a81cbdcd",
+            "bytes": 12857
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileSelectionAllowlist.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileSelectionAllowlist.php",
+            "sha256": "5332fe31adeed5537afcc1bd25b3fff3cdcaa83e48580151e479067dbc075c3c",
+            "bytes": 5545
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileWebhookAdapter.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileWebhookAdapter.php",
+            "sha256": "6ef5c7246e4ea387621276da0f184617d7f717d90f310cb5d7d8b7db51ecc32e",
+            "bytes": 9358
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksTrackCore.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTrackCore.php",
+            "sha256": "594ecbaa58cd6a433997823eadbff392ec4e7fa919129cde4edadeda6a717f31",
+            "bytes": 25945
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/OwnTracksWgs84.php",
+            "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksWgs84.php",
+            "sha256": "cc9e3748dd500043f6ce9ebb0e726f75f52508fbff7adbdb305c5735cd6b18d3",
+            "bytes": 4797
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/openlayers/licenses/esbuild-build-tool.txt",
+            "target": "OwnTracksPositionMap/assets/licenses/esbuild-build-tool.txt",
+            "sha256": "b40ec5baec7bb34fa5b1c09521fa3cd52d5fad7adafed74932a2010d3612a681",
+            "bytes": 1069
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/openlayers/licenses/ol.txt",
+            "target": "OwnTracksPositionMap/assets/licenses/ol.txt",
+            "sha256": "6c4347b83a8c9feef18d57b18e3b6c44cf901b3c344a4a1fbd837e421555ab8e",
+            "bytes": 1337
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/openlayers/licenses/quickselect.txt",
+            "target": "OwnTracksPositionMap/assets/licenses/quickselect.txt",
+            "sha256": "238ddb00e12a420a54e060afa19bdab4f70bf49e0e2a8ebb1a5e851f9ef447df",
+            "bytes": 750
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/openlayers/licenses/rbush.txt",
+            "target": "OwnTracksPositionMap/assets/licenses/rbush.txt",
+            "sha256": "bf20b07b8e41f306d22b73bfa6b0e248e81ee8caaa6a04285acb0b8e963c01ec",
+            "bytes": 1076
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/openlayers/openlayers-renderer.bundle.css",
+            "target": "OwnTracksPositionMap/assets/openlayers-renderer.bundle.css",
+            "sha256": "67e64fbd199fb0405d0bafc19305b6164d976d25839fda0ed735f2c943d174e9",
+            "bytes": 5349
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/openlayers/openlayers-renderer.bundle.js",
+            "target": "OwnTracksPositionMap/assets/openlayers-renderer.bundle.js",
+            "sha256": "07c939fbeb890e66c8eef6ef32c40ce231b7be553b9bd5ad1172002b44c3bc49",
+            "bytes": 375488
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/renderer/openlayers-renderer.html",
+            "target": "OwnTracksPositionMap/assets/openlayers-renderer.html",
+            "sha256": "2d692f2da0c6e271bcb9d31f6c25799cde015ad0250fddecb27b8b163172eabf",
+            "bytes": 1385
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/renderer/renderer.css",
+            "target": "OwnTracksPositionMap/assets/renderer.css",
+            "sha256": "b853db7ccb147927fe09a7c74d52d0d282479150e8486d1a82aba65559aa1ee3",
+            "bytes": 7017
+        },
+        {
+            "source": "case-studies/owntracks-position-map/candidate/runtime/OwnTracksPositionMap/module.php",
+            "target": "OwnTracksPositionMap/module.php",
+            "sha256": "d340e4aa0381f9d9650dbad6ae514ff05b781dfb3265ba397990069c23b8f4dd",
+            "bytes": 97409
+        },
+        {
+            "source": "case-studies/owntracks-position-map/distribution/OwnTracksPositionMap/form.json",
+            "target": "OwnTracksPositionMap/form.json",
+            "sha256": "c42209f561270292aa84955902cb4c22eb2d761115a7931d21d31eb8f97f7a4e",
+            "bytes": 4729
+        },
+        {
+            "source": "case-studies/owntracks-position-map/distribution/OwnTracksPositionMap/locale.json",
+            "target": "OwnTracksPositionMap/locale.json",
+            "sha256": "17b987d0eebf72a9e6e650d212d72ed7e20f3c58f37b6871ef9f16a119463d0d",
+            "bytes": 2143
+        },
+        {
+            "source": "case-studies/owntracks-position-map/distribution/OwnTracksPositionMap/module.json",
+            "target": "OwnTracksPositionMap/module.json",
+            "sha256": "75415c8a082fb4855b79ee8125c603aa640e196b2bb4d8963f173f75fc9c5775",
+            "bytes": 332
+        },
+        {
+            "source": "case-studies/owntracks-position-map/distribution/library.json",
+            "target": "library.json",
+            "sha256": "460c6405c412e707b75d3856851d2b01cf68386090249ac5d427dd291a86b0dd",
+            "bytes": 268
+        }
+    ],
+    "filesetSha256": "7f817af5a67d6d7c0da5b6621f62bd03d46e1340bc843d78ed3d94b7feebbabe",
+    "builderVersion": "1.0.0",
+    "license": {
+        "identifier": "PolyForm-Noncommercial-1.0.0",
+        "url": "https://polyformproject.org/licenses/noncommercial/1.0.0/"
+    }
+}

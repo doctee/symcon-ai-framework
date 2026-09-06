@@ -1,0 +1,148 @@
+{
+  "formatVersion": 1,
+  "name": "saef-owntracks-position-map-module",
+  "phpMinimum": "8.2",
+  "outputDirectory": "dist/symcon/saef-owntracks-position-map-module",
+  "files": [
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksDayWindow.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksDayWindow.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksEtaProjector.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksEtaProjector.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksMotionAwareTargetResolver.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksMotionAwareTargetResolver.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksOsmTileProviderPolicy.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksOsmTileProviderPolicy.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksPinnedHttpsTileTransport.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksPinnedHttpsTileTransport.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksProviderPolicy.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksProviderPolicy.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksProviderTileCache.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksProviderTileCache.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksProviderTileRuntime.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksProviderTileRuntime.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksSymconArchiveAdapter.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksSymconArchiveAdapter.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileAccessPolicy.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileAccessPolicy.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileCapability.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileCapability.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileDeadline.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileDeadline.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileDirectoryAuthority.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileDirectoryAuthority.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileFileCache.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileFileCache.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileGateway.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileGateway.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileMissResolver.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileMissResolver.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileMissStateStore.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileMissStateStore.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileRequestBudget.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileRequestBudget.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileSelectionAllowlist.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileSelectionAllowlist.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksTileWebhookAdapter.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTileWebhookAdapter.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksTrackCore.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksTrackCore.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/OwnTracksWgs84.php",
+      "target": "OwnTracksPositionMap/libs/OwnTracks/OwnTracksWgs84.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/openlayers/licenses/esbuild-build-tool.txt",
+      "target": "OwnTracksPositionMap/assets/licenses/esbuild-build-tool.txt"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/openlayers/licenses/ol.txt",
+      "target": "OwnTracksPositionMap/assets/licenses/ol.txt"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/openlayers/licenses/quickselect.txt",
+      "target": "OwnTracksPositionMap/assets/licenses/quickselect.txt"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/openlayers/licenses/rbush.txt",
+      "target": "OwnTracksPositionMap/assets/licenses/rbush.txt"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/openlayers/openlayers-renderer.bundle.css",
+      "target": "OwnTracksPositionMap/assets/openlayers-renderer.bundle.css"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/openlayers/openlayers-renderer.bundle.js",
+      "target": "OwnTracksPositionMap/assets/openlayers-renderer.bundle.js"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/renderer/openlayers-renderer.html",
+      "target": "OwnTracksPositionMap/assets/openlayers-renderer.html"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/renderer/renderer.css",
+      "target": "OwnTracksPositionMap/assets/renderer.css"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/candidate/runtime/OwnTracksPositionMap/module.php",
+      "target": "OwnTracksPositionMap/module.php"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/distribution/OwnTracksPositionMap/form.json",
+      "target": "OwnTracksPositionMap/form.json"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/distribution/OwnTracksPositionMap/locale.json",
+      "target": "OwnTracksPositionMap/locale.json"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/distribution/OwnTracksPositionMap/module.json",
+      "target": "OwnTracksPositionMap/module.json"
+    },
+    {
+      "source": "case-studies/owntracks-position-map/distribution/library.json",
+      "target": "library.json"
+    }
+  ]
+}
