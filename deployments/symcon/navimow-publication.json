@@ -58,6 +58,7 @@
     "libs/Navimow/LocalMapSceneProjector.php",
     "libs/Navimow/LocalMapSvgRenderer.php",
     "libs/Navimow/MapGeometryReducer.php",
+    "libs/Navimow/MqttContinuousOperationReducer.php",
     "libs/Navimow/MqttCredentialMapper.php",
     "libs/Navimow/MqttEnvelopeException.php",
     "libs/Navimow/MqttEnvelopeParser.php",

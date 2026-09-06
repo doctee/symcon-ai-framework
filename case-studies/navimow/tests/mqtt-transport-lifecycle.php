@@ -161,6 +161,18 @@ function decodeLifecycle(string $json): array
     return $decoded;
 }
 
+function lifecycleLegacyVariables(array $variables): array
+{
+    return array_intersect_key($variables, array_flip([
+        'ConnectionState',
+        'ReauthRequired',
+        'TokenExpiresAt',
+        'LastDiscovery',
+        'LastRestSuccess',
+        'RestErrorCount',
+    ]));
+}
+
 function lifecycleSubscriptions(
     string $deviceId,
     bool $legacy = false
@@ -410,12 +422,17 @@ assertLifecycle(
         'formatVersion',
         'featureEnabled',
         'configurationStatus',
+        'operation',
         'lifecycle',
         'statistics',
         'errors',
         'shadow',
     ]
-        && ($readyDiagnostics['formatVersion'] ?? null) === 2
+        && ($readyDiagnostics['formatVersion'] ?? null) === 3
+        && ($readyDiagnostics['operation']['effectiveMode'] ?? null)
+            === 'BoundedPilot'
+        && ($readyDiagnostics['operation']['state'] ?? null)
+            === 'Inactive'
         && ($readyDiagnostics['featureEnabled'] ?? null) === true
         && ($readyDiagnostics['configurationStatus'] ?? null) === 'ready'
         && ($readyDiagnostics['lifecycle']['state'] ?? null) === 'Ready'
@@ -596,7 +613,7 @@ assertLifecycle(
             $activeDiagnostics['shadow']['pendingReconciliationCount']
                 ?? null
         ) === 1
-        && strlen($activeDiagnosticsJson) < 4096
+        && strlen($activeDiagnosticsJson) < 6144
         && !str_contains($activeDiagnosticsJson, 'DEVICE_001')
         && !str_contains($activeDiagnosticsJson, 'SYNTHETIC')
         && !str_contains($activeDiagnosticsJson, '/downlink/')
@@ -1333,8 +1350,9 @@ assertLifecycle(
                 'connectionAttempts'
             ] ?? null
         ) === 2
-        && $account->testSnapshotPersistentState()['variables']
-            === $variablesBeforeNativeRestart,
+        && lifecycleLegacyVariables(
+            $account->testSnapshotPersistentState()['variables']
+        ) === lifecycleLegacyVariables($variablesBeforeNativeRestart),
     'Healthy native Core restart was not adopted without reconnect.'
 );
 $reconciledNativeState = $account->testSnapshotPersistentState();
@@ -1359,16 +1377,18 @@ assertLifecycle(
             === '[]'
         && ($lifecycleConfigurations[$mqttId]['UserName'] ?? null) === ''
         && ($lifecycleConfigurations[$mqttId]['Password'] ?? null) === ''
-        && $account->testSnapshotPersistentState()['variables']
-            === $variablesBeforeRestart,
+        && lifecycleLegacyVariables(
+            $account->testSnapshotPersistentState()['variables']
+        ) === lifecycleLegacyVariables($variablesBeforeRestart),
     'ApplyChanges did not produce a delayed credential-free restart.'
 );
 $account->ApplyChanges();
 assertLifecycle(
     $credentialCalls === $credentialCallsBeforeRestart
         && $account->testTimerInterval('MqttLifecycle') === 5000
-        && $account->testSnapshotPersistentState()['variables']
-            === $variablesBeforeRestart,
+        && lifecycleLegacyVariables(
+            $account->testSnapshotPersistentState()['variables']
+        ) === lifecycleLegacyVariables($variablesBeforeRestart),
     'Repeated ApplyChanges was not restart-idempotent.'
 );
 $clock->advance(1);
@@ -1642,8 +1662,9 @@ assertLifecycle(
         && ($disabledClosureRequested['closureReason'] ?? null)
             === 'operator-disabled'
         && $account->testTimerInterval('MqttPilotClosure') === 1000
-        && $account->testSnapshotPersistentState()['variables']
-            === $variablesBeforeDisable,
+        && lifecycleLegacyVariables(
+            $account->testSnapshotPersistentState()['variables']
+        ) === lifecycleLegacyVariables($variablesBeforeDisable),
     'Feature disable did not stop MQTT without public-variable churn.'
 );
 $account->ProcessMqttPilotClosure();
@@ -1655,8 +1676,9 @@ assertLifecycle(
         && ($disabledClosureCompleted['closureReason'] ?? null)
             === 'operator-disabled'
         && $account->testTimerInterval('MqttPilotClosure') === 0
-        && $account->testSnapshotPersistentState()['variables']
-            === $variablesBeforeDisable,
+        && lifecycleLegacyVariables(
+            $account->testSnapshotPersistentState()['variables']
+        ) === lifecycleLegacyVariables($variablesBeforeDisable),
     'Feature disable did not complete owned pilot closure.'
 );
 $lifecycleOperations = [];
@@ -1664,8 +1686,9 @@ $account->ApplyChanges();
 assertLifecycle(
     $account->testStatus() === IS_ACTIVE
         && $account->testTimerInterval('MqttLifecycle') === 0
-        && $account->testSnapshotPersistentState()['variables']
-            === $variablesBeforeDisable,
+        && lifecycleLegacyVariables(
+            $account->testSnapshotPersistentState()['variables']
+        ) === lifecycleLegacyVariables($variablesBeforeDisable),
     'Repeated disabled ApplyChanges was not idempotent.'
 );
 $clock->advance(1);

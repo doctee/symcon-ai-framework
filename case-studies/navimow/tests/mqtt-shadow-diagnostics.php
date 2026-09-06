@@ -78,7 +78,7 @@ $account->ApplyChanges();
 $beforeEmptyRead = $account->testSnapshotPersistentState();
 $empty = decodeShadowDiagnostics($account->GetMqttDiagnostics());
 assertShadowDiagnostics(
-    ($empty['formatVersion'] ?? null) === 2
+    ($empty['formatVersion'] ?? null) === 3
         && (
             $empty['shadow']['trackedDeviceCount']
                 ?? null

@@ -38,12 +38,13 @@ $device->testSetVariable('Online', true);
 $device->testSetVariable('VehicleState', 1);
 $device->testSetVariable('LastStatusUpdate', $device->now);
 $requests = [];
+$runtimeEvidence = $fixture['evidence'];
 $device->testSetParentHandler(static function (string $json) use (
     &$requests,
-    $fixture
+    &$runtimeEvidence
 ): string {
     $requests[] = json_decode($json, true, 32, JSON_THROW_ON_ERROR);
-    return json_encode($fixture['evidence'], JSON_THROW_ON_ERROR);
+    return json_encode($runtimeEvidence, JSON_THROW_ON_ERROR);
 });
 assertLocalMapRuntime(
     $device->RefreshLocalMap() === 'Local map refresh succeeded.',
@@ -78,6 +79,33 @@ assertLocalMapRuntime(
     'Rendered runtime projection differs: '
         . json_encode($runtimeChecks, JSON_THROW_ON_ERROR)
 );
+$runtimeEvidence['status'] = 'delayed';
+assertLocalMapRuntime(
+    $device->RefreshLocalMap() === 'Local map refresh succeeded.'
+        && str_contains(
+            $device->testReadVariable('LocalMap'),
+            'mower mower-active mower-position-delayed'
+        )
+        && str_contains(
+            $device->testReadVariable('LocalMap'),
+            '<polyline class="path"'
+        ),
+    'Delayed MQTT evidence did not retain the marker and path.'
+);
+$runtimeEvidence['status'] = 'stale';
+assertLocalMapRuntime(
+    $device->RefreshLocalMap() === 'Local map refresh succeeded.'
+        && !str_contains(
+            $device->testReadVariable('LocalMap'),
+            'class="mower mower-'
+        )
+        && str_contains(
+            $device->testReadVariable('LocalMap'),
+            '<polyline class="path"'
+        ),
+    'Stale MQTT evidence did not hide only the current marker.'
+);
+$runtimeEvidence['status'] = 'ok';
 $device->testSetVariable('LastStatusUpdate', $device->now - 301);
 assertLocalMapRuntime(
     $device->RefreshLocalMap() === 'Local map refresh succeeded.'

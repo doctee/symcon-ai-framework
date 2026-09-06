@@ -49,7 +49,10 @@ assertLocalMapSvg(
         && substr_count($svg, '<polygon class="obstacle') === 3
         && substr_count($svg, '<polyline class="path"') > 0
         && substr_count($svg, 'class="station station-unknown"') === 1
-        && substr_count($svg, 'class="mower mower-unknown"') === 1
+        && substr_count(
+            $svg,
+            'class="mower mower-unknown mower-position-fresh"'
+        ) === 1
         && str_contains($svg, 'class="station-base"')
         && str_contains($svg, 'class="station-occupancy"')
         && str_contains($svg, 'class="mower-body"')
@@ -90,6 +93,7 @@ assertLocalMapSvg(
         && str_contains($svg, '>Fahrspur</text>')
         && str_contains($svg, '>Sperrbereich</text>')
         && str_contains($svg, '>Zuordnung prüfen</text>')
+        && str_contains($svg, '>Position verspätet</text>')
         && str_contains(
             $svg,
             'class="legend-station legend-station-unknown"'
@@ -99,7 +103,10 @@ assertLocalMapSvg(
             'class="legend-mower legend-mower-unknown"'
         )
         && substr_count($svg, 'class="station station-') === 1
-        && substr_count($svg, 'class="mower mower-unknown"') === 1
+        && substr_count(
+            $svg,
+            'class="mower mower-unknown mower-position-fresh"'
+        ) === 1
         && substr_count($svg, '<polyline class="path"') === 5
         && substr_count($svg, '<circle class="path-point') === 2
         && substr_count($svg, '<polygon class="obstacle') === 3,
@@ -201,7 +208,8 @@ foreach (
     assertLocalMapSvg(
         str_contains(
             $stateSvg,
-            'class="mower mower-' . $mowerState . '"'
+            'class="mower mower-' . $mowerState
+                . ' mower-position-fresh"'
         )
             && str_contains(
                 $stateSvg,
@@ -210,6 +218,33 @@ foreach (
         'Mower-state presentation differs for ' . $mowerState . '.'
     );
 }
+$delayedSvg = LocalMapSvgRenderer::render($scene, [
+    'mowerState' => 'active',
+    'positionFreshness' => 'delayed',
+]);
+assertLocalMapSvg(
+    str_contains(
+        $delayedSvg,
+        'class="mower mower-active mower-position-delayed"'
+    )
+        && str_contains(
+            $delayedSvg,
+            '<title>Mower active; position delayed</title>'
+        )
+        && str_contains($delayedSvg, 'class="mower-freshness-halo"')
+        && str_contains(
+            $delayedSvg,
+            '.mower-position-delayed .mower-freshness-halo{display:inline}'
+        ),
+    'Delayed position did not retain state color with a freshness halo.'
+);
+assertLocalMapSvgRejected(
+    static fn (): string => LocalMapSvgRenderer::render(
+        $scene,
+        ['positionFreshness' => 'recentish']
+    ),
+    'An unknown position freshness was accepted.'
+);
 $headingMatched = preg_match(
     '/data-heading-degrees="(-?[0-9]+(?:\.[0-9]+)?)"/',
     $svg,
