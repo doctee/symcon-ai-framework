@@ -590,7 +590,7 @@ function Invoke-QualificationPhase {
         [string] $qualification.adapterSha256 -cne (Get-Sha256 -Path $AdapterPath) -or
         ([bool] $script:policy.resealEnabled -and
             [string] $qualification.resealSha256 -cne
-                (Get-Sha256 -Path ([string] $script:policy.resealScriptPath))) {
+                (Get-Sha256 -Path ([string] $script:policy.resealScriptPath)))) {
         throw [Security.SecurityException]::new('Windows qualification evidence differs.')
     }
     return Get-Sha256 -Path ([string] $script:policy.qualificationEvidencePath)

@@ -70,6 +70,14 @@ foreach (
 }
 
 assertScopeBoundApprovalRunner(
+    str_contains(
+        $runner,
+        '(Get-Sha256 -Path ([string] $script:policy.resealScriptPath)))) {'
+    ),
+    'Approval qualification condition is not closed for Windows PowerShell 5.1.'
+);
+
+assertScopeBoundApprovalRunner(
     strpos($runner, "[Threading.Mutex]::new(\$false, 'Global\\SAEF.DeploymentApproval')")
         < strpos($runner, 'if (Test-Path -LiteralPath $script:statePath -PathType Leaf)'),
     'Approval claim is evaluated before the global approval mutex.'
