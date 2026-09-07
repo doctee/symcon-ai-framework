@@ -63,6 +63,7 @@ $script:profileInstallerRollbackAttempted = $false
 $script:profileInstallerRollbackSucceeded = $false
 $script:profileInstallerStandardErrorBytes = 0
 $script:runnerScenarioLabel = ''
+$script:runnerScenarioPhase = ''
 $script:runnerProcessExitCode = -1
 $script:runnerStatusWritten = $false
 $script:runnerStatusExitCode = -1
@@ -73,6 +74,11 @@ $script:runnerStatusMutationAttempted = $false
 $script:runnerStatusRollbackAttempted = $false
 $script:runnerStatusRollbackSucceeded = $false
 $script:runnerStandardErrorBytes = 0
+$script:finalErrorId = ''
+$script:finalErrorCategory = ''
+$script:finalErrorLine = 0
+$script:finalErrorColumn = 0
+$script:finalErrorCommand = ''
 $script:secretBytes = [Text.UTF8Encoding]::new($false).GetBytes(
     'saef-windows-qualification-secret-32-bytes-minimum'
 )
@@ -306,6 +312,7 @@ function Update-RunnerScenarioDiagnostics {
         [Parameter(Mandatory = $true)][string] $StandardErrorPath
     )
     $script:runnerScenarioLabel = $Label
+    $script:runnerScenarioPhase = 'scratch_setup'
     $script:runnerProcessExitCode = $ProcessExitCode
     $script:runnerStatusWritten = Test-Path -LiteralPath $StatusPath -PathType Leaf
     $script:runnerStandardErrorBytes = if (
@@ -529,6 +536,7 @@ function Invoke-RunnerScenario {
     $targetId = 'saef-qualification-target'
     $adapterProfile = 'saef-qualification-adapter-v1'
 
+    $script:runnerScenarioPhase = 'fixture_files'
     Write-Json -Path $transactionPath -Value ([ordered]@{ formatVersion = 1 })
     $manifest = [ordered]@{
         formatVersion = 1
@@ -564,12 +572,14 @@ function Invoke-RunnerScenario {
     Write-Json -Path $deploymentStatusPath -Value ([ordered]@{ formatVersion = 1 })
     [IO.File]::WriteAllText($activePath, $previousPackage, [Text.UTF8Encoding]::new($false))
 
+    $script:runnerScenarioPhase = 'qualification_evidence'
     $syntheticAdapterSha256 = Get-Sha256 -Path $SyntheticAdapterPath
     $syntheticResealSha256 = if ([bool] $Reseal) { Get-Sha256 -Path $SyntheticResealPath } else { '' }
     $fixtureEvidence = New-QualificationEvidence -AdapterSha256 $syntheticAdapterSha256 `
         -ResealSha256 $syntheticResealSha256
     Write-Json -Path $evidencePath -Value $fixtureEvidence
     $qualificationEvidenceSha256 = Get-Sha256 -Path $evidencePath
+    $script:runnerScenarioPhase = 'approval_policy'
     $approvalPolicy = [ordered]@{
         formatVersion = 1
         runnerProfile = 'saef-channel-v8-one-click-v1'
@@ -592,6 +602,7 @@ function Invoke-RunnerScenario {
     Write-Json -Path $approvalPolicyPath -Value $approvalPolicy
     Set-ScratchAcl -Path $scenarioRoot
 
+    $script:runnerScenarioPhase = 'approval_plan'
     $operations = if ([bool] $Reseal) {
         @('qualify', 'stage', 'preflight', 'activate', 'postflight', 'reseal', 'final_postflight', 'rollback')
     } else {
@@ -631,6 +642,7 @@ function Invoke-RunnerScenario {
     $expiresAt = if ($Mode -ceq 'expired') { $now - 300 } else { $now + 300 }
     $proofUser = if ($Mode -ceq 'wrong_user') { 'wrong-approver' } else { $script:approverIdentity }
     $proofHost = if ($Mode -ceq 'wrong_host') { 'wrong-controller' } else { $script:executionHostIdentity }
+    $script:runnerScenarioPhase = 'approval_envelope'
     $envelope = New-ApprovalEnvelope -Plan ([pscustomobject] $plan) -IssuedAt $issuedAt `
         -ExpiresAt $expiresAt -ApproverIdentity $proofUser -ExecutionHostIdentity $proofHost `
         -InvalidSignature:($Mode -ceq 'bad_signature')
@@ -648,12 +660,14 @@ function Invoke-RunnerScenario {
             throw [InvalidOperationException]::new('Qualification could not acquire approval lock fixture.')
         }
     }
+    $script:runnerScenarioPhase = 'runner_environment'
     $previousFailureSetting = [string] $env:SAEF_APPROVAL_SYNTHETIC_FAIL_POSTFLIGHT_AT
     $previousCrashSetting = [string] $env:SAEF_APPROVAL_SYNTHETIC_CRASH_ACTIVATE
     try {
         $env:SAEF_APPROVAL_SYNTHETIC_FAIL_POSTFLIGHT_AT = [string] $FailPostflightAt
         $env:SAEF_APPROVAL_SYNTHETIC_CRASH_ACTIVATE = if ([bool] $CrashActivate) { '1' } else { '0' }
         $powerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+        $script:runnerScenarioPhase = 'process_start'
         & $powerShell '-NoLogo' '-NoProfile' '-NonInteractive' '-ExecutionPolicy' 'Bypass' `
             '-File' $RunnerPath '-ApprovalEnvelopeBase64Url' $envelope `
             '-ChannelPolicyPath' $channelPolicyPath '-ManifestPath' $manifestPath `
@@ -666,6 +680,7 @@ function Invoke-RunnerScenario {
         $exitCode = [int] $LASTEXITCODE
         Update-RunnerScenarioDiagnostics -Label $Label -ProcessExitCode $exitCode `
             -StatusPath $runnerStatusPath -StandardErrorPath $runnerStandardErrorPath
+        $script:runnerScenarioPhase = 'process_result'
     } finally {
         $env:SAEF_APPROVAL_SYNTHETIC_FAIL_POSTFLIGHT_AT = $previousFailureSetting
         $env:SAEF_APPROVAL_SYNTHETIC_CRASH_ACTIVATE = $previousCrashSetting
@@ -676,6 +691,7 @@ function Invoke-RunnerScenario {
             $heldMutex.Dispose()
         }
     }
+    $script:runnerScenarioPhase = 'result_validation'
     if ($exitCode -ne $ExpectedExitCode -or
         -not (Test-Path -LiteralPath $runnerStatusPath -PathType Leaf)) {
         throw [InvalidOperationException]::new('Qualification runner outcome differs: ' + $Label)
@@ -773,6 +789,7 @@ function Write-FinalStatus {
         $record['profileInstallerRollbackSucceeded'] = [bool] $script:profileInstallerRollbackSucceeded
         $record['profileInstallerStandardErrorBytes'] = $script:profileInstallerStandardErrorBytes
         $record['runnerScenarioLabel'] = $script:runnerScenarioLabel
+        $record['runnerScenarioPhase'] = $script:runnerScenarioPhase
         $record['runnerProcessExitCode'] = $script:runnerProcessExitCode
         $record['runnerStatusWritten'] = [bool] $script:runnerStatusWritten
         $record['runnerStatusExitCode'] = $script:runnerStatusExitCode
@@ -783,6 +800,11 @@ function Write-FinalStatus {
         $record['runnerStatusRollbackAttempted'] = [bool] $script:runnerStatusRollbackAttempted
         $record['runnerStatusRollbackSucceeded'] = [bool] $script:runnerStatusRollbackSucceeded
         $record['runnerStandardErrorBytes'] = $script:runnerStandardErrorBytes
+        $record['errorId'] = $script:finalErrorId
+        $record['errorCategory'] = $script:finalErrorCategory
+        $record['errorLine'] = $script:finalErrorLine
+        $record['errorColumn'] = $script:finalErrorColumn
+        $record['errorCommand'] = $script:finalErrorCommand
     }
     Write-Json -Path $StatusPath -Value $record
 }
@@ -892,6 +914,13 @@ try {
     $finalExitCode = $ExitSuccess
 } catch {
     $finalErrorType = $_.Exception.GetType().FullName
+    $script:finalErrorId = [string] $_.FullyQualifiedErrorId
+    $script:finalErrorCategory = [string] $_.CategoryInfo.Category
+    $script:finalErrorLine = [int] $_.InvocationInfo.ScriptLineNumber
+    $script:finalErrorColumn = [int] $_.InvocationInfo.OffsetInLine
+    $script:finalErrorCommand = if ($null -ne $_.InvocationInfo.MyCommand) {
+        [string] $_.InvocationInfo.MyCommand.Name
+    } else { '' }
 } finally {
     if (-not [string]::IsNullOrEmpty($script:scratchRoot) -and
         (Test-Path -LiteralPath $script:scratchRoot -PathType Container)) {
