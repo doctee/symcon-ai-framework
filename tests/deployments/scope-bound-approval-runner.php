@@ -42,6 +42,7 @@ foreach (
         'ConvertTo-CanonicalJson',
         '$Value -is [Collections.IDictionary]',
         'ConvertTo-CanonicalValue -Value $dictionary[$name]',
+        'ConvertTo-CanonicalValue -Value $property.Value',
         'Get-HmacSha256',
         'Test-FixedTimeTextEquals',
         'Assert-ExactProperties',
@@ -94,6 +95,10 @@ assertScopeBoundApprovalRunner(
 assertScopeBoundApprovalRunner(
     substr_count($runner, 'exit $script:finalExitCode') === 1,
     'Approval runner must have one native exit boundary.'
+);
+assertScopeBoundApprovalRunner(
+    preg_match('/\.\$[A-Za-z_]/', $runner) === 0,
+    'Approval runner contains a Windows PowerShell 5.1-unsafe dynamic property access.'
 );
 assertScopeBoundApprovalRunner(
     !str_contains($runner, '$env:SSH_ORIGINAL_COMMAND')

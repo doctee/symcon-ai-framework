@@ -282,8 +282,9 @@ function ConvertTo-CanonicalValue {
         return $result
     }
     $result = [ordered]@{}
-    foreach ($name in @($Value.PSObject.Properties.Name | Sort-Object)) {
-        $result[$name] = ConvertTo-CanonicalValue -Value $Value.$name
+    foreach ($property in @($Value.PSObject.Properties | Sort-Object Name)) {
+        $name = [string] $property.Name
+        $result[$name] = ConvertTo-CanonicalValue -Value $property.Value
     }
     return $result
 }
@@ -397,8 +398,8 @@ function Read-SignedState {
         throw [InvalidOperationException]::new('Approval state format is invalid.')
     }
     $unsigned = [ordered]@{}
-    foreach ($name in @($state.PSObject.Properties.Name | Where-Object { $_ -ne 'stateSignature' })) {
-        $unsigned[$name] = $state.$name
+    foreach ($property in @($state.PSObject.Properties | Where-Object { $_.Name -ne 'stateSignature' })) {
+        $unsigned[[string] $property.Name] = $property.Value
     }
     $expected = Get-HmacSha256 `
         -Text (ConvertTo-CanonicalJson -Value ([pscustomobject] $unsigned)) `
@@ -407,8 +408,8 @@ function Read-SignedState {
         throw [Security.SecurityException]::new('Approval state integrity differs.')
     }
     $map = [ordered]@{}
-    foreach ($name in @($state.PSObject.Properties.Name)) {
-        $map[$name] = $state.$name
+    foreach ($property in @($state.PSObject.Properties)) {
+        $map[[string] $property.Name] = $property.Value
     }
     return $map
 }
@@ -440,8 +441,9 @@ function Assert-RunningStatePhaseOrder {
     }
     for ($index = 0; $index -lt $completed; $index++) {
         $phase = [string] $phases[$index]
-        if ($evidenceNames -notcontains $phase -or
-            -not (Test-HexSha256 -Value ([string] $script:state.evidence.$phase))) {
+        $evidenceProperty = $script:state.evidence.PSObject.Properties[$phase]
+        if ($null -eq $evidenceProperty -or
+            -not (Test-HexSha256 -Value ([string] $evidenceProperty.Value))) {
             throw [InvalidOperationException]::new('Approval state evidence order is invalid.')
         }
     }
@@ -464,8 +466,8 @@ function Complete-Phase {
         throw [InvalidOperationException]::new('Phase evidence identity is invalid.')
     }
     $evidence = [ordered]@{}
-    foreach ($name in @($script:state.evidence.PSObject.Properties.Name)) {
-        $evidence[$name] = [string] $script:state.evidence.$name
+    foreach ($property in @($script:state.evidence.PSObject.Properties)) {
+        $evidence[[string] $property.Name] = [string] $property.Value
     }
     $evidence[$Phase] = $EvidenceSha256
     $script:state['evidence'] = [pscustomobject] $evidence
@@ -967,7 +969,9 @@ try {
         'retentionDeletion', 'activeIdentityReseal'
     ) -Label 'Approval risk scope'
     foreach ($name in @('allowlistChange', 'serviceRestart', 'providerContact', 'publication', 'retentionDeletion')) {
-        if ($script:plan.riskScope.$name -isnot [bool] -or [bool] $script:plan.riskScope.$name) {
+        $riskProperty = $script:plan.riskScope.PSObject.Properties[$name]
+        if ($null -eq $riskProperty -or $riskProperty.Value -isnot [bool] -or
+            [bool] $riskProperty.Value) {
             throw [Security.SecurityException]::new('Approval plan contains a forbidden risk scope.')
         }
     }
@@ -979,7 +983,9 @@ try {
         'activePackageSha256', 'adapterPolicySha256', 'channelPolicySha256'
     ) -Label 'Approval baseline'
     foreach ($name in @('activePackageSha256', 'adapterPolicySha256', 'channelPolicySha256')) {
-        if (-not (Test-HexSha256 -Value ([string] $script:plan.expectedBaselineIdentities.$name))) {
+        $identityProperty = $script:plan.expectedBaselineIdentities.PSObject.Properties[$name]
+        if ($null -eq $identityProperty -or
+            -not (Test-HexSha256 -Value ([string] $identityProperty.Value))) {
             throw [Security.SecurityException]::new('Approval baseline identity is invalid.')
         }
     }
@@ -1002,8 +1008,10 @@ try {
     ) -Label 'Approval proof'
     $script:planSha256 = Get-TextSha256 -Text (ConvertTo-CanonicalJson -Value $script:plan)
     $unsignedApproval = [ordered]@{}
-    foreach ($name in @($script:approval.PSObject.Properties.Name | Where-Object { $_ -ne 'signature' })) {
-        $unsignedApproval[$name] = $script:approval.$name
+    foreach ($property in @(
+        $script:approval.PSObject.Properties | Where-Object { $_.Name -ne 'signature' }
+    )) {
+        $unsignedApproval[[string] $property.Name] = $property.Value
     }
     $expectedSignature = Get-HmacSha256 `
         -Text (ConvertTo-CanonicalJson -Value ([pscustomobject] $unsignedApproval)) `

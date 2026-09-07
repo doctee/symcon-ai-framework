@@ -92,6 +92,7 @@ $qualificationFragments = [
     '[Management.Automation.Language.Parser]::ParseFile',
     '$Value -is [Collections.IDictionary]',
     'ConvertTo-CanonicalValue -Value $dictionary[$name]',
+    'ConvertTo-CanonicalValue -Value $property.Value',
     "'base_positive'",
     "'profile_installer_positive'",
     "'replay_negative'",
@@ -140,6 +141,10 @@ assertScopeBoundApprovalWindows(
         && !str_contains($qualification, 'Invoke-WebRequest')
         && !str_contains($qualification, 'ssh '),
     'Approval Windows qualification reaches a production or network mutation boundary.'
+);
+assertScopeBoundApprovalWindows(
+    preg_match('/\.\$[A-Za-z_]/', $qualification) === 0,
+    'Approval Windows qualification contains an unsafe dynamic property access.'
 );
 assertScopeBoundApprovalWindows(
     str_contains($qualification, 'Invoke-ProfileInstallerScenario')

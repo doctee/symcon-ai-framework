@@ -145,8 +145,9 @@ function ConvertTo-CanonicalValue {
         return $result
     }
     $result = [ordered]@{}
-    foreach ($name in @($Value.PSObject.Properties.Name | Sort-Object)) {
-        $result[$name] = ConvertTo-CanonicalValue -Value $Value.$name
+    foreach ($property in @($Value.PSObject.Properties | Sort-Object Name)) {
+        $name = [string] $property.Name
+        $result[$name] = ConvertTo-CanonicalValue -Value $property.Value
     }
     return $result
 }
