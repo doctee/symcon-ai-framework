@@ -62,6 +62,17 @@ $script:profileInstallerErrorType = ''
 $script:profileInstallerRollbackAttempted = $false
 $script:profileInstallerRollbackSucceeded = $false
 $script:profileInstallerStandardErrorBytes = 0
+$script:runnerScenarioLabel = ''
+$script:runnerProcessExitCode = -1
+$script:runnerStatusWritten = $false
+$script:runnerStatusExitCode = -1
+$script:runnerStatusOutcome = ''
+$script:runnerStatusFailureCode = ''
+$script:runnerStatusActivationAttempted = $false
+$script:runnerStatusMutationAttempted = $false
+$script:runnerStatusRollbackAttempted = $false
+$script:runnerStatusRollbackSucceeded = $false
+$script:runnerStandardErrorBytes = 0
 $script:secretBytes = [Text.UTF8Encoding]::new($false).GetBytes(
     'saef-windows-qualification-secret-32-bytes-minimum'
 )
@@ -287,6 +298,49 @@ function Update-ProfileInstallerDiagnostics {
     } else { $false }
 }
 
+function Update-RunnerScenarioDiagnostics {
+    param(
+        [Parameter(Mandatory = $true)][string] $Label,
+        [Parameter(Mandatory = $true)][int] $ProcessExitCode,
+        [Parameter(Mandatory = $true)][string] $StatusPath,
+        [Parameter(Mandatory = $true)][string] $StandardErrorPath
+    )
+    $script:runnerScenarioLabel = $Label
+    $script:runnerProcessExitCode = $ProcessExitCode
+    $script:runnerStatusWritten = Test-Path -LiteralPath $StatusPath -PathType Leaf
+    $script:runnerStandardErrorBytes = if (
+        Test-Path -LiteralPath $StandardErrorPath -PathType Leaf
+    ) {
+        [long] (Get-Item -LiteralPath $StandardErrorPath -Force).Length
+    } else { 0 }
+    if (-not $script:runnerStatusWritten) {
+        return
+    }
+    $status = Get-Content -LiteralPath $StatusPath -Raw | ConvertFrom-Json
+    $names = @($status.PSObject.Properties.Name)
+    $script:runnerStatusExitCode = if ($names -contains 'exitCode') {
+        [int] $status.exitCode
+    } else { -1 }
+    $script:runnerStatusOutcome = if ($names -contains 'outcome') {
+        [string] $status.outcome
+    } else { '' }
+    $script:runnerStatusFailureCode = if ($names -contains 'failureCode') {
+        [string] $status.failureCode
+    } else { '' }
+    $script:runnerStatusActivationAttempted = if ($names -contains 'activationAttempted') {
+        [bool] $status.activationAttempted
+    } else { $false }
+    $script:runnerStatusMutationAttempted = if ($names -contains 'mutationAttempted') {
+        [bool] $status.mutationAttempted
+    } else { $false }
+    $script:runnerStatusRollbackAttempted = if ($names -contains 'rollbackAttempted') {
+        [bool] $status.rollbackAttempted
+    } else { $false }
+    $script:runnerStatusRollbackSucceeded = if ($names -contains 'rollbackSucceeded') {
+        [bool] $status.rollbackSucceeded
+    } else { $false }
+}
+
 function Invoke-ProfileInstallerScenario {
     $scenarioRoot = Join-Path $script:scratchRoot 'profile-installer-positive'
     $targetRoot = Join-Path $scenarioRoot 'target'
@@ -437,6 +491,17 @@ function Invoke-RunnerScenario {
         [Parameter()][switch] $CrashActivate,
         [Parameter(Mandatory = $true)][int] $ExpectedExitCode
     )
+    $script:runnerScenarioLabel = $Label
+    $script:runnerProcessExitCode = -1
+    $script:runnerStatusWritten = $false
+    $script:runnerStatusExitCode = -1
+    $script:runnerStatusOutcome = ''
+    $script:runnerStatusFailureCode = ''
+    $script:runnerStatusActivationAttempted = $false
+    $script:runnerStatusMutationAttempted = $false
+    $script:runnerStatusRollbackAttempted = $false
+    $script:runnerStatusRollbackSucceeded = $false
+    $script:runnerStandardErrorBytes = 0
     $scenarioRoot = Join-Path $script:scratchRoot $Label
     [IO.Directory]::CreateDirectory($scenarioRoot) | Out-Null
     Set-ScratchAcl -Path $scenarioRoot
@@ -455,6 +520,7 @@ function Invoke-RunnerScenario {
     $credentialPath = Join-Path $scenarioRoot 'credential.json'
     $deploymentStatusPath = Join-Path $scenarioRoot 'deployment-status.json'
     $runnerStatusPath = Join-Path $scenarioRoot 'runner-status.json'
+    $runnerStandardErrorPath = Join-Path $scenarioRoot 'runner-standard-error.local.txt'
     $activePath = Join-Path $scenarioRoot 'synthetic-active.local.txt'
     $previousPackage = Get-TextSha256 -Text ('previous:' + $Label)
     $candidatePackage = Get-TextSha256 -Text ('candidate:' + $Label)
@@ -596,8 +662,10 @@ function Invoke-RunnerScenario {
             '-AdapterPolicyPath' $adapterPolicyPath '-ApprovalPolicyPath' $approvalPolicyPath `
             '-RpcUri' 'http://127.0.0.1:3777/api/' '-CredentialPath' $credentialPath `
             '-DeploymentUser' 'saefdeploy' '-DeploymentStatusPath' $deploymentStatusPath `
-            '-StatusPath' $runnerStatusPath | Out-Null
+            '-StatusPath' $runnerStatusPath 2> $runnerStandardErrorPath | Out-Null
         $exitCode = [int] $LASTEXITCODE
+        Update-RunnerScenarioDiagnostics -Label $Label -ProcessExitCode $exitCode `
+            -StatusPath $runnerStatusPath -StandardErrorPath $runnerStandardErrorPath
     } finally {
         $env:SAEF_APPROVAL_SYNTHETIC_FAIL_POSTFLIGHT_AT = $previousFailureSetting
         $env:SAEF_APPROVAL_SYNTHETIC_CRASH_ACTIVATE = $previousCrashSetting
@@ -704,6 +772,17 @@ function Write-FinalStatus {
         $record['profileInstallerRollbackAttempted'] = [bool] $script:profileInstallerRollbackAttempted
         $record['profileInstallerRollbackSucceeded'] = [bool] $script:profileInstallerRollbackSucceeded
         $record['profileInstallerStandardErrorBytes'] = $script:profileInstallerStandardErrorBytes
+        $record['runnerScenarioLabel'] = $script:runnerScenarioLabel
+        $record['runnerProcessExitCode'] = $script:runnerProcessExitCode
+        $record['runnerStatusWritten'] = [bool] $script:runnerStatusWritten
+        $record['runnerStatusExitCode'] = $script:runnerStatusExitCode
+        $record['runnerStatusOutcome'] = $script:runnerStatusOutcome
+        $record['runnerStatusFailureCode'] = $script:runnerStatusFailureCode
+        $record['runnerStatusActivationAttempted'] = [bool] $script:runnerStatusActivationAttempted
+        $record['runnerStatusMutationAttempted'] = [bool] $script:runnerStatusMutationAttempted
+        $record['runnerStatusRollbackAttempted'] = [bool] $script:runnerStatusRollbackAttempted
+        $record['runnerStatusRollbackSucceeded'] = [bool] $script:runnerStatusRollbackSucceeded
+        $record['runnerStandardErrorBytes'] = $script:runnerStandardErrorBytes
     }
     Write-Json -Path $StatusPath -Value $record
 }
