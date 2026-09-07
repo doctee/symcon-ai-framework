@@ -103,6 +103,8 @@ $qualificationFragments = [
     "'wrong_host'",
     "'bad_signature'",
     "'baseline-drift'",
+    "'baseline_drift_fixture'",
+    'Write-Json -Path $adapterPolicyPath -Value $adapterPolicy',
     "'forbidden-risk'",
     "'lock-contention'",
     "'postflight_rollback'",

@@ -596,11 +596,12 @@ function Invoke-RunnerScenario {
         packageSha256 = $packageSha256
         packageBytes = 1024
     })
-    Write-Json -Path $adapterPolicyPath -Value ([ordered]@{
+    $adapterPolicy = [ordered]@{
         formatVersion = 1
         adapterProfile = $adapterProfile
         expectedActivePackageIdentitySha256 = $previousPackage
-    })
+    }
+    Write-Json -Path $adapterPolicyPath -Value $adapterPolicy
     Write-Json -Path $channelPolicyPath -Value ([ordered]@{ formatVersion = 1 })
     Write-Json -Path $secretPath -Value ([ordered]@{
         formatVersion = 1
@@ -686,6 +687,7 @@ function Invoke-RunnerScenario {
         -ExpiresAt $expiresAt -ApproverIdentity $proofUser -ExecutionHostIdentity $proofHost `
         -InvalidSignature:($Mode -ceq 'bad_signature')
     if ($Mode -ceq 'drift') {
+        $script:runnerScenarioPhase = 'baseline_drift_fixture'
         $adapterPolicy['drift'] = $true
         Write-Json -Path $adapterPolicyPath -Value $adapterPolicy
     }
