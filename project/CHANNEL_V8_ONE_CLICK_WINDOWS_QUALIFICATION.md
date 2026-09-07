@@ -68,6 +68,10 @@ version, timestamp, phase, outcome, exit code, exact source and profile hashes,
 case counts, scratch-mutation and cleanup facts, failed check, error type and
 whether any production mutation or service restart was attempted. Paths,
 accounts, SIDs, commands, credentials and exception messages are excluded.
+Failed profile-installer qualification additionally records only its bounded
+phase, process and status exit codes, outcome, failed step, error type, rollback
+flags and standard-error byte count. It does not retain the standard-error
+content or the scratch tree.
 
 Pass requires exit code `0`, six positive and eight negative scenario groups,
 successful

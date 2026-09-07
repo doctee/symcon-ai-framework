@@ -52,6 +52,16 @@ $script:scratchRoot = ''
 $script:runnerSha256 = ''
 $script:adapterSha256 = ''
 $script:resealSha256 = ''
+$script:profileInstallerPhase = 'not_started'
+$script:profileInstallerProcessExitCode = -1
+$script:profileInstallerStatusWritten = $false
+$script:profileInstallerStatusExitCode = -1
+$script:profileInstallerOutcome = ''
+$script:profileInstallerFailedStep = ''
+$script:profileInstallerErrorType = ''
+$script:profileInstallerRollbackAttempted = $false
+$script:profileInstallerRollbackSucceeded = $false
+$script:profileInstallerStandardErrorBytes = 0
 $script:secretBytes = [Text.UTF8Encoding]::new($false).GetBytes(
     'saef-windows-qualification-secret-32-bytes-minimum'
 )
@@ -237,6 +247,46 @@ function New-QualificationEvidence {
     }
 }
 
+function Update-ProfileInstallerDiagnostics {
+    param(
+        [Parameter(Mandatory = $true)][string] $Phase,
+        [Parameter(Mandatory = $true)][int] $ProcessExitCode,
+        [Parameter(Mandatory = $true)][string] $StatusPath,
+        [Parameter(Mandatory = $true)][string] $StandardErrorPath
+    )
+    $script:profileInstallerPhase = $Phase
+    $script:profileInstallerProcessExitCode = $ProcessExitCode
+    $script:profileInstallerStatusWritten = Test-Path -LiteralPath $StatusPath -PathType Leaf
+    $script:profileInstallerStandardErrorBytes = if (
+        Test-Path -LiteralPath $StandardErrorPath -PathType Leaf
+    ) {
+        [long] (Get-Item -LiteralPath $StandardErrorPath -Force).Length
+    } else { 0 }
+    if (-not $script:profileInstallerStatusWritten) {
+        return
+    }
+    $status = Get-Content -LiteralPath $StatusPath -Raw | ConvertFrom-Json
+    $names = @($status.PSObject.Properties.Name)
+    $script:profileInstallerStatusExitCode = if ($names -contains 'exitCode') {
+        [int] $status.exitCode
+    } else { -1 }
+    $script:profileInstallerOutcome = if ($names -contains 'outcome') {
+        [string] $status.outcome
+    } else { '' }
+    $script:profileInstallerFailedStep = if ($names -contains 'failedStep') {
+        [string] $status.failedStep
+    } else { '' }
+    $script:profileInstallerErrorType = if ($names -contains 'errorType') {
+        [string] $status.errorType
+    } else { '' }
+    $script:profileInstallerRollbackAttempted = if ($names -contains 'rollbackAttempted') {
+        [bool] $status.rollbackAttempted
+    } else { $false }
+    $script:profileInstallerRollbackSucceeded = if ($names -contains 'rollbackSucceeded') {
+        [bool] $status.rollbackSucceeded
+    } else { $false }
+}
+
 function Invoke-ProfileInstallerScenario {
     $scenarioRoot = Join-Path $script:scratchRoot 'profile-installer-positive'
     $targetRoot = Join-Path $scenarioRoot 'target'
@@ -255,6 +305,7 @@ function Invoke-ProfileInstallerScenario {
     $secretPath = Join-Path $scenarioRoot 'approval-secret.json'
     $evidencePath = Join-Path $scenarioRoot 'qualification.json'
     $statusPath = Join-Path $scenarioRoot 'profile-status.json'
+    $standardErrorPath = Join-Path $scenarioRoot 'profile-standard-error.local.txt'
     Copy-Item -LiteralPath $SyntheticAdapterPath -Destination $targetAdapterPath
     Copy-Item -LiteralPath $SyntheticResealPath -Destination $targetResealPath
     Write-Json -Path $adapterPolicyPath -Value ([ordered]@{
@@ -312,8 +363,13 @@ function Invoke-ProfileInstallerScenario {
         '-StatusPath', $statusPath
     )
 
-    & $powerShell @commonArguments '-PreflightOnly' | Out-Null
-    if ([int] $LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $statusPath -PathType Leaf)) {
+    $script:profileInstallerPhase = 'preflight_process'
+    & $powerShell @commonArguments '-PreflightOnly' 2> $standardErrorPath | Out-Null
+    $processExitCode = [int] $LASTEXITCODE
+    Update-ProfileInstallerDiagnostics -Phase 'preflight_result' `
+        -ProcessExitCode $processExitCode -StatusPath $statusPath `
+        -StandardErrorPath $standardErrorPath
+    if ($processExitCode -ne 0 -or -not $script:profileInstallerStatusWritten) {
         throw [InvalidOperationException]::new('Approval profile scratch preflight failed.')
     }
     $preflight = Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
@@ -322,8 +378,15 @@ function Invoke-ProfileInstallerScenario {
         throw [InvalidOperationException]::new('Approval profile scratch preflight mutated state.')
     }
 
-    & $powerShell @commonArguments | Out-Null
-    if ([int] $LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $statusPath -PathType Leaf)) {
+    Remove-Item -LiteralPath $statusPath -Force
+    Remove-Item -LiteralPath $standardErrorPath -Force -ErrorAction SilentlyContinue
+    $script:profileInstallerPhase = 'install_process'
+    & $powerShell @commonArguments 2> $standardErrorPath | Out-Null
+    $processExitCode = [int] $LASTEXITCODE
+    Update-ProfileInstallerDiagnostics -Phase 'install_result' `
+        -ProcessExitCode $processExitCode -StatusPath $statusPath `
+        -StandardErrorPath $standardErrorPath
+    if ($processExitCode -ne 0 -or -not $script:profileInstallerStatusWritten) {
         throw [InvalidOperationException]::new('Approval profile scratch installation failed.')
     }
     $installed = Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
@@ -333,8 +396,15 @@ function Invoke-ProfileInstallerScenario {
         throw [InvalidOperationException]::new('Approval profile scratch installation status differs.')
     }
 
-    & $powerShell @commonArguments '-PreflightOnly' | Out-Null
-    if ([int] $LASTEXITCODE -ne 0) {
+    Remove-Item -LiteralPath $statusPath -Force
+    Remove-Item -LiteralPath $standardErrorPath -Force -ErrorAction SilentlyContinue
+    $script:profileInstallerPhase = 'postflight_process'
+    & $powerShell @commonArguments '-PreflightOnly' 2> $standardErrorPath | Out-Null
+    $processExitCode = [int] $LASTEXITCODE
+    Update-ProfileInstallerDiagnostics -Phase 'postflight_result' `
+        -ProcessExitCode $processExitCode -StatusPath $statusPath `
+        -StandardErrorPath $standardErrorPath
+    if ($processExitCode -ne 0) {
         throw [InvalidOperationException]::new('Installed approval profile scratch preflight failed.')
     }
     $postflight = Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
@@ -622,6 +692,18 @@ function Write-FinalStatus {
         serviceRestartAttempted = $false
         failedCheck = if ($Outcome -ceq 'passed') { '' } else { $script:failedCheck }
         errorType = $ErrorType
+    }
+    if ($Outcome -cne 'passed') {
+        $record['profileInstallerPhase'] = $script:profileInstallerPhase
+        $record['profileInstallerProcessExitCode'] = $script:profileInstallerProcessExitCode
+        $record['profileInstallerStatusWritten'] = [bool] $script:profileInstallerStatusWritten
+        $record['profileInstallerStatusExitCode'] = $script:profileInstallerStatusExitCode
+        $record['profileInstallerOutcome'] = $script:profileInstallerOutcome
+        $record['profileInstallerFailedStep'] = $script:profileInstallerFailedStep
+        $record['profileInstallerErrorType'] = $script:profileInstallerErrorType
+        $record['profileInstallerRollbackAttempted'] = [bool] $script:profileInstallerRollbackAttempted
+        $record['profileInstallerRollbackSucceeded'] = [bool] $script:profileInstallerRollbackSucceeded
+        $record['profileInstallerStandardErrorBytes'] = $script:profileInstallerStandardErrorBytes
     }
     Write-Json -Path $StatusPath -Value $record
 }

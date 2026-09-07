@@ -108,6 +108,9 @@ $qualificationFragments = [
     'productionMutationAttempted = $false',
     'serviceRestartAttempted = $false',
     'scratchCleanupSucceeded',
+    'Update-ProfileInstallerDiagnostics',
+    "'profileInstallerFailedStep'",
+    "if (\$Outcome -cne 'passed')",
     'positiveCaseCount -ne 6',
     'negativeCaseCount -ne 8',
 ];
