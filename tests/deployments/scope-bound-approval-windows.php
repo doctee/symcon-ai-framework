@@ -147,6 +147,10 @@ assertScopeBoundApprovalWindows(
     'Approval Windows qualification contains an unsafe dynamic property access.'
 );
 assertScopeBoundApprovalWindows(
+    !str_contains($qualification, '.PSObject.Properties.Name'),
+    'Approval Windows qualification contains an unsafe aggregate property-name access.'
+);
+assertScopeBoundApprovalWindows(
     str_contains($qualification, 'Invoke-ProfileInstallerScenario')
         && str_contains($qualification, "'-File', \$ProfileInitializerPath")
         && str_contains($qualification, "'-PreflightOnly'")

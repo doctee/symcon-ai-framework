@@ -249,7 +249,9 @@ function Assert-ExactProperties {
     if ($null -eq $Value -or $Value -is [Array] -or $Value -is [string] -or $Value -is [ValueType]) {
         throw [InvalidOperationException]::new($Label + ' must be an object.')
     }
-    $actual = @($Value.PSObject.Properties.Name | Sort-Object)
+    $actual = @(
+        $Value.PSObject.Properties | ForEach-Object { [string] $_.Name } | Sort-Object
+    )
     $expected = @($Names | Sort-Object)
     if ($actual.Count -ne $expected.Count) {
         throw [InvalidOperationException]::new($Label + ' fields differ.')
@@ -435,7 +437,9 @@ function Assert-RunningStatePhaseOrder {
         throw [InvalidOperationException]::new('Approval state phase order is invalid.')
     }
 
-    $evidenceNames = @($script:state.evidence.PSObject.Properties.Name)
+    $evidenceNames = @(
+        $script:state.evidence.PSObject.Properties | ForEach-Object { [string] $_.Name }
+    )
     if ($evidenceNames.Count -ne $completed) {
         throw [InvalidOperationException]::new('Approval state evidence count is invalid.')
     }

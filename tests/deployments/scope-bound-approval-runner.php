@@ -101,6 +101,10 @@ assertScopeBoundApprovalRunner(
     'Approval runner contains a Windows PowerShell 5.1-unsafe dynamic property access.'
 );
 assertScopeBoundApprovalRunner(
+    !str_contains($runner, '.PSObject.Properties.Name'),
+    'Approval runner contains an unsafe aggregate property-name access.'
+);
+assertScopeBoundApprovalRunner(
     !str_contains($runner, '$env:SSH_ORIGINAL_COMMAND')
         && !str_contains($runner, 'Invoke-Expression')
         && !str_contains($runner, 'errorMessage')

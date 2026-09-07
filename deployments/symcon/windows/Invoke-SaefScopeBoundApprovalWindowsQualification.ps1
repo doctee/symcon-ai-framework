@@ -298,7 +298,7 @@ function Update-ProfileInstallerDiagnostics {
         return
     }
     $status = Get-Content -LiteralPath $StatusPath -Raw | ConvertFrom-Json
-    $names = @($status.PSObject.Properties.Name)
+    $names = @($status.PSObject.Properties | ForEach-Object { [string] $_.Name })
     $script:profileInstallerStatusExitCode = if ($names -contains 'exitCode') {
         [int] $status.exitCode
     } else { -1 }
@@ -339,7 +339,7 @@ function Update-RunnerScenarioDiagnostics {
         return
     }
     $status = Get-Content -LiteralPath $StatusPath -Raw | ConvertFrom-Json
-    $names = @($status.PSObject.Properties.Name)
+    $names = @($status.PSObject.Properties | ForEach-Object { [string] $_.Name })
     $script:runnerStatusExitCode = if ($names -contains 'exitCode') {
         [int] $status.exitCode
     } else { -1 }
