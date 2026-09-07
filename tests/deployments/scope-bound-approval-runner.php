@@ -40,6 +40,8 @@ foreach (
         "'Global\\SAEF.DeploymentApproval'",
         'ApprovalEnvelopeBase64Url',
         'ConvertTo-CanonicalJson',
+        '$Value -is [Collections.IDictionary]',
+        'ConvertTo-CanonicalValue -Value $dictionary[$name]',
         'Get-HmacSha256',
         'Test-FixedTimeTextEquals',
         'Assert-ExactProperties',

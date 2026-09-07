@@ -130,6 +130,14 @@ function ConvertTo-CanonicalValue {
     if ($null -eq $Value -or $Value -is [string] -or $Value -is [ValueType]) {
         return $Value
     }
+    if ($Value -is [Collections.IDictionary]) {
+        $dictionary = [Collections.IDictionary] $Value
+        $result = [ordered]@{}
+        foreach ($name in @($dictionary.Keys | ForEach-Object { [string] $_ } | Sort-Object)) {
+            $result[$name] = ConvertTo-CanonicalValue -Value $dictionary[$name]
+        }
+        return $result
+    }
     $result = [ordered]@{}
     foreach ($name in @($Value.PSObject.Properties.Name | Sort-Object)) {
         $result[$name] = ConvertTo-CanonicalValue -Value $Value.$name

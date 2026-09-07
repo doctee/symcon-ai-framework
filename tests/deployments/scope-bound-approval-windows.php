@@ -90,6 +90,8 @@ assertScopeBoundApprovalWindows(
 
 $qualificationFragments = [
     '[Management.Automation.Language.Parser]::ParseFile',
+    '$Value -is [Collections.IDictionary]',
+    'ConvertTo-CanonicalValue -Value $dictionary[$name]',
     "'base_positive'",
     "'profile_installer_positive'",
     "'replay_negative'",
