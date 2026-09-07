@@ -74,6 +74,12 @@ $script:runnerStatusMutationAttempted = $false
 $script:runnerStatusRollbackAttempted = $false
 $script:runnerStatusRollbackSucceeded = $false
 $script:runnerStandardErrorBytes = 0
+$script:runnerErrorType = ''
+$script:runnerErrorId = ''
+$script:runnerErrorCategory = ''
+$script:runnerErrorLine = 0
+$script:runnerErrorColumn = 0
+$script:runnerErrorCommand = ''
 $script:finalErrorId = ''
 $script:finalErrorCategory = ''
 $script:finalErrorLine = 0
@@ -354,6 +360,24 @@ function Update-RunnerScenarioDiagnostics {
     $script:runnerStatusRollbackSucceeded = if ($names -contains 'rollbackSucceeded') {
         [bool] $status.rollbackSucceeded
     } else { $false }
+    $script:runnerErrorType = if ($names -contains 'errorType') {
+        [string] $status.errorType
+    } else { '' }
+    $script:runnerErrorId = if ($names -contains 'errorId') {
+        [string] $status.errorId
+    } else { '' }
+    $script:runnerErrorCategory = if ($names -contains 'errorCategory') {
+        [string] $status.errorCategory
+    } else { '' }
+    $script:runnerErrorLine = if ($names -contains 'errorLine') {
+        [int] $status.errorLine
+    } else { 0 }
+    $script:runnerErrorColumn = if ($names -contains 'errorColumn') {
+        [int] $status.errorColumn
+    } else { 0 }
+    $script:runnerErrorCommand = if ($names -contains 'errorCommand') {
+        [string] $status.errorCommand
+    } else { '' }
 }
 
 function Invoke-ProfileInstallerScenario {
@@ -517,6 +541,12 @@ function Invoke-RunnerScenario {
     $script:runnerStatusRollbackAttempted = $false
     $script:runnerStatusRollbackSucceeded = $false
     $script:runnerStandardErrorBytes = 0
+    $script:runnerErrorType = ''
+    $script:runnerErrorId = ''
+    $script:runnerErrorCategory = ''
+    $script:runnerErrorLine = 0
+    $script:runnerErrorColumn = 0
+    $script:runnerErrorCommand = ''
     $scenarioRoot = Join-Path $script:scratchRoot $Label
     [IO.Directory]::CreateDirectory($scenarioRoot) | Out-Null
     Set-ScratchAcl -Path $scenarioRoot
@@ -808,6 +838,12 @@ function Write-FinalStatus {
         $record['runnerStatusRollbackAttempted'] = [bool] $script:runnerStatusRollbackAttempted
         $record['runnerStatusRollbackSucceeded'] = [bool] $script:runnerStatusRollbackSucceeded
         $record['runnerStandardErrorBytes'] = $script:runnerStandardErrorBytes
+        $record['runnerErrorType'] = $script:runnerErrorType
+        $record['runnerErrorId'] = $script:runnerErrorId
+        $record['runnerErrorCategory'] = $script:runnerErrorCategory
+        $record['runnerErrorLine'] = $script:runnerErrorLine
+        $record['runnerErrorColumn'] = $script:runnerErrorColumn
+        $record['runnerErrorCommand'] = $script:runnerErrorCommand
         $record['errorId'] = $script:finalErrorId
         $record['errorCategory'] = $script:finalErrorCategory
         $record['errorLine'] = $script:finalErrorLine

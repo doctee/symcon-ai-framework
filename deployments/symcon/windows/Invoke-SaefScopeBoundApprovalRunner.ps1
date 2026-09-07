@@ -79,6 +79,12 @@ $script:statePath = ''
 $script:stateDirectory = ''
 $script:terminalReached = $false
 $script:stateClaimed = $false
+$script:errorType = ''
+$script:errorId = ''
+$script:errorCategory = ''
+$script:errorLine = 0
+$script:errorColumn = 0
+$script:errorCommand = ''
 
 function Test-HexSha256 {
     param([Parameter(Mandatory = $true)][string] $Value)
@@ -98,6 +104,33 @@ function Test-FixedTimeTextEquals {
         $difference = $difference -bor ([int] $Left[$index] -bxor [int] $Right[$index])
     }
     return $difference -eq 0
+}
+
+function Set-FailureDiagnostics {
+    param([Parameter(Mandatory = $true)] $ErrorRecord)
+    try {
+        $script:errorType = [string] $ErrorRecord.Exception.GetType().FullName
+        $script:errorId = [string] $ErrorRecord.FullyQualifiedErrorId
+        $script:errorCategory = [string] $ErrorRecord.CategoryInfo.Category
+        $script:errorLine = [int] $ErrorRecord.InvocationInfo.ScriptLineNumber
+        $script:errorColumn = [int] $ErrorRecord.InvocationInfo.OffsetInLine
+        $script:errorCommand = if ($null -ne $ErrorRecord.InvocationInfo.MyCommand) {
+            [string] $ErrorRecord.InvocationInfo.MyCommand.Name
+        } else { '' }
+        if ($script:errorId.Length -gt 256) {
+            $script:errorId = $script:errorId.Substring(0, 256)
+        }
+        if ($script:errorCommand.Length -gt 128) {
+            $script:errorCommand = $script:errorCommand.Substring(0, 128)
+        }
+    } catch {
+        $script:errorType = 'System.Management.Automation.RuntimeException'
+        $script:errorId = 'failure_diagnostics'
+        $script:errorCategory = 'InvalidOperation'
+        $script:errorLine = 0
+        $script:errorColumn = 0
+        $script:errorCommand = ''
+    }
 }
 
 function Get-Sha256 {
@@ -809,6 +842,12 @@ function Write-RunnerStatus {
         rollbackAttempted = [bool] $script:rollbackAttempted
         rollbackSucceeded = [bool] $script:rollbackSucceeded
         failureCode = $script:failureCode
+        errorType = $script:errorType
+        errorId = $script:errorId
+        errorCategory = $script:errorCategory
+        errorLine = $script:errorLine
+        errorColumn = $script:errorColumn
+        errorCommand = $script:errorCommand
     }
     Write-AtomicJson -Path $StatusPath -Value $status
 }
@@ -1005,11 +1044,13 @@ try {
         throw [InvalidOperationException]::new('Another approved deployment is active.')
     }
 
-    $script:failureCode = 'claim'
+    $script:failureCode = 'claim_paths'
     $script:statePath = Join-Path ([string] $script:policy.approvalStateRoot) ($script:planSha256 + '.json')
     $script:stateDirectory = Join-Path ([string] $script:policy.approvalStateRoot) $script:planSha256
     $nonceSha256 = Get-TextSha256 -Text ([string] $script:approval.nonce)
+    $script:failureCode = 'claim_state_lookup'
     if (Test-Path -LiteralPath $script:statePath -PathType Leaf) {
+        $script:failureCode = 'claim_state_read'
         $script:state = Read-SignedState
         if ([string] $script:state.planSha256 -cne $script:planSha256 -or
             [string] $script:state.targetId -cne [string] $script:plan.targetId -or
@@ -1025,6 +1066,7 @@ try {
         Assert-ProtectedPathAcl -Path $script:stateDirectory
         $script:stateClaimed = $true
     } else {
+        $script:failureCode = 'claim_capacity'
         $stateFiles = @(Get-ChildItem -LiteralPath ([string] $script:policy.approvalStateRoot) `
             -File -Filter '*.json' -Force)
         if ($stateFiles.Count -ge [int] $script:policy.maximumStateFiles) {
@@ -1033,6 +1075,7 @@ try {
         if (Test-Path -LiteralPath $script:stateDirectory) {
             throw [InvalidOperationException]::new('Approval state directory exists without a claim.')
         }
+        $script:failureCode = 'claim_directory'
         [IO.Directory]::CreateDirectory($script:stateDirectory) | Out-Null
         Assert-ProtectedPathAcl -Path $script:stateDirectory
         $script:state = [ordered]@{
@@ -1052,9 +1095,11 @@ try {
             createdUtc = [DateTime]::UtcNow.ToString('o')
             updatedUtc = [DateTime]::UtcNow.ToString('o')
         }
+        $script:failureCode = 'claim_state_write'
         Write-SignedState
         $script:stateClaimed = $true
     }
+    $script:failureCode = 'claim_phase_order'
     if ([string] $script:state.phaseState -ceq 'started' -and
         [string] $script:state.phase -ceq 'rollback') {
         $script:state['phase'] = 'manual_recovery'
@@ -1096,6 +1141,7 @@ try {
         $script:finalOutcome = 'activated'
     }
 } catch {
+    Set-FailureDiagnostics -ErrorRecord $_
     if ($script:stateClaimed -and $script:activationAttempted -and
         -not [bool] $script:state.activationCompleted) {
         try {

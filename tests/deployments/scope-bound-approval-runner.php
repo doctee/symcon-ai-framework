@@ -49,6 +49,9 @@ foreach (
         'Approval state capacity is exhausted.',
         'Approval proof has already reached a terminal outcome.',
         'Approval plan was claimed by another proof.',
+        'Set-FailureDiagnostics -ErrorRecord $_',
+        "\$script:failureCode = 'claim_state_write'",
+        'errorLine = $script:errorLine',
         "@('qualify', 'stage', 'preflight', 'activate', 'postflight', 'rollback')",
         "'final_postflight'",
         'Reconcile-InterruptedPhase',
@@ -95,6 +98,7 @@ assertScopeBoundApprovalRunner(
 assertScopeBoundApprovalRunner(
     !str_contains($runner, '$env:SSH_ORIGINAL_COMMAND')
         && !str_contains($runner, 'Invoke-Expression')
+        && !str_contains($runner, 'errorMessage')
         && !str_contains($runner, 'Restart-Service')
         && !str_contains($runner, 'Start-Service')
         && !str_contains($runner, 'Stop-Service'),
