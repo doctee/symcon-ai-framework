@@ -109,6 +109,7 @@ $qualificationFragments = [
     'serviceRestartAttempted = $false',
     'scratchCleanupSucceeded',
     'Update-ProfileInstallerDiagnostics',
+    '[AllowEmptyString()][string] $ResealSha256',
     "'profileInstallerFailedStep'",
     "if (\$Outcome -cne 'passed')",
     'positiveCaseCount -ne 6',

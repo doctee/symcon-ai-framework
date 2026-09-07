@@ -224,7 +224,7 @@ function New-ApprovalEnvelope {
 function New-QualificationEvidence {
     param(
         [Parameter(Mandatory = $true)][string] $AdapterSha256,
-        [Parameter(Mandatory = $true)][string] $ResealSha256
+        [Parameter(Mandatory = $true)][AllowEmptyString()][string] $ResealSha256
     )
     return [ordered]@{
         formatVersion = 1
