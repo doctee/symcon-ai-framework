@@ -77,6 +77,9 @@
             "@php tests/deployments/owntracks-position-map-adapter-state-migration.php",
             "@php tests/deployments/owntracks-position-map-active-identity-reseal.php"
         ],
+        "test:deployment-approval": [
+            "@php tests/deployments/scope-bound-approval.php"
+        ],
         "test:runtime-source-mirror": [
             "@php tests/deployments/runtime-source-mirror.php"
         ],
@@ -223,6 +226,7 @@
             "@test:control-light-fileset",
             "@test:deployment-restart",
             "@test:deployment-channel",
+            "@test:deployment-approval",
             "@test:runtime-source-mirror",
             "@test:runtime-health-probe",
             "@test:helpers",

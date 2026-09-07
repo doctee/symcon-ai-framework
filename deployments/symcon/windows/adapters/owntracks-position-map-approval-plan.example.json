@@ -1,0 +1,39 @@
+{
+    "formatVersion": 1,
+    "channelVersion": 8,
+    "deploymentId": "saef-owntracks-position-map-example-01",
+    "targetId": "owntracks-position-map",
+    "adapterProfile": "saef-owntracks-position-map-v1",
+    "qualificationProfile": "saef-windows-powershell-5.1-owntracks-v1",
+    "postflightProfile": "saef-owntracks-position-map-health-v1",
+    "package": {
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "bytes": 1
+    },
+    "operations": [
+        "qualify",
+        "stage",
+        "preflight",
+        "activate",
+        "postflight",
+        "reseal",
+        "final_postflight",
+        "rollback"
+    ],
+    "expectedBaselineIdentities": {
+        "activePackageSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "adapterPolicySha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "channelPolicySha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "recoverySourcePackageSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "resealPlanSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "channelHostBindingSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "riskScope": {
+        "allowlistChange": false,
+        "serviceRestart": false,
+        "providerContact": false,
+        "publication": false,
+        "retentionDeletion": false,
+        "activeIdentityReseal": true
+    }
+}

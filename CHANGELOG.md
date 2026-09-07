@@ -11,6 +11,10 @@ This project adheres to Semantic Versioning.
 
 ### Security
 
+- Added a scope-bound, short-lived, one-use HMAC approval contract for channel
+  version 8. It binds plan, target, adapter, operations, starting identities,
+  user and host while preserving fresh preflight, lock ordering, independent
+  postflight, automatic rollback and manual-recovery boundaries.
 - Activated the OwnTracks position-map security correction after targeted
   Windows ACL hardening, with bounded package transfer, quiescent atomic switch,
   fresh negative-request and one-tile transport acceptance, independent
@@ -21,6 +25,10 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added an execution-neutral **Jetzt anwenden** coordinator, OwnTracks
+  reference plan, replay/drift/parallelism/rollback regressions, threat model
+  and a separately gated cross-root standalone-module retention specification.
+  No gateway verb, live target authority or deletion capability was added.
 - Added the repository-only OwnTracks Position Map pilot adapter for deployment
   channel version 8, with exact ownership/configuration/package pins, bounded
   five-lock quiescence, format-2 state preservation, targeted Module Control
@@ -48,6 +56,9 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Made the Composer toolchain ownership check part of every `composer check`,
+  aligned the root lock to PHP_CodeSniffer 3.13.6 and documented why historical
+  worktree locks are revision drift rather than separate Composer projects.
 - Completed the Windows parser, protected-ACL, real-negotiation and guarded live
   installation gates for restricted deployment channel version 8. Independent
   postflight confirmed both deployment kinds and the unchanged five-command

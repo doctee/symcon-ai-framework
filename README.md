@@ -63,6 +63,11 @@ Important current artifacts include:
 - `project/AI_PROJECT.md`
 - `project/SYMCON_MCP_SCRIPT_READBACK.md`
 - `project/WORKSTREAM_COORDINATION.md`
+- `project/COMPOSER_TOOLCHAIN_OWNERSHIP.md`
+- `project/SCOPE_BOUND_DEPLOYMENT_APPROVAL.md`
+- `project/CHANNEL_V8_ONE_CLICK_THREAT_MODEL.md`
+- `project/CHANNEL_V8_ONE_CLICK_WINDOWS_QUALIFICATION.md`
+- `project/STANDALONE_MODULE_CROSS_ROOT_RETENTION.md`
 - `project/SYSTEM_FUNCTIONS_CANDIDATE_INVENTORY.md`
 - `project/SYSTEM_FUNCTIONS_MIGRATION_WAVE_1.md`
 - `project/SYSTEM_FUNCTIONS_PILOT_DEPLOYMENT_PLAN.md`
@@ -98,6 +103,7 @@ Important current artifacts include:
 - `adr/ADR-0006-managed-symcon-runtime-mirrors.md`
 - `adr/ADR-0007-use-restricted-windows-deployment-channel.md`
 - `adr/ADR-0009-use-target-bound-standalone-module-deployment.md`
+- `adr/ADR-0010-use-scope-bound-one-click-deployment-approval.md`
 - `deployments/symcon/windows/Invoke-SaefDeploymentGateway.ps1`
 - `deployments/symcon/windows/Invoke-SaefRuntimeMirror.ps1`
 - `deployments/symcon/windows/SaefRuntimeSourceMirror.php`

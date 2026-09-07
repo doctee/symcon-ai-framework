@@ -137,6 +137,19 @@ The gates remain distinct:
 6. independent postflight; and
 7. separately authorized retention cleanup.
 
+A scope-bound coordinator may present gates 1 through 6 as one conscious
+**Jetzt anwenden** action only when its short-lived proof binds the complete
+plan, target, adapter, operation sequence, starting identities, user and host.
+The internal phases, fresh preflight, lock order, independent postflight and
+automatic rollback remain distinct and observable. See
+`project/SCOPE_BOUND_DEPLOYMENT_APPROVAL.md`.
+
+Allowlist changes, service restarts, provider contact, publication and
+retention deletion are outside that approval. Standalone-module artifacts that
+span adapter state, channel deployment state and managed filesets remain
+protected until `project/STANDALONE_MODULE_CROSS_ROOT_RETENTION.md` is
+implemented and separately qualified.
+
 One approval must name the exact package and phase. Channel installation does
 not authorize module activation. Module activation does not authorize
 publication, cache deletion, state reset, rollback-artifact removal or channel

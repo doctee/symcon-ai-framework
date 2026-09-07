@@ -326,6 +326,35 @@ mapping. Deployment-only or fileset-only cleanup is intentionally unsupported.
 Standalone-module candidates are also rejected here: their target adapter must
 provide a separate state-aware retention workflow before any deletion gate.
 
+### Scope-bound one-click approval
+
+`tools/deployment/ScopeBoundApproval.php` provides the platform-neutral core
+for presenting one exact reviewed deployment as **Jetzt anwenden**. The public
+shape is shown in `deployment-approval-plan.example.json`; the OwnTracks
+composition with active-identity reseal is shown in
+`adapters/owntracks-position-map-approval-plan.example.json`. Both examples use
+non-runnable placeholder identities.
+
+The approval does not add a gateway verb. It binds plan, target, adapter,
+ordered phases, starting identities, expiry, nonce, user and host with an HMAC
+whose secret stays in private protected storage. A fixed runner must map only
+the known phase names to installed, hash-pinned operations. Read-only preflight
+still immediately precedes activation, target locks and checks remain in the
+adapter, postflight remains independent and any potentially mutating failure
+must prove byte-exact rollback or stop for manual recovery.
+
+The repository implementation is not an installed Windows runner. Before live
+use, exact runner bytes need a separate Windows PowerShell 5.1 parser, ACL,
+reparse, lock, interruption and rollback qualification and a separate
+installation gate. The existing OwnTracks reseal also needs a fixed
+coordinator-aware entry point so it does not reacquire a channel mutex already
+owned by the sequence.
+
+Allowlist changes, OpenSSH or Symcon restarts, provider contact, publication
+and retention deletion remain outside one-click approval. Cross-root deletion
+is specified, but still disabled, in
+`project/STANDALONE_MODULE_CROSS_ROOT_RETENTION.md`.
+
 ### OwnTracks Position Map pilot adapter
 
 The first repository-only target profile is documented in
