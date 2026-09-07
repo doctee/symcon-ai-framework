@@ -1,7 +1,7 @@
 # Scope-Bound Deployment Approval
 
-Status: Stable Draft 1.0, repository implementation complete; Windows and live
-integration remain separately gated
+Status: Stable Draft 1.0, repository implementation complete; exact Windows
+qualification, installation and live use remain separately gated
 
 ## Purpose
 
@@ -21,8 +21,8 @@ The design reuses these existing responsibilities:
 
 | Component | Existing responsibility | One-click treatment |
 | --- | --- | --- |
-| `Invoke-SaefDeploymentGateway.ps1` | five-verb forced-command validation, staging, dispatch and channel mutex | unchanged; never receives arbitrary coordinator commands |
-| `saef-deploy` | POSIX transport wrapper for the five verbs | retained as transport, not treated as an approval ledger |
+| `Invoke-SaefDeploymentGateway.ps1` | five-verb forced-command validation, staging, dispatch and channel mutex | retains five verbs; `activate` accepts one bounded approval envelope and invokes only the installed pinned runner |
+| `saef-deploy` | POSIX transport wrapper for the five verbs | transports the bounded approval envelope without becoming an approval ledger |
 | `Invoke-SaefSymconRestart.ps1` | bounded service restart and bootstrap rollback | remains a separately approved high-risk profile |
 | runtime mirror and health probe | bounded post-restart compatibility checks | retained; not a substitute for target postflight |
 | generic deployment retention | paired runtime-fileset cleanup | still rejects standalone-module deletion |
@@ -33,9 +33,12 @@ The design reuses these existing responsibilities:
 | OwnTracks adapter retention | adapter-transaction plan/apply | remains separate and cannot delete channel roots |
 | module fileset/package builders | deterministic candidate bytes and identities | supply the immutable package inputs |
 
-No generic confirmation ledger or crash-aware coordinator existed before this
-workstream. Extending the transport wrapper alone would duplicate state and
-could not resolve postflight rollback or reseal lock ownership.
+The new `Invoke-SaefScopeBoundApprovalRunner.ps1` owns the Windows-side
+crash-aware state machine. `Initialize-SaefScopeBoundApprovalProfile.ps1`
+installs its exact qualified bytes, private policy, secret and bounded state
+root. `tools/apply-approved-symcon-deployment.php` prepares and applies the
+reviewed plan from POSIX systems. These components compose the existing
+gateway and target adapters; none creates a general command channel.
 
 ## Plan contract
 
@@ -99,14 +102,20 @@ apply and remains available after a lost client response.
 
 If a process ends after a phase was persisted as started, the same still-valid
 approval may resume only through `inspect`. Inspection may prove that the step
-completed or that rollback completed. An uncertain result stops for manual
-recovery. The coordinator never repeats an uncertain mutation.
+completed, that rollback completed or that activation did not begin. The last
+case preserves the fresh gateway preflight and permits one delivery retry with
+the identical envelope. An uncertain result stops for manual recovery. The
+coordinator never repeats an uncertain mutation. A persisted `rollback`
+`started` state is always manual recovery; rollback is not retried after a
+process boundary.
 
 ## Runner boundary
 
-The runner callable receives only a fixed phase name and normalized context.
-Its implementation must be installed and hash-pinned independently. On
-Windows, each profile must pass PowerShell 5.1 parsing and synthetic tests for:
+The installed runner receives only the server-controlled deployment, target
+and policy paths plus the bounded approval envelope. It maps the fixed plan
+phases to the hash-pinned target adapter, optional reseal script and read-only
+qualification evidence. On Windows, each exact profile must pass PowerShell
+5.1 parsing and synthetic tests for:
 
 - exact policy, package and plan identities;
 - ACL protection and reparse-point rejection;
@@ -117,22 +126,53 @@ Windows, each profile must pass PowerShell 5.1 parsing and synthetic tests for:
 - interrupted activation, reseal and rollback inspection; and
 - bounded private status output.
 
-The runner must use the existing channel verbs. A server-side integration may
-own the channel mutex across the sequence, but it must call only installed
-profiles and must not reacquire the same mutex from the reseal helper. The
-existing OwnTracks reseal script therefore needs a coordinator-aware fixed
-entry point before it can be enabled in this sequence.
+The runner uses the existing channel verbs. The gateway owns the channel mutex
+across the sequence and calls only installed profiles. The OwnTracks reseal
+script has a fixed coordinator-aware mode that validates inherited lock
+ownership instead of reacquiring that mutex.
 
 The exact offline gate and machine-readable result contract are defined in
-`project/CHANNEL_V8_ONE_CLICK_WINDOWS_QUALIFICATION.md`. No Windows
-qualification or installation is implied by the repository tests.
+`project/CHANNEL_V8_ONE_CLICK_WINDOWS_QUALIFICATION.md`. The repository gate
+checks the contract, but does not substitute for executing the exact sources
+under Windows PowerShell 5.1.
+
+## Operator flow
+
+Preparation stages the inactive package, runs the existing read-only preflight
+and saves the server-generated canonical plan with owner-only permissions:
+
+```console
+php tools/apply-approved-symcon-deployment.php \
+  --ssh-alias=<private-alias> \
+  --package=<private-package.zip> \
+  --prepare-plan=<review-plan.local.json>
+```
+
+After review, one exact confirmation performs a fresh preflight, compares its
+plan byte-semantically, creates the short-lived proof, requests approved
+activation and performs independent status readback:
+
+```console
+php tools/apply-approved-symcon-deployment.php \
+  --ssh-alias=<private-alias> \
+  --package=<private-package.zip> \
+  --plan=<review-plan.local.json> \
+  --secret-record=<approval-secret.local.json> \
+  --approver-identity=<private-identity> \
+  --execution-host-identity=<private-host-identity> \
+  --confirm="Jetzt anwenden"
+```
+
+The client never creates the reviewed plan itself and never restages during
+apply. It may redeliver the same envelope once only when status proves that no
+activation mutation began. All other uncertain outcomes stop closed.
 
 ## Reference mappings
 
 ### OwnTracks
 
 OwnTracks is the first reference pilot. Its plan binds target
-`owntracks-position-map`, adapter profile
+`saef-owntracks-position-map`, adapter profile
 `saef-owntracks-position-map-v1`, exact package and policies, the restart-
 recovery source identity when applicable, and the active-identity reseal. The
 existing adapter remains responsible for five runtime locks, quiescence,
@@ -177,9 +217,11 @@ this workstream.
 
 Channel version 8 and its five remote verbs are unchanged. Existing manual
 stage, preflight, activate, status, reseal and retention workflows continue to
-work. Targets opt in only after a runner profile and approval service have been
-qualified and installed. Existing target allowlists gain no authority from the
-repository implementation.
+work. The additional `activate <deployment-id> approved <envelope>` grammar is
+available only for a target whose server policy contains a complete,
+hash-pinned approval profile. Targets opt in only after exact qualification and
+installation. Existing target allowlists gain no authority from repository
+code alone.
 
 The one-click path requires new private approval state and secret ownership but
 does not migrate module bytes, policies or adapter state. An interrupted manual
@@ -187,15 +229,15 @@ workflow cannot be imported implicitly; a fresh plan and baseline are required.
 
 ## Remaining gates
 
-1. Review and repository integration of this contract.
-2. Implement the exact fixed Windows runner profile and post-success rollback
-   entry point without changing the gateway verb grammar.
-3. Run protected Windows PowerShell 5.1 parser, ACL, reparse, lock, crash and
-   rollback qualification for the exact runner bytes.
-4. Install an approval secret/state owner and runner profile under a separate
-   administrative gate.
-5. Materialize a private OwnTracks plan and run read-only preflight.
-6. Approve one OwnTracks **Jetzt anwenden** activation, then perform independent
-   MCP and browser acceptance without provider-expanding behavior.
-7. Decide retention separately under the cross-root contract.
-8. Repeat adapter and Windows qualification before MediaCarousel opt-in.
+1. Execute the protected Windows PowerShell 5.1 parser, ACL, reparse, lock,
+   crash and rollback qualification for the final exact source hashes.
+2. Install the qualified runner, secret, private state root and target policy
+   through the administrative profile installer.
+3. Materialize a private OwnTracks plan and complete read-only review and
+   preflight.
+4. Approve one OwnTracks **Jetzt anwenden** activation, then perform independent
+   Symcon MCP and browser acceptance without provider-expanding behavior.
+5. Implement and qualify cross-root retention in its separate workstream; no
+   deletion is authorized here.
+6. Repeat target-adapter and Windows qualification before MediaCarousel opts
+   in.

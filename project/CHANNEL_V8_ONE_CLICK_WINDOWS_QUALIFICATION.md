@@ -1,18 +1,19 @@
 # Channel v8 One-Click Windows Qualification
 
-Status: Required separate gate; no runner installed or qualified yet
+Status: Exact repository gate implemented; Windows PowerShell 5.1 execution
+and installation remain separate
 
 ## Scope
 
-This gate qualifies the exact future Windows runner profile that connects
-`SaefDeploymentApprovalCoordinator` to the existing channel-v8 and target
+`Invoke-SaefScopeBoundApprovalWindowsQualification.ps1` qualifies the exact
+runner profile that connects the channel-v8 gateway to existing target
 operations. It is an offline scratch qualification. It does not install the
 runner, change the channel policy, restart OpenSSH or Symcon, stage or activate
 a package, contact a provider, publish or delete retention artifacts.
 
-The gate may start only after the runner, all invoked fixed scripts and every
-example/private policy have recorded SHA-256 identities. A changed byte closes
-the result.
+The gate accepts exact expected hashes for the runner, target adapter and
+reseal script. It also parses the profile initializer and synthetic fixtures.
+A changed byte closes the result.
 
 ## Environment
 
@@ -26,16 +27,19 @@ the result.
 ## Required positive cases
 
 1. Parse every exact PowerShell source with zero parser errors.
-2. Validate exact source, policy, plan, target, adapter and package hashes.
-3. Execute qualify, stage, fresh preflight, activation, independent postflight
+2. Install the exact approval profile in protected scratch, verify its
+   least-authority directory and file ACLs, and prove a clean repeated
+   read-only preflight.
+3. Validate exact source, policy, plan, target, adapter and package hashes.
+4. Execute qualify, stage, fresh preflight, activation, independent postflight
    and terminal status in the fixed order.
-4. Execute the reseal sequence with channel-before-adapter lock ownership and
+5. Execute the reseal sequence with channel-before-adapter lock ownership and
    a final independent postflight.
-5. Prove byte-exact automatic rollback for failures after stage, activation,
+6. Prove byte-exact automatic rollback for failures after stage, activation,
    postflight and reseal.
-6. Reconcile a persisted started phase through read-only inspection without
+7. Reconcile a persisted started phase through read-only inspection without
    repeating an uncertain mutation.
-7. Return only bounded outcome, mutation, rollback and evidence-hash fields.
+8. Return only bounded outcome, mutation, rollback and evidence-hash fields.
 
 ## Required negative cases
 
@@ -65,9 +69,32 @@ case counts, scratch-mutation and cleanup facts, failed check, error type and
 whether any production mutation or service restart was attempted. Paths,
 accounts, SIDs, commands, credentials and exception messages are excluded.
 
-Pass requires exit code `0`, all positive and negative cases, successful
+Pass requires exit code `0`, six positive and eight negative scenario groups,
+successful
 scratch cleanup, `productionMutationAttempted: false` and
 `serviceRestartAttempted: false`.
+
+Run the exact reviewed sources from an elevated Windows PowerShell 5.1
+session:
+
+```powershell
+& .\Invoke-SaefScopeBoundApprovalWindowsQualification.ps1 `
+    -ExpectedRunnerSha256 '<reviewed-lowercase-sha256>' `
+    -ExpectedAdapterSha256 '<reviewed-lowercase-sha256>' `
+    -ExpectedResealSha256 '<reviewed-lowercase-sha256>'
+
+$LASTEXITCODE
+Get-Content .\scope-bound-approval-windows-qualification.local.json -Raw
+```
+
+The positive groups cover profile installation and ACL verification in scratch,
+the base sequence, reseal, safe pre-mutation resume and automatic rollback
+after postflight and reseal failure. The negative
+groups cover replay, expiry, wrong approver, wrong execution host, altered
+HMAC, baseline drift, forbidden risk scope and lock contention. Existing
+channel-v8 and target-adapter Windows
+qualifications continue to prove their own SSH, writer-lock, ACL and live
+adapter boundaries; this gate does not replace them.
 
 ## Later gates
 

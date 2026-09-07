@@ -640,6 +640,7 @@ $markerEnd
         runtimeMirrorName = $RuntimeMirrorName
         runtimeMirrorPosition = $RuntimeMirrorPosition
         standaloneModuleTargets = $installedStandaloneModuleTargets
+        deploymentUser = $normalizedDeploymentUser
         credentialPath = $credentialPath
         rpcUri = $RpcUri.AbsoluteUri
         serviceName = $ServiceName

@@ -119,6 +119,12 @@ The channel consists of:
   reconciler;
 - `SaefRuntimeHealthProbe.php`, the inert, hash-pinned Symcon compatibility
   sentinel executed around each activation restart;
+- `Invoke-SaefScopeBoundApprovalRunner.ps1`, the fixed crash-aware one-click
+  state machine for opted-in standalone targets;
+- `Initialize-SaefScopeBoundApprovalProfile.ps1`, the guarded installer for an
+  exact qualified runner, private secret, target policy and state root;
+- `Invoke-SaefScopeBoundApprovalWindowsQualification.ps1`, the protected
+  Windows PowerShell 5.1 qualification gate;
 - `Initialize-SaefDeploymentChannel.ps1`, the one-time guarded Windows
   bootstrap;
 - `deployment-channel-policy.example.json`, the public policy shape;
@@ -328,8 +334,11 @@ provide a separate state-aware retention workflow before any deletion gate.
 
 ### Scope-bound one-click approval
 
-`tools/deployment/ScopeBoundApproval.php` provides the platform-neutral core
-for presenting one exact reviewed deployment as **Jetzt anwenden**. The public
+`tools/deployment/ScopeBoundApproval.php` provides the platform-neutral proof
+contract for presenting one exact reviewed deployment as **Jetzt anwenden**.
+`tools/apply-approved-symcon-deployment.php` is the two-step POSIX controller,
+and `Invoke-SaefScopeBoundApprovalRunner.ps1` is the Windows-side state
+machine. The public
 shape is shown in `deployment-approval-plan.example.json`; the OwnTracks
 composition with active-identity reseal is shown in
 `adapters/owntracks-position-map-approval-plan.example.json`. Both examples use
@@ -343,12 +352,46 @@ still immediately precedes activation, target locks and checks remain in the
 adapter, postflight remains independent and any potentially mutating failure
 must prove byte-exact rollback or stop for manual recovery.
 
-The repository implementation is not an installed Windows runner. Before live
-use, exact runner bytes need a separate Windows PowerShell 5.1 parser, ACL,
-reparse, lock, interruption and rollback qualification and a separate
-installation gate. The existing OwnTracks reseal also needs a fixed
-coordinator-aware entry point so it does not reacquire a channel mutex already
-owned by the sequence.
+Preparation stages the package, runs the normal read-only preflight and writes
+the server-generated review plan to a new owner-only `*.local.json` file:
+
+```console
+php tools/apply-approved-symcon-deployment.php \
+  --ssh-alias=<private-alias> \
+  --package=<private-package.zip> \
+  --prepare-plan=<review-plan.local.json>
+```
+
+After that plan has been reviewed, apply requires the exact confirmation and
+does not stage again:
+
+```console
+php tools/apply-approved-symcon-deployment.php \
+  --ssh-alias=<private-alias> \
+  --package=<private-package.zip> \
+  --plan=<review-plan.local.json> \
+  --secret-record=<approval-secret.local.json> \
+  --approver-identity=<private-identity> \
+  --execution-host-identity=<private-host-identity> \
+  --confirm="Jetzt anwenden"
+```
+
+Apply obtains a fresh server plan, requires canonical equality with the
+reviewed plan, submits one short-lived proof and reads status independently.
+The same envelope is delivered once more only when server inspection proves
+that no activation mutation began. Replay after a claimed or terminal action,
+drift and every uncertain mutation fail closed.
+
+Before live use, the exact runner, OwnTracks adapter and reseal bytes need the
+separate Windows PowerShell 5.1 gate documented in
+`project/CHANNEL_V8_ONE_CLICK_WINDOWS_QUALIFICATION.md`. The profile installer
+then copies only those qualified bytes, applies protected ACLs, records bounded
+private policy and state, and updates only the existing target allowlist entry.
+It does not restart OpenSSH or Symcon and has byte-exact rollback for replaced
+files and ACLs. The deployment identity receives read/traverse access on the
+approval and target roots, read-only access to secret/policy/evidence files and
+full control only on its bounded state leaf, so directory permissions cannot
+be used to replace the HMAC secret.
 
 Allowlist changes, OpenSSH or Symcon restarts, provider contact, publication
 and retention deletion remain outside one-click approval. Cross-root deletion
@@ -365,7 +408,9 @@ configuration and active-package hashes, protected paths and the Module Control
 binding must be supplied only in excluded local configuration.
 
 The adapter composes the existing standalone package and status contract. It
-adds no remote verb. Its OwnTracks-specific boundary is exactly one pinned
+adds no remote verb. It now exposes fixed `postflight`, `inspect` and
+post-success `rollback` operations for the approval runner. Its
+OwnTracks-specific boundary is exactly one pinned
 module instance, five runtime lock files, zero active request leases, a fresh
 format-2 authoritative-state snapshot, one targeted `MC_ReloadModule` per
 activation/rollback direction and adapter-owned package/state retention.
@@ -552,7 +597,7 @@ Host saef-symcon
     IdentitiesOnly yes
 ```
 
-Then use the POSIX client:
+Then use the POSIX transport client for manual gates:
 
 ```console
 deployments/symcon/windows/saef-deploy saef-symcon probe
@@ -565,6 +610,10 @@ deployments/symcon/windows/saef-deploy saef-symcon status saef-example-release
 The client requires strict host-key checking, batch public-key authentication,
 no TTY and no forwarding. It computes the package SHA-256 locally and transfers
 ordered 4096-byte chunks through the bounded forced-command protocol.
+
+For an installed and qualified one-click profile, use the PHP controller shown
+under **Scope-bound one-click approval**. The transport command remains one of
+the same five gateway verbs.
 
 ### iPhone and iPad client
 
@@ -599,5 +648,7 @@ design.
 
 Possession of the SSH key grants access only to the five dispatcher commands;
 it does not itself authorize a production activation. SAEF agents must still
-obtain explicit approval before `activate`. Package creation, staging,
-preflight, activation and postflight remain distinct recorded gates.
+obtain explicit approval before `activate`. In one-click mode, one
+`Jetzt anwenden` action authorizes only the exact, short-lived, identity-bound
+plan; qualification, preflight, activation, postflight and rollback remain
+distinct recorded phases.

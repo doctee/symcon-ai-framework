@@ -78,7 +78,10 @@
             "@php tests/deployments/owntracks-position-map-active-identity-reseal.php"
         ],
         "test:deployment-approval": [
-            "@php tests/deployments/scope-bound-approval.php"
+            "@php tests/deployments/scope-bound-approval.php",
+            "@php tests/deployments/scope-bound-approval-runner.php",
+            "@php tests/deployments/approved-deployment-client.php",
+            "@php tests/deployments/scope-bound-approval-windows.php"
         ],
         "test:runtime-source-mirror": [
             "@php tests/deployments/runtime-source-mirror.php"

@@ -47,13 +47,19 @@ is invoked automatically after any potentially mutating failure. An unproven
 rollback ends in `manual_recovery_required`.
 
 The remote channel keeps exactly `probe`, `stage`, `preflight`, `activate` and
-`status`. A later Windows integration must map coordinator phases only to
-installed, hash-pinned profiles; it must not add arbitrary remote execution.
+`status`. The Windows integration maps coordinator phases only to installed,
+hash-pinned profiles and adds no arbitrary remote execution.
 
 Allowlist changes, service restarts, provider contacts, publication and
 retention deletion are rejected by this one-click plan. They remain separate
 risk gates. Cross-root standalone-module retention is specified separately in
 `project/STANDALONE_MODULE_CROSS_ROOT_RETENTION.md`.
+
+Cross-root retention implementation is deliberately deferred to its own
+workstream. It spans adapter state, channel deployment state and managed
+filesets, introduces deletion authority and needs a distinct review plan,
+Windows qualification, backup, rollback and live gate. Combining it with
+deployment confirmation would violate the existing retention boundary.
 
 ## Rationale
 
@@ -81,10 +87,10 @@ of moving their responsibilities into a generic coordinator.
 - A trusted controller must protect the HMAC secret and private state root.
 - Each Windows runner profile still needs PowerShell 5.1, ACL and rollback
   qualification.
-- Existing adapters need an explicit post-success rollback entry point before
-  production one-click activation can be enabled.
-- A reseal-capable runner must avoid reacquiring the channel mutex while it is
-  already owned by the coordinator.
+- Existing adapters need explicit post-success rollback and inspection entry
+  points before production one-click activation can be enabled.
+- Each exact Windows runner/profile generation requires its own Windows
+  PowerShell 5.1 qualification before installation.
 
 ## Alternatives considered
 

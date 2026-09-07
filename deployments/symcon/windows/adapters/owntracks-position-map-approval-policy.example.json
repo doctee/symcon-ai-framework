@@ -1,0 +1,19 @@
+{
+    "formatVersion": 1,
+    "runnerProfile": "saef-channel-v8-one-click-v1",
+    "targetId": "saef-owntracks-position-map",
+    "adapterProfile": "saef-owntracks-position-map-v1",
+    "qualificationProfile": "saef-windows-powershell-5.1-owntracks-v1",
+    "postflightProfile": "saef-owntracks-position-map-health-v1",
+    "approvalStateRoot": "<private-absolute-protected-approval-state-root>",
+    "approvalSecretPath": "<private-absolute-protected-approval-secret-path>",
+    "qualificationEvidencePath": "<private-absolute-qualified-evidence-path>",
+    "expectedQualificationEvidenceSha256": "<reviewed-lowercase-sha256>",
+    "channelHostBindingSha256": "<private-opaque-channel-host-binding-sha256>",
+    "approverIdentitySha256": "<private-opaque-approver-binding-sha256>",
+    "executionHostIdentitySha256": "<private-opaque-controller-host-binding-sha256>",
+    "maximumStateFiles": 256,
+    "resealEnabled": true,
+    "resealScriptPath": "<private-absolute-reseal-script-path>",
+    "expectedResealScriptSha256": "<reviewed-lowercase-sha256>"
+}

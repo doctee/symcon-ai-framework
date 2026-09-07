@@ -34,9 +34,11 @@ plan or status record.
 | plan drift after review | exact plan hash plus fresh baseline comparison immediately before activation |
 | TOCTOU after client preflight | adapter revalidates package, policy, ownership, configuration and quiescence while holding server locks |
 | concurrent deployment | global controller lock, channel mutex, then target adapter mutex and writer locks |
-| approval-state alteration | HMAC-protected bounded state records in a protected private root |
-| process crash or lost response | persist phase as `started`; resume invokes fixed read-only inspection before continuation |
+| approval-state alteration | HMAC-protected bounded state records in a protected private root; deployment identity has write access only below the state leaf |
+| secret replacement through parent ACL | exact non-inheriting ACLs give the deployment identity read/traverse on approval roots and read-only access to the secret |
+| process crash or lost response | persist phase as `started`; resume invokes fixed read-only inspection before continuation; one identical-envelope retry is allowed only after `not_applied` proof |
 | uncertain mutation | no blind retry; prove completed step or rollback, otherwise manual recovery |
+| process loss during rollback | signed `rollback/started` state becomes manual recovery; rollback is never blindly repeated |
 | partial activation or failed postflight | automatic target-owned byte-exact rollback and independent rollback evidence |
 | failed rollback | terminal `manual_recovery_required`; preserve all recovery artifacts |
 | evidence disclosure | bounded hashes and phase facts only; no paths, credentials, raw identities or private payloads |
@@ -67,5 +69,8 @@ in-progress recovery state.
   baseline and evidence hashes must all validate.
 - A cleanup, restart, publication or provider action cannot be smuggled into
   the one-click operation list.
+- A fresh preflight remains reusable only after the runner proves that no
+  activation mutation began; the gateway does not replace it with an aborted
+  activation record in that case.
 - Failure remains recoverable or explicitly manual; it is never reported as a
   successful deployment without complete postflight.

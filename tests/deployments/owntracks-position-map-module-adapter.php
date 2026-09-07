@@ -104,7 +104,7 @@ assertOwnTracksPositionMapAdapter(
 );
 
 $requiredAdapterFragments = [
-    "[ValidateSet('preflight', 'activate')]",
+    "[ValidateSet('preflight', 'activate', 'postflight', 'inspect', 'rollback')]",
     "[Threading.Mutex]::new(\$false, [string] \$script:policy.mutexName)",
     "Git-managed module trees cannot be adopted by this adapter.",
     "-Method 'IPS_GetInstanceListByModuleID'",
@@ -129,6 +129,15 @@ $requiredAdapterFragments = [
     "Wait-Healthy -Snapshot \$script:snapshot",
     "Write-AdapterStatus -Outcome 'manual_recovery_required'",
     "Write-AdapterStatus -Outcome 'rolled_back'",
+    "Write-AdapterStatus -Outcome 'active'",
+    'Get-PreviousActiveStateSnapshot',
+    'Restore-PreviousActiveStateFromSnapshot',
+    'Read-CompletedActivationContext',
+    'Get-DeploymentTransactionRecords',
+    'Get-UnfinishedDeploymentTransactionRecords',
+    'safeBeforeMutation',
+    "Write-AdapterStatus -Outcome 'not_applied'",
+    "\$script:snapshot['previousActiveState'] = Get-PreviousActiveStateSnapshot",
     "packageIdentitySha256 = \$script:packageIdentitySha256",
     'function Test-BroadWriteAccess',
     '[Security.AccessControl.FileSystemRights]::WriteData',
@@ -247,6 +256,14 @@ assertOwnTracksPositionMapAdapter(
         '-ExpectedPackageIdentitySha256 ([string] $script:snapshot.activePackageIdentitySha256)'
     ),
     'Rollback health must be pinned to the previous package identity.'
+);
+assertOwnTracksPositionMapAdapter(
+    str_contains($adapter, "if (\$Operation -ne 'inspect' -and \$activePackageIdentity -ne \$expectedCurrentIdentity)")
+        && str_contains(
+            $adapter,
+            "\$script:previousPackageIdentitySha256 = [string] \$script:policy.expectedActivePackageIdentitySha256"
+        ),
+    'Adapter no longer preserves the administrative active-package trust anchor.'
 );
 
 $requiredRetentionFragments = [

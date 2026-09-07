@@ -29,6 +29,15 @@ This project adheres to Semantic Versioning.
   reference plan, replay/drift/parallelism/rollback regressions, threat model
   and a separately gated cross-root standalone-module retention specification.
   No gateway verb, live target authority or deletion capability was added.
+- Added the fixed channel-v8 approval runner, protected profile installer,
+  Windows PowerShell 5.1 qualification gate and two-step POSIX controller. The
+  server now materializes the reviewed plan, while apply rechecks it, submits a
+  short-lived proof and performs independent status readback. A lost response
+  can reuse the identical envelope only after a read-only `not_applied` proof.
+- Extended the OwnTracks reference adapter with fixed independent postflight,
+  interruption inspection and post-success rollback operations, plus a
+  coordinator-bound reseal mode. Media Carousel remains a later separately
+  qualified reuse target.
 - Added the repository-only OwnTracks Position Map pilot adapter for deployment
   channel version 8, with exact ownership/configuration/package pins, bounded
   five-lock quiescence, format-2 state preservation, targeted Module Control

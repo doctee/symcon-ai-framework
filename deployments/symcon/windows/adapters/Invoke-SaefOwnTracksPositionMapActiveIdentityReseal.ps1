@@ -31,6 +31,15 @@ param(
     [string] $StatusPath,
 
     [Parameter()]
+    [switch] $ChannelMutexAlreadyHeld,
+
+    [Parameter()]
+    [string] $CoordinatorPlanSha256 = '',
+
+    [Parameter()]
+    [string] $ActivationStatusPath = '',
+
+    [Parameter()]
     [string] $Confirmation = ''
 )
 
@@ -386,6 +395,12 @@ function Write-ResealStatus {
         channelPolicyMutationAttempted = [bool] $script:channelPolicyMutationAttempted
         rollbackAttempted = [bool] $script:rollbackAttempted
         rollbackSucceeded = [bool] $script:rollbackSucceeded
+        channelMutexInherited = [bool] $ChannelMutexAlreadyHeld
+        coordinatorPlanSha256 = $CoordinatorPlanSha256
+        activationStatusSha256 = if (-not [string]::IsNullOrEmpty($ActivationStatusPath) -and
+            (Test-Path -LiteralPath $ActivationStatusPath -PathType Leaf)) {
+            Get-Sha256 -Path $ActivationStatusPath
+        } else { '' }
         moduleReloadAttempted = $false
         moduleActivationAttempted = $false
         symconRpcContactAttempted = $false
@@ -414,6 +429,16 @@ try {
     }
     if ($Operation -eq 'apply' -and $Confirmation -cne $ExpectedConfirmation) {
         throw [Security.SecurityException]::new('Explicit active-identity reseal confirmation is missing.')
+    }
+    if (($ChannelMutexAlreadyHeld -and $CoordinatorPlanSha256 -notmatch '^[a-f0-9]{64}$') -or
+        (-not $ChannelMutexAlreadyHeld -and -not [string]::IsNullOrEmpty($CoordinatorPlanSha256))) {
+        throw [Security.SecurityException]::new('Coordinator mutex binding is invalid.')
+    }
+    if (($ChannelMutexAlreadyHeld -and
+            ([string]::IsNullOrWhiteSpace($ActivationStatusPath) -or
+                -not [IO.Path]::IsPathRooted($ActivationStatusPath))) -or
+        (-not $ChannelMutexAlreadyHeld -and -not [string]::IsNullOrEmpty($ActivationStatusPath))) {
+        throw [Security.SecurityException]::new('Coordinator activation-status binding is invalid.')
     }
     if ($ExpectedPreviousPackageIdentitySha256 -ceq $ExpectedActivePackageIdentitySha256) {
         throw [InvalidOperationException]::new('Reseal requires a changed active package identity.')
@@ -510,14 +535,16 @@ try {
     Assert-NoBroadWriteAcl -Path ([string] $adapterPolicy.activeModulePath)
 
     $script:failureCode = 'quiescence'
-    $script:channelMutex = [Threading.Mutex]::new($false, 'Global\SAEF.DeploymentChannel')
-    try {
-        $script:channelMutexAcquired = $script:channelMutex.WaitOne(0)
-    } catch [Threading.AbandonedMutexException] {
-        $script:channelMutexAcquired = $true
-    }
-    if (-not $script:channelMutexAcquired) {
-        throw [TimeoutException]::new('Deployment channel operation is active.')
+    if (-not $ChannelMutexAlreadyHeld) {
+        $script:channelMutex = [Threading.Mutex]::new($false, 'Global\SAEF.DeploymentChannel')
+        try {
+            $script:channelMutexAcquired = $script:channelMutex.WaitOne(0)
+        } catch [Threading.AbandonedMutexException] {
+            $script:channelMutexAcquired = $true
+        }
+        if (-not $script:channelMutexAcquired) {
+            throw [TimeoutException]::new('Deployment channel operation is active.')
+        }
     }
     $script:adapterMutex = [Threading.Mutex]::new($false, [string] $adapterPolicy.mutexName)
     try {
@@ -565,11 +592,17 @@ try {
 
     $deploymentRoot = Join-Path ([string] $channelPolicy.stateRoot) $ExpectedActiveDeploymentId
     $deploymentStatus = Read-BoundedJson -Path (Join-Path $deploymentRoot 'status.json')
-    $adapterStatus = Read-BoundedJson -Path (Join-Path $deploymentRoot 'module-adapter-status.json')
+    $adapterStatusPath = if ($ChannelMutexAlreadyHeld) {
+        $ActivationStatusPath
+    } else {
+        Join-Path $deploymentRoot 'module-adapter-status.json'
+    }
+    $adapterStatus = Read-BoundedJson -Path $adapterStatusPath
     $manifest = Read-BoundedJson -Path (Join-Path $deploymentRoot 'deployment.json')
-    if ([string] $deploymentStatus.phase -cne 'activation' -or
-        [string] $deploymentStatus.outcome -cne 'activated' -or
-        [int] $deploymentStatus.exitCode -ne 0 -or
+    $channelActivationComplete = [string] $deploymentStatus.phase -ceq 'activation' -and
+        [string] $deploymentStatus.outcome -ceq 'activated' -and
+        [int] $deploymentStatus.exitCode -eq 0
+    if ((-not $ChannelMutexAlreadyHeld -and -not $channelActivationComplete) -or
         [string] $adapterStatus.operation -cne 'activate' -or
         [string] $adapterStatus.outcome -cne 'activated' -or
         [int] $adapterStatus.exitCode -ne 0 -or

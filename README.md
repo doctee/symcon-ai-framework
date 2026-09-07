@@ -106,8 +106,12 @@ Important current artifacts include:
 - `adr/ADR-0010-use-scope-bound-one-click-deployment-approval.md`
 - `deployments/symcon/windows/Invoke-SaefDeploymentGateway.ps1`
 - `deployments/symcon/windows/Invoke-SaefRuntimeMirror.ps1`
+- `deployments/symcon/windows/Invoke-SaefScopeBoundApprovalRunner.ps1`
+- `deployments/symcon/windows/Invoke-SaefScopeBoundApprovalWindowsQualification.ps1`
+- `deployments/symcon/windows/Initialize-SaefScopeBoundApprovalProfile.ps1`
 - `deployments/symcon/windows/SaefRuntimeSourceMirror.php`
 - `deployments/symcon/windows/saef-deploy`
+- `tools/apply-approved-symcon-deployment.php`
 - `tools/build-symcon-module-deployment-package.php`
 - `tools/publish-symcon-module.php`
 - `deployments/symcon/publication/README.md`
@@ -174,6 +178,16 @@ preserves runtime-fileset deployments and advertises the target-bound
 standalone-module capability. Its module target allowlist is intentionally
 empty, so no standalone-module activation is enabled. The channel does not
 expose a general remote PowerShell session.
+
+The post-v0.4 line also contains a repository-complete scope-bound approval
+path for channel version 8. It turns one reviewed standalone-module plan into
+one explicit **Jetzt anwenden** action while retaining qualification, fresh
+preflight, server lock ordering, independent postflight, automatic rollback
+and crash reconciliation as separate internal phases. Exact Windows
+PowerShell 5.1 qualification, protected profile installation and each live
+target activation remain independent gates. OwnTracks is the first reference
+profile; Media Carousel is a later reuse target. Standalone-module cross-root
+retention remains specified but disabled.
 
 ## Licensing
 
