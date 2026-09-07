@@ -8,9 +8,12 @@
     },
     "require-dev": {
         "phpstan/phpstan": "^2.1",
-        "squizlabs/php_codesniffer": "^3.13"
+        "squizlabs/php_codesniffer": "^3.13.6"
     },
     "scripts": {
+        "toolchain:verify": [
+            "tools/resolve-composer-vendor-dir.sh ."
+        ],
         "bundle:build": [
             "@php tools/build-symcon-bundle.php bundles/symcon/ensure-variable.bundle.json"
         ],
@@ -203,6 +206,7 @@
             "phpcs"
         ],
         "check": [
+            "@toolchain:verify",
             "@test:toolchain-resolution",
             "@lint",
             "@bundle:check",
