@@ -30,6 +30,7 @@ abstract class IPSModuleStrict
 
     public function ApplyChanges(): void
     {
+        $GLOBALS['ownTracksRuntimeFake']['activeModule'] = $this;
         $this->applyCalls++;
     }
 
@@ -111,6 +112,9 @@ abstract class IPSModuleStrict
 
     protected function UnregisterReference(int $objectID): void
     {
+        if (!in_array($objectID, $this->references, true)) {
+            throw new RuntimeException('Cannot unregister a missing reference.');
+        }
         $this->references = array_values(array_filter(
             $this->references,
             static fn (int $referenceID): bool => $referenceID !== $objectID
@@ -186,6 +190,11 @@ abstract class IPSModuleStrict
         return $this->applyCalls;
     }
 
+    public function testInstanceID(): int
+    {
+        return $this->InstanceID;
+    }
+
     public function testAttribute(string $name): string
     {
         return $this->attributes[$name] ?? '';
@@ -194,6 +203,11 @@ abstract class IPSModuleStrict
     public function testSetAttribute(string $name, string $value): void
     {
         $this->attributes[$name] = $value;
+    }
+
+    public function testSimulateKernelRestart(): void
+    {
+        $this->references = [];
     }
 
     /** @return list<array{action: string, address: string}> */
@@ -232,6 +246,17 @@ function IPS_GetInstance(int $id): array
                 : '',
         ],
     ];
+}
+
+/** @return list<int> */
+function IPS_GetReferenceList(int $id): array
+{
+    $module = $GLOBALS['ownTracksRuntimeFake']['activeModule'] ?? null;
+    if (!$module instanceof IPSModuleStrict || $id !== $module->testInstanceID()) {
+        return [];
+    }
+
+    return $module->testReferences();
 }
 
 function SAEFLOCATION_GetDescriptor(int $instanceId): string
@@ -881,8 +906,22 @@ runtimeCheck(
     'Invalid client key did not fail closed.'
 );
 
+$persistedReferencesBeforeRestart = $module->testAttribute(
+    'RegisteredReferences'
+);
+$module->testSimulateKernelRestart();
+runtimeCheck(
+    $module->testReferences() === []
+        && $module->testAttribute('RegisteredReferences')
+            === $persistedReferencesBeforeRestart,
+    'Synthetic kernel restart did not preserve only persisted references.'
+);
 $module->ApplyChanges();
 runtimeCheck($module->testApplyCalls() === 2, 'Repeated ApplyChanges was not called.');
+runtimeCheck(
+    $module->testStatus() === IS_ACTIVE,
+    'ApplyChanges did not recover references after a kernel restart.'
+);
 runtimeCheck(
     $module->testHookCalls() === [
         ['action' => 'register', 'address' => 'owntracks-position-map'],
@@ -893,6 +932,15 @@ runtimeCheck(
     $module->testReferences()
         === [3101, 3102, 3103, 5101, 5102, 6101, 6102],
     'Repeated ApplyChanges duplicated references.'
+);
+runtimeCheck(
+    json_decode(
+        $module->testAttribute('RegisteredReferences'),
+        true,
+        16,
+        JSON_THROW_ON_ERROR
+    ) === [3101, 3102, 3103, 5101, 5102, 6101, 6102],
+    'Recovered references were not persisted exactly.'
 );
 
 $viewportModule = new TestOwnTracksPositionMapCandidate();

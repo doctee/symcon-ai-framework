@@ -79,6 +79,10 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Integrated the OwnTracks restart-reference reconciliation so module
+  reconfiguration clears only references currently registered in the Symcon
+  kernel and deterministically restores configured references after a host
+  restart. The packaged distribution and regression harness remain aligned.
 - Bound Windows approval-qualification fault injection to the hashed scratch
   adapter policy instead of relying on ambient SAEF environment inheritance,
   preserving both secure child-process isolation and deterministic resume and

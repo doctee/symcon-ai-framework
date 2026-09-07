@@ -220,7 +220,7 @@ local commits should be handled as follows after their own review:
 
 | Commits | Decision | Reason |
 | --- | --- | --- |
-| `79818de` | integrate separately | Independent module-runtime restart correction; the coordinator does not replace it. |
+| `79818de` | integrated separately | Independent module-runtime restart correction imported by its dedicated repository workstream; the coordinator does not replace it. |
 | `1d8742e`, `2502786`, `5f97a59` | retain as OwnTracks evidence | Windows boundary, stage and failed recovery-preflight records describe the target history, not generic code. |
 | `b71485e` | adapt, then integrate separately | Keep the source/candidate-bound degraded recovery inside the target adapter; expose only fixed runner results. |
 | `161ec25`, `1a81672`, `0a0685d`, `254208a`, `30e34b7`, `1eebeaf` | retain and reference | Qualification, private policy and live recovery gates remain target-specific evidence and cannot be generalized into authority. |
@@ -230,8 +230,10 @@ local commits should be handled as follows after their own review:
 Documentation-only lifecycle evidence should not be copied wholesale into a
 generic public contract.
 
-No commit from that branch was cherry-picked, rebased, modified or published by
-this workstream.
+Only the independently reviewed `79818de` restart-reference correction has
+been imported by its dedicated repository workstream. The remaining commits
+from that branch were not cherry-picked, rebased, modified or published by the
+scope-bound approval workstream.
 
 ## Compatibility and migration
 

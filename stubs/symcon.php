@@ -100,6 +100,8 @@ function IPS_VariableExists(int $id): bool {}
 function IPS_ScriptExists(int $id): bool {}
 function IPS_EventExists(int $id): bool {}
 function IPS_InstanceExists(int $id): bool {}
+/** @return list<int> */
+function IPS_GetReferenceList(int $id): array {}
 function IPS_MediaExists(int $id): bool {}
 function IPS_VariableProfileExists(string $name): bool {}
 function HasAction(int $variableID): bool {}

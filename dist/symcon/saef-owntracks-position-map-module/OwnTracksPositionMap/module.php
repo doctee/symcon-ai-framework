@@ -1998,19 +1998,35 @@ class OwnTracksPositionMap extends IPSModuleStrict
 
     private function clearRegisteredReferences(): void
     {
-        $references = json_decode(
+        $persistedReferences = json_decode(
             $this->ReadAttributeString('RegisteredReferences'),
             true,
             16,
             JSON_THROW_ON_ERROR
         );
-        if (!is_array($references) || !array_is_list($references)) {
+        if (
+            !is_array($persistedReferences)
+            || !array_is_list($persistedReferences)
+        ) {
             throw new RuntimeException('Registered reference state is invalid.');
         }
-        foreach ($references as $referenceID) {
+        foreach ($persistedReferences as $referenceID) {
             if (!is_int($referenceID) || $referenceID <= 0) {
                 throw new RuntimeException('Registered reference state is invalid.');
             }
+        }
+
+        $kernelReferences = IPS_GetReferenceList($this->InstanceID);
+        $references = [];
+        foreach ($kernelReferences as $referenceID) {
+            if ($referenceID <= 0) {
+                throw new RuntimeException('Kernel reference state is invalid.');
+            }
+            $references[$referenceID] = true;
+        }
+        $references = array_keys($references);
+        sort($references, SORT_NUMERIC);
+        foreach ($references as $referenceID) {
             $this->UnregisterReference($referenceID);
         }
         $this->WriteAttributeString('RegisteredReferences', '[]');
