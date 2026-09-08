@@ -381,8 +381,12 @@ function Assert-ExactProperties {
         [Parameter(Mandatory = $true)][string[]] $Names,
         [Parameter(Mandatory = $true)][string] $Label
     )
-    $actual = @($Value.PSObject.Properties.Name | Sort-Object)
-    $expected = @($Names | Sort-Object)
+    [string[]] $actual = @(
+        $Value.PSObject.Properties | ForEach-Object { [string] $_.Name }
+    )
+    [string[]] $expected = @($Names | ForEach-Object { [string] $_ })
+    [Array]::Sort($actual, [StringComparer]::Ordinal)
+    [Array]::Sort($expected, [StringComparer]::Ordinal)
     if (($actual -join [char] 0) -cne ($expected -join [char] 0)) {
         throw [InvalidOperationException]::new($Label + ' fields differ.')
     }

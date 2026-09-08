@@ -1662,6 +1662,63 @@ are deployment artifacts, not runtime mirrors, and follow ADR-0005 instead.
 
 ---
 
+### Rule RS-001.38 — Make Security-Critical Ordering Culture-Independent
+
+#### Purpose
+
+Prevent locale, operating-system or runtime differences from changing
+identities, signatures, deployment decisions or recovery evidence.
+
+#### Rule
+
+Strings that contribute to a hash, HMAC, manifest, package identity, approval
+proof, backup identity, rollback comparison or retention plan shall use an
+explicit culture-independent comparison. The comparison and serialization
+contract shall be identical across every participating runtime.
+
+#### Rationale
+
+Default sorting commonly follows the process culture. Two machines can then
+produce different bytes from the same logical map, while a producer and
+verifier on one machine may share the same defect and falsely appear
+compatible. This is both a portability defect and a fail-closed availability
+risk for signed deployment workflows.
+
+#### Recommended Practice
+
+- Use bytewise or ordinal case-sensitive ordering for canonical field names,
+  relative paths and identifiers. In the channel-v8 approval contract, PHP
+  `SORT_STRING` corresponds to Windows `StringComparer.Ordinal`.
+- Use `OrdinalIgnoreCase` only where a contract explicitly models a
+  case-insensitive Windows path or identifier; document that exception.
+- Do not use PowerShell `Sort-Object`, locale collation or UI-oriented sorting
+  for values that feed canonical JSON, hashes, HMACs or exact recovery plans.
+- Keep presentation sorting, including browser `localeCompare`, outside every
+  security, identity, deployment and retention input.
+- Parse protocol numbers and timestamps with invariant culture and an exact
+  documented format when their textual representation crosses a runtime
+  boundary.
+- Test a fixed independently derived byte vector and digest under multiple
+  cultures. Testing only two components on the same host is insufficient.
+- Keep contract alphabets explicit. Add non-ASCII vectors before widening an
+  ASCII-only contract to Unicode.
+
+#### Exceptions
+
+Human-facing presentation order may use the user's locale when the resulting
+order cannot affect state, identity, authorization, cleanup or rollback.
+Numeric cleanup ordering may use a numeric comparison for the same reason.
+
+#### Related References
+
+- `adr/ADR-0010-use-scope-bound-one-click-deployment-approval.md`
+- `project/SCOPE_BOUND_DEPLOYMENT_APPROVAL.md`
+- `project/CHANNEL_V8_ONE_CLICK_WINDOWS_QUALIFICATION.md`
+- `project/CULTURE_INVARIANT_SECURITY_CONTRACTS.md`
+- `standards/TESTING_STANDARDS.md`
+
+---
+
 ## 13. References
 
 This stable draft standard is supported by the following SAEF artifacts:
@@ -1677,6 +1734,7 @@ This stable draft standard is supported by the following SAEF artifacts:
 - `adr/ADR-0003-private-overlay.md`
 - `adr/ADR-0005-generate-symcon-helper-bundles.md`
 - `adr/ADR-0006-managed-symcon-runtime-mirrors.md`
+- `adr/ADR-0010-use-scope-bound-one-click-deployment-approval.md`
 - `standards/DOCUMENTATION_STANDARDS.md`
 - `standards/PHP_STANDARDS.md`
 - `standards/TESTING_STANDARDS.md`
@@ -1710,3 +1768,7 @@ operational observation of installation invariants.
 File-backed shared runtimes may now use an optional managed Symcon mirror for
 console discoverability. The runtime file remains authoritative; the generated
 mirror is inert, privately indexed, presentation-preserving and rollback-safe.
+
+Security-critical ordering is now explicitly culture-independent. Canonical
+cross-runtime contracts require ordinal or bytewise sorting plus fixed digest
+vectors under multiple cultures; display-localized sorting remains separate.

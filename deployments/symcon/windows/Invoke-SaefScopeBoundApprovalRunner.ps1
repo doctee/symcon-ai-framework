@@ -249,10 +249,12 @@ function Assert-ExactProperties {
     if ($null -eq $Value -or $Value -is [Array] -or $Value -is [string] -or $Value -is [ValueType]) {
         throw [InvalidOperationException]::new($Label + ' must be an object.')
     }
-    $actual = @(
-        $Value.PSObject.Properties | ForEach-Object { [string] $_.Name } | Sort-Object
+    [string[]] $actual = @(
+        $Value.PSObject.Properties | ForEach-Object { [string] $_.Name }
     )
-    $expected = @($Names | Sort-Object)
+    [string[]] $expected = @($Names | ForEach-Object { [string] $_ })
+    [Array]::Sort($actual, [StringComparer]::Ordinal)
+    [Array]::Sort($expected, [StringComparer]::Ordinal)
     if ($actual.Count -ne $expected.Count) {
         throw [InvalidOperationException]::new($Label + ' fields differ.')
     }
@@ -278,15 +280,24 @@ function ConvertTo-CanonicalValue {
     if ($Value -is [Collections.IDictionary]) {
         $dictionary = [Collections.IDictionary] $Value
         $result = [ordered]@{}
-        foreach ($name in @($dictionary.Keys | ForEach-Object { [string] $_ } | Sort-Object)) {
+        [string[]] $names = @($dictionary.Keys | ForEach-Object { [string] $_ })
+        [Array]::Sort($names, [StringComparer]::Ordinal)
+        foreach ($name in $names) {
             $result[$name] = ConvertTo-CanonicalValue -Value $dictionary[$name]
         }
         return $result
     }
+    $properties = [Collections.Generic.Dictionary[string, object]]::new(
+        [StringComparer]::Ordinal
+    )
+    foreach ($property in @($Value.PSObject.Properties)) {
+        $properties.Add([string] $property.Name, $property)
+    }
+    [string[]] $names = @($properties.Keys)
+    [Array]::Sort($names, [StringComparer]::Ordinal)
     $result = [ordered]@{}
-    foreach ($property in @($Value.PSObject.Properties | Sort-Object Name)) {
-        $name = [string] $property.Name
-        $result[$name] = ConvertTo-CanonicalValue -Value $property.Value
+    foreach ($name in $names) {
+        $result[$name] = ConvertTo-CanonicalValue -Value $properties[$name].Value
     }
     return $result
 }

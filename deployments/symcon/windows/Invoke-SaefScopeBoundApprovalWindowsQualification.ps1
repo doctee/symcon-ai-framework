@@ -139,15 +139,24 @@ function ConvertTo-CanonicalValue {
     if ($Value -is [Collections.IDictionary]) {
         $dictionary = [Collections.IDictionary] $Value
         $result = [ordered]@{}
-        foreach ($name in @($dictionary.Keys | ForEach-Object { [string] $_ } | Sort-Object)) {
+        [string[]] $names = @($dictionary.Keys | ForEach-Object { [string] $_ })
+        [Array]::Sort($names, [StringComparer]::Ordinal)
+        foreach ($name in $names) {
             $result[$name] = ConvertTo-CanonicalValue -Value $dictionary[$name]
         }
         return $result
     }
+    $properties = [Collections.Generic.Dictionary[string, object]]::new(
+        [StringComparer]::Ordinal
+    )
+    foreach ($property in @($Value.PSObject.Properties)) {
+        $properties.Add([string] $property.Name, $property)
+    }
+    [string[]] $names = @($properties.Keys)
+    [Array]::Sort($names, [StringComparer]::Ordinal)
     $result = [ordered]@{}
-    foreach ($property in @($Value.PSObject.Properties | Sort-Object Name)) {
-        $name = [string] $property.Name
-        $result[$name] = ConvertTo-CanonicalValue -Value $property.Value
+    foreach ($name in $names) {
+        $result[$name] = ConvertTo-CanonicalValue -Value $properties[$name].Value
     }
     return $result
 }
@@ -155,6 +164,41 @@ function ConvertTo-CanonicalValue {
 function ConvertTo-CanonicalJson {
     param([Parameter(Mandatory = $true)] $Value)
     return ConvertTo-CanonicalValue -Value $Value | ConvertTo-Json -Depth 16 -Compress
+}
+
+function Assert-CultureInvariantCanonicalization {
+    $expectedJson = '{"Beta":2,"Zeta":4,"alpha":1,"item":3,"nested":{"Delta":6,"charlie":5}}'
+    $expectedSha256 = '8b5c8f1ad3815fcd35b593c95d78af0776d33d0b4e29242ca92f4f07d0a6a0a7'
+    $value = [pscustomobject] [ordered]@{
+        item = 3
+        alpha = 1
+        Zeta = 4
+        Beta = 2
+        nested = [pscustomobject] [ordered]@{
+            charlie = 5
+            Delta = 6
+        }
+    }
+    $thread = [Threading.Thread]::CurrentThread
+    $originalCulture = $thread.CurrentCulture
+    $originalUiCulture = $thread.CurrentUICulture
+    try {
+        foreach ($cultureName in @('en-US', 'de-DE', 'tr-TR')) {
+            $culture = [Globalization.CultureInfo]::GetCultureInfo($cultureName)
+            $thread.CurrentCulture = $culture
+            $thread.CurrentUICulture = $culture
+            $actualJson = ConvertTo-CanonicalJson -Value $value
+            if ($actualJson -cne $expectedJson -or
+                (Get-TextSha256 -Text $actualJson) -cne $expectedSha256) {
+                throw [InvalidOperationException]::new(
+                    'Canonical approval serialization depends on the current culture.'
+                )
+            }
+        }
+    } finally {
+        $thread.CurrentCulture = $originalCulture
+        $thread.CurrentUICulture = $originalUiCulture
+    }
 }
 
 function ConvertTo-Base64Url {
@@ -883,6 +927,9 @@ try {
         $script:resealSha256 -cne $ExpectedResealSha256) {
         throw [Security.SecurityException]::new('Qualified source identity differs.')
     }
+
+    $script:failedCheck = 'culture_invariant_canonicalization'
+    Assert-CultureInvariantCanonicalization
 
     $script:failedCheck = 'scratch_setup'
     $scratchParent = Join-Path $env:ProgramData 'SAEF\QualificationScratch'

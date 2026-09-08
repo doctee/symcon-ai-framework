@@ -352,6 +352,11 @@ still immediately precedes activation, target locks and checks remain in the
 adapter, postflight remains independent and any potentially mutating failure
 must prove byte-exact rollback or stop for manual recovery.
 
+Canonical approval keys use the PHP `SORT_STRING` / Windows
+`StringComparer.Ordinal` byte-order contract. Windows qualification reproduces
+one fixed PHP-derived JSON and SHA-256 vector under `en-US`, `de-DE` and
+`tr-TR`; `Sort-Object` must never feed canonical JSON, a plan hash or an HMAC.
+
 Preparation stages the package, runs the normal read-only preflight and writes
 the server-generated review plan to a new owner-only `*.local.json` file:
 

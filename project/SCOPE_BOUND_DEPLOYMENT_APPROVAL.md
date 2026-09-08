@@ -74,6 +74,21 @@ HMAC-SHA-256 proof. The maximum lifetime is 900 seconds. The proof repeats the
 security-critical target, adapter, operations and baseline identities so any
 incorrect projection fails before state is claimed.
 
+Canonical object keys and identifier components are ASCII and sort bytewise:
+PHP uses `SORT_STRING` and Windows uses `StringComparer.Ordinal`. `Sort-Object`
+or another current-culture comparison is not permitted on input to canonical
+JSON, plan hashes or HMACs. The independent cross-runtime vector is:
+
+```text
+{"Beta":2,"Zeta":4,"alpha":1,"item":3,"nested":{"Delta":6,"charlie":5}}
+SHA-256 8b5c8f1ad3815fcd35b593c95d78af0776d33d0b4e29242ca92f4f07d0a6a0a7
+```
+
+PHP owns the reference result. Windows qualification must reproduce both
+bytes and hash under `en-US`, `de-DE` and `tr-TR`. Generating and validating a
+proof with two implementations that share one ambient culture is not
+sufficient because matching defects could otherwise pass together.
+
 The caller supplies raw approver and execution-host identities; only their
 SHA-256 bindings enter the proof. The channel-host binding is already an opaque
 plan value. A 256-bit nonce makes each approval unique. The HMAC secret must be
@@ -125,6 +140,7 @@ qualification evidence. On Windows, each exact profile must pass PowerShell
 - byte-exact rollback and unproven-rollback handling;
 - interrupted activation, reseal and rollback inspection; and
 - bounded private status output.
+- PHP-identical canonical JSON and SHA-256 under multiple Windows cultures.
 
 The runner uses the existing channel verbs. The gateway owns the channel mutex
 across the sequence and calls only installed profiles. The OwnTracks reseal

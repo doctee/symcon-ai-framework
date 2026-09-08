@@ -41,8 +41,10 @@ foreach (
         'ApprovalEnvelopeBase64Url',
         'ConvertTo-CanonicalJson',
         '$Value -is [Collections.IDictionary]',
+        '[Array]::Sort($names, [StringComparer]::Ordinal)',
+        '[Array]::Sort($actual, [StringComparer]::Ordinal)',
         'ConvertTo-CanonicalValue -Value $dictionary[$name]',
-        'ConvertTo-CanonicalValue -Value $property.Value',
+        'ConvertTo-CanonicalValue -Value $properties[$name].Value',
         'Get-HmacSha256',
         'Test-FixedTimeTextEquals',
         'Assert-ExactProperties',
@@ -103,6 +105,10 @@ assertScopeBoundApprovalRunner(
 assertScopeBoundApprovalRunner(
     !str_contains($runner, '.PSObject.Properties.Name'),
     'Approval runner contains an unsafe aggregate property-name access.'
+);
+assertScopeBoundApprovalRunner(
+    !str_contains($runner, 'Sort-Object'),
+    'Approval runner contains culture-dependent canonical sorting.'
 );
 assertScopeBoundApprovalRunner(
     !str_contains($runner, '$env:SSH_ORIGINAL_COMMAND')

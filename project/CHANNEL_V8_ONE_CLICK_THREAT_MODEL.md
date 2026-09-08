@@ -29,6 +29,7 @@ plan or status record.
 | --- | --- |
 | approval replay or double-click | one nonce claim per plan; terminal states reject re-entry |
 | altered target, package or operation | HMAC over canonical plan hash and duplicated scope bindings |
+| culture-dependent plan serialization | ASCII keys sorted bytewise with PHP `SORT_STRING` and Windows `StringComparer.Ordinal`; fixed PHP-derived JSON and SHA-256 reproduced under `en-US`, `de-DE` and `tr-TR` |
 | stolen approval on another host or account | opaque approver, execution-host and channel-host bindings |
 | stale approval | issue time, bounded expiry and maximum lifetime of 900 seconds |
 | plan drift after review | exact plan hash plus fresh baseline comparison immediately before activation |
@@ -53,6 +54,11 @@ semantics. It does not by itself prove Windows ACLs, PowerShell parsing,
 cross-language lock interoperability or a target's rollback implementation.
 Those properties require an exact-profile Windows qualification before a
 profile can be installed or allowed.
+
+A producer and verifier running under the same ambient culture can agree on
+the same wrong bytes. Cross-runtime canonicalization therefore requires a
+fixed externally expected byte vector, not only equality between two values
+created on one machine.
 
 An approval service compromise can issue valid proofs. Its secret and state
 root therefore require least-authority ACLs, rotation and separate operational

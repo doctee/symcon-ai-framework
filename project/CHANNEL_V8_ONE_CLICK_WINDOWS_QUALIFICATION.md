@@ -21,8 +21,16 @@ A changed byte closes the result.
 - protected administrator-owned scratch root on a non-production tree;
 - a synthetic deployment account SID and least-authority ACL fixtures;
 - no network, provider, Symcon RPC or production channel root;
-- deterministic fixture clocks, nonces, plans and status paths; and
+- deterministic fixture clocks, nonces, plans and status paths;
+- an independent PHP-derived canonical JSON/SHA-256 vector executed under
+  `en-US`, `de-DE` and `tr-TR`; and
 - cleanup verification for every scratch artifact.
+
+Before scratch scenarios begin, the exact Windows implementation must reproduce
+the fixed reference vector with `StringComparer.Ordinal` under all three
+cultures. This prerequisite does not increment the six positive or eight
+negative scenario-group counts. It closes the same-host blind spot in which a
+plan producer and runner could share the same culture-dependent ordering bug.
 
 ## Required positive cases
 
@@ -99,6 +107,12 @@ HMAC, baseline drift, forbidden risk scope and lock contention. Existing
 channel-v8 and target-adapter Windows
 qualifications continue to prove their own SSH, writer-lock, ACL and live
 adapter boundaries; this gate does not replace them.
+
+The culture prerequisite must fail with
+`culture_invariant_canonicalization` before scratch setup if either the exact
+canonical JSON or its fixed SHA-256 differs. `Sort-Object` is prohibited for
+canonical strings; display or numeric cleanup ordering is outside this rule
+only when it cannot feed an identity, signature, manifest, backup or plan.
 
 ## Later gates
 

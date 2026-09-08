@@ -32,6 +32,13 @@ The proof binds:
 - issue and expiry times; and
 - a cryptographic nonce.
 
+Canonical plan objects use the same bytewise key order on every runtime. PHP
+`SORT_STRING` and Windows `StringComparer.Ordinal` are the normative pair for
+the plan's ASCII field names and identifiers. Current culture, UI culture and
+display-oriented sorting must not affect canonical JSON, its SHA-256 or the
+approval HMAC. A fixed PHP-derived JSON and SHA-256 vector is verified under
+multiple Windows cultures before the Windows profile can qualify.
+
 The private HMAC secret and raw identities are never part of repository files,
 the plan or retained evidence. The coordinator atomically claims a nonce under
 the plan identity, HMAC-protects every bounded state record, persists phase
@@ -91,6 +98,9 @@ of moving their responsibilities into a generic coordinator.
   points before production one-click activation can be enabled.
 - Each exact Windows runner/profile generation requires its own Windows
   PowerShell 5.1 qualification before installation.
+- Canonicalization changes require coordinated PHP and Windows test vectors;
+  a same-host producer and consumer are not an independent interoperability
+  proof.
 
 ## Alternatives considered
 
