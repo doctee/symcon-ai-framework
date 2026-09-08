@@ -1,7 +1,7 @@
 # Scope-Bound Deployment Approval
 
-Status: Stable Draft 1.0, repository implementation complete; exact Windows
-qualification, installation and live use remain separately gated
+Status: Stable Draft 1.0, repository implementation and exact Windows
+qualification complete; installation and live use remain separately gated
 
 ## Purpose
 
@@ -245,8 +245,9 @@ workflow cannot be imported implicitly; a fresh plan and baseline are required.
 
 ## Remaining gates
 
-1. Execute the protected Windows PowerShell 5.1 parser, ACL, reparse, lock,
-   crash and rollback qualification for the final exact source hashes.
+1. Completed on 2026-09-08: the protected Windows PowerShell 5.1 parser,
+   culture, ACL, reparse, lock, crash and rollback qualification passed for
+   commit `10e482a7959c84524415066d90b514d2774974ba` and its exact source hashes.
 2. Install the qualified runner, secret, private state root and target policy
    through the administrative profile installer.
 3. Materialize a private OwnTracks plan and complete read-only review and

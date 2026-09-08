@@ -1,7 +1,7 @@
 # Culture-Invariant Security Contracts
 
-Status: Normative rule and channel-v8 approval correction implemented;
-follow-up inventory remains gated
+Status: Normative rule, channel-v8 approval correction and exact Windows
+PowerShell 5.1 qualification complete; follow-up inventory remains gated
 
 ## Purpose
 
@@ -23,6 +23,12 @@ The repository audit used channel-v8 main commit
 The repeated harness failure establishes a process rule: a corrected production
 implementation is not enough. Every copied fixture, qualification helper and
 recovery tool must be searched and independently tested.
+
+The corrected approval sources at commit
+`10e482a7959c84524415066d90b514d2774974ba` subsequently passed all six positive
+and eight negative Windows PowerShell 5.1 scenario groups. The fixed culture
+vector was identical under `en-US`, `de-DE` and `tr-TR`; production mutation and
+service restart remained false.
 
 ## Current disposition
 
