@@ -1,7 +1,7 @@
 # Channel v8 One-Click Windows Qualification
 
-Status: Exact repository gate implemented; Windows PowerShell 5.1 execution
-and installation remain separate
+Status: Exact repository and Windows PowerShell 5.1 gates passed; installation
+remains separate
 
 ## Scope
 
@@ -21,8 +21,16 @@ A changed byte closes the result.
 - protected administrator-owned scratch root on a non-production tree;
 - a synthetic deployment account SID and least-authority ACL fixtures;
 - no network, provider, Symcon RPC or production channel root;
-- deterministic fixture clocks, nonces, plans and status paths; and
+- deterministic fixture clocks, nonces, plans and status paths;
+- an independent PHP-derived canonical JSON/SHA-256 vector executed under
+  `en-US`, `de-DE` and `tr-TR`; and
 - cleanup verification for every scratch artifact.
+
+Before scratch scenarios begin, the exact Windows implementation must reproduce
+the fixed reference vector with `StringComparer.Ordinal` under all three
+cultures. This prerequisite does not increment the six positive or eight
+negative scenario-group counts. It closes the same-host blind spot in which a
+plan producer and runner could share the same culture-dependent ordering bug.
 
 ## Required positive cases
 
@@ -78,6 +86,30 @@ successful
 scratch cleanup, `productionMutationAttempted: false` and
 `serviceRestartAttempted: false`.
 
+## Qualified artifact
+
+The exact culture-invariant sources from commit
+`10e482a7959c84524415066d90b514d2774974ba` passed the protected Windows gate
+on 2026-09-08 with Windows PowerShell `5.1.26100.9168`:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| qualification | `bbcbc7519a387ef4e910c6b3ceba52aef51b9c85ff47a3bd3c6a16c6889ff7ff` |
+| profile initializer | `339b52035f835dd2c5f3ac66b0b934cb305b9bcfd599cb6a066349198f23744e` |
+| approval runner | `a372c997bdffe7600e424d9519512312dad447844d05cb2882c891ffb6949ce6` |
+| OwnTracks adapter | `9be435b538e70f40b3096209ea15ecf6995ce12681a2de125e89622da4111f49` |
+| OwnTracks reseal | `8213ef11255991a670d9ca33b3d92173399344ffd85543ce548d1cf33742f405` |
+| canonical culture vector | `8b5c8f1ad3815fcd35b593c95d78af0776d33d0b4e29242ca92f4f07d0a6a0a7` |
+
+All six positive and eight negative scenario groups passed. The culture vector
+was identical under `en-US`, `de-DE` and `tr-TR`. Scratch mutation was confined
+to the qualification tree and cleanup succeeded. Production mutation, installed
+channel reads or writes, target-allowlist changes, Symcon contact and service
+restart were all false.
+
+The private transfer bundle and raw machine status remain excluded. This
+bounded record does not authorize profile installation or live activation.
+
 Run the exact reviewed sources from an elevated Windows PowerShell 5.1
 session:
 
@@ -99,6 +131,12 @@ HMAC, baseline drift, forbidden risk scope and lock contention. Existing
 channel-v8 and target-adapter Windows
 qualifications continue to prove their own SSH, writer-lock, ACL and live
 adapter boundaries; this gate does not replace them.
+
+The culture prerequisite must fail with
+`culture_invariant_canonicalization` before scratch setup if either the exact
+canonical JSON or its fixed SHA-256 differs. `Sort-Object` is prohibited for
+canonical strings; display or numeric cleanup ordering is outside this rule
+only when it cannot feed an identity, signature, manifest, backup or plan.
 
 ## Later gates
 

@@ -45,6 +45,7 @@ $initializerFragments = [
     'Set-RestrictedDirectoryAcl',
     'Set-RestrictedRuntimeFileAcl',
     'Assert-RestrictedAcl',
+    '[Array]::Sort($actual, [StringComparer]::Ordinal)',
     "-DeploymentRights 'RX'",
     'Get-FileSnapshot',
     'Restore-Snapshots',
@@ -87,12 +88,21 @@ assertScopeBoundApprovalWindows(
         && !str_contains($initializer, 'Invoke-Expression'),
     'Approval profile initializer contains a service or arbitrary execution path.'
 );
+assertScopeBoundApprovalWindows(
+    substr_count($initializer, 'Sort-Object') === 1
+        && str_contains($initializer, 'Sort-Object Length -Descending'),
+    'Approval profile initializer contains culture-dependent string sorting.'
+);
 
 $qualificationFragments = [
     '[Management.Automation.Language.Parser]::ParseFile',
     '$Value -is [Collections.IDictionary]',
+    '[Array]::Sort($names, [StringComparer]::Ordinal)',
     'ConvertTo-CanonicalValue -Value $dictionary[$name]',
-    'ConvertTo-CanonicalValue -Value $property.Value',
+    'ConvertTo-CanonicalValue -Value $properties[$name].Value',
+    'Assert-CultureInvariantCanonicalization',
+    "@('en-US', 'de-DE', 'tr-TR')",
+    '8b5c8f1ad3815fcd35b593c95d78af0776d33d0b4e29242ca92f4f07d0a6a0a7',
     "'base_positive'",
     "'profile_installer_positive'",
     "'replay_negative'",
@@ -152,6 +162,10 @@ assertScopeBoundApprovalWindows(
 assertScopeBoundApprovalWindows(
     !str_contains($qualification, '.PSObject.Properties.Name'),
     'Approval Windows qualification contains an unsafe aggregate property-name access.'
+);
+assertScopeBoundApprovalWindows(
+    !str_contains($qualification, 'Sort-Object'),
+    'Approval Windows qualification contains culture-dependent canonical sorting.'
 );
 assertScopeBoundApprovalWindows(
     str_contains($qualification, 'Invoke-ProfileInstallerScenario')

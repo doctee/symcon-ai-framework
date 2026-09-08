@@ -27,6 +27,7 @@ try {
 
     deploymentApprovalTestExamples();
     deploymentApprovalTestNormalization($plan);
+    deploymentApprovalTestCrossRuntimeCanonicalization();
     deploymentApprovalTestHappyPath($root, $secret, $now, $plan, $approval);
     deploymentApprovalTestProofFailures($root, $secret, $now, $plan, $approval);
     deploymentApprovalTestDriftAndRollback($root, $secret, $now, $plan);
@@ -123,6 +124,33 @@ function deploymentApprovalTestNormalization(array $plan): void
         hashSaefDeploymentApprovalValue(normalizeSaefDeploymentApprovalPlan($plan)),
         hashSaefDeploymentApprovalValue(normalizeSaefDeploymentApprovalPlan($reordered)),
         'Plan hash is not stable for equivalent maps.'
+    );
+}
+
+function deploymentApprovalTestCrossRuntimeCanonicalization(): void
+{
+    $value = [
+        'item' => 3,
+        'alpha' => 1,
+        'Zeta' => 4,
+        'Beta' => 2,
+        'nested' => [
+            'charlie' => 5,
+            'Delta' => 6,
+        ],
+    ];
+    $expectedJson = '{"Beta":2,"Zeta":4,"alpha":1,"item":3,"nested":{"Delta":6,"charlie":5}}';
+    $expectedSha256 = '8b5c8f1ad3815fcd35b593c95d78af0776d33d0b4e29242ca92f4f07d0a6a0a7';
+
+    deploymentApprovalTestSame(
+        $expectedJson,
+        encodeSaefDeploymentApprovalValue($value),
+        'Cross-runtime canonical JSON differs.'
+    );
+    deploymentApprovalTestSame(
+        $expectedSha256,
+        hashSaefDeploymentApprovalValue($value),
+        'Cross-runtime canonical SHA-256 differs.'
     );
 }
 
