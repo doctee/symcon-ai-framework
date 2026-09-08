@@ -26,6 +26,33 @@ workstream is extracted.
 Generated artifacts and deployment hashes are authoritative only when they are
 reproducible from the clean workstream source.
 
+## Primary Checkout Boundary
+
+The primary checkout is a local mirror of `origin/main`. It is not a
+development branch, integration branch, evidence store or deployment source.
+Local commits on `main` and direct pushes to remote `main` are prohibited.
+
+Use the repository tools to keep that boundary explicit:
+
+```sh
+make check-primary
+make sync-primary
+tools/repository/start-workstream.sh <workstream>
+```
+
+`check-primary` requires a clean primary checkout with local `main` exactly
+equal to the locally stored `origin/main`. `sync-primary` fetches `origin` and
+permits only a clean fast-forward; local-ahead or divergent histories fail
+closed. `start-workstream` fetches first, requires the same exact alignment and
+creates `codex/<workstream>` below the ignored `private/worktrees/` directory.
+It never commits, rebases, resets or repairs an existing checkout.
+
+After the guardrail files are present on canonical `main`, run
+`make install-git-guardrails` once in the primary checkout. This configures the
+repository-local hooks path. The hooks reject commits on local `main` and
+direct pushes to remote `main`; they do not replace GitHub branch protection,
+review or the explicit publication gates.
+
 ## Worktree Placement
 
 Persistent development worktrees use
@@ -140,9 +167,9 @@ delete a deployment record when its target fileset is still referenced.
 
 ## Recommended Sequence
 
-1. Refresh `origin/main` read-only.
-2. Verify the ignored persistent worktree location, then create the dedicated
-   worktree and branch.
+1. Run `make sync-primary`, followed by `make check-primary`.
+2. Create the dedicated worktree and branch with
+   `tools/repository/start-workstream.sh <workstream>`.
 3. Capture the clean baseline and workstream record.
 4. Implement and test only the stated scope.
 5. Perform the shared-impact gate where applicable.

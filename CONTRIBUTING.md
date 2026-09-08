@@ -23,6 +23,26 @@ Before changing code or documentation, read the relevant context:
 
 For reference implementations, also follow `prompts/IMPLEMENT_REFERENCE.md`.
 
+Keep the primary checkout as a clean mirror of `origin/main`. Do not develop,
+commit or integrate on local `main`. Synchronize it with a fail-closed
+fast-forward, then create a dedicated worktree:
+
+```sh
+make sync-primary
+make check-primary
+tools/repository/start-workstream.sh <workstream>
+```
+
+After the guardrails are available on canonical `main`, enable the local
+commit and push checks once from the primary checkout:
+
+```sh
+make install-git-guardrails
+```
+
+The hooks are local safety checks. Pull requests, review and protected-branch
+settings remain the authoritative integration boundary.
+
 ## Engineering Rules
 
 - Prefer reliability, maintainability and reviewability over convenience.
