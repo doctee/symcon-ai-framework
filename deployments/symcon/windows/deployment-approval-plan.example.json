@@ -1,0 +1,35 @@
+{
+    "formatVersion": 1,
+    "channelVersion": 8,
+    "deploymentId": "saef-example-module-20260907-01",
+    "targetId": "example-module",
+    "adapterProfile": "saef-example-module-v1",
+    "qualificationProfile": "saef-windows-powershell-5.1-example-v1",
+    "postflightProfile": "saef-example-module-health-v1",
+    "package": {
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "bytes": 1
+    },
+    "operations": [
+        "qualify",
+        "stage",
+        "preflight",
+        "activate",
+        "postflight",
+        "rollback"
+    ],
+    "expectedBaselineIdentities": {
+        "activePackageSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "adapterPolicySha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "channelPolicySha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "channelHostBindingSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "riskScope": {
+        "allowlistChange": false,
+        "serviceRestart": false,
+        "providerContact": false,
+        "publication": false,
+        "retentionDeletion": false,
+        "activeIdentityReseal": false
+    }
+}

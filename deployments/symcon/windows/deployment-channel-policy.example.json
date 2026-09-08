@@ -22,6 +22,7 @@
     "runtimeMirrorName": "SAEF Runtime Source Mirror",
     "runtimeMirrorPosition": 90,
     "standaloneModuleTargets": [],
+    "deploymentUser": "<dedicated-deployment-user>",
     "credentialPath": "<private-absolute-dpapi-credential-path>",
     "rpcUri": "http://127.0.0.1:3777/api/",
     "serviceName": "IPSServer",

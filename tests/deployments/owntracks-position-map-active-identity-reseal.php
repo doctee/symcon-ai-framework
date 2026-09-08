@@ -35,6 +35,10 @@ foreach (
         'ExpectedPreviousPackageIdentitySha256',
         'ExpectedActivePackageIdentitySha256',
         'ExpectedActiveDeploymentId',
+        '[switch] $ChannelMutexAlreadyHeld',
+        '[string] $CoordinatorPlanSha256',
+        '[string] $ActivationStatusPath',
+        "Coordinator activation-status binding is invalid.",
         'Status path overlaps the installed channel policy.',
         'Status path overlaps the installed adapter policy.',
         'OwnTracks adapter state must use a target-owned child root.',
@@ -119,7 +123,7 @@ assertOwnTracksActiveIdentityReseal(
 assertOwnTracksActiveIdentityReseal(
     str_contains(
         $adapter,
-        '$activePackageIdentity -ne [string] $script:policy.expectedActivePackageIdentitySha256'
+        "if (\$Operation -ne 'inspect' -and \$activePackageIdentity -ne \$expectedCurrentIdentity)"
     ),
     'Module adapter no longer enforces the administratively pinned active-package identity.'
 );

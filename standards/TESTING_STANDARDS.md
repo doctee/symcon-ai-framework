@@ -26,6 +26,14 @@ must exist before any analyzer runs. Resolution must not copy source, install
 dependencies or access the network. Missing, incomplete or lock-mismatched
 toolchains fail closed with a deterministic diagnostic.
 
+The repository root is one Composer project. Different lock files in historical
+worktrees represent different revisions of that project, not independent
+dependency owners. A nested module becomes a separate Composer project only
+when its boundary, lock file, vendor installation and check entrypoint are all
+explicitly documented. Root and nested projects must never borrow analyzers
+across non-identical lock files. See
+`project/COMPOSER_TOOLCHAIN_OWNERSHIP.md` for the executable contract.
+
 ## 5. Safety
 
 Tests must not unexpectedly switch real devices or modify production state.

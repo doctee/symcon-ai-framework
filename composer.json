@@ -8,9 +8,12 @@
     },
     "require-dev": {
         "phpstan/phpstan": "^2.1",
-        "squizlabs/php_codesniffer": "^3.13"
+        "squizlabs/php_codesniffer": "^3.13.6"
     },
     "scripts": {
+        "toolchain:verify": [
+            "tools/resolve-composer-vendor-dir.sh ."
+        ],
         "bundle:build": [
             "@php tools/build-symcon-bundle.php bundles/symcon/ensure-variable.bundle.json"
         ],
@@ -73,6 +76,12 @@
             "@php tests/deployments/windows-retention.php",
             "@php tests/deployments/owntracks-position-map-adapter-state-migration.php",
             "@php tests/deployments/owntracks-position-map-active-identity-reseal.php"
+        ],
+        "test:deployment-approval": [
+            "@php tests/deployments/scope-bound-approval.php",
+            "@php tests/deployments/scope-bound-approval-runner.php",
+            "@php tests/deployments/approved-deployment-client.php",
+            "@php tests/deployments/scope-bound-approval-windows.php"
         ],
         "test:runtime-source-mirror": [
             "@php tests/deployments/runtime-source-mirror.php"
@@ -203,6 +212,7 @@
             "phpcs"
         ],
         "check": [
+            "@toolchain:verify",
             "@test:toolchain-resolution",
             "@lint",
             "@bundle:check",
@@ -219,6 +229,7 @@
             "@test:control-light-fileset",
             "@test:deployment-restart",
             "@test:deployment-channel",
+            "@test:deployment-approval",
             "@test:runtime-source-mirror",
             "@test:runtime-health-probe",
             "@test:helpers",

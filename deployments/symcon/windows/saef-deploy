@@ -7,7 +7,7 @@ usage() {
     printf '%s\n' '  saef-deploy <ssh-alias> probe' >&2
     printf '%s\n' '  saef-deploy <ssh-alias> stage <package.zip>' >&2
     printf '%s\n' '  saef-deploy <ssh-alias> preflight <deployment-id>' >&2
-    printf '%s\n' '  saef-deploy <ssh-alias> activate <deployment-id>' >&2
+    printf '%s\n' '  saef-deploy <ssh-alias> activate <deployment-id> [approved <approval-envelope>]' >&2
     printf '%s\n' '  saef-deploy <ssh-alias> status <deployment-id>' >&2
     exit 64
 }
@@ -77,7 +77,7 @@ case "$operation" in
         done
         ssh_command "stage commit $package_hash"
         ;;
-    preflight|activate|status)
+    preflight|status)
         [ "$#" -eq 1 ] || usage
         deployment_id=$1
         case "$deployment_id" in
@@ -94,6 +94,40 @@ case "$operation" in
                 ;;
         esac
         ssh_command "$operation $deployment_id"
+        ;;
+    activate)
+        [ "$#" -eq 1 ] || [ "$#" -eq 3 ] || usage
+        deployment_id=$1
+        case "$deployment_id" in
+            saef-[a-z0-9]* ) ;;
+            * )
+                printf '%s\n' 'Deployment identifier is invalid.' >&2
+                exit 64
+                ;;
+        esac
+        case "$deployment_id" in
+            *[!a-z0-9.-]* )
+                printf '%s\n' 'Deployment identifier is invalid.' >&2
+                exit 64
+                ;;
+        esac
+        if [ "$#" -eq 1 ]; then
+            ssh_command "activate $deployment_id"
+            exit $?
+        fi
+        [ "$2" = 'approved' ] || usage
+        approval_envelope=$3
+        case "$approval_envelope" in
+            *[!A-Za-z0-9_-]*|'')
+                printf '%s\n' 'Approval envelope is invalid.' >&2
+                exit 64
+                ;;
+        esac
+        [ "${#approval_envelope}" -le 32768 ] || {
+            printf '%s\n' 'Approval envelope exceeds its byte limit.' >&2
+            exit 64
+        }
+        ssh_command "activate $deployment_id approved $approval_envelope"
         ;;
     *)
         usage

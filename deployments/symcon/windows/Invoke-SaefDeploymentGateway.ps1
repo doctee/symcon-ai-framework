@@ -354,6 +354,7 @@ function Read-ChannelPolicy {
         'runtimeMirrorName',
         'runtimeMirrorPosition',
         'standaloneModuleTargets',
+        'deploymentUser',
         'credentialPath',
         'rpcUri',
         'serviceName',
@@ -487,6 +488,46 @@ function Read-ChannelPolicy {
             [string] $adapterPolicy.adapterProfile -ne [string] $target.adapterProfile) {
             throw [System.InvalidOperationException]::new('Standalone module adapter policy identity is invalid.')
         }
+        $approvalFields = @(
+            'approvalRunnerPath', 'expectedApprovalRunnerSha256',
+            'approvalPolicyPath', 'expectedApprovalPolicySha256'
+        )
+        $presentApprovalFields = @($approvalFields | Where-Object {
+            $target.PSObject.Properties.Name -contains $_
+        })
+        if ($presentApprovalFields.Count -ne 0 -and $presentApprovalFields.Count -ne $approvalFields.Count) {
+            throw [System.InvalidOperationException]::new('Standalone module approval profile is incomplete.')
+        }
+        if ($presentApprovalFields.Count -eq $approvalFields.Count) {
+            if (-not [IO.Path]::IsPathRooted([string] $target.approvalRunnerPath) -or
+                -not [IO.Path]::IsPathRooted([string] $target.approvalPolicyPath) -or
+                -not (Test-HexSha256 -Value ([string] $target.expectedApprovalRunnerSha256)) -or
+                -not (Test-HexSha256 -Value ([string] $target.expectedApprovalPolicySha256))) {
+                throw [System.InvalidOperationException]::new('Standalone module approval profile is invalid.')
+            }
+            foreach ($path in @([string] $target.approvalRunnerPath, [string] $target.approvalPolicyPath)) {
+                if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or
+                    (((Get-Item -LiteralPath $path).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
+                    throw [System.IO.FileNotFoundException]::new('Standalone module approval dependency is missing.')
+                }
+            }
+            if ((Get-Item -LiteralPath ([string] $target.approvalRunnerPath)).Length -gt 4194304 -or
+                (Get-Item -LiteralPath ([string] $target.approvalPolicyPath)).Length -gt 1048576 -or
+                (Get-Sha256 -Path ([string] $target.approvalRunnerPath)) -cne
+                    [string] $target.expectedApprovalRunnerSha256 -or
+                (Get-Sha256 -Path ([string] $target.approvalPolicyPath)) -cne
+                    [string] $target.expectedApprovalPolicySha256) {
+                throw [System.InvalidOperationException]::new('Standalone module approval dependency differs.')
+            }
+            $approvalPolicy = Get-Content -LiteralPath ([string] $target.approvalPolicyPath) -Raw |
+                ConvertFrom-Json
+            if ($approvalPolicy.formatVersion -ne 1 -or
+                [string] $approvalPolicy.runnerProfile -cne 'saef-channel-v8-one-click-v1' -or
+                [string] $approvalPolicy.targetId -cne $targetId -or
+                [string] $approvalPolicy.adapterProfile -cne [string] $target.adapterProfile) {
+                throw [System.InvalidOperationException]::new('Standalone module approval policy identity is invalid.')
+            }
+        }
         $moduleTargetIds[$targetId] = $true
     }
     $uri = [Uri] ([string] $policy.rpcUri)
@@ -495,6 +536,9 @@ function Read-ChannelPolicy {
     }
     if ([string] $policy.serviceName -notmatch '^[A-Za-z0-9_.-]{1,64}$') {
         throw [System.InvalidOperationException]::new('Configured service name is invalid.')
+    }
+    if ([string] $policy.deploymentUser -notmatch '^[A-Za-z0-9_.-]{1,64}$') {
+        throw [System.InvalidOperationException]::new('Configured deployment user is invalid.')
     }
     foreach ($directory in @($policy.scriptsRoot, $policy.managedFilesetRoot, $policy.stateRoot)) {
         if (-not (Test-Path -LiteralPath ([string] $directory) -PathType Container)) {
@@ -540,6 +584,14 @@ function Get-StandaloneModuleTarget {
     if ((Get-Sha256 -Path ([string] $target.adapterPath)) -ne [string] $target.expectedAdapterSha256 -or
         (Get-Sha256 -Path ([string] $target.adapterPolicyPath)) -ne [string] $target.expectedAdapterPolicySha256) {
         throw [System.InvalidOperationException]::new('Standalone module target dependency drift detected.')
+    }
+    if ($target.PSObject.Properties.Name -contains 'approvalRunnerPath') {
+        if ((Get-Sha256 -Path ([string] $target.approvalRunnerPath)) -cne
+                [string] $target.expectedApprovalRunnerSha256 -or
+            (Get-Sha256 -Path ([string] $target.approvalPolicyPath)) -cne
+                [string] $target.expectedApprovalPolicySha256) {
+            throw [System.InvalidOperationException]::new('Standalone module approval dependency drift detected.')
+        }
     }
     return $target
 }
@@ -678,6 +730,7 @@ function Get-DeploymentPaths {
         mirrorStatusPath = Join-Path $stateDirectory 'runtime-mirror-status.json'
         moduleAdapterStatusPath = Join-Path $stateDirectory 'module-adapter-status.json'
         transactionContractPath = Join-Path $stateDirectory 'module-transaction.json'
+        packageTransferPath = Join-Path $stateDirectory 'package-transfer.json'
         rollbackPath = Join-Path $stateDirectory 'rollback-bootstrap.bin'
     }
 }
@@ -775,6 +828,21 @@ function Assert-StagedDeployment {
         manifestHash = Get-BytesSha256 -Bytes ([Text.Encoding]::UTF8.GetBytes($manifestRecord.text))
         deploymentKind = $deploymentKind
         targetDirectory = $targetDirectory
+    }
+    if (Test-Path -LiteralPath $paths.packageTransferPath -PathType Leaf) {
+        if ((Get-Item -LiteralPath $paths.packageTransferPath).Length -gt 4096 -or
+            (((Get-Item -LiteralPath $paths.packageTransferPath).Attributes -band
+                [IO.FileAttributes]::ReparsePoint) -ne 0)) {
+            throw [System.InvalidOperationException]::new('Package transfer identity is unsafe.')
+        }
+        $packageTransfer = Get-Content -LiteralPath $paths.packageTransferPath -Raw | ConvertFrom-Json
+        if ($packageTransfer.formatVersion -ne 1 -or
+            -not (Test-HexSha256 -Value ([string] $packageTransfer.packageSha256)) -or
+            [long] $packageTransfer.packageBytes -le 0 -or
+            [long] $packageTransfer.packageBytes -gt [long] $Policy.maxPackageBytes) {
+            throw [System.InvalidOperationException]::new('Package transfer identity is invalid.')
+        }
+        $result['packageTransfer'] = $packageTransfer
     }
     if ($deploymentKind -eq 'standalone-module') {
         if ((Get-BytesSha256 -Bytes ([Text.Encoding]::UTF8.GetBytes($identityText.ToString()))) -ne
@@ -979,6 +1047,146 @@ function Invoke-StandaloneModuleAdapter {
         throw [System.InvalidOperationException]::new('Standalone module adapter activation status is invalid.')
     }
     return [ordered]@{ exitCode = $adapterExitCode; status = $status }
+}
+
+function Invoke-ScopeBoundApprovalRunner {
+    param(
+        [Parameter(Mandatory = $true)] $Policy,
+        [Parameter(Mandatory = $true)] $Deployment,
+        [Parameter(Mandatory = $true)][string] $ApprovalEnvelopeBase64Url
+    )
+
+    $target = Get-StandaloneModuleTarget -Policy $Policy `
+        -TargetId ([string] $Deployment.manifest.module.targetId)
+    foreach ($name in @(
+        'approvalRunnerPath', 'expectedApprovalRunnerSha256',
+        'approvalPolicyPath', 'expectedApprovalPolicySha256'
+    )) {
+        if ($target.PSObject.Properties.Name -notcontains $name) {
+            throw [System.InvalidOperationException]::new('Standalone module target has no approval profile.')
+        }
+    }
+    if ($Deployment.PSObject.Properties.Name -notcontains 'packageTransfer') {
+        throw [System.InvalidOperationException]::new('Approved activation requires package transfer identity.')
+    }
+    $statusPath = [string] $Deployment.paths.moduleAdapterStatusPath
+    if (Test-Path -LiteralPath $statusPath -PathType Leaf) {
+        Remove-Item -LiteralPath $statusPath -Force
+    }
+    $startedUtc = [DateTime]::UtcNow
+    $powerShellExecutable = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    $arguments = @(
+        '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', [string] $target.approvalRunnerPath,
+        '-ApprovalEnvelopeBase64Url', $ApprovalEnvelopeBase64Url,
+        '-ChannelPolicyPath', $PolicyPath,
+        '-ManifestPath', [string] $Deployment.paths.manifestPath,
+        '-CandidatePath', [string] $Deployment.targetDirectory,
+        '-TransactionContractPath', [string] $Deployment.paths.transactionContractPath,
+        '-PackageTransferPath', [string] $Deployment.paths.packageTransferPath,
+        '-AdapterPath', [string] $target.adapterPath,
+        '-AdapterPolicyPath', [string] $target.adapterPolicyPath,
+        '-ApprovalPolicyPath', [string] $target.approvalPolicyPath,
+        '-RpcUri', [string] $Policy.rpcUri,
+        '-CredentialPath', [string] $Policy.credentialPath,
+        '-DeploymentUser', [string] $Policy.deploymentUser,
+        '-DeploymentStatusPath', [string] $Deployment.paths.statusPath,
+        '-StatusPath', $statusPath
+    )
+    & $powerShellExecutable @arguments | Out-Null
+    $runnerExitCode = [int] $LASTEXITCODE
+    if (-not (Test-Path -LiteralPath $statusPath -PathType Leaf) -or
+        (Get-Item -LiteralPath $statusPath).Length -gt 65536) {
+        throw [System.InvalidOperationException]::new('Approval runner status is missing or invalid.')
+    }
+    $status = Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
+    $statusTime = [DateTime]::Parse([string] $status.timestampUtc).ToUniversalTime()
+    if ($status.formatVersion -ne 1 -or [string] $status.operation -cne 'activate' -or
+        [string] $status.runnerProfile -cne 'saef-channel-v8-one-click-v1' -or
+        [string] $status.deploymentId -cne [string] $Deployment.manifest.deploymentId -or
+        [string] $status.manifestSha256 -cne [string] $Deployment.manifestHash -or
+        [string] $status.packageIdentitySha256 -cne
+            [string] $Deployment.manifest.module.packageIdentitySha256 -or
+        -not (Test-HexSha256 -Value ([string] $status.approvalPlanSha256)) -or
+        -not (Test-HexSha256 -Value ([string] $status.channelPolicySha256)) -or
+        -not (Test-HexSha256 -Value ([string] $status.adapterPolicySha256)) -or
+        [int] $status.exitCode -ne $runnerExitCode -or
+        $statusTime -lt $startedUtc.AddSeconds(-1) -or $statusTime -gt [DateTime]::UtcNow.AddMinutes(1) -or
+        $status.activationAttempted -isnot [bool] -or $status.mutationAttempted -isnot [bool] -or
+        $status.rollbackAttempted -isnot [bool] -or $status.rollbackSucceeded -isnot [bool]) {
+        throw [System.InvalidOperationException]::new('Approval runner status contract is invalid.')
+    }
+    $validOutcome =
+        ($runnerExitCode -eq 0 -and [string] $status.outcome -ceq 'activated' -and
+            [bool] $status.activationAttempted -and [bool] $status.mutationAttempted -and
+            -not [bool] $status.rollbackAttempted -and -not [bool] $status.rollbackSucceeded) -or
+        ($runnerExitCode -eq 10 -and [string] $status.outcome -ceq 'aborted' -and
+            -not [bool] $status.activationAttempted -and -not [bool] $status.mutationAttempted -and
+            -not [bool] $status.rollbackAttempted -and -not [bool] $status.rollbackSucceeded) -or
+        ($runnerExitCode -eq 30 -and [string] $status.outcome -ceq 'rolled_back' -and
+            [bool] $status.activationAttempted -and [bool] $status.mutationAttempted -and
+            [bool] $status.rollbackAttempted -and [bool] $status.rollbackSucceeded) -or
+        ($runnerExitCode -eq 40 -and [string] $status.outcome -ceq 'manual_recovery_required' -and
+            [bool] $status.activationAttempted -and [bool] $status.mutationAttempted -and
+            -not [bool] $status.rollbackSucceeded)
+    if (-not $validOutcome) {
+        throw [System.InvalidOperationException]::new('Approval runner outcome is invalid.')
+    }
+    return [ordered]@{ exitCode = $runnerExitCode; status = $status }
+}
+
+function New-ScopeBoundApprovalPlan {
+    param(
+        [Parameter(Mandatory = $true)] $Policy,
+        [Parameter(Mandatory = $true)] $Deployment
+    )
+    $target = Get-StandaloneModuleTarget -Policy $Policy `
+        -TargetId ([string] $Deployment.manifest.module.targetId)
+    if ($target.PSObject.Properties.Name -notcontains 'approvalPolicyPath' -or
+        $Deployment.PSObject.Properties.Name -notcontains 'packageTransfer') {
+        return $null
+    }
+    $approvalPolicy = Get-Content -LiteralPath ([string] $target.approvalPolicyPath) -Raw |
+        ConvertFrom-Json
+    $adapterPolicy = Get-Content -LiteralPath ([string] $target.adapterPolicyPath) -Raw |
+        ConvertFrom-Json
+    if (-not (Test-HexSha256 -Value ([string] $adapterPolicy.expectedActivePackageIdentitySha256)) -or
+        $approvalPolicy.resealEnabled -isnot [bool]) {
+        throw [InvalidOperationException]::new('Approval plan baseline is invalid.')
+    }
+    $operations = if ([bool] $approvalPolicy.resealEnabled) {
+        @('qualify', 'stage', 'preflight', 'activate', 'postflight', 'reseal', 'final_postflight', 'rollback')
+    } else {
+        @('qualify', 'stage', 'preflight', 'activate', 'postflight', 'rollback')
+    }
+    return [ordered]@{
+        formatVersion = 1
+        channelVersion = 8
+        deploymentId = [string] $Deployment.manifest.deploymentId
+        targetId = [string] $Deployment.manifest.module.targetId
+        adapterProfile = [string] $target.adapterProfile
+        qualificationProfile = [string] $approvalPolicy.qualificationProfile
+        postflightProfile = [string] $approvalPolicy.postflightProfile
+        package = [ordered]@{
+            sha256 = [string] $Deployment.packageTransfer.packageSha256
+            bytes = [long] $Deployment.packageTransfer.packageBytes
+        }
+        operations = $operations
+        expectedBaselineIdentities = [ordered]@{
+            activePackageSha256 = [string] $adapterPolicy.expectedActivePackageIdentitySha256
+            adapterPolicySha256 = Get-Sha256 -Path ([string] $target.adapterPolicyPath)
+            channelPolicySha256 = Get-Sha256 -Path $PolicyPath
+        }
+        channelHostBindingSha256 = [string] $approvalPolicy.channelHostBindingSha256
+        riskScope = [ordered]@{
+            allowlistChange = $false
+            serviceRestart = $false
+            providerContact = $false
+            publication = $false
+            retentionDeletion = $false
+            activeIdentityReseal = [bool] $approvalPolicy.resealEnabled
+        }
+    }
 }
 
 function Get-ManagedDeploymentUsage {
@@ -1433,6 +1641,11 @@ function Receive-Package {
             if ($deploymentKind -eq 'standalone-module') {
                 Write-AtomicText -Path (Join-Path $stateDirectory 'module-transaction.json') -Text $transactionText
             }
+            Write-AtomicText -Path (Join-Path $stateDirectory 'package-transfer.json') -Text (([ordered]@{
+                formatVersion = 1
+                packageSha256 = $ExpectedPackageSha256
+                packageBytes = $ExpectedPackageBytes
+            } | ConvertTo-Json -Depth 3) + [Environment]::NewLine)
             Write-AtomicText -Path (Join-Path $stateDirectory 'deployment.json') -Text ($manifestText + [Environment]::NewLine)
             $status = Write-DeploymentStatus -Path (Join-Path $stateDirectory 'status.json') `
                 -DeploymentId ([string] $manifest.deploymentId) -Phase 'stage' -Outcome 'staged' -ExitCode $ExitSuccess `
@@ -1487,14 +1700,19 @@ function Invoke-DeploymentPreflight {
         if ([string] $postAdapterDeployment.manifestHash -ne [string] $deployment.manifestHash) {
             throw [System.InvalidOperationException]::new('Standalone module candidate changed during preflight.')
         }
+        $approvalPlan = New-ScopeBoundApprovalPlan -Policy $Policy -Deployment $postAdapterDeployment
+        $details = @{
+            deploymentKind = 'standalone-module'
+            manifestSha256 = $deployment.manifestHash
+            packageIdentitySha256 = [string] $deployment.manifest.module.packageIdentitySha256
+            activationAttempted = $false
+        }
+        if ($null -ne $approvalPlan) {
+            $details['approvalPlan'] = $approvalPlan
+        }
         return Write-DeploymentStatus -Path $deployment.paths.statusPath -DeploymentId $DeploymentId `
             -Phase 'preflight' -Outcome 'passed' -ExitCode $ExitSuccess `
-            -Details @{
-                deploymentKind = 'standalone-module'
-                manifestSha256 = $deployment.manifestHash
-                packageIdentitySha256 = [string] $deployment.manifest.module.packageIdentitySha256
-                activationAttempted = $false
-            }
+            -Details $details
     }
     $requiredRuntimeFunctions = Assert-RuntimeHealthContract -RuntimeHealth $deployment.manifest.runtimeHealth
     $restartExit = Invoke-RestartCoordinator -Policy $Policy -StatusPath $deployment.paths.restartStatusPath `
@@ -1688,6 +1906,97 @@ function Invoke-DeploymentActivation {
         -Details @{ restartExitCode = $restartExit; activationAttempted = $true; rollbackAttempted = $true; rollbackSucceeded = $false }
 }
 
+function Invoke-ApprovedStandaloneModuleActivation {
+    param(
+        [Parameter(Mandatory = $true)] $Policy,
+        [Parameter(Mandatory = $true)][string] $DeploymentId,
+        [Parameter(Mandatory = $true)][string] $ApprovalEnvelopeBase64Url
+    )
+
+    $paths = Get-DeploymentPaths -Policy $Policy -DeploymentId $DeploymentId
+    if (-not (Test-Path -LiteralPath $paths.statusPath -PathType Leaf)) {
+        throw [System.InvalidOperationException]::new('Deployment has no preflight status.')
+    }
+    $preflightStatus = Get-Content -LiteralPath $paths.statusPath -Raw | ConvertFrom-Json
+    $preflightTime = [DateTime]::Parse([string] $preflightStatus.timestampUtc).ToUniversalTime()
+    if ([string] $preflightStatus.phase -cne 'preflight' -or
+        [string] $preflightStatus.outcome -cne 'passed' -or
+        ([DateTime]::UtcNow - $preflightTime).TotalSeconds -gt [int] $Policy.maxPreflightAgeSeconds) {
+        throw [System.InvalidOperationException]::new('Approved activation requires a fresh successful preflight.')
+    }
+    $deployment = Assert-StagedDeployment -Policy $Policy -DeploymentId $DeploymentId
+    if ([string] $deployment.deploymentKind -cne 'standalone-module' -or
+        [string] $preflightStatus.deploymentKind -cne 'standalone-module' -or
+        [string] $preflightStatus.manifestSha256 -cne [string] $deployment.manifestHash -or
+        [string] $preflightStatus.packageIdentitySha256 -cne
+            [string] $deployment.manifest.module.packageIdentitySha256) {
+        throw [System.InvalidOperationException]::new('Approved activation preflight identity changed.')
+    }
+
+    try {
+        $runner = Invoke-ScopeBoundApprovalRunner -Policy $Policy -Deployment $deployment `
+            -ApprovalEnvelopeBase64Url $ApprovalEnvelopeBase64Url
+    } catch {
+        return [ordered]@{
+            exitCode = $ExitManualRecovery
+            outcome = 'approval_resume_required'
+        }
+    }
+    $runnerStatus = $runner.status
+    if ([string] $runnerStatus.outcome -in @('activated', 'rolled_back')) {
+        try {
+            $postPolicy = Read-ChannelPolicy -Path $PolicyPath
+            $postDeployment = Assert-StagedDeployment -Policy $postPolicy -DeploymentId $DeploymentId
+            $postTarget = Get-StandaloneModuleTarget -Policy $postPolicy `
+                -TargetId ([string] $deployment.manifest.module.targetId)
+            if ([string] $postDeployment.manifestHash -cne [string] $deployment.manifestHash -or
+                (Get-Sha256 -Path $PolicyPath) -cne [string] $runnerStatus.channelPolicySha256 -or
+                (Get-Sha256 -Path ([string] $postTarget.adapterPolicyPath)) -cne
+                    [string] $runnerStatus.adapterPolicySha256) {
+                throw [System.InvalidOperationException]::new('Approved activation post-state differs.')
+            }
+        } catch {
+            return Write-DeploymentStatus -Path $paths.statusPath -DeploymentId $DeploymentId `
+                -Phase 'activation' -Outcome 'manual_recovery_required' -ExitCode $ExitManualRecovery `
+                -Details @{
+                    deploymentKind = 'standalone-module'
+                    activationAttempted = [bool] $runnerStatus.activationAttempted
+                    rollbackAttempted = [bool] $runnerStatus.rollbackAttempted
+                    rollbackSucceeded = $false
+                    approvalMode = 'scope-bound'
+                    approvalPlanSha256 = [string] $runnerStatus.approvalPlanSha256
+                }
+        }
+    }
+    if ([string] $runnerStatus.outcome -ceq 'aborted' -and
+        -not [bool] $runnerStatus.activationAttempted -and
+        -not [bool] $runnerStatus.mutationAttempted) {
+        return [ordered]@{
+            exitCode = $ExitActivationFailed
+            outcome = 'approval_resume_required'
+        }
+    }
+    $channelExitCode = if ([string] $runnerStatus.outcome -ceq 'activated') {
+        $ExitSuccess
+    } elseif ([string] $runnerStatus.outcome -in @('aborted', 'rolled_back')) {
+        $ExitActivationFailed
+    } else {
+        $ExitManualRecovery
+    }
+    return Write-DeploymentStatus -Path $paths.statusPath -DeploymentId $DeploymentId `
+        -Phase 'activation' -Outcome ([string] $runnerStatus.outcome) -ExitCode $channelExitCode `
+        -Details @{
+            deploymentKind = 'standalone-module'
+            packageIdentitySha256 = [string] $deployment.manifest.module.packageIdentitySha256
+            approvalMode = 'scope-bound'
+            approvalPlanSha256 = [string] $runnerStatus.approvalPlanSha256
+            approvalRunnerExitCode = [int] $runner.exitCode
+            activationAttempted = [bool] $runnerStatus.activationAttempted
+            rollbackAttempted = [bool] $runnerStatus.rollbackAttempted
+            rollbackSucceeded = [bool] $runnerStatus.rollbackSucceeded
+        }
+}
+
 $operation = 'request'
 $exitCode = $ExitRequestRejected
 $channelMutex = $null
@@ -1788,8 +2097,18 @@ try {
         }
         throw [System.InvalidOperationException]::new('Stage subcommand is not allowed.')
     }
-    if ($parts.Count -ne 2 -or -not (Test-SafeIdentifier -Value $parts[1])) {
-        throw [System.InvalidOperationException]::new('Operation requires exactly one valid deployment identifier.')
+    $approvalEnvelopeBase64Url = ''
+    if ($operation -eq 'activate' -and $parts.Count -eq 4) {
+        if ([string] $parts[2] -cne 'approved' -or
+            [string] $parts[3] -notmatch '^[A-Za-z0-9_-]{1,32768}$') {
+            throw [System.InvalidOperationException]::new('Approved activation contract is invalid.')
+        }
+        $approvalEnvelopeBase64Url = [string] $parts[3]
+    } elseif ($parts.Count -ne 2) {
+        throw [System.InvalidOperationException]::new('Operation requires one bounded deployment identifier.')
+    }
+    if (-not (Test-SafeIdentifier -Value $parts[1])) {
+        throw [System.InvalidOperationException]::new('Operation deployment identifier is invalid.')
     }
     $deploymentId = $parts[1]
     if ($operation -eq 'preflight') {
@@ -1798,14 +2117,23 @@ try {
         $channelMutex = Enter-ChannelMutex
         $status = Invoke-DeploymentPreflight -Policy $policy -DeploymentId $deploymentId
         $success = [int] $status.exitCode -eq 0
+        $details = @{ deploymentId = $deploymentId }
+        if ($status.PSObject.Properties.Name -contains 'approvalPlan') {
+            $details['approvalPlan'] = $status.approvalPlan
+        }
         Write-JsonResponse -Success $success -Operation $operation -Outcome ([string] $status.outcome) `
-            -ExitCode ([int] $status.exitCode) -Details @{ deploymentId = $deploymentId }
+            -ExitCode ([int] $status.exitCode) -Details $details
         exit ([int] $status.exitCode)
     }
     if ($operation -eq 'activate') {
         $exitCode = $ExitActivationFailed
         $channelMutex = Enter-ChannelMutex
-        $status = Invoke-DeploymentActivation -Policy $policy -DeploymentId $deploymentId
+        $status = if ([string]::IsNullOrEmpty($approvalEnvelopeBase64Url)) {
+            Invoke-DeploymentActivation -Policy $policy -DeploymentId $deploymentId
+        } else {
+            Invoke-ApprovedStandaloneModuleActivation -Policy $policy -DeploymentId $deploymentId `
+                -ApprovalEnvelopeBase64Url $approvalEnvelopeBase64Url
+        }
         $success = [int] $status.exitCode -eq 0
         Write-JsonResponse -Success $success -Operation $operation -Outcome ([string] $status.outcome) `
             -ExitCode ([int] $status.exitCode) -Details @{ deploymentId = $deploymentId }

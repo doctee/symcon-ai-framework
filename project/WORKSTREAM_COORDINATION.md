@@ -55,6 +55,10 @@ worktree lock file. Missing analyzers, inaccessible paths or lock drift fail
 closed. Toolchain reuse must not copy source between worktrees, trigger
 dependency installation or perform network access.
 
+`composer check` verifies the selected owner before lint, static analysis or
+coding-style checks run. The complete ownership and separate-project rules are
+defined in `project/COMPOSER_TOOLCHAIN_OWNERSHIP.md`.
+
 ## Workstream Record
 
 The private overlay should maintain a machine-readable record for each active

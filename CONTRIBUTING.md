@@ -111,6 +111,10 @@ when `phpstan` and `phpcs` are executable and the toolchain owner's
 installs packages or accesses the network; an absent, incomplete or mismatched
 toolchain fails with a deterministic error.
 
+The repository-wide ownership rules, including the boundary for future nested
+Composer projects, are documented in
+`project/COMPOSER_TOOLCHAIN_OWNERSHIP.md`.
+
 If a change affects Markdown-only documentation, still run `make check` so the
 repository remains in a known-good state.
 
