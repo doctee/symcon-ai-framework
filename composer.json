@@ -199,6 +199,9 @@
         "test:toolchain-resolution": [
             "tests/toolchain/vendor-resolution.sh"
         ],
+        "test:repository-guardrails": [
+            "tests/repository/checkout-guardrails.sh"
+        ],
         "lint": [
             "@php tools/lint.php"
         ],
@@ -214,6 +217,7 @@
         "check": [
             "@toolchain:verify",
             "@test:toolchain-resolution",
+            "@test:repository-guardrails",
             "@lint",
             "@bundle:check",
             "@fileset:check",

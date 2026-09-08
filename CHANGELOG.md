@@ -25,6 +25,9 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added fail-closed primary-checkout alignment, fast-forward synchronization,
+  clean worktree creation and local Git guardrails so `main` remains a mirror
+  of `origin/main` instead of becoming an unpublished integration branch.
 - Added an execution-neutral **Jetzt anwenden** coordinator, OwnTracks
   reference plan, replay/drift/parallelism/rollback regressions, threat model
   and a separately gated cross-root standalone-module retention specification.

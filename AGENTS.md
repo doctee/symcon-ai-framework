@@ -116,6 +116,12 @@ repository work.
   known consumers and active observation constraints.
 - Close evidence, rollback and retention decisions before removing a worktree
   or immutable live artifact.
+- Treat the primary checkout's `main` branch as a clean local mirror of
+  `origin/main`, not as a development or integration branch. Do not commit on
+  it or push it directly.
+- Use `tools/repository/check-primary-checkout.sh` before relying on the primary
+  checkout. Use the fail-closed sync and workstream-start tools instead of
+  repairing divergence implicitly.
 
 ## Commit Style
 

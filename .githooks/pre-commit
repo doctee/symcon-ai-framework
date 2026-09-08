@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -eu
+
+branch_name=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)
+
+if [ "$branch_name" = 'main' ]; then
+    printf '%s\n' \
+        'SAEF Git guardrail: commits on main are prohibited; use a dedicated worktree branch.' \
+        >&2
+    exit 1
+fi

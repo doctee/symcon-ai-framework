@@ -1,0 +1,18 @@
+#!/bin/sh
+
+set -eu
+
+blocked=false
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    if [ "$remote_ref" = 'refs/heads/main' ]; then
+        blocked=true
+    fi
+done
+
+if [ "$blocked" = true ]; then
+    printf '%s\n' \
+        'SAEF Git guardrail: direct pushes to main are prohibited; use a reviewed pull request.' \
+        >&2
+    exit 1
+fi
