@@ -797,7 +797,7 @@ function Write-FinalStatus {
     param(
         [Parameter(Mandatory = $true)][string] $Outcome,
         [Parameter(Mandatory = $true)][int] $ExitCode,
-        [Parameter(Mandatory = $true)][string] $ErrorType
+        [Parameter(Mandatory = $true)][AllowEmptyString()][string] $ErrorType
     )
     $record = [ordered]@{
         formatVersion = 1

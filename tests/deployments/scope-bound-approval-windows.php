@@ -116,6 +116,7 @@ $qualificationFragments = [
     'Update-ProfileInstallerDiagnostics',
     'Update-RunnerScenarioDiagnostics',
     '[AllowEmptyString()][string] $ResealSha256',
+    '[AllowEmptyString()][string] $ErrorType',
     "'profileInstallerFailedStep'",
     "'runnerStatusFailureCode'",
     "'runnerErrorType'",
