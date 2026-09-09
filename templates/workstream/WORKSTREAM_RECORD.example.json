@@ -1,0 +1,32 @@
+{
+  "formatVersion": 1,
+  "updatedAtUtc": "{{UPDATED_AT_UTC}}",
+  "workstream": "{{WORKSTREAM}}",
+  "status": "ready_for_handover",
+  "branch": "codex/{{WORKSTREAM}}",
+  "worktree": "private/worktrees/{{WORKSTREAM}}",
+  "baseCommit": "{{BASE_COMMIT}}",
+  "headCommit": "{{HEAD_COMMIT}}",
+  "worktreeClean": true,
+  "publicScope": "{{PUBLIC_SCOPE}}",
+  "privateScope": "{{PRIVATE_SCOPE_OR_NONE}}",
+  "authorization": {
+    "commit": false,
+    "push": false,
+    "pullRequest": false,
+    "merge": false,
+    "liveSymcon": false,
+    "serviceRestart": false,
+    "retentionCleanup": false
+  },
+  "verification": [
+    "{{COMPLETED_CHECK}}"
+  ],
+  "openGates": [
+    "{{OPEN_GATE_OR_NONE}}"
+  ],
+  "rollbackAndRetention": [
+    "{{ROLLBACK_OR_RETENTION_BOUNDARY_OR_NONE}}"
+  ],
+  "nextAction": "{{NEXT_ACTION}}"
+}
