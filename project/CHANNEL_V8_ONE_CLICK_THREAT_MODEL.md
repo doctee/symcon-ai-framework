@@ -22,6 +22,8 @@ plan or status record.
 5. The channel gateway retains its five fixed SSH verbs and its global mutex.
 6. The target adapter owns module-specific locks, state, health and rollback.
 7. Independent postflight does not trust the adapter's activation result alone.
+8. A shared internal child-process boundary owns PowerShell selection, script
+   identity, timeout, output capture and descendant termination.
 
 ## Threats and controls
 
@@ -43,6 +45,10 @@ plan or status record.
 | partial activation or failed postflight | automatic target-owned byte-exact rollback and independent rollback evidence |
 | failed rollback | terminal `manual_recovery_required`; preserve all recovery artifacts |
 | evidence disclosure | bounded hashes and phase facts only; no paths, credentials, raw identities or private payloads |
+| approval disclosure through process inventory | environment-only delivery to the runner and immediate clearing before child execution |
+| hung or output-flooding child | explicit timeout, combined output budget and fail-closed termination |
+| orphaned child process tree | kill-on-close Windows Job Object |
+| mixed launcher and runner generation | exact child-process hash in channel policy, approval policy and Windows qualification evidence |
 | remote-code expansion | no executable, path, RPC endpoint or command in plan; no new gateway verb |
 | privilege expansion through one click | allowlist, restart, provider, publication and retention flags must be false |
 | cross-root retention race | separate contract, channel-before-adapter lock order, fresh plan and all-root backup |
@@ -54,6 +60,12 @@ semantics. It does not by itself prove Windows ACLs, PowerShell parsing,
 cross-language lock interoperability or a target's rollback implementation.
 Those properties require an exact-profile Windows qualification before a
 profile can be installed or allowed.
+
+Repository tests also cannot prove Windows Job Object behavior. The exact
+launcher must pass PowerShell 5.1 parser, timeout, output-limit and descendant
+cleanup tests. A short interval remains between starting the already
+hash-pinned child and assigning it to the Job Object; protected source ACLs and
+server-selected scripts remain mandatory controls.
 
 A producer and verifier running under the same ambient culture can agree on
 the same wrong bytes. Cross-runtime canonicalization therefore requires a
@@ -73,6 +85,8 @@ in-progress recovery state.
   HMAC before it can influence execution.
 - A successful transport or runner call is not sufficient; expected outcome,
   baseline and evidence hashes must all validate.
+- A child process result is not sufficient; the owning coordinator must still
+  validate the child's bounded status and independent postflight.
 - A cleanup, restart, publication or provider action cannot be smuggled into
   the one-click operation list.
 - A fresh preflight remains reusable only after the runner proves that no

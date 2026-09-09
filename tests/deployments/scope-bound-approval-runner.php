@@ -39,6 +39,10 @@ foreach (
     [
         "'Global\\SAEF.DeploymentApproval'",
         'ApprovalEnvelopeBase64Url',
+        'SAEF_APPROVAL_ENVELOPE',
+        '$env:SAEF_APPROVAL_ENVELOPE = $null',
+        'Invoke-SaefPowerShellChildProcess',
+        'ExpectedChildProcessContractSha256',
         'ConvertTo-CanonicalJson',
         '$Value -is [Collections.IDictionary]',
         '[Array]::Sort($names, [StringComparer]::Ordinal)',
@@ -113,6 +117,8 @@ assertScopeBoundApprovalRunner(
 assertScopeBoundApprovalRunner(
     !str_contains($runner, '$env:SSH_ORIGINAL_COMMAND')
         && !str_contains($runner, 'Invoke-Expression')
+        && !str_contains($runner, '& $powerShell')
+        && !str_contains($runner, "'-ApprovalEnvelopeBase64Url'")
         && !str_contains($runner, 'errorMessage')
         && !str_contains($runner, 'Restart-Service')
         && !str_contains($runner, 'Start-Service')
@@ -143,6 +149,7 @@ $expectedPolicyKeys = [
     'approvalSecretPath',
     'qualificationEvidencePath',
     'expectedQualificationEvidenceSha256',
+    'expectedChildProcessContractSha256',
     'channelHostBindingSha256',
     'approverIdentitySha256',
     'executionHostIdentitySha256',

@@ -1,8 +1,15 @@
 [CmdletBinding()]
 param(
+    [Parameter()]
+    [ValidatePattern('^(?:|[A-Za-z0-9_-]{1,32768})$')]
+    [string] $ApprovalEnvelopeBase64Url = '',
+
     [Parameter(Mandatory = $true)]
-    [ValidatePattern('^[A-Za-z0-9_-]{1,32768}$')]
-    [string] $ApprovalEnvelopeBase64Url,
+    [string] $ChildProcessContractPath,
+
+    [Parameter(Mandatory = $true)]
+    [ValidatePattern('^[a-f0-9]{64}$')]
+    [string] $ExpectedChildProcessContractSha256,
 
     [Parameter(Mandatory = $true)]
     [string] $ChannelPolicyPath,
@@ -48,6 +55,14 @@ param(
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
+$environmentApprovalEnvelope = [string] $env:SAEF_APPROVAL_ENVELOPE
+$approvalEnvelopeSourceConflict = -not [string]::IsNullOrEmpty($ApprovalEnvelopeBase64Url) -and
+    -not [string]::IsNullOrEmpty($environmentApprovalEnvelope)
+if ([string]::IsNullOrEmpty($ApprovalEnvelopeBase64Url)) {
+    $ApprovalEnvelopeBase64Url = $environmentApprovalEnvelope
+}
+$env:SAEF_APPROVAL_ENVELOPE = $null
+
 $ExitSuccess = 0
 $ExitPreflightFailed = 10
 $ExitRolledBack = 30
@@ -85,6 +100,7 @@ $script:errorCategory = ''
 $script:errorLine = 0
 $script:errorColumn = 0
 $script:errorCommand = ''
+$script:expectedAdapterSha256 = ''
 
 function Test-HexSha256 {
     param([Parameter(Mandatory = $true)][string] $Value)
@@ -142,6 +158,20 @@ function Get-Sha256 {
         ).ToLowerInvariant()
     } finally {
         $algorithm.Dispose()
+    }
+}
+
+function Import-SaefChildProcessContract {
+    Assert-RootedLeaf -Path $ChildProcessContractPath -MaximumBytes 4194304
+    Assert-ProtectedPathAcl -Path $ChildProcessContractPath
+    if ((Get-Sha256 -Path $ChildProcessContractPath) -cne
+        $ExpectedChildProcessContractSha256) {
+        throw [Security.SecurityException]::new('Child process contract identity differs.')
+    }
+    . $ChildProcessContractPath
+    if ($null -eq (Get-Command Invoke-SaefPowerShellChildProcess -CommandType Function `
+            -ErrorAction SilentlyContinue)) {
+        throw [InvalidOperationException]::new('Child process contract function is unavailable.')
     }
 }
 
@@ -516,13 +546,21 @@ function Invoke-Adapter {
     if (Test-Path -LiteralPath $ChildStatusPath -PathType Leaf) {
         Remove-Item -LiteralPath $ChildStatusPath -Force
     }
-    $powerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-    & $powerShell '-NoLogo' '-NoProfile' '-NonInteractive' '-ExecutionPolicy' 'Bypass' `
-        '-File' $AdapterPath '-Operation' $Operation '-ManifestPath' $ManifestPath `
-        '-CandidatePath' $CandidatePath '-TransactionContractPath' $TransactionContractPath `
-        '-AdapterPolicyPath' $AdapterPolicyPath '-RpcUri' ([string] $RpcUri) `
-        '-CredentialPath' $CredentialPath '-StatusPath' $ChildStatusPath | Out-Null
-    $exitCode = [int] $LASTEXITCODE
+    $arguments = @(
+        '-Operation', $Operation,
+        '-ManifestPath', $ManifestPath,
+        '-CandidatePath', $CandidatePath,
+        '-TransactionContractPath', $TransactionContractPath,
+        '-AdapterPolicyPath', $AdapterPolicyPath,
+        '-RpcUri', [string] $RpcUri,
+        '-CredentialPath', $CredentialPath,
+        '-StatusPath', $ChildStatusPath
+    )
+    $timeoutSeconds = if ($Operation -in @('activate', 'rollback')) { 900 } else { 300 }
+    $result = Invoke-SaefPowerShellChildProcess -ScriptPath $AdapterPath `
+        -ExpectedScriptSha256 $script:expectedAdapterSha256 -Arguments $arguments `
+        -TimeoutSeconds $timeoutSeconds -MaximumOutputBytes 65536
+    $exitCode = [int] $result.exitCode
     $status = Read-BoundedJson -Path $ChildStatusPath -MaximumBytes 65536
     if ([int] $status.exitCode -ne $exitCode -or [string] $status.operation -cne $Operation -or
         [string] $status.deploymentId -cne [string] $script:manifest.deploymentId -or
@@ -553,19 +591,25 @@ function Invoke-Reseal {
         [string] $script:policy.expectedResealScriptSha256) {
         throw [Security.SecurityException]::new('Reseal source identity differs.')
     }
-    $powerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-    & $powerShell '-NoLogo' '-NoProfile' '-NonInteractive' '-ExecutionPolicy' 'Bypass' `
-        '-File' ([string] $script:policy.resealScriptPath) '-Operation' 'apply' `
-        '-ChannelPolicyPath' $ChannelPolicyPath `
-        '-ExpectedChannelPolicySha256' ([string] $script:plan.expectedBaselineIdentities.channelPolicySha256) `
-        '-ExpectedPreviousPackageIdentitySha256' $script:previousPackageIdentitySha256 `
-        '-ExpectedActivePackageIdentitySha256' $script:packageIdentitySha256 `
-        '-ExpectedActiveDeploymentId' ([string] $script:manifest.deploymentId) `
-        '-DeploymentUser' $DeploymentUser '-StatusPath' $ChildStatusPath `
-        '-ChannelMutexAlreadyHeld' '-CoordinatorPlanSha256' $script:planSha256 `
-        '-ActivationStatusPath' (Join-Path $script:stateDirectory 'activation-status.json') `
-        '-Confirmation' 'reseal-saef-owntracks-position-map-active-identity' | Out-Null
-    $exitCode = [int] $LASTEXITCODE
+    $arguments = @(
+        '-Operation', 'apply',
+        '-ChannelPolicyPath', $ChannelPolicyPath,
+        '-ExpectedChannelPolicySha256', [string] $script:plan.expectedBaselineIdentities.channelPolicySha256,
+        '-ExpectedPreviousPackageIdentitySha256', $script:previousPackageIdentitySha256,
+        '-ExpectedActivePackageIdentitySha256', $script:packageIdentitySha256,
+        '-ExpectedActiveDeploymentId', [string] $script:manifest.deploymentId,
+        '-DeploymentUser', $DeploymentUser,
+        '-StatusPath', $ChildStatusPath,
+        '-ChannelMutexAlreadyHeld',
+        '-CoordinatorPlanSha256', $script:planSha256,
+        '-ActivationStatusPath', (Join-Path $script:stateDirectory 'activation-status.json'),
+        '-Confirmation', 'reseal-saef-owntracks-position-map-active-identity'
+    )
+    $result = Invoke-SaefPowerShellChildProcess `
+        -ScriptPath ([string] $script:policy.resealScriptPath) `
+        -ExpectedScriptSha256 ([string] $script:policy.expectedResealScriptSha256) `
+        -Arguments $arguments -TimeoutSeconds 300 -MaximumOutputBytes 65536
+    $exitCode = [int] $result.exitCode
     $status = Read-BoundedJson -Path $ChildStatusPath -MaximumBytes 65536
     $currentChannelPolicySha256 = Get-Sha256 -Path $ChannelPolicyPath
     $currentAdapterPolicySha256 = Get-Sha256 -Path $AdapterPolicyPath
@@ -637,13 +681,15 @@ function Get-ExecutionPhases {
     return @($script:plan.operations | Where-Object { [string] $_ -cne 'rollback' })
 }
 
-function Invoke-QualificationPhase {
+function Read-QualificationEvidence {
     $qualification = Read-BoundedJson -Path ([string] $script:policy.qualificationEvidencePath)
     if ((Get-Sha256 -Path ([string] $script:policy.qualificationEvidencePath)) -cne
             [string] $script:policy.expectedQualificationEvidenceSha256 -or
         $qualification.formatVersion -ne 1 -or [string] $qualification.outcome -cne 'passed' -or
         [int] $qualification.exitCode -ne 0 -or [int] $qualification.expectedChannelVersion -ne 8 -or
         [bool] $qualification.productionMutationAttempted -or [bool] $qualification.serviceRestartAttempted -or
+        [string] $qualification.childProcessContractSha256 -cne
+            $ExpectedChildProcessContractSha256 -or
         [string] $qualification.runnerSha256 -cne (Get-Sha256 -Path $PSCommandPath) -or
         [string] $qualification.adapterSha256 -cne (Get-Sha256 -Path $AdapterPath) -or
         ([bool] $script:policy.resealEnabled -and
@@ -651,6 +697,12 @@ function Invoke-QualificationPhase {
                 (Get-Sha256 -Path ([string] $script:policy.resealScriptPath)))) {
         throw [Security.SecurityException]::new('Windows qualification evidence differs.')
     }
+    $script:expectedAdapterSha256 = [string] $qualification.adapterSha256
+    return $qualification
+}
+
+function Invoke-QualificationPhase {
+    $null = Read-QualificationEvidence
     return Get-Sha256 -Path ([string] $script:policy.qualificationEvidencePath)
 }
 
@@ -871,9 +923,14 @@ function Write-RunnerStatus {
 
 try {
     $script:failureCode = 'input'
+    if ($approvalEnvelopeSourceConflict -or
+        $ApprovalEnvelopeBase64Url -cnotmatch '^[A-Za-z0-9_-]{1,32768}$') {
+        throw [Security.SecurityException]::new('Approval envelope source is invalid or ambiguous.')
+    }
     foreach ($path in @(
         $ChannelPolicyPath, $ManifestPath, $TransactionContractPath, $PackageTransferPath,
-        $AdapterPath, $AdapterPolicyPath, $ApprovalPolicyPath, $CredentialPath, $DeploymentStatusPath
+        $AdapterPath, $AdapterPolicyPath, $ApprovalPolicyPath, $CredentialPath, $DeploymentStatusPath,
+        $ChildProcessContractPath
     )) {
         Assert-RootedLeaf -Path $path -MaximumBytes 4194304
     }
@@ -881,7 +938,7 @@ try {
     Assert-PlainDirectory -Path (Split-Path -Parent $StatusPath)
     foreach ($path in @(
         $PSCommandPath, $ChannelPolicyPath, $AdapterPath, $AdapterPolicyPath,
-        $ApprovalPolicyPath, $CredentialPath
+        $ApprovalPolicyPath, $CredentialPath, $ChildProcessContractPath
     )) {
         Assert-ProtectedPathAcl -Path $path
     }
@@ -890,6 +947,7 @@ try {
     $script:packageIdentitySha256 = [string] $script:manifest.module.packageIdentitySha256
     $script:policy = Read-BoundedJson -Path $ApprovalPolicyPath
     $script:transfer = Read-BoundedJson -Path $PackageTransferPath -MaximumBytes 4096
+    Import-SaefChildProcessContract
     $envelope = ConvertFrom-Base64UrlJson -Value $ApprovalEnvelopeBase64Url
     Assert-ExactProperties -Value $envelope -Names @('formatVersion', 'plan', 'approval') `
         -Label 'Approval envelope'
@@ -905,7 +963,8 @@ try {
         'postflightProfile', 'approvalStateRoot', 'approvalSecretPath', 'qualificationEvidencePath',
         'expectedQualificationEvidenceSha256', 'channelHostBindingSha256',
         'approverIdentitySha256', 'executionHostIdentitySha256', 'resealEnabled',
-        'resealScriptPath', 'expectedResealScriptSha256', 'maximumStateFiles'
+        'resealScriptPath', 'expectedResealScriptSha256', 'maximumStateFiles',
+        'expectedChildProcessContractSha256'
     ) -Label 'Approval runner policy'
     if ($script:policy.formatVersion -ne 1 -or
         [string] $script:policy.runnerProfile -cne $RunnerProfile -or
@@ -913,12 +972,15 @@ try {
         [string] $script:policy.adapterProfile -cne [string] $script:plan.adapterProfile -or
         [int] $script:policy.maximumStateFiles -lt 1 -or
         [int] $script:policy.maximumStateFiles -gt 4096 -or
+        [string] $script:policy.expectedChildProcessContractSha256 -cne
+            $ExpectedChildProcessContractSha256 -or
         -not (Test-HexSha256 -Value ([string] $script:policy.expectedQualificationEvidenceSha256)) -or
         -not (Test-HexSha256 -Value ([string] $script:policy.channelHostBindingSha256)) -or
         -not (Test-HexSha256 -Value ([string] $script:policy.approverIdentitySha256)) -or
         -not (Test-HexSha256 -Value ([string] $script:policy.executionHostIdentitySha256))) {
         throw [InvalidOperationException]::new('Approval runner policy identity differs.')
     }
+    $null = Read-QualificationEvidence
     Assert-PlainDirectory -Path ([string] $script:policy.approvalStateRoot)
     Assert-ProtectedPathAcl -Path ([string] $script:policy.approvalStateRoot)
     Assert-RootedLeaf -Path ([string] $script:policy.approvalSecretPath) -MaximumBytes 4096

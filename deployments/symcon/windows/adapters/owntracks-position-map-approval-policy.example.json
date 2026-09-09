@@ -9,6 +9,7 @@
     "approvalSecretPath": "<private-absolute-protected-approval-secret-path>",
     "qualificationEvidencePath": "<private-absolute-qualified-evidence-path>",
     "expectedQualificationEvidenceSha256": "<reviewed-lowercase-sha256>",
+    "expectedChildProcessContractSha256": "<reviewed-lowercase-sha256>",
     "channelHostBindingSha256": "<private-opaque-channel-host-binding-sha256>",
     "approverIdentitySha256": "<private-opaque-approver-binding-sha256>",
     "executionHostIdentitySha256": "<private-opaque-controller-host-binding-sha256>",

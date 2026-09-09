@@ -77,6 +77,9 @@ The contract is:
     Their activation is delegated only to a server-local target adapter whose
     path, private policy, profile and hashes are pinned outside the client
     package, as specified by ADR-0009.
+18. Runtime PowerShell children use the hash-pinned, timeout- and
+    output-bounded Job Object contract from ADR-0011. The fixed bootstrap-only
+    `sshd.exe -t` validation remains outside that runtime contract.
 
 Possession of the transport key does not replace SAEF's operational approval
 gates. Agents still require explicit approval before `activate`.
@@ -144,3 +147,4 @@ authentication, replay protection, certificate handling and exposure model.
 - `project/SAEF_V0_2_SYMCON_ROLLOUT_PLAN.md`
 - `adr/ADR-0005-generate-symcon-helper-bundles.md`
 - `adr/ADR-0009-use-target-bound-standalone-module-deployment.md`
+- `adr/ADR-0011-use-bounded-powershell-child-processes.md`

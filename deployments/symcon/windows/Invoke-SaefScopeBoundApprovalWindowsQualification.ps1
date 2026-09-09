@@ -12,6 +12,10 @@ param(
     [ValidatePattern('^[a-f0-9]{64}$')]
     [string] $ExpectedResealSha256,
 
+    [Parameter(Mandatory = $true)]
+    [ValidatePattern('^[a-f0-9]{64}$')]
+    [string] $ExpectedChildProcessContractSha256,
+
     [Parameter()]
     [string] $RunnerPath = (Join-Path $PSScriptRoot 'Invoke-SaefScopeBoundApprovalRunner.ps1'),
 
@@ -29,6 +33,9 @@ param(
 
     [Parameter()]
     [string] $SyntheticResealPath = (Join-Path $PSScriptRoot 'Invoke-SaefApprovalSyntheticReseal.ps1'),
+
+    [Parameter()]
+    [string] $ChildProcessContractPath = (Join-Path $PSScriptRoot 'SaefChildProcess.ps1'),
 
     [Parameter()]
     [string] $StatusPath
@@ -52,6 +59,7 @@ $script:scratchRoot = ''
 $script:runnerSha256 = ''
 $script:adapterSha256 = ''
 $script:resealSha256 = ''
+$script:childProcessContractSha256 = ''
 $script:profileInstallerPhase = 'not_started'
 $script:profileInstallerProcessExitCode = -1
 $script:profileInstallerStatusWritten = $false
@@ -309,6 +317,7 @@ function New-QualificationEvidence {
         outcome = 'passed'
         exitCode = 0
         expectedChannelVersion = 8
+        childProcessContractSha256 = $script:childProcessContractSha256
         runnerSha256 = $script:runnerSha256
         adapterSha256 = $AdapterSha256
         resealSha256 = $ResealSha256
@@ -320,6 +329,18 @@ function New-QualificationEvidence {
         serviceRestartAttempted = $false
         failedCheck = ''
         errorType = ''
+    }
+}
+
+function Write-ChildStandardError {
+    param(
+        [Parameter(Mandatory = $true)] $Result,
+        [Parameter(Mandatory = $true)][string] $Path
+    )
+    if ([long] $Result.standardErrorBytes -gt 0) {
+        [IO.File]::WriteAllBytes($Path, [byte[]] $Result.standardError)
+    } elseif (Test-Path -LiteralPath $Path -PathType Leaf) {
+        Remove-Item -LiteralPath $Path -Force
     }
 }
 
@@ -455,6 +476,7 @@ function Invoke-ProfileInstallerScenario {
     Write-Json -Path $channelPolicyPath -Value ([ordered]@{
         formatVersion = 1
         deploymentUser = 'saefdeploy'
+        expectedChildProcessContractSha256 = $script:childProcessContractSha256
         standaloneModuleTargets = @([ordered]@{
             targetId = $targetId
             adapterProfile = $adapterProfile
@@ -476,10 +498,7 @@ function Invoke-ProfileInstallerScenario {
     $evidenceSha256 = Get-Sha256 -Path $evidencePath
     Set-ScratchAcl -Path $scenarioRoot
 
-    $powerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
     $commonArguments = @(
-        '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-        '-File', $ProfileInitializerPath,
         '-DeploymentUser', 'saefdeploy',
         '-TargetId', $targetId,
         '-QualificationProfile', 'saef-windows-powershell-5.1-qualification-v1',
@@ -500,10 +519,15 @@ function Invoke-ProfileInstallerScenario {
         '-ApprovalRoot', $approvalRoot,
         '-StatusPath', $statusPath
     )
+    $profileInitializerSha256 = Get-Sha256 -Path $ProfileInitializerPath
 
     $script:profileInstallerPhase = 'preflight_process'
-    & $powerShell @commonArguments '-PreflightOnly' 2> $standardErrorPath | Out-Null
-    $processExitCode = [int] $LASTEXITCODE
+    $result = Invoke-SaefPowerShellChildProcess -ScriptPath $ProfileInitializerPath `
+        -ExpectedScriptSha256 $profileInitializerSha256 `
+        -Arguments @($commonArguments + '-PreflightOnly') `
+        -TimeoutSeconds 120 -MaximumOutputBytes 65536
+    Write-ChildStandardError -Result $result -Path $standardErrorPath
+    $processExitCode = [int] $result.exitCode
     Update-ProfileInstallerDiagnostics -Phase 'preflight_result' `
         -ProcessExitCode $processExitCode -StatusPath $statusPath `
         -StandardErrorPath $standardErrorPath
@@ -519,8 +543,11 @@ function Invoke-ProfileInstallerScenario {
     Remove-Item -LiteralPath $statusPath -Force
     Remove-Item -LiteralPath $standardErrorPath -Force -ErrorAction SilentlyContinue
     $script:profileInstallerPhase = 'install_process'
-    & $powerShell @commonArguments 2> $standardErrorPath | Out-Null
-    $processExitCode = [int] $LASTEXITCODE
+    $result = Invoke-SaefPowerShellChildProcess -ScriptPath $ProfileInitializerPath `
+        -ExpectedScriptSha256 $profileInitializerSha256 -Arguments $commonArguments `
+        -TimeoutSeconds 120 -MaximumOutputBytes 65536
+    Write-ChildStandardError -Result $result -Path $standardErrorPath
+    $processExitCode = [int] $result.exitCode
     Update-ProfileInstallerDiagnostics -Phase 'install_result' `
         -ProcessExitCode $processExitCode -StatusPath $statusPath `
         -StandardErrorPath $standardErrorPath
@@ -537,8 +564,12 @@ function Invoke-ProfileInstallerScenario {
     Remove-Item -LiteralPath $statusPath -Force
     Remove-Item -LiteralPath $standardErrorPath -Force -ErrorAction SilentlyContinue
     $script:profileInstallerPhase = 'postflight_process'
-    & $powerShell @commonArguments '-PreflightOnly' 2> $standardErrorPath | Out-Null
-    $processExitCode = [int] $LASTEXITCODE
+    $result = Invoke-SaefPowerShellChildProcess -ScriptPath $ProfileInitializerPath `
+        -ExpectedScriptSha256 $profileInitializerSha256 `
+        -Arguments @($commonArguments + '-PreflightOnly') `
+        -TimeoutSeconds 120 -MaximumOutputBytes 65536
+    Write-ChildStandardError -Result $result -Path $standardErrorPath
+    $processExitCode = [int] $result.exitCode
     Update-ProfileInstallerDiagnostics -Phase 'postflight_result' `
         -ProcessExitCode $processExitCode -StatusPath $statusPath `
         -StandardErrorPath $standardErrorPath
@@ -646,7 +677,10 @@ function Invoke-RunnerScenario {
         expectedActivePackageIdentitySha256 = $previousPackage
     }
     Write-Json -Path $adapterPolicyPath -Value $adapterPolicy
-    Write-Json -Path $channelPolicyPath -Value ([ordered]@{ formatVersion = 1 })
+    Write-Json -Path $channelPolicyPath -Value ([ordered]@{
+        formatVersion = 1
+        expectedChildProcessContractSha256 = $script:childProcessContractSha256
+    })
     Write-Json -Path $secretPath -Value ([ordered]@{
         formatVersion = 1
         encoding = 'base64'
@@ -675,6 +709,7 @@ function Invoke-RunnerScenario {
         approvalSecretPath = $secretPath
         qualificationEvidencePath = $evidencePath
         expectedQualificationEvidenceSha256 = $qualificationEvidenceSha256
+        expectedChildProcessContractSha256 = $script:childProcessContractSha256
         channelHostBindingSha256 = $script:channelHostBindingSha256
         approverIdentitySha256 = Get-TextSha256 -Text $script:approverIdentity
         executionHostIdentitySha256 = Get-TextSha256 -Text $script:executionHostIdentity
@@ -746,29 +781,39 @@ function Invoke-RunnerScenario {
         }
     }
     $script:runnerScenarioPhase = 'runner_environment'
-    $previousFailureSetting = [string] $env:SAEF_APPROVAL_SYNTHETIC_FAIL_POSTFLIGHT_AT
-    $previousCrashSetting = [string] $env:SAEF_APPROVAL_SYNTHETIC_CRASH_ACTIVATE
     try {
-        $env:SAEF_APPROVAL_SYNTHETIC_FAIL_POSTFLIGHT_AT = [string] $FailPostflightAt
-        $env:SAEF_APPROVAL_SYNTHETIC_CRASH_ACTIVATE = if ([bool] $CrashActivate) { '1' } else { '0' }
-        $powerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
         $script:runnerScenarioPhase = 'process_start'
-        & $powerShell '-NoLogo' '-NoProfile' '-NonInteractive' '-ExecutionPolicy' 'Bypass' `
-            '-File' $RunnerPath '-ApprovalEnvelopeBase64Url' $envelope `
-            '-ChannelPolicyPath' $channelPolicyPath '-ManifestPath' $manifestPath `
-            '-CandidatePath' $candidatePath '-TransactionContractPath' $transactionPath `
-            '-PackageTransferPath' $transferPath '-AdapterPath' $SyntheticAdapterPath `
-            '-AdapterPolicyPath' $adapterPolicyPath '-ApprovalPolicyPath' $approvalPolicyPath `
-            '-RpcUri' 'http://127.0.0.1:3777/api/' '-CredentialPath' $credentialPath `
-            '-DeploymentUser' 'saefdeploy' '-DeploymentStatusPath' $deploymentStatusPath `
-            '-StatusPath' $runnerStatusPath 2> $runnerStandardErrorPath | Out-Null
-        $exitCode = [int] $LASTEXITCODE
+        $runnerArguments = @(
+            '-ChildProcessContractPath', $ChildProcessContractPath,
+            '-ExpectedChildProcessContractSha256', $script:childProcessContractSha256,
+            '-ChannelPolicyPath', $channelPolicyPath,
+            '-ManifestPath', $manifestPath,
+            '-CandidatePath', $candidatePath,
+            '-TransactionContractPath', $transactionPath,
+            '-PackageTransferPath', $transferPath,
+            '-AdapterPath', $SyntheticAdapterPath,
+            '-AdapterPolicyPath', $adapterPolicyPath,
+            '-ApprovalPolicyPath', $approvalPolicyPath,
+            '-RpcUri', 'http://127.0.0.1:3777/api/',
+            '-CredentialPath', $credentialPath,
+            '-DeploymentUser', 'saefdeploy',
+            '-DeploymentStatusPath', $deploymentStatusPath,
+            '-StatusPath', $runnerStatusPath
+        )
+        $runnerEnvironment = @{
+            SAEF_APPROVAL_ENVELOPE = $envelope
+            SAEF_APPROVAL_SYNTHETIC_FAIL_POSTFLIGHT_AT = [string] $FailPostflightAt
+            SAEF_APPROVAL_SYNTHETIC_CRASH_ACTIVATE = if ([bool] $CrashActivate) { '1' } else { '0' }
+        }
+        $result = Invoke-SaefPowerShellChildProcess -ScriptPath $RunnerPath `
+            -ExpectedScriptSha256 $script:runnerSha256 -Arguments $runnerArguments `
+            -Environment $runnerEnvironment -TimeoutSeconds 180 -MaximumOutputBytes 65536
+        Write-ChildStandardError -Result $result -Path $runnerStandardErrorPath
+        $exitCode = [int] $result.exitCode
         Update-RunnerScenarioDiagnostics -Label $Label -ProcessExitCode $exitCode `
             -StatusPath $runnerStatusPath -StandardErrorPath $runnerStandardErrorPath
         $script:runnerScenarioPhase = 'process_result'
     } finally {
-        $env:SAEF_APPROVAL_SYNTHETIC_FAIL_POSTFLIGHT_AT = $previousFailureSetting
-        $env:SAEF_APPROVAL_SYNTHETIC_CRASH_ACTIVATE = $previousCrashSetting
         if ($heldMutexAcquired) {
             $heldMutex.ReleaseMutex()
         }
@@ -810,23 +855,28 @@ function Invoke-ReplayCase {
     )
     $scenarioRoot = [string] $Scenario.scenarioRoot
     $runnerStatusPath = [string] $Scenario.runnerStatusPath
-    $powerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-    & $powerShell '-NoLogo' '-NoProfile' '-NonInteractive' '-ExecutionPolicy' 'Bypass' `
-        '-File' $RunnerPath '-ApprovalEnvelopeBase64Url' ([string] $Scenario.envelope) `
-        '-ChannelPolicyPath' (Join-Path $scenarioRoot 'channel-policy.json') `
-        '-ManifestPath' (Join-Path $scenarioRoot 'deployment.json') `
-        '-CandidatePath' (Join-Path $scenarioRoot 'candidate') `
-        '-TransactionContractPath' (Join-Path $scenarioRoot 'module-transaction.json') `
-        '-PackageTransferPath' (Join-Path $scenarioRoot 'package-transfer.json') `
-        '-AdapterPath' $SyntheticAdapterPath `
-        '-AdapterPolicyPath' (Join-Path $scenarioRoot 'adapter-policy.json') `
-        '-ApprovalPolicyPath' (Join-Path $scenarioRoot 'approval-policy.json') `
-        '-RpcUri' 'http://127.0.0.1:3777/api/' `
-        '-CredentialPath' (Join-Path $scenarioRoot 'credential.json') `
-        '-DeploymentUser' 'saefdeploy' `
-        '-DeploymentStatusPath' (Join-Path $scenarioRoot 'deployment-status.json') `
-        '-StatusPath' $runnerStatusPath | Out-Null
-    if ([int] $LASTEXITCODE -ne $ExpectedExitCode -or
+    $arguments = @(
+        '-ChildProcessContractPath', $ChildProcessContractPath,
+        '-ExpectedChildProcessContractSha256', $script:childProcessContractSha256,
+        '-ChannelPolicyPath', (Join-Path $scenarioRoot 'channel-policy.json'),
+        '-ManifestPath', (Join-Path $scenarioRoot 'deployment.json'),
+        '-CandidatePath', (Join-Path $scenarioRoot 'candidate'),
+        '-TransactionContractPath', (Join-Path $scenarioRoot 'module-transaction.json'),
+        '-PackageTransferPath', (Join-Path $scenarioRoot 'package-transfer.json'),
+        '-AdapterPath', $SyntheticAdapterPath,
+        '-AdapterPolicyPath', (Join-Path $scenarioRoot 'adapter-policy.json'),
+        '-ApprovalPolicyPath', (Join-Path $scenarioRoot 'approval-policy.json'),
+        '-RpcUri', 'http://127.0.0.1:3777/api/',
+        '-CredentialPath', (Join-Path $scenarioRoot 'credential.json'),
+        '-DeploymentUser', 'saefdeploy',
+        '-DeploymentStatusPath', (Join-Path $scenarioRoot 'deployment-status.json'),
+        '-StatusPath', $runnerStatusPath
+    )
+    $result = Invoke-SaefPowerShellChildProcess -ScriptPath $RunnerPath `
+        -ExpectedScriptSha256 $script:runnerSha256 -Arguments $arguments `
+        -Environment @{ SAEF_APPROVAL_ENVELOPE = [string] $Scenario.envelope } `
+        -TimeoutSeconds 180 -MaximumOutputBytes 65536
+    if ([int] $result.exitCode -ne $ExpectedExitCode -or
         -not (Test-Path -LiteralPath $runnerStatusPath -PathType Leaf)) {
         throw [InvalidOperationException]::new('Approval reinvocation outcome differs.')
     }
@@ -850,6 +900,7 @@ function Write-FinalStatus {
         outcome = $Outcome
         exitCode = $ExitCode
         expectedChannelVersion = 8
+        childProcessContractSha256 = $script:childProcessContractSha256
         runnerSha256 = $script:runnerSha256
         adapterSha256 = $script:adapterSha256
         resealSha256 = $script:resealSha256
@@ -914,7 +965,7 @@ try {
     $script:failedCheck = 'source_identity'
     foreach ($path in @(
         $RunnerPath, $AdapterPath, $ResealPath, $ProfileInitializerPath,
-        $SyntheticAdapterPath, $SyntheticResealPath
+        $SyntheticAdapterPath, $SyntheticResealPath, $ChildProcessContractPath
     )) {
         Assert-PlainLeaf -Path $path
         Assert-PowerShellSyntax -Path $path
@@ -922,9 +973,11 @@ try {
     $script:runnerSha256 = Get-Sha256 -Path $RunnerPath
     $script:adapterSha256 = Get-Sha256 -Path $AdapterPath
     $script:resealSha256 = Get-Sha256 -Path $ResealPath
+    $script:childProcessContractSha256 = Get-Sha256 -Path $ChildProcessContractPath
     if ($script:runnerSha256 -cne $ExpectedRunnerSha256 -or
         $script:adapterSha256 -cne $ExpectedAdapterSha256 -or
-        $script:resealSha256 -cne $ExpectedResealSha256) {
+        $script:resealSha256 -cne $ExpectedResealSha256 -or
+        $script:childProcessContractSha256 -cne $ExpectedChildProcessContractSha256) {
         throw [Security.SecurityException]::new('Qualified source identity differs.')
     }
 
@@ -946,15 +999,23 @@ try {
     $qualifiedProfileInitializerPath = Join-Path $script:scratchRoot 'approval-profile-initializer.ps1'
     $qualifiedSyntheticAdapterPath = Join-Path $script:scratchRoot 'synthetic-adapter.ps1'
     $qualifiedSyntheticResealPath = Join-Path $script:scratchRoot 'synthetic-reseal.ps1'
+    $qualifiedChildProcessContractPath = Join-Path $script:scratchRoot 'child-process-contract.ps1'
     Copy-Item -LiteralPath $RunnerPath -Destination $qualifiedRunnerPath
     Copy-Item -LiteralPath $ProfileInitializerPath -Destination $qualifiedProfileInitializerPath
     Copy-Item -LiteralPath $SyntheticAdapterPath -Destination $qualifiedSyntheticAdapterPath
     Copy-Item -LiteralPath $SyntheticResealPath -Destination $qualifiedSyntheticResealPath
+    Copy-Item -LiteralPath $ChildProcessContractPath -Destination $qualifiedChildProcessContractPath
     Set-ScratchAcl -Path $script:scratchRoot
     $RunnerPath = $qualifiedRunnerPath
     $ProfileInitializerPath = $qualifiedProfileInitializerPath
     $SyntheticAdapterPath = $qualifiedSyntheticAdapterPath
     $SyntheticResealPath = $qualifiedSyntheticResealPath
+    $ChildProcessContractPath = $qualifiedChildProcessContractPath
+    . $ChildProcessContractPath
+    if ($null -eq (Get-Command Invoke-SaefPowerShellChildProcess -CommandType Function `
+            -ErrorAction SilentlyContinue)) {
+        throw [InvalidOperationException]::new('Child process contract function is unavailable.')
+    }
 
     $script:failedCheck = 'profile_installer_positive'
     Invoke-ProfileInstallerScenario

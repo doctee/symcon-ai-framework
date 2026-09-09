@@ -144,6 +144,7 @@ function Assert-SourceChecksums {
         'Invoke-SaefDeploymentRetentionCleanup.ps1',
         'Invoke-SaefRuntimeMirror.ps1',
         'Invoke-SaefSymconRestart.ps1',
+        'SaefChildProcess.ps1',
         'SaefRuntimeHealthProbe.php',
         'SaefRuntimeSourceMirror.php',
         'restart-policy.json'
@@ -172,7 +173,8 @@ function Assert-PowerShellSourceSyntax {
         'Invoke-SaefDeploymentGateway.ps1',
         'Invoke-SaefDeploymentRetentionCleanup.ps1',
         'Invoke-SaefRuntimeMirror.ps1',
-        'Invoke-SaefSymconRestart.ps1'
+        'Invoke-SaefSymconRestart.ps1',
+        'SaefChildProcess.ps1'
     )) {
         $tokens = $null
         $parseErrors = $null
@@ -539,6 +541,7 @@ $markerEnd
         $gatewayPath,
         (Join-Path $InstallRoot 'Invoke-SaefRuntimeMirror.ps1'),
         (Join-Path $InstallRoot 'Invoke-SaefSymconRestart.ps1'),
+        (Join-Path $InstallRoot 'SaefChildProcess.ps1'),
         (Join-Path $InstallRoot 'SaefRuntimeHealthProbe.php'),
         (Join-Path $InstallRoot 'SaefRuntimeSourceMirror.php'),
         (Join-Path $InstallRoot 'restart-policy.json')
@@ -606,6 +609,7 @@ $markerEnd
         'Invoke-SaefDeploymentRetentionCleanup.ps1',
         'Invoke-SaefRuntimeMirror.ps1',
         'Invoke-SaefSymconRestart.ps1',
+        'SaefChildProcess.ps1',
         'SaefRuntimeHealthProbe.php',
         'SaefRuntimeSourceMirror.php',
         'restart-policy.json'
@@ -623,6 +627,8 @@ $markerEnd
         stateRoot = [IO.Path]::GetFullPath($StateRoot)
         adapterStateRoot = [IO.Path]::GetFullPath($AdapterStateRoot)
         activeBootstrapRelativePath = $ActiveBootstrapRelativePath.Replace('\', '/')
+        childProcessContractPath = Join-Path $InstallRoot 'SaefChildProcess.ps1'
+        expectedChildProcessContractSha256 = (Get-FileHash -LiteralPath (Join-Path $InstallRoot 'SaefChildProcess.ps1') -Algorithm SHA256).Hash.ToLowerInvariant()
         restartCoordinatorPath = Join-Path $InstallRoot 'Invoke-SaefSymconRestart.ps1'
         expectedRestartCoordinatorSha256 = (Get-FileHash -LiteralPath (Join-Path $InstallRoot 'Invoke-SaefSymconRestart.ps1') -Algorithm SHA256).Hash.ToLowerInvariant()
         restartPolicyPath = Join-Path $InstallRoot 'restart-policy.json'

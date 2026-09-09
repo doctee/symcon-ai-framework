@@ -11,6 +11,14 @@ This project adheres to Semantic Versioning.
 
 ### Security
 
+- Added a shared hash-pinned Windows PowerShell child-process contract with
+  fixed interpreter selection, argument and environment bounds, combined
+  output limits, timeout and kill-on-close Job Object cleanup. Gateway,
+  approval runner and Windows qualification now compose this boundary without
+  adding a remote verb or target authority.
+- Moved the short-lived scope-bound approval envelope out of child command
+  lines into a bounded environment handoff that the runner rejects on
+  ambiguity and clears before adapter or reseal execution.
 - Added a scope-bound, short-lived, one-use HMAC approval contract for channel
   version 8. It binds plan, target, adapter, operations, starting identities,
   user and host while preserving fresh preflight, lock ordering, independent

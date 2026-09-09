@@ -40,6 +40,7 @@ $initializerFragments = [
     '[switch] $PreflightOnly',
     'Assert-PowerShellSyntax',
     'ExpectedQualificationEvidenceSha256',
+    'expectedChildProcessContractSha256',
     'ExpectedRunnerSha256',
     'ExpectedResealScriptSha256',
     'Set-RestrictedDirectoryAcl',
@@ -125,6 +126,9 @@ $qualificationFragments = [
     'scratchCleanupSucceeded',
     'Update-ProfileInstallerDiagnostics',
     'Update-RunnerScenarioDiagnostics',
+    'Invoke-SaefPowerShellChildProcess',
+    'ExpectedChildProcessContractSha256',
+    'SAEF_APPROVAL_ENVELOPE',
     '[AllowEmptyString()][string] $ResealSha256',
     '[AllowEmptyString()][string] $ErrorType',
     "'profileInstallerFailedStep'",
@@ -169,10 +173,19 @@ assertScopeBoundApprovalWindows(
 );
 assertScopeBoundApprovalWindows(
     str_contains($qualification, 'Invoke-ProfileInstallerScenario')
-        && str_contains($qualification, "'-File', \$ProfileInitializerPath")
+        && str_contains($qualification, '-ScriptPath $ProfileInitializerPath')
         && str_contains($qualification, "'-PreflightOnly'")
         && str_contains($qualification, '[bool] $postflight.repairRequired'),
     'Approval Windows qualification does not execute the profile installer in scratch.'
+);
+assertScopeBoundApprovalWindows(
+    !str_contains($qualification, '& $powerShell')
+        && !str_contains($qualification, "'-ApprovalEnvelopeBase64Url'")
+        && str_contains(
+            $qualification,
+            '-Environment @{ SAEF_APPROVAL_ENVELOPE = [string] $Scenario.envelope }'
+        ),
+    'Approval Windows qualification bypasses the secure child process contract.'
 );
 assertScopeBoundApprovalWindows(
     str_contains($syntheticAdapter, "[ValidateSet('preflight', 'activate', 'postflight', 'inspect', 'rollback')]")

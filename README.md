@@ -67,6 +67,7 @@ Important current artifacts include:
 - `tools/repository/check-workstream-handover.sh`
 - `project/COMPOSER_TOOLCHAIN_OWNERSHIP.md`
 - `project/SCOPE_BOUND_DEPLOYMENT_APPROVAL.md`
+- `project/SECURE_CHILD_PROCESS_EXECUTION.md`
 - `project/CHANNEL_V8_ONE_CLICK_THREAT_MODEL.md`
 - `project/CHANNEL_V8_ONE_CLICK_WINDOWS_QUALIFICATION.md`
 - `project/CULTURE_INVARIANT_SECURITY_CONTRACTS.md`
@@ -107,6 +108,7 @@ Important current artifacts include:
 - `adr/ADR-0007-use-restricted-windows-deployment-channel.md`
 - `adr/ADR-0009-use-target-bound-standalone-module-deployment.md`
 - `adr/ADR-0010-use-scope-bound-one-click-deployment-approval.md`
+- `adr/ADR-0011-use-bounded-powershell-child-processes.md`
 - `deployments/symcon/windows/Invoke-SaefDeploymentGateway.ps1`
 - `deployments/symcon/windows/Invoke-SaefRuntimeMirror.ps1`
 - `deployments/symcon/windows/Invoke-SaefScopeBoundApprovalRunner.ps1`
@@ -191,6 +193,13 @@ PowerShell 5.1 qualification, protected profile installation and each live
 target activation remain independent gates. OwnTracks is the first reference
 profile; Media Carousel is a later reuse target. Standalone-module cross-root
 retention remains specified but disabled.
+
+The current repository line adds a shared internal Windows child-process
+contract for hash-pinned PowerShell children. It provides explicit timeout,
+combined output bounds and process-tree termination, and keeps approval
+capabilities out of ordinary child command lines. The channel remains version
+8 with the same five remote verbs. Exact Windows PowerShell 5.1
+requalification, installation and live use remain separate closed gates.
 
 ## Licensing
 

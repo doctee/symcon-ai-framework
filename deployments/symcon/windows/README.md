@@ -112,6 +112,10 @@ iPhone and iPad.
 
 The channel consists of:
 
+- `SaefChildProcess.ps1`, the internal fixed-interpreter, hash-pinned,
+  timeout- and output-bounded Windows Job Object launcher;
+- `Invoke-SaefChildProcessWindowsQualification.ps1`, the protected
+  PowerShell 5.1 process-lifecycle qualification;
 - `Invoke-SaefDeploymentGateway.ps1`, the Windows forced-command dispatcher;
 - `Invoke-SaefRuntimeMirror.ps1`, the bounded post-activation mirror
   coordinator;
@@ -145,9 +149,30 @@ The dispatcher recognizes exactly five commands:
 
 There is no command for arbitrary PowerShell, arbitrary paths, service names,
 RPC endpoints or script execution. All paths, limits, the loopback RPC URI and
-the hashes of the restart and mirror artifacts come from
+the hashes of the child-process, restart and mirror artifacts come from
 `deployment-channel.local.json` on the Windows host. That local file is
 excluded from Git.
+
+### Secure child processes
+
+Runtime PowerShell children are started only through the installed and
+hash-pinned `SaefChildProcess.ps1` contract. It selects Windows PowerShell
+5.1, quotes a bounded argument array without a shell, captures a bounded
+combined output stream and terminates the assigned Job Object on timeout or
+overflow. It removes inherited SAEF-prefixed environment entries and closes
+redirected standard input before applying the explicit bounded environment.
+Callers still validate each child's own status and independent postflight.
+
+The scope-bound approval envelope is transferred to the runner as
+`SAEF_APPROVAL_ENVELOPE`, then validated and cleared before any adapter or
+reseal process starts. Existing direct recovery invocation remains temporarily
+compatible, but gateway and qualification paths do not place the capability on
+a process command line.
+
+The deployment initializer's direct `sshd.exe -t` call is a narrow bootstrap
+exception: the process contract is not installed yet, and neither executable
+nor arguments come from a remote command. See
+`project/SECURE_CHILD_PROCESS_EXECUTION.md` and ADR-0011.
 
 ### Optional SAEF helper source mirror
 

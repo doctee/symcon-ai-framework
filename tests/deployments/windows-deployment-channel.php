@@ -68,6 +68,7 @@ $restartPath = $root . '/deployments/symcon/windows/Invoke-SaefSymconRestart.ps1
 $healthProbePath = $root . '/deployments/symcon/windows/SaefRuntimeHealthProbe.php';
 $mirrorCoordinatorPath = $root . '/deployments/symcon/windows/Invoke-SaefRuntimeMirror.ps1';
 $mirrorReconcilerPath = $root . '/deployments/symcon/windows/SaefRuntimeSourceMirror.php';
+$childProcessPath = $root . '/deployments/symcon/windows/SaefChildProcess.ps1';
 $initializerPath = $root . '/deployments/symcon/windows/Initialize-SaefDeploymentChannel.ps1';
 $clientPath = $root . '/deployments/symcon/windows/saef-deploy';
 $policyExamplePath = $root . '/deployments/symcon/windows/deployment-channel-policy.example.json';
@@ -80,6 +81,7 @@ $restart = file_get_contents($restartPath);
 $healthProbe = file_get_contents($healthProbePath);
 $mirrorCoordinator = file_get_contents($mirrorCoordinatorPath);
 $mirrorReconciler = file_get_contents($mirrorReconcilerPath);
+$childProcess = file_get_contents($childProcessPath);
 $initializer = file_get_contents($initializerPath);
 $client = file_get_contents($clientPath);
 $policy = json_decode((string) file_get_contents($policyExamplePath), true, flags: JSON_THROW_ON_ERROR);
@@ -88,6 +90,7 @@ assertDeploymentChannel(is_string($restart), 'Restart coordinator is unreadable.
 assertDeploymentChannel(is_string($healthProbe), 'Runtime health probe is unreadable.');
 assertDeploymentChannel(is_string($mirrorCoordinator), 'Runtime mirror coordinator is unreadable.');
 assertDeploymentChannel(is_string($mirrorReconciler), 'Runtime mirror reconciler is unreadable.');
+assertDeploymentChannel(is_string($childProcess), 'Secure child process contract is unreadable.');
 assertDeploymentChannel(is_string($initializer), 'Deployment channel initializer is unreadable.');
 assertDeploymentChannel(is_string($client), 'Deployment client is unreadable.');
 assertDeploymentChannel(is_array($policy), 'Deployment policy example is invalid.');
@@ -108,6 +111,8 @@ $requiredGatewayFragments = [
     'maxPreflightAgeSeconds',
     "@('127.0.0.1', 'localhost', '::1')",
     'expectedRestartCoordinatorSha256',
+    'expectedChildProcessContractSha256',
+    'Invoke-SaefPowerShellChildProcess',
     'expectedRestartPolicySha256',
     'expectedRuntimeMirrorCoordinatorSha256',
     'expectedRuntimeMirrorReconcilerSha256',
@@ -177,7 +182,6 @@ $requiredGatewayFragments = [
     "Outcome 'restart_launch_failed_rolled_back'",
     "Outcome 'manual_recovery_required'",
     "'-CredentialPath'",
-    "'-ExecutionPolicy', 'Bypass'",
     '[IO.File]::Replace',
 ];
 foreach ($requiredGatewayFragments as $fragment) {
@@ -218,6 +222,12 @@ foreach ($forbiddenGatewayPatterns as $pattern) {
 assertDeploymentChannel(
     !str_contains($gateway, '[Console]::OpenStandardInput()'),
     'Gateway still depends on Windows OpenSSH standard-input forwarding.'
+);
+assertDeploymentChannel(
+    str_contains($childProcess, "'-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File'")
+        && str_contains($childProcess, 'UseShellExecute = false')
+        && !str_contains($gateway, '& $powerShellExecutable'),
+    'Gateway child execution is not owned by the fixed secure process contract.'
 );
 assertDeploymentChannel(
     str_contains($gateway, '$PolicyPath = Join-Path $PSScriptRoot \'deployment-channel.local.json\''),
@@ -424,6 +434,8 @@ $requiredPolicyKeys = [
     'stateRoot',
     'adapterStateRoot',
     'activeBootstrapRelativePath',
+    'childProcessContractPath',
+    'expectedChildProcessContractSha256',
     'restartCoordinatorPath',
     'expectedRestartCoordinatorSha256',
     'restartPolicyPath',
@@ -487,12 +499,14 @@ assertDeploymentChannel(is_array($checksumLines), 'Windows deployment checksums 
 $expectedChecksumFiles = [
     'Initialize-SaefDeploymentChannel.ps1',
     'Initialize-SaefScopeBoundApprovalProfile.ps1',
+    'Invoke-SaefChildProcessWindowsQualification.ps1',
     'Invoke-SaefDeploymentGateway.ps1',
     'Invoke-SaefDeploymentRetentionCleanup.ps1',
     'Invoke-SaefRuntimeMirror.ps1',
     'Invoke-SaefScopeBoundApprovalRunner.ps1',
     'Invoke-SaefScopeBoundApprovalWindowsQualification.ps1',
     'Invoke-SaefSymconRestart.ps1',
+    'SaefChildProcess.ps1',
     'SaefRuntimeHealthProbe.php',
     'SaefRuntimeSourceMirror.php',
     'deployment-approval-plan.example.json',

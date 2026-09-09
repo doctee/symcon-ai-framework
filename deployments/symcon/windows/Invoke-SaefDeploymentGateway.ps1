@@ -144,6 +144,27 @@ function Get-Sha256 {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
+function Import-SaefChildProcessContract {
+    param([Parameter(Mandatory = $true)] $Policy)
+
+    $path = [string] $Policy.childProcessContractPath
+    if (-not [IO.Path]::IsPathRooted($path) -or
+        -not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw [IO.FileNotFoundException]::new('Child process contract is missing.')
+    }
+    $item = Get-Item -LiteralPath $path -Force
+    if ([long] $item.Length -lt 1 -or [long] $item.Length -gt 4194304 -or
+        (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) -or
+        (Get-Sha256 -Path $path) -cne [string] $Policy.expectedChildProcessContractSha256) {
+        throw [Security.SecurityException]::new('Child process contract identity differs.')
+    }
+    . $path
+    if ($null -eq (Get-Command Invoke-SaefPowerShellChildProcess -CommandType Function `
+            -ErrorAction SilentlyContinue)) {
+        throw [InvalidOperationException]::new('Child process contract function is unavailable.')
+    }
+}
+
 function Get-BytesSha256 {
     param([Parameter(Mandatory = $true)][byte[]] $Bytes)
 
@@ -337,6 +358,8 @@ function Read-ChannelPolicy {
         'stateRoot',
         'adapterStateRoot',
         'activeBootstrapRelativePath',
+        'childProcessContractPath',
+        'expectedChildProcessContractSha256',
         'restartCoordinatorPath',
         'expectedRestartCoordinatorSha256',
         'restartPolicyPath',
@@ -387,6 +410,7 @@ function Read-ChannelPolicy {
         'managedFilesetRoot',
         'stateRoot',
         'adapterStateRoot',
+        'childProcessContractPath',
         'restartCoordinatorPath',
         'restartPolicyPath',
         'runtimeMirrorCoordinatorPath',
@@ -433,7 +457,8 @@ function Read-ChannelPolicy {
         (Test-PathInsideRoot -Root $adapterStateRoot -Path $configuredBootstrapPath)) {
         throw [System.InvalidOperationException]::new('Active bootstrap must be outside managed deployment roots.')
     }
-    if (-not (Test-HexSha256 -Value ([string] $policy.expectedRestartCoordinatorSha256)) -or
+    if (-not (Test-HexSha256 -Value ([string] $policy.expectedChildProcessContractSha256)) -or
+        -not (Test-HexSha256 -Value ([string] $policy.expectedRestartCoordinatorSha256)) -or
         -not (Test-HexSha256 -Value ([string] $policy.expectedRestartPolicySha256)) -or
         -not (Test-HexSha256 -Value ([string] $policy.expectedRuntimeMirrorCoordinatorSha256)) -or
         -not (Test-HexSha256 -Value ([string] $policy.expectedRuntimeMirrorReconcilerSha256))) {
@@ -546,6 +571,7 @@ function Read-ChannelPolicy {
         }
     }
     foreach ($file in @(
+        $policy.childProcessContractPath,
         $policy.restartCoordinatorPath,
         $policy.restartPolicyPath,
         $policy.runtimeMirrorCoordinatorPath,
@@ -556,7 +582,9 @@ function Read-ChannelPolicy {
             throw [System.IO.FileNotFoundException]::new('Configured deployment dependency is missing.')
         }
     }
-    if ((Get-Sha256 -Path ([string] $policy.restartCoordinatorPath)) -ne [string] $policy.expectedRestartCoordinatorSha256 -or
+    if ((Get-Sha256 -Path ([string] $policy.childProcessContractPath)) -cne
+            [string] $policy.expectedChildProcessContractSha256 -or
+        (Get-Sha256 -Path ([string] $policy.restartCoordinatorPath)) -ne [string] $policy.expectedRestartCoordinatorSha256 -or
         (Get-Sha256 -Path ([string] $policy.restartPolicyPath)) -ne [string] $policy.expectedRestartPolicySha256 -or
         (Get-Sha256 -Path ([string] $policy.runtimeMirrorCoordinatorPath)) -ne
             [string] $policy.expectedRuntimeMirrorCoordinatorSha256 -or
@@ -907,13 +935,7 @@ function Invoke-RestartCoordinator {
         [Parameter()][array] $RequiredRuntimeFunctions
     )
 
-    $powerShellExecutable = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
     $arguments = @(
-        '-NoLogo',
-        '-NoProfile',
-        '-NonInteractive',
-        '-ExecutionPolicy', 'Bypass',
-        '-File', [string] $Policy.restartCoordinatorPath,
         '-RpcUri', [string] $Policy.rpcUri,
         '-CredentialPath', [string] $Policy.credentialPath,
         '-PolicyPath', [string] $Policy.restartPolicyPath,
@@ -942,8 +964,11 @@ function Invoke-RestartCoordinator {
                 [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($contractJson))
         )
     }
-    & $powerShellExecutable @arguments | Out-Null
-    return [int] $LASTEXITCODE
+    $result = Invoke-SaefPowerShellChildProcess `
+        -ScriptPath ([string] $Policy.restartCoordinatorPath) `
+        -ExpectedScriptSha256 ([string] $Policy.expectedRestartCoordinatorSha256) `
+        -Arguments $arguments -TimeoutSeconds 600 -MaximumOutputBytes 65536
+    return [int] $result.exitCode
 }
 
 function Invoke-RuntimeMirrorCoordinator {
@@ -954,13 +979,7 @@ function Invoke-RuntimeMirrorCoordinator {
         [Parameter()][switch] $PreflightOnly
     )
 
-    $powerShellExecutable = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
     $arguments = @(
-        '-NoLogo',
-        '-NoProfile',
-        '-NonInteractive',
-        '-ExecutionPolicy', 'Bypass',
-        '-File', [string] $Policy.runtimeMirrorCoordinatorPath,
         '-RpcUri', [string] $Policy.rpcUri,
         '-CredentialPath', [string] $Policy.credentialPath,
         '-ReconcilerPath', [string] $Policy.runtimeMirrorReconcilerPath,
@@ -976,8 +995,11 @@ function Invoke-RuntimeMirrorCoordinator {
     if ($PreflightOnly) {
         $arguments += '-PreflightOnly'
     }
-    & $powerShellExecutable @arguments | Out-Null
-    return [int] $LASTEXITCODE
+    $result = Invoke-SaefPowerShellChildProcess `
+        -ScriptPath ([string] $Policy.runtimeMirrorCoordinatorPath) `
+        -ExpectedScriptSha256 ([string] $Policy.expectedRuntimeMirrorCoordinatorSha256) `
+        -Arguments $arguments -TimeoutSeconds 300 -MaximumOutputBytes 65536
+    return [int] $result.exitCode
 }
 
 function Invoke-StandaloneModuleAdapter {
@@ -994,13 +1016,7 @@ function Invoke-StandaloneModuleAdapter {
         Remove-Item -LiteralPath $statusPath -Force
     }
     $startedUtc = [DateTime]::UtcNow
-    $powerShellExecutable = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
     $arguments = @(
-        '-NoLogo',
-        '-NoProfile',
-        '-NonInteractive',
-        '-ExecutionPolicy', 'Bypass',
-        '-File', [string] $target.adapterPath,
         '-Operation', $Operation,
         '-ManifestPath', [string] $Deployment.paths.manifestPath,
         '-CandidatePath', [string] $Deployment.targetDirectory,
@@ -1010,8 +1026,11 @@ function Invoke-StandaloneModuleAdapter {
         '-CredentialPath', [string] $Policy.credentialPath,
         '-StatusPath', $statusPath
     )
-    & $powerShellExecutable @arguments | Out-Null
-    $adapterExitCode = [int] $LASTEXITCODE
+    $timeoutSeconds = if ($Operation -ceq 'activate') { 900 } else { 300 }
+    $result = Invoke-SaefPowerShellChildProcess -ScriptPath ([string] $target.adapterPath) `
+        -ExpectedScriptSha256 ([string] $target.expectedAdapterSha256) `
+        -Arguments $arguments -TimeoutSeconds $timeoutSeconds -MaximumOutputBytes 65536
+    $adapterExitCode = [int] $result.exitCode
     if (-not (Test-Path -LiteralPath $statusPath -PathType Leaf) -or
         (Get-Item -LiteralPath $statusPath).Length -gt 65536) {
         throw [System.InvalidOperationException]::new('Standalone module adapter status is missing or invalid.')
@@ -1074,11 +1093,9 @@ function Invoke-ScopeBoundApprovalRunner {
         Remove-Item -LiteralPath $statusPath -Force
     }
     $startedUtc = [DateTime]::UtcNow
-    $powerShellExecutable = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
     $arguments = @(
-        '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-        '-File', [string] $target.approvalRunnerPath,
-        '-ApprovalEnvelopeBase64Url', $ApprovalEnvelopeBase64Url,
+        '-ChildProcessContractPath', [string] $Policy.childProcessContractPath,
+        '-ExpectedChildProcessContractSha256', [string] $Policy.expectedChildProcessContractSha256,
         '-ChannelPolicyPath', $PolicyPath,
         '-ManifestPath', [string] $Deployment.paths.manifestPath,
         '-CandidatePath', [string] $Deployment.targetDirectory,
@@ -1093,8 +1110,12 @@ function Invoke-ScopeBoundApprovalRunner {
         '-DeploymentStatusPath', [string] $Deployment.paths.statusPath,
         '-StatusPath', $statusPath
     )
-    & $powerShellExecutable @arguments | Out-Null
-    $runnerExitCode = [int] $LASTEXITCODE
+    $result = Invoke-SaefPowerShellChildProcess `
+        -ScriptPath ([string] $target.approvalRunnerPath) `
+        -ExpectedScriptSha256 ([string] $target.expectedApprovalRunnerSha256) `
+        -Arguments $arguments -Environment @{ SAEF_APPROVAL_ENVELOPE = $ApprovalEnvelopeBase64Url } `
+        -TimeoutSeconds 900 -MaximumOutputBytes 65536
+    $runnerExitCode = [int] $result.exitCode
     if (-not (Test-Path -LiteralPath $statusPath -PathType Leaf) -or
         (Get-Item -LiteralPath $statusPath).Length -gt 65536) {
         throw [System.InvalidOperationException]::new('Approval runner status is missing or invalid.')
@@ -2003,6 +2024,7 @@ $channelMutex = $null
 try {
     $script:failureCode = 'policy'
     $policy = Read-ChannelPolicy -Path $PolicyPath
+    Import-SaefChildProcessContract -Policy $policy
     $script:failureCode = 'command'
     $originalCommand = [string] $env:SSH_ORIGINAL_COMMAND
     if ([string]::IsNullOrWhiteSpace($originalCommand)) {
