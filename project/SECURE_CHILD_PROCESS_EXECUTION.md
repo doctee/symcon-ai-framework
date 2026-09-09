@@ -131,7 +131,10 @@ PowerShell 5.1 against exact reviewed hashes. Its protected scratch cases prove:
 
 The scope-bound approval Windows qualification also uses the exact same
 launcher for profile and runner children and includes its hash in final
-evidence.
+evidence. Synthetic interruption and postflight-failure controls are explicit
+fields of the hash-bound scratch adapter policy. They are not ambient
+environment capabilities; the activation interruption is consumed exactly
+once so the unchanged approval envelope can prove the guarded resume path.
 
 The dedicated launcher result requires four positive and four negative case
 groups, protected scratch cleanup, no production mutation and no service

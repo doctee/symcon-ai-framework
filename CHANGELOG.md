@@ -79,6 +79,10 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Bound Windows approval-qualification fault injection to the hashed scratch
+  adapter policy instead of relying on ambient SAEF environment inheritance,
+  preserving both secure child-process isolation and deterministic resume and
+  rollback coverage.
 - Kept the hash-verified child-process launcher in gateway and approval-runner
   script scope under Windows PowerShell 5.1 so every later operation uses the
   qualified process boundary instead of losing the imported command.

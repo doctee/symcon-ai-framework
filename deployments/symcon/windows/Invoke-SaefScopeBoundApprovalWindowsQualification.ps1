@@ -675,6 +675,8 @@ function Invoke-RunnerScenario {
         formatVersion = 1
         adapterProfile = $adapterProfile
         expectedActivePackageIdentitySha256 = $previousPackage
+        syntheticCrashActivate = [bool] $CrashActivate
+        syntheticFailPostflightAt = [int] $FailPostflightAt
     }
     Write-Json -Path $adapterPolicyPath -Value $adapterPolicy
     Write-Json -Path $channelPolicyPath -Value ([ordered]@{
@@ -802,8 +804,6 @@ function Invoke-RunnerScenario {
         )
         $runnerEnvironment = @{
             SAEF_APPROVAL_ENVELOPE = $envelope
-            SAEF_APPROVAL_SYNTHETIC_FAIL_POSTFLIGHT_AT = [string] $FailPostflightAt
-            SAEF_APPROVAL_SYNTHETIC_CRASH_ACTIVATE = if ([bool] $CrashActivate) { '1' } else { '0' }
         }
         $result = Invoke-SaefPowerShellChildProcess -ScriptPath $RunnerPath `
             -ExpectedScriptSha256 $script:runnerSha256 -Arguments $runnerArguments `

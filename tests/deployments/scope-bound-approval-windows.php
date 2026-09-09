@@ -188,6 +188,16 @@ assertScopeBoundApprovalWindows(
     'Approval Windows qualification bypasses the secure child process contract.'
 );
 assertScopeBoundApprovalWindows(
+    str_contains($qualification, 'syntheticCrashActivate = [bool] $CrashActivate')
+        && str_contains($qualification, 'syntheticFailPostflightAt = [int] $FailPostflightAt')
+        && !str_contains($qualification, 'SAEF_APPROVAL_SYNTHETIC_')
+        && str_contains($syntheticAdapter, '$crashActivate = [bool] $policy.syntheticCrashActivate')
+        && str_contains($syntheticAdapter, '$failPostflightAt = [int] $policy.syntheticFailPostflightAt')
+        && str_contains($syntheticAdapter, "'synthetic-activate-crash-consumed.local.txt'")
+        && !str_contains($syntheticAdapter, '$env:SAEF_APPROVAL_SYNTHETIC_'),
+    'Synthetic fault injection is not bound to the hashed scratch adapter policy.'
+);
+assertScopeBoundApprovalWindows(
     str_contains($syntheticAdapter, "[ValidateSet('preflight', 'activate', 'postflight', 'inspect', 'rollback')]")
         && str_contains($syntheticAdapter, "Write-Status -Outcome 'rolled_back'")
         && str_contains($syntheticReseal, '[switch] $ChannelMutexAlreadyHeld')

@@ -55,8 +55,13 @@ $policy = Get-Content -LiteralPath $AdapterPolicyPath -Raw | ConvertFrom-Json
 $activePath = Join-Path (Split-Path -Parent $AdapterPolicyPath) 'synthetic-active.local.txt'
 $previousPath = Join-Path (Split-Path -Parent $AdapterPolicyPath) 'synthetic-previous.local.txt'
 $postflightCountPath = Join-Path (Split-Path -Parent $AdapterPolicyPath) 'synthetic-postflight-count.local.txt'
+$activateCrashConsumedPath = Join-Path `
+    (Split-Path -Parent $AdapterPolicyPath) `
+    'synthetic-activate-crash-consumed.local.txt'
 $candidateIdentity = [string] $script:manifest.module.packageIdentitySha256
 $previousIdentity = [string] $policy.expectedActivePackageIdentitySha256
+$crashActivate = [bool] $policy.syntheticCrashActivate
+$failPostflightAt = [int] $policy.syntheticFailPostflightAt
 
 switch ($Operation) {
     'preflight' {
@@ -68,7 +73,13 @@ switch ($Operation) {
         exit 0
     }
     'activate' {
-        if ([string] $env:SAEF_APPROVAL_SYNTHETIC_CRASH_ACTIVATE -ceq '1') {
+        if ($crashActivate -and
+            -not (Test-Path -LiteralPath $activateCrashConsumedPath -PathType Leaf)) {
+            [IO.File]::WriteAllText(
+                $activateCrashConsumedPath,
+                'consumed',
+                [Text.UTF8Encoding]::new($false)
+            )
             exit 99
         }
         [IO.File]::WriteAllText(
@@ -91,7 +102,7 @@ switch ($Operation) {
             [string] $count,
             [Text.UTF8Encoding]::new($false)
         )
-        if ([int] $env:SAEF_APPROVAL_SYNTHETIC_FAIL_POSTFLIGHT_AT -eq $count) {
+        if ($failPostflightAt -eq $count) {
             Write-Status -Outcome 'failed' -ExitCode 10 -ActivationAttempted $true `
                 -RollbackAttempted $false -RollbackSucceeded $false
             exit 10
