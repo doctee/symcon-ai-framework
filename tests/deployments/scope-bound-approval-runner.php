@@ -89,6 +89,30 @@ assertScopeBoundApprovalRunner(
     'Approval qualification condition is not closed for Windows PowerShell 5.1.'
 );
 
+$childProcessSourceAssertion = strpos(
+    $runner,
+    'function Assert-SaefChildProcessContractSource {'
+);
+$nextFunctionAfterSourceAssertion = strpos(
+    $runner,
+    'function Get-TextSha256 {',
+    $childProcessSourceAssertion === false ? 0 : $childProcessSourceAssertion
+);
+$childProcessScriptScopeImport = strpos(
+    $runner,
+    "Assert-SaefChildProcessContractSource\n" .
+    "    # Keep the exported launcher in script scope for every later approval phase.\n" .
+    '    . $ChildProcessContractPath'
+);
+assertScopeBoundApprovalRunner(
+    $childProcessSourceAssertion !== false
+        && $nextFunctionAfterSourceAssertion !== false
+        && $childProcessScriptScopeImport !== false
+        && $childProcessScriptScopeImport > $nextFunctionAfterSourceAssertion
+        && substr_count($runner, '. $ChildProcessContractPath') === 1,
+    'Child process contract is not imported exactly once in approval runner script scope.'
+);
+
 assertScopeBoundApprovalRunner(
     strpos($runner, "[Threading.Mutex]::new(\$false, 'Global\\SAEF.DeploymentApproval')")
         < strpos($runner, 'if (Test-Path -LiteralPath $script:statePath -PathType Leaf)'),

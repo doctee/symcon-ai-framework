@@ -190,6 +190,30 @@ foreach ($requiredGatewayFragments as $fragment) {
         "Required gateway contract fragment is missing: {$fragment}"
     );
 }
+$childProcessSourceAssertion = strpos(
+    $gateway,
+    'function Assert-SaefChildProcessContractSource {'
+);
+$nextFunctionAfterSourceAssertion = strpos(
+    $gateway,
+    'function Get-BytesSha256 {',
+    $childProcessSourceAssertion === false ? 0 : $childProcessSourceAssertion
+);
+$childProcessScriptScopeImport = strpos(
+    $gateway,
+    "Assert-SaefChildProcessContractSource -Policy \$policy\n" .
+    '    $childProcessContractPath = [string] $policy.childProcessContractPath' . "\n" .
+    "    # Keep the exported launcher in script scope for every later channel operation.\n" .
+    '    . $childProcessContractPath'
+);
+assertDeploymentChannel(
+    $childProcessSourceAssertion !== false
+        && $nextFunctionAfterSourceAssertion !== false
+        && $childProcessScriptScopeImport !== false
+        && $childProcessScriptScopeImport > $nextFunctionAfterSourceAssertion
+        && substr_count($gateway, '. $childProcessContractPath') === 1,
+    'Child process contract is not imported exactly once in gateway script scope.'
+);
 assertDeploymentChannel(
     substr_count(
         $gateway,

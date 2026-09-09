@@ -79,6 +79,9 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Kept the hash-verified child-process launcher in gateway and approval-runner
+  script scope under Windows PowerShell 5.1 so every later operation uses the
+  qualified process boundary instead of losing the imported command.
 - Corrected the Windows PowerShell 5.1 C# host compilation by separating the
   Job Object information-class constant from the identically named structure,
   with a regression against the original member collision.

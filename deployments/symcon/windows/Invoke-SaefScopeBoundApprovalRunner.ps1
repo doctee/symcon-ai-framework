@@ -161,17 +161,12 @@ function Get-Sha256 {
     }
 }
 
-function Import-SaefChildProcessContract {
+function Assert-SaefChildProcessContractSource {
     Assert-RootedLeaf -Path $ChildProcessContractPath -MaximumBytes 4194304
     Assert-ProtectedPathAcl -Path $ChildProcessContractPath
     if ((Get-Sha256 -Path $ChildProcessContractPath) -cne
         $ExpectedChildProcessContractSha256) {
         throw [Security.SecurityException]::new('Child process contract identity differs.')
-    }
-    . $ChildProcessContractPath
-    if ($null -eq (Get-Command Invoke-SaefPowerShellChildProcess -CommandType Function `
-            -ErrorAction SilentlyContinue)) {
-        throw [InvalidOperationException]::new('Child process contract function is unavailable.')
     }
 }
 
@@ -947,7 +942,13 @@ try {
     $script:packageIdentitySha256 = [string] $script:manifest.module.packageIdentitySha256
     $script:policy = Read-BoundedJson -Path $ApprovalPolicyPath
     $script:transfer = Read-BoundedJson -Path $PackageTransferPath -MaximumBytes 4096
-    Import-SaefChildProcessContract
+    Assert-SaefChildProcessContractSource
+    # Keep the exported launcher in script scope for every later approval phase.
+    . $ChildProcessContractPath
+    if ($null -eq (Get-Command Invoke-SaefPowerShellChildProcess -CommandType Function `
+            -ErrorAction SilentlyContinue)) {
+        throw [InvalidOperationException]::new('Child process contract function is unavailable.')
+    }
     $envelope = ConvertFrom-Base64UrlJson -Value $ApprovalEnvelopeBase64Url
     Assert-ExactProperties -Value $envelope -Names @('formatVersion', 'plan', 'approval') `
         -Label 'Approval envelope'

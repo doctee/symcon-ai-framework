@@ -144,7 +144,7 @@ function Get-Sha256 {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
-function Import-SaefChildProcessContract {
+function Assert-SaefChildProcessContractSource {
     param([Parameter(Mandatory = $true)] $Policy)
 
     $path = [string] $Policy.childProcessContractPath
@@ -157,11 +157,6 @@ function Import-SaefChildProcessContract {
         (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) -or
         (Get-Sha256 -Path $path) -cne [string] $Policy.expectedChildProcessContractSha256) {
         throw [Security.SecurityException]::new('Child process contract identity differs.')
-    }
-    . $path
-    if ($null -eq (Get-Command Invoke-SaefPowerShellChildProcess -CommandType Function `
-            -ErrorAction SilentlyContinue)) {
-        throw [InvalidOperationException]::new('Child process contract function is unavailable.')
     }
 }
 
@@ -2024,7 +2019,14 @@ $channelMutex = $null
 try {
     $script:failureCode = 'policy'
     $policy = Read-ChannelPolicy -Path $PolicyPath
-    Import-SaefChildProcessContract -Policy $policy
+    Assert-SaefChildProcessContractSource -Policy $policy
+    $childProcessContractPath = [string] $policy.childProcessContractPath
+    # Keep the exported launcher in script scope for every later channel operation.
+    . $childProcessContractPath
+    if ($null -eq (Get-Command Invoke-SaefPowerShellChildProcess -CommandType Function `
+            -ErrorAction SilentlyContinue)) {
+        throw [InvalidOperationException]::new('Child process contract function is unavailable.')
+    }
     $script:failureCode = 'command'
     $originalCommand = [string] $env:SSH_ORIGINAL_COMMAND
     if ([string]::IsNullOrWhiteSpace($originalCommand)) {

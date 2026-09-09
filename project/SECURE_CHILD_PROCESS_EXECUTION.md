@@ -29,6 +29,12 @@ The launcher supplies the Windows PowerShell executable and fixed NoLogo,
 NoProfile, NonInteractive, ExecutionPolicy Bypass and File arguments. Callers
 must not repeat interpreter options or File.
 
+Callers must verify the contract path, reparse status, ACL and exact SHA-256
+before dot-sourcing it exactly once in their persistent script scope. Windows
+PowerShell 5.1 binds a script dot-sourced inside a helper function to that
+short-lived function scope; such an import must not be used for a launcher
+needed by later coordinator phases.
+
 The result contains only exit code, termination reason, bounded output bytes,
 observed output byte counts and duration. Non-zero child exit codes are
 returned to the owning coordinator. Timeout and output overflow terminate the
@@ -50,6 +56,7 @@ Job Object and throw a classified exception.
 - Standard output and standard error share one capture budget.
 - Timeout and output overflow terminate the complete assigned process tree.
 - A pre-existing process-host type is rejected rather than reused.
+- The exported launcher remains in the owning coordinator's script scope.
 - Process success never substitutes for the child's own status and postflight
   validation.
 
