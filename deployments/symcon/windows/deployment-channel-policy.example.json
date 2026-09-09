@@ -5,6 +5,8 @@
     "stateRoot": "<private-absolute-deployment-state-root>",
     "adapterStateRoot": "<private-absolute-adapter-state-root>",
     "activeBootstrapRelativePath": "<private-relative-bootstrap-path>",
+    "childProcessContractPath": "<private-absolute-child-process-contract-path>",
+    "expectedChildProcessContractSha256": "<reviewed-lowercase-sha256>",
     "restartCoordinatorPath": "<private-absolute-restart-coordinator-path>",
     "expectedRestartCoordinatorSha256": "<reviewed-lowercase-sha256>",
     "restartPolicyPath": "<private-absolute-restart-policy-path>",

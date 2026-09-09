@@ -57,6 +57,11 @@ The remote channel keeps exactly `probe`, `stage`, `preflight`, `activate` and
 `status`. The Windows integration maps coordinator phases only to installed,
 hash-pinned profiles and adds no arbitrary remote execution.
 
+The gateway and runner launch reviewed PowerShell children only through the
+bounded process contract from ADR-0011. The approval envelope is passed in a
+short-lived environment entry and cleared by the runner before any adapter or
+reseal child starts; it is not placed on the child command line.
+
 Allowlist changes, service restarts, provider contacts, publication and
 retention deletion are rejected by this one-click plan. They remain separate
 risk gates. Cross-root standalone-module retention is specified separately in
@@ -125,3 +130,4 @@ Rejected because those remain adapter-owned, target-specific responsibilities.
 - `project/SCOPE_BOUND_DEPLOYMENT_APPROVAL.md`
 - `project/CHANNEL_V8_ONE_CLICK_THREAT_MODEL.md`
 - `project/STANDALONE_MODULE_CROSS_ROOT_RETENTION.md`
+- `adr/ADR-0011-use-bounded-powershell-child-processes.md`

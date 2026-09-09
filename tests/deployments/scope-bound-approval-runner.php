@@ -39,6 +39,10 @@ foreach (
     [
         "'Global\\SAEF.DeploymentApproval'",
         'ApprovalEnvelopeBase64Url',
+        'SAEF_APPROVAL_ENVELOPE',
+        '$env:SAEF_APPROVAL_ENVELOPE = $null',
+        'Invoke-SaefPowerShellChildProcess',
+        'ExpectedChildProcessContractSha256',
         'ConvertTo-CanonicalJson',
         '$Value -is [Collections.IDictionary]',
         '[Array]::Sort($names, [StringComparer]::Ordinal)',
@@ -85,6 +89,30 @@ assertScopeBoundApprovalRunner(
     'Approval qualification condition is not closed for Windows PowerShell 5.1.'
 );
 
+$childProcessSourceAssertion = strpos(
+    $runner,
+    'function Assert-SaefChildProcessContractSource {'
+);
+$nextFunctionAfterSourceAssertion = strpos(
+    $runner,
+    'function Get-TextSha256 {',
+    $childProcessSourceAssertion === false ? 0 : $childProcessSourceAssertion
+);
+$childProcessScriptScopeImport = strpos(
+    $runner,
+    "Assert-SaefChildProcessContractSource\n" .
+    "    # Keep the exported launcher in script scope for every later approval phase.\n" .
+    '    . $ChildProcessContractPath'
+);
+assertScopeBoundApprovalRunner(
+    $childProcessSourceAssertion !== false
+        && $nextFunctionAfterSourceAssertion !== false
+        && $childProcessScriptScopeImport !== false
+        && $childProcessScriptScopeImport > $nextFunctionAfterSourceAssertion
+        && substr_count($runner, '. $ChildProcessContractPath') === 1,
+    'Child process contract is not imported exactly once in approval runner script scope.'
+);
+
 assertScopeBoundApprovalRunner(
     strpos($runner, "[Threading.Mutex]::new(\$false, 'Global\\SAEF.DeploymentApproval')")
         < strpos($runner, 'if (Test-Path -LiteralPath $script:statePath -PathType Leaf)'),
@@ -113,6 +141,8 @@ assertScopeBoundApprovalRunner(
 assertScopeBoundApprovalRunner(
     !str_contains($runner, '$env:SSH_ORIGINAL_COMMAND')
         && !str_contains($runner, 'Invoke-Expression')
+        && !str_contains($runner, '& $powerShell')
+        && !str_contains($runner, "'-ApprovalEnvelopeBase64Url'")
         && !str_contains($runner, 'errorMessage')
         && !str_contains($runner, 'Restart-Service')
         && !str_contains($runner, 'Start-Service')
@@ -143,6 +173,7 @@ $expectedPolicyKeys = [
     'approvalSecretPath',
     'qualificationEvidencePath',
     'expectedQualificationEvidenceSha256',
+    'expectedChildProcessContractSha256',
     'channelHostBindingSha256',
     'approverIdentitySha256',
     'executionHostIdentitySha256',

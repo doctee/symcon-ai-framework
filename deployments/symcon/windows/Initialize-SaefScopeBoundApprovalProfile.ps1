@@ -461,7 +461,8 @@ try {
     $evidence = Get-Content -LiteralPath $QualificationEvidencePath -Raw | ConvertFrom-Json
     Assert-ExactProperties -Value $evidence -Names @(
         'formatVersion', 'timestampUtc', 'phase', 'outcome', 'exitCode', 'expectedChannelVersion',
-        'runnerSha256', 'adapterSha256', 'resealSha256', 'positiveCaseCount', 'negativeCaseCount',
+        'childProcessContractSha256', 'runnerSha256', 'adapterSha256', 'resealSha256',
+        'positiveCaseCount', 'negativeCaseCount',
         'scratchMutationAttempted', 'scratchCleanupSucceeded', 'productionMutationAttempted',
         'serviceRestartAttempted', 'failedCheck', 'errorType'
     ) -Label 'Approval qualification evidence'
@@ -484,7 +485,10 @@ try {
     Assert-PlainLeaf -Path $channelPolicyPath -MaximumBytes 1048576
     $channelPolicy = Get-Content -LiteralPath $channelPolicyPath -Raw | ConvertFrom-Json
     if ($channelPolicy.formatVersion -ne 1 -or [string] $channelPolicy.deploymentUser -cne
-        $DeploymentUser.ToLowerInvariant()) {
+        $DeploymentUser.ToLowerInvariant() -or
+        [string] $channelPolicy.expectedChildProcessContractSha256 -cnotmatch '^[a-f0-9]{64}$' -or
+        [string] $evidence.childProcessContractSha256 -cne
+            [string] $channelPolicy.expectedChildProcessContractSha256) {
         throw [Security.SecurityException]::new('Active channel policy identity differs.')
     }
     $target = Get-Target -Policy $channelPolicy
@@ -526,6 +530,7 @@ try {
         approvalSecretPath = $installedSecretPath
         qualificationEvidencePath = $installedEvidencePath
         expectedQualificationEvidenceSha256 = $ExpectedQualificationEvidenceSha256
+        expectedChildProcessContractSha256 = [string] $channelPolicy.expectedChildProcessContractSha256
         channelHostBindingSha256 = $ChannelHostBindingSha256
         approverIdentitySha256 = $ApproverIdentitySha256
         executionHostIdentitySha256 = $ExecutionHostIdentitySha256

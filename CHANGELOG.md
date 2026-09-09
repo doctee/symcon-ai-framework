@@ -11,6 +11,14 @@ This project adheres to Semantic Versioning.
 
 ### Security
 
+- Added a shared hash-pinned Windows PowerShell child-process contract with
+  fixed interpreter selection, argument and environment bounds, combined
+  output limits, timeout and kill-on-close Job Object cleanup. Gateway,
+  approval runner and Windows qualification now compose this boundary without
+  adding a remote verb or target authority.
+- Moved the short-lived scope-bound approval envelope out of child command
+  lines into a bounded environment handoff that the runner rejects on
+  ambiguity and clears before adapter or reseal execution.
 - Added a scope-bound, short-lived, one-use HMAC approval contract for channel
   version 8. It binds plan, target, adapter, operations, starting identities,
   user and host while preserving fresh preflight, lock ordering, independent
@@ -71,6 +79,16 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Bound Windows approval-qualification fault injection to the hashed scratch
+  adapter policy instead of relying on ambient SAEF environment inheritance,
+  preserving both secure child-process isolation and deterministic resume and
+  rollback coverage.
+- Kept the hash-verified child-process launcher in gateway and approval-runner
+  script scope under Windows PowerShell 5.1 so every later operation uses the
+  qualified process boundary instead of losing the imported command.
+- Corrected the Windows PowerShell 5.1 C# host compilation by separating the
+  Job Object information-class constant from the identically named structure,
+  with a regression against the original member collision.
 - Made the Composer toolchain ownership check part of every `composer check`,
   aligned the root lock to PHP_CodeSniffer 3.13.6 and documented why historical
   worktree locks are revision drift rather than separate Composer projects.

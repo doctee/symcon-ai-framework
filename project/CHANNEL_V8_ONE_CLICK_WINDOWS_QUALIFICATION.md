@@ -1,7 +1,7 @@
 # Channel v8 One-Click Windows Qualification
 
-Status: Exact repository and Windows PowerShell 5.1 gates passed; installation
-remains separate
+Status: Repository contract updated; exact Windows PowerShell 5.1
+requalification and installation remain separate gates
 
 ## Scope
 
@@ -11,9 +11,9 @@ operations. It is an offline scratch qualification. It does not install the
 runner, change the channel policy, restart OpenSSH or Symcon, stage or activate
 a package, contact a provider, publish or delete retention artifacts.
 
-The gate accepts exact expected hashes for the runner, target adapter and
-reseal script. It also parses the profile initializer and synthetic fixtures.
-A changed byte closes the result.
+The gate accepts exact expected hashes for the child-process contract, runner,
+target adapter and reseal script. It also parses the profile initializer and
+synthetic fixtures. A changed byte closes the result.
 
 ## Environment
 
@@ -25,6 +25,7 @@ A changed byte closes the result.
 - an independent PHP-derived canonical JSON/SHA-256 vector executed under
   `en-US`, `de-DE` and `tr-TR`; and
 - cleanup verification for every scratch artifact.
+- the exact bounded child-process contract for every profile and runner child.
 
 Before scratch scenarios begin, the exact Windows implementation must reproduce
 the fixed reference vector with `StringComparer.Ordinal` under all three
@@ -84,9 +85,10 @@ content or the scratch tree.
 Pass requires exit code `0`, six positive and eight negative scenario groups,
 successful
 scratch cleanup, `productionMutationAttempted: false` and
-`serviceRestartAttempted: false`.
+`serviceRestartAttempted: false`. The result also binds the exact
+`childProcessContractSha256`.
 
-## Qualified artifact
+## Historical qualified artifact
 
 The exact culture-invariant sources from commit
 `10e482a7959c84524415066d90b514d2774974ba` passed the protected Windows gate
@@ -110,6 +112,10 @@ restart were all false.
 The private transfer bundle and raw machine status remain excluded. This
 bounded record does not authorize profile installation or live activation.
 
+This result predates the shared child-process contract and remains valid only
+for the listed historical source generation. It cannot qualify the current
+runner or channel artifacts.
+
 Run the exact reviewed sources from an elevated Windows PowerShell 5.1
 session:
 
@@ -117,7 +123,8 @@ session:
 & .\Invoke-SaefScopeBoundApprovalWindowsQualification.ps1 `
     -ExpectedRunnerSha256 '<reviewed-lowercase-sha256>' `
     -ExpectedAdapterSha256 '<reviewed-lowercase-sha256>' `
-    -ExpectedResealSha256 '<reviewed-lowercase-sha256>'
+    -ExpectedResealSha256 '<reviewed-lowercase-sha256>' `
+    -ExpectedChildProcessContractSha256 '<reviewed-lowercase-sha256>'
 
 $LASTEXITCODE
 Get-Content .\scope-bound-approval-windows-qualification.local.json -Raw

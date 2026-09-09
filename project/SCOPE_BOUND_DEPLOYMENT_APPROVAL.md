@@ -127,7 +127,9 @@ process boundary.
 ## Runner boundary
 
 The installed runner receives only the server-controlled deployment, target
-and policy paths plus the bounded approval envelope. It maps the fixed plan
+and policy paths. The gateway supplies the bounded approval envelope through a
+dedicated environment entry; the runner clears it before starting any child.
+It maps the fixed plan
 phases to the hash-pinned target adapter, optional reseal script and read-only
 qualification evidence. On Windows, each exact profile must pass PowerShell
 5.1 parsing and synthetic tests for:
@@ -141,6 +143,8 @@ qualification evidence. On Windows, each exact profile must pass PowerShell
 - interrupted activation, reseal and rollback inspection; and
 - bounded private status output.
 - PHP-identical canonical JSON and SHA-256 under multiple Windows cultures.
+- hash-bound child scripts, bounded output and timeout behavior; and
+- process-tree termination without approval data in child command lines.
 
 The runner uses the existing channel verbs. The gateway owns the channel mutex
 across the sequence and calls only installed profiles. The OwnTracks reseal
@@ -245,10 +249,10 @@ workflow cannot be imported implicitly; a fresh plan and baseline are required.
 
 ## Remaining gates
 
-1. Completed on 2026-09-08: the protected Windows PowerShell 5.1 parser,
-   culture, ACL, reparse, lock, crash and rollback qualification passed for
-   commit `10e482a7959c84524415066d90b514d2774974ba` and its exact source hashes.
-2. Install the qualified runner, secret, private state root and target policy
+1. Requalify the exact runner, process launcher, profile initializer and target
+   scripts under Windows PowerShell 5.1. The 2026-09-08 result remains
+   historical evidence for the earlier source generation only.
+2. Install the newly qualified runner, secret, private state root and target policy
    through the administrative profile installer.
 3. Materialize a private OwnTracks plan and complete read-only review and
    preflight.
