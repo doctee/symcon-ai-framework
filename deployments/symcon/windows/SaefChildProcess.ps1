@@ -68,7 +68,7 @@ internal sealed class SaefOutputBudget
 public static class SaefChildProcessHost
 {
     private const uint JobObjectLimitKillOnJobClose = 0x00002000;
-    private const int JobObjectExtendedLimitInformation = 9;
+    private const int JobObjectExtendedLimitInformationClass = 9;
 
     [StructLayout(LayoutKind.Sequential)]
     private struct JobObjectBasicLimitInformation
@@ -203,7 +203,7 @@ public static class SaefChildProcessHost
         try
         {
             Marshal.StructureToPtr(information, pointer, false);
-            if (!SetInformationJobObject(job, JobObjectExtendedLimitInformation, pointer, (uint)length))
+            if (!SetInformationJobObject(job, JobObjectExtendedLimitInformationClass, pointer, (uint)length))
             {
                 throw new Win32Exception(Marshal.GetLastWin32Error());
             }

@@ -64,6 +64,7 @@ foreach (
         'process.StandardInput.Close();',
         'CreateJobObject',
         'JobObjectLimitKillOnJobClose',
+        'JobObjectExtendedLimitInformationClass',
         'AssignProcessToJobObject',
         'TerminateJobObject',
         'Child process exceeded its runtime bound.',
@@ -77,6 +78,11 @@ foreach (
         "Secure child process fragment is missing: {$fragment}"
     );
 }
+
+assertSecureChildProcess(
+    !str_contains($contract, 'private const int JobObjectExtendedLimitInformation = 9;'),
+    'C# Job Object information class collides with its structure name.'
+);
 
 foreach (
     [
@@ -103,7 +109,7 @@ foreach (
         'environment_allowlist',
         'output_limit',
         'timeout_process_tree',
-       'result_bounds',
+        'result_bounds',
         'positiveCaseCount -eq 4',
         'negativeCaseCount -eq 4',
         "& icacls.exe \$Path '/inheritance:r'",

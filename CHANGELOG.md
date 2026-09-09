@@ -79,6 +79,9 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Corrected the Windows PowerShell 5.1 C# host compilation by separating the
+  Job Object information-class constant from the identically named structure,
+  with a regression against the original member collision.
 - Made the Composer toolchain ownership check part of every `composer check`,
   aligned the root lock to PHP_CodeSniffer 3.13.6 and documented why historical
   worktree locks are revision drift rather than separate Composer projects.
