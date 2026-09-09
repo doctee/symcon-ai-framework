@@ -88,7 +88,8 @@ defined in `project/COMPOSER_TOOLCHAIN_OWNERSHIP.md`.
 
 ## Workstream Record
 
-The private overlay should maintain a machine-readable record for each active
+The primary checkout's private overlay should maintain a machine-readable
+`private/workstreams/<workstream>/workstream.local.json` record for each active
 workstream with at least:
 
 - workstream name and status;
@@ -101,6 +102,50 @@ workstream with at least:
 
 Installation paths, ObjectIDs, hostnames and private topics stay in that private
 record and never enter the public repository.
+
+New or actively transferred workstreams use the versioned record shape in
+`templates/workstream/WORKSTREAM_RECORD.example.json`. Existing private records
+are historical evidence and do not need a bulk rewrite. Migrate one when it is
+next transferred between tasks.
+
+## Cross-Task Handover
+
+The Codex task list, task title and automatically generated task summary are
+discovery aids. They may be incomplete or stale and are not an engineering
+source of truth.
+
+Before another task takes ownership, the source task creates or updates:
+
+```text
+private/workstreams/<workstream>/
+|-- workstream.local.json
+`-- HANDOVER.local.md
+```
+
+The JSON record is authoritative for repository state, verification, gate and
+retention metadata. The Markdown file provides the human-readable scope,
+rationale and next action. Its identity fields must match the JSON record.
+Both files stay private because they may contain local paths, task identities,
+live references or exact rollback locations.
+
+The source task runs this read-only check before sending the destination task a
+pointer to the handover:
+
+```sh
+tools/repository/check-workstream-handover.sh <workstream>
+```
+
+The checker validates the bounded versioned files, canonical private location,
+worktree path, branch, base ancestry, exact HEAD and recorded clean state. It
+does not fetch, mutate Git state, contact a live system or confer authority.
+
+The receiving task reads both files, reruns the checker and then refreshes any
+remote, CI or live evidence required by the next gate. It must report drift
+instead of repairing it implicitly. Recorded approvals are historical context,
+not transferable credentials or permission to cross a new gate.
+
+See `templates/workstream/README.md` for the public, installation-neutral
+template and startup sequence.
 
 ## Shared-Impact Gate
 
@@ -175,6 +220,7 @@ delete a deployment record when its target fileset is still referenced.
 5. Perform the shared-impact gate where applicable.
 6. Review, merge and verify the intended commit.
 7. Complete any separately authorized live gate.
-8. Close evidence, rollback and retention decisions.
-9. Remove obsolete worktrees and immutable artifacts only through their
+8. Create and validate the private handover before transferring task ownership.
+9. Close evidence, rollback and retention decisions.
+10. Remove obsolete worktrees and immutable artifacts only through their
    dedicated cleanup gates.

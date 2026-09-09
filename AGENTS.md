@@ -122,6 +122,13 @@ repository work.
 - Use `tools/repository/check-primary-checkout.sh` before relying on the primary
   checkout. Use the fail-closed sync and workstream-start tools instead of
   repairing divergence implicitly.
+- Treat generated task-list summaries as navigation only. Before transferring a
+  workstream to another task, update the canonical private
+  `workstream.local.json` and `HANDOVER.local.md`, then run
+  `tools/repository/check-workstream-handover.sh <workstream>`.
+- A handover records context; it does not grant commit, publication, live,
+  restart or cleanup authority. The receiving task must verify current Git and
+  live evidence before acting on the next gate.
 
 ## Commit Style
 

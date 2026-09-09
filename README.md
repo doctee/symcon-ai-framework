@@ -63,6 +63,8 @@ Important current artifacts include:
 - `project/AI_PROJECT.md`
 - `project/SYMCON_MCP_SCRIPT_READBACK.md`
 - `project/WORKSTREAM_COORDINATION.md`
+- `templates/workstream/README.md`
+- `tools/repository/check-workstream-handover.sh`
 - `project/COMPOSER_TOOLCHAIN_OWNERSHIP.md`
 - `project/SCOPE_BOUND_DEPLOYMENT_APPROVAL.md`
 - `project/CHANNEL_V8_ONE_CLICK_THREAT_MODEL.md`

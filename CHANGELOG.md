@@ -25,6 +25,9 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added a versioned private cross-task handover contract, public neutral
+  templates and a read-only Git-backed validator so task-list summaries remain
+  navigation aids rather than unverified engineering state.
 - Added fail-closed primary-checkout alignment, fast-forward synchronization,
   clean worktree creation and local Git guardrails so `main` remains a mirror
   of `origin/main` instead of becoming an unpublished integration branch.

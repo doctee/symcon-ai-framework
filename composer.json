@@ -202,6 +202,9 @@
         "test:repository-guardrails": [
             "tests/repository/checkout-guardrails.sh"
         ],
+        "test:workstream-handover": [
+            "tests/repository/workstream-handover.sh"
+        ],
         "lint": [
             "@php tools/lint.php"
         ],
@@ -218,6 +221,7 @@
             "@toolchain:verify",
             "@test:toolchain-resolution",
             "@test:repository-guardrails",
+            "@test:workstream-handover",
             "@lint",
             "@bundle:check",
             "@fileset:check",

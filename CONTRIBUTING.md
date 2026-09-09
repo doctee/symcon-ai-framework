@@ -43,6 +43,22 @@ make install-git-guardrails
 The hooks are local safety checks. Pull requests, review and protected-branch
 settings remain the authoritative integration boundary.
 
+## Cross-Task Handover
+
+Do not rely on a generated task-list summary to transfer engineering state.
+Before handing a workstream to another human or AI task, update the private
+`workstream.local.json` and `HANDOVER.local.md` files described in
+`project/WORKSTREAM_COORDINATION.md`, then run:
+
+```sh
+tools/repository/check-workstream-handover.sh <workstream>
+```
+
+Send the destination task the canonical private path, not a reconstructed
+conversation transcript. The destination task reruns the checker and refreshes
+the evidence required by its next gate. A handover never grants mutation,
+publication, merge, restart or cleanup authorization.
+
 ## Engineering Rules
 
 - Prefer reliability, maintainability and reviewability over convenience.
