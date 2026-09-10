@@ -93,7 +93,18 @@ keeping every correction and live operation separately gated. The subsequent
 [repository correction](105-safari-picker-and-tile-rearm-correction.md) adds a
 scoped picker-focus release, one bounded same-viewport `Fit all` rearm and
 aggregate failure classes; Windows qualification and every live operation
-remain closed.
+remain closed. The subsequent
+[channel-state separation](106-channel-state-separation-correction.md),
+[active-identity reseal](107-post-activation-identity-reseal.md) and its
+[live closure](108-post-activation-identity-reseal-live-closure.md) are also
+recorded.
+After a regular Windows restart exposed an empty kernel reference list behind
+persistent module bookkeeping, the repository-only
+[restart reconciliation](110-windows-restart-reference-reconciliation.md) now
+uses the native kernel list for reference cleanup and packages the correction
+reproducibly. The exact correction was subsequently activated through the
+separately gated restart-recovery path; this repository integration prevents a
+later package built from `main` from dropping it.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -294,6 +305,7 @@ inside the server grace window. Live activation is recorded separately.
 | `107-post-activation-identity-reseal.md` | Defines the administrator-controlled post-activation reseal of the private active-package trust anchor without weakening the target adapter or adding a channel verb. |
 | `108-post-activation-identity-reseal-live-closure.md` | Records the exact live reseal, independent MCP health postflight and repeated channel-bound adapter readiness without reload or activation. |
 | `109-scope-bound-one-click-profile.md` | Composes the generic one-use channel-v8 approval runner with fixed OwnTracks postflight, inspection, rollback and reseal operations while keeping Windows installation and live use gated. |
+| `110-windows-restart-reference-reconciliation.md` | Reconciles persistent OwnTracks reference bookkeeping with an empty post-restart kernel list and records the repository-only regression, local verification and reproducible inactive package. |
 
 ## Architectural Boundary
 
