@@ -79,6 +79,10 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Corrected channel-v8 approval-plan generation and approved activation to
+  inspect ordered deployment and status records through their dictionary keys.
+  Present package-transfer identities and generated plans are now recognized,
+  while missing identities continue to fail closed.
 - Reconciled the exact OwnTracks `200`-to-`102` one-shot recovery contract with
   the current scope-bound channel-v8 adapter. Normal health remains status
   `102`; complete transaction evidence now carries recovery semantics through

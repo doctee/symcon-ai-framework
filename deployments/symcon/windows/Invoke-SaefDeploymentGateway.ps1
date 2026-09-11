@@ -1080,7 +1080,8 @@ function Invoke-ScopeBoundApprovalRunner {
             throw [System.InvalidOperationException]::new('Standalone module target has no approval profile.')
         }
     }
-    if ($Deployment.PSObject.Properties.Name -notcontains 'packageTransfer') {
+    # Assert-StagedDeployment returns an OrderedDictionary, so inspect its keys directly.
+    if (-not $Deployment.Contains('packageTransfer')) {
         throw [System.InvalidOperationException]::new('Approved activation requires package transfer identity.')
     }
     $statusPath = [string] $Deployment.paths.moduleAdapterStatusPath
@@ -1159,7 +1160,7 @@ function New-ScopeBoundApprovalPlan {
     $target = Get-StandaloneModuleTarget -Policy $Policy `
         -TargetId ([string] $Deployment.manifest.module.targetId)
     if ($target.PSObject.Properties.Name -notcontains 'approvalPolicyPath' -or
-        $Deployment.PSObject.Properties.Name -notcontains 'packageTransfer') {
+        -not $Deployment.Contains('packageTransfer')) {
         return $null
     }
     $approvalPolicy = Get-Content -LiteralPath ([string] $target.approvalPolicyPath) -Raw |
@@ -2142,7 +2143,7 @@ try {
         $status = Invoke-DeploymentPreflight -Policy $policy -DeploymentId $deploymentId
         $success = [int] $status.exitCode -eq 0
         $details = @{ deploymentId = $deploymentId }
-        if ($status.PSObject.Properties.Name -contains 'approvalPlan') {
+        if ($status.Contains('approvalPlan')) {
             $details['approvalPlan'] = $status.approvalPlan
         }
         Write-JsonResponse -Success $success -Operation $operation -Outcome ([string] $status.outcome) `
