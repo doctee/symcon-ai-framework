@@ -68,6 +68,23 @@ Health requires ready runlevel, exact library/module ownership, the same single
 instance, byte-identical configuration and presentation metadata, candidate
 package identity, unchanged state bytes and zero active leases.
 
+The normal baseline remains exactly status `102`. An optional private recovery
+binding does not add status `200` to that allowlist. It is armed only while the
+pinned active package equals its exact source identity and only for its exact
+candidate deployment and package identities. In that mode preflight requires
+the sole instance to be status `200`, activation requires the single transition
+to `102`, and rollback requires the original package and status `200` again.
+Configuration, presentation metadata, pending-change, state and quiescence
+checks are unchanged.
+
+The recovery mode is stored consistently in the activation state, transaction
+and snapshot. Independent postflight and post-success rollback validate that
+evidence before using the different target or rollback status. Older normal
+transactions without this field remain classifiable as normal. Once the
+active-package identity is resealed to the repaired package, the source-bound
+recovery block is inert while retained transaction evidence still permits the
+existing bounded rollback path.
+
 On any post-mutation failure the adapter moves the failed candidate aside,
 restores the previous package and the fresh state snapshot, performs one
 targeted rollback reload, restores configuration only if drift occurred and
@@ -92,7 +109,7 @@ The generic channel retention tool remains prohibited for standalone modules.
 | Gate | State |
 | --- | --- |
 | repository adapter and deterministic package contract | complete |
-| Windows PowerShell 5.1 parse and synthetic transaction test | complete in Gate 83 |
+| Windows PowerShell 5.1 parse and synthetic transaction test | required again after recovery reconciliation |
 | PHP `flock()` / Windows range-lock interoperability test | complete in Gate 83 |
 | private policy creation and target-allowlist initializer preflight | closed |
 | channel target installation | closed |

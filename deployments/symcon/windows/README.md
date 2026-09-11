@@ -447,6 +447,14 @@ activation/rollback direction and adapter-owned package/state retention.
 Format changes fail closed. The companion retention command defaults to the
 read-only `plan` operation; `apply` is a later local-administrator gate.
 
+Normal OwnTracks health remains exactly instance status `102`. An optional
+private one-shot recovery block may bind one exact source package, deployment,
+candidate package and `200`-to-`102` transition. It preserves the same
+configuration, ownership, quiescence, state and rollback checks and is inert
+after the active-package trust anchor is resealed. Recovery state is carried
+through the existing fixed postflight, inspection and rollback operations; it
+adds neither a gateway verb nor a general degraded-status allowance.
+
 The channel provisions a distinct `.saef-adapter-states` root beside, never
 inside, its generic deployment-state and managed-fileset roots. A target's
 private `adapterStateRoot` must be one target-owned child of that protected

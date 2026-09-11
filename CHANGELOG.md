@@ -79,6 +79,10 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Reconciled the exact OwnTracks `200`-to-`102` one-shot recovery contract with
+  the current scope-bound channel-v8 adapter. Normal health remains status
+  `102`; complete transaction evidence now carries recovery semantics through
+  independent postflight and rollback without a new channel verb or public API.
 - Added bounded OwnTracks startup-failure classification at the pre-runtime
   diagnostics boundary. Failed `ApplyChanges()` runs now log only a fixed phase
   and error class, without exception text, ObjectIDs, paths, new variables or a

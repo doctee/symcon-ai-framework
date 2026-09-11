@@ -106,6 +106,23 @@ protected ACL, reparse-point rejection, writer locks and leases, state schema,
 targeted reload, health checks and rollback retention. These responsibilities
 cannot be inferred by the generic gateway.
 
+A target adapter may admit a degraded instance only through a private,
+one-shot recovery binding. The binding must name the exact source package
+identity, candidate deployment ID, candidate package identity, degraded source
+status and healthy target status. It must not broaden the normal healthy-status
+allowlist. Preflight must still prove unchanged configuration, no pending
+changes, exact ownership and normal quiescence. Activation may permit only the
+bound status transition; rollback must restore and prove the original package,
+status and state. The binding becomes inert when the active-package trust
+anchor no longer equals its source identity, so the existing post-activation
+reseal closes it without a new channel verb or adapter-policy self-mutation.
+
+Recovery evidence belongs to the adapter transaction. Fixed `postflight`,
+`inspect` and post-success `rollback` operations must classify legacy normal
+transactions conservatively and require complete, consistent recovery evidence
+for a recovery transaction. A target-specific recovery does not authorize a
+service restart, provider contact, publication or retention deletion.
+
 Adapter-owned writable roots are a prerequisite, not a side effect of module
 preflight. Channel policy therefore defines a protected adapter-state root
 that is pairwise disjoint from both the generic deployment-state root and the

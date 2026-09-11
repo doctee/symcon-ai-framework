@@ -15,6 +15,111 @@ function assertOwnTracksPositionMapAdapter(bool $condition, string $message): vo
     }
 }
 
+/**
+ * @param array{
+ *     enabled:bool,
+ *     sourcePackageIdentitySha256:string,
+ *     deploymentId:string,
+ *     packageIdentitySha256:string,
+ *     sourceInstanceStatuses:list<int>,
+ *     targetInstanceStatuses:list<int>
+ * } $recovery
+ * @return array{accepted:bool,recoveryMode:bool,postActivationStatus:int|null,rollbackStatus:int|null}
+ */
+function classifyOwnTracksRecoveryFixture(
+    string $expectedActivePackageIdentity,
+    string $candidateDeploymentId,
+    string $candidatePackageIdentity,
+    int $instanceStatus,
+    array $recovery
+): array {
+    $armed = $recovery['enabled']
+        && hash_equals($recovery['sourcePackageIdentitySha256'], $expectedActivePackageIdentity);
+    if (
+        $armed
+        && (
+            !hash_equals($recovery['deploymentId'], $candidateDeploymentId)
+            || !hash_equals($recovery['packageIdentitySha256'], $candidatePackageIdentity)
+        )
+    ) {
+        return ['accepted' => false, 'recoveryMode' => false, 'postActivationStatus' => null, 'rollbackStatus' => null];
+    }
+    $allowed = $armed ? $recovery['sourceInstanceStatuses'] : [102];
+    if (!in_array($instanceStatus, $allowed, true)) {
+        return ['accepted' => false, 'recoveryMode' => false, 'postActivationStatus' => null, 'rollbackStatus' => null];
+    }
+
+    return [
+        'accepted' => true,
+        'recoveryMode' => $armed,
+        'postActivationStatus' => $armed ? $recovery['targetInstanceStatuses'][0] : $instanceStatus,
+        'rollbackStatus' => $instanceStatus,
+    ];
+}
+
+/**
+ * @param list<array<string, mixed>> $records
+ * @param array{
+ *     enabled:bool,
+ *     sourcePackageIdentitySha256:string,
+ *     deploymentId:string,
+ *     packageIdentitySha256:string,
+ *     sourceInstanceStatuses:list<int>,
+ *     targetInstanceStatuses:list<int>
+ * } $recovery
+ * @param array<string, mixed> $snapshot
+ * @return array{accepted:bool,recoveryMode:bool}
+ */
+function classifyOwnTracksCompletedRecoveryFixture(
+    array $records,
+    array $recovery,
+    string $expectedActivePackageIdentity,
+    string $candidateDeploymentId,
+    string $candidatePackageIdentity,
+    array $snapshot
+): array {
+    $recordsWithMode = array_values(array_filter(
+        $records,
+        static fn (array $record): bool => array_key_exists('recoveryMode', $record)
+    ));
+    if ($recordsWithMode === []) {
+        return ['accepted' => true, 'recoveryMode' => false];
+    }
+    if (count($recordsWithMode) !== count($records)) {
+        return ['accepted' => false, 'recoveryMode' => false];
+    }
+
+    $recoveryMode = $recordsWithMode[0]['recoveryMode'];
+    foreach ($recordsWithMode as $record) {
+        if (!is_bool($record['recoveryMode']) || $record['recoveryMode'] !== $recoveryMode) {
+            return ['accepted' => false, 'recoveryMode' => false];
+        }
+    }
+    if ($recoveryMode === false) {
+        $statuses = $snapshot['sourceInstanceStatuses'] ?? [102];
+        return [
+            'accepted' => $statuses === [102],
+            'recoveryMode' => false,
+        ];
+    }
+
+    $acceptedActiveIdentities = [
+        $recovery['sourcePackageIdentitySha256'],
+        $recovery['packageIdentitySha256'],
+    ];
+
+    return [
+        'accepted' => $recovery['enabled']
+            && ($snapshot['sourceInstanceStatuses'] ?? null) === [200]
+            && ($snapshot['activePackageIdentitySha256'] ?? null)
+                === $recovery['sourcePackageIdentitySha256']
+            && $candidateDeploymentId === $recovery['deploymentId']
+            && $candidatePackageIdentity === $recovery['packageIdentitySha256']
+            && in_array($expectedActivePackageIdentity, $acceptedActiveIdentities, true),
+        'recoveryMode' => true,
+    ];
+}
+
 /** @return array{exitCode:int,stdout:string,stderr:string} */
 function runOwnTracksPositionMapAdapterProcess(array $command): array
 {
@@ -76,6 +181,10 @@ assertOwnTracksPositionMapAdapter(
 );
 assertOwnTracksPositionMapAdapter($policy['moduleControlInstanceId'] === 0, 'Example contains a live Module Control ID.');
 assertOwnTracksPositionMapAdapter(
+    ($policy['recovery'] ?? null) === ['enabled' => false],
+    'Public example must contain only a disabled recovery switch.'
+);
+assertOwnTracksPositionMapAdapter(
     $transaction['ownership']['mode'] === 'exactly-one-positive-module-instance'
         && $transaction['ownership']['repositoryMetadataAllowed'] === false,
     'Ownership contract permits implicit Git adoption.'
@@ -122,6 +231,18 @@ $requiredAdapterFragments = [
     'Restore-RuntimeStateSnapshot -Snapshot $script:runtimeStateSnapshot',
     'expectedActivePackageIdentitySha256',
     'expectedConfigurationSha256',
+    'sourcePackageIdentitySha256',
+    "Recovery status transition must be exactly 200 to 102.",
+    "Recovery candidate binding differs from private policy.",
+    'Completed activation recovery evidence is incomplete.',
+    'Completed recovery transaction differs from private policy.',
+    '$script:recoveryArmed',
+    'Get-InstanceSnapshot -AllowedInstanceStatuses $initialInstanceStatuses',
+    '-ExpectedInstanceStatuses $postActivationInstanceStatuses',
+    '-RequireOriginalInstanceStatus (-not $script:recoveryMode)',
+    '-ExpectedInstanceStatuses $rollbackInstanceStatuses',
+    'Set-RecoveryModeFromCompletedContext -Context $context',
+    'recoveryMode = [bool] $script:recoveryMode',
     "instanceIDs.Count -ne 1",
     "[IO.Directory]::Move([string] \$script:policy.activeModulePath, \$script:rollbackPath)",
     "[IO.Directory]::Move(\$script:rollbackPath, [string] \$script:policy.activeModulePath)",
@@ -161,6 +282,147 @@ assertOwnTracksPositionMapAdapter(
     substr_count($adapter, "-Method 'MC_ReloadModule'") === 1,
     'Adapter must have one targeted reload call site.'
 );
+
+$sourceIdentity = str_repeat('a', 64);
+$repairIdentity = str_repeat('b', 64);
+$laterIdentity = str_repeat('c', 64);
+$recoveryFixture = [
+    'enabled' => true,
+    'sourcePackageIdentitySha256' => $sourceIdentity,
+    'deploymentId' => 'saef-owntracks-position-map-repair',
+    'packageIdentitySha256' => $repairIdentity,
+    'sourceInstanceStatuses' => [200],
+    'targetInstanceStatuses' => [102],
+];
+$exactRecovery = classifyOwnTracksRecoveryFixture(
+    $sourceIdentity,
+    'saef-owntracks-position-map-repair',
+    $repairIdentity,
+    200,
+    $recoveryFixture
+);
+assertOwnTracksPositionMapAdapter(
+    $exactRecovery === [
+        'accepted' => true,
+        'recoveryMode' => true,
+        'postActivationStatus' => 102,
+        'rollbackStatus' => 200,
+    ],
+    'Exact degraded recovery transition differs.'
+);
+foreach (
+    [
+        [$sourceIdentity, 'saef-owntracks-position-map-other', $repairIdentity, 200],
+        [$sourceIdentity, 'saef-owntracks-position-map-repair', $laterIdentity, 200],
+        [$sourceIdentity, 'saef-owntracks-position-map-repair', $repairIdentity, 102],
+        [$sourceIdentity, 'saef-owntracks-position-map-repair', $repairIdentity, 202],
+    ] as [$activeIdentity, $deploymentId, $packageIdentity, $status]
+) {
+    assertOwnTracksPositionMapAdapter(
+        classifyOwnTracksRecoveryFixture(
+            $activeIdentity,
+            $deploymentId,
+            $packageIdentity,
+            $status,
+            $recoveryFixture
+        )['accepted'] === false,
+        'Recovery fixture accepted a mismatched binding or source status.'
+    );
+}
+$normalAfterReseal = classifyOwnTracksRecoveryFixture(
+    $laterIdentity,
+    'saef-owntracks-position-map-later',
+    $laterIdentity,
+    102,
+    $recoveryFixture
+);
+assertOwnTracksPositionMapAdapter(
+    $normalAfterReseal['accepted'] === true && $normalAfterReseal['recoveryMode'] === false,
+    'Historical recovery binding did not become inert after active-identity reseal.'
+);
+$legacyRecords = [[], [], []];
+assertOwnTracksPositionMapAdapter(
+    classifyOwnTracksCompletedRecoveryFixture(
+        $legacyRecords,
+        $recoveryFixture,
+        $sourceIdentity,
+        'saef-owntracks-position-map-repair',
+        $repairIdentity,
+        []
+    ) === ['accepted' => true, 'recoveryMode' => false],
+    'Legacy completed transaction is not classified as normal mode.'
+);
+$recoveryRecords = [
+    ['recoveryMode' => true],
+    ['recoveryMode' => true],
+    ['recoveryMode' => true],
+];
+$completedRecoverySnapshot = [
+    'sourceInstanceStatuses' => [200],
+    'activePackageIdentitySha256' => $sourceIdentity,
+];
+foreach ([$sourceIdentity, $repairIdentity] as $expectedActiveIdentity) {
+    assertOwnTracksPositionMapAdapter(
+        classifyOwnTracksCompletedRecoveryFixture(
+            $recoveryRecords,
+            $recoveryFixture,
+            $expectedActiveIdentity,
+            'saef-owntracks-position-map-repair',
+            $repairIdentity,
+            $completedRecoverySnapshot
+        ) === ['accepted' => true, 'recoveryMode' => true],
+        'Completed recovery evidence differs before or after active-identity reseal.'
+    );
+}
+foreach (
+    [
+        [['recoveryMode' => true], ['recoveryMode' => true], []],
+        [['recoveryMode' => true], ['recoveryMode' => false], ['recoveryMode' => true]],
+    ] as $invalidRecords
+) {
+    assertOwnTracksPositionMapAdapter(
+        classifyOwnTracksCompletedRecoveryFixture(
+            $invalidRecords,
+            $recoveryFixture,
+            $sourceIdentity,
+            'saef-owntracks-position-map-repair',
+            $repairIdentity,
+            $completedRecoverySnapshot
+        )['accepted'] === false,
+        'Incomplete or inconsistent completed recovery evidence was accepted.'
+    );
+}
+foreach (
+    [
+        [$laterIdentity, 'saef-owntracks-position-map-repair', $repairIdentity, $completedRecoverySnapshot],
+        [$sourceIdentity, 'saef-owntracks-position-map-other', $repairIdentity, $completedRecoverySnapshot],
+        [$sourceIdentity, 'saef-owntracks-position-map-repair', $laterIdentity, $completedRecoverySnapshot],
+        [
+            $sourceIdentity,
+            'saef-owntracks-position-map-repair',
+            $repairIdentity,
+            ['sourceInstanceStatuses' => [102], 'activePackageIdentitySha256' => $sourceIdentity],
+        ],
+        [
+            $sourceIdentity,
+            'saef-owntracks-position-map-repair',
+            $repairIdentity,
+            ['sourceInstanceStatuses' => [200], 'activePackageIdentitySha256' => $laterIdentity],
+        ],
+    ] as [$expectedActiveIdentity, $deploymentId, $packageIdentity, $snapshot]
+) {
+    assertOwnTracksPositionMapAdapter(
+        classifyOwnTracksCompletedRecoveryFixture(
+            $recoveryRecords,
+            $recoveryFixture,
+            $expectedActiveIdentity,
+            $deploymentId,
+            $packageIdentity,
+            $snapshot
+        )['accepted'] === false,
+        'Completed recovery evidence accepted a stale identity or source status.'
+    );
+}
 assertOwnTracksPositionMapAdapter(
     !str_contains($adapter, '.PSObject.Properties.Value'),
     'Adapter must iterate empty JSON maps without strict-mode member enumeration.'
@@ -256,6 +518,24 @@ assertOwnTracksPositionMapAdapter(
         '-ExpectedPackageIdentitySha256 ([string] $script:snapshot.activePackageIdentitySha256)'
     ),
     'Rollback health must be pinned to the previous package identity.'
+);
+$completedOperationStart = strpos($adapter, "} elseif (\$Operation -in @('postflight', 'rollback')) {");
+$newActivationStart = strpos($adapter, "    } else {\n        \$initialInstanceStatuses", $completedOperationStart);
+assertOwnTracksPositionMapAdapter(
+    is_int($completedOperationStart)
+        && is_int($newActivationStart)
+        && $completedOperationStart < $newActivationStart,
+    'Completed-operation branch boundary is missing.'
+);
+$completedOperationSource = substr(
+    $adapter,
+    $completedOperationStart,
+    $newActivationStart - $completedOperationStart
+);
+assertOwnTracksPositionMapAdapter(
+    str_contains($completedOperationSource, 'recoveryMode = [bool] $script:recoveryMode')
+        && str_contains($completedOperationSource, "outcome = 'rolled_back'"),
+    'Post-success rollback must retain recovery mode in its transaction evidence.'
 );
 assertOwnTracksPositionMapAdapter(
     str_contains($adapter, "if (\$Operation -ne 'inspect' -and \$activePackageIdentity -ne \$expectedCurrentIdentity)")
