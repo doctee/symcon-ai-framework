@@ -225,6 +225,24 @@ assertDeploymentChannel(
     substr_count($gateway, '$mirrorExit = -1') === 2,
     'Gateway does not contain both bounded runtime-mirror launch failure paths.'
 );
+assertDeploymentChannel(
+    substr_count($gateway, "-not \$Deployment.Contains('packageTransfer')") === 2,
+    'Ordered deployment records must require package-transfer identity at both approval boundaries.'
+);
+assertDeploymentChannel(
+    substr_count($gateway, "\$status.Contains('approvalPlan')") === 1,
+    'Ordered preflight status must propagate exactly one generated approval plan.'
+);
+assertDeploymentChannel(
+    !str_contains(
+        $gateway,
+        "\$Deployment.PSObject.Properties.Name -notcontains 'packageTransfer'"
+    ) && !str_contains(
+        $gateway,
+        "\$status.PSObject.Properties.Name -contains 'approvalPlan'"
+    ),
+    'Gateway still checks OrderedDictionary keys through PSObject properties.'
+);
 
 $forbiddenGatewayPatterns = [
     '/\bInvoke-Expression\b/i',
