@@ -276,6 +276,14 @@ function GetValue(int $id): mixed
     return is_array($values) ? ($values[$id] ?? null) : null;
 }
 
+function IPS_LogMessage(string $sender, string $message): void
+{
+    $GLOBALS['ownTracksRuntimeFake']['logs'][] = [
+        'sender' => $sender,
+        'message' => $message,
+    ];
+}
+
 /** @return list<int> */
 function IPS_GetInstanceListByModuleID(string $moduleID): array
 {
@@ -604,6 +612,10 @@ $module->ApplyChanges();
 
 runtimeCheck($module->testApplyCalls() === 1, 'Parent ApplyChanges was not called.');
 runtimeCheck($module->testStatus() === IS_ACTIVE, 'Valid runtime is not active.');
+runtimeCheck(
+    ($GLOBALS['ownTracksRuntimeFake']['logs'] ?? []) === [],
+    'Successful startup produced an operational error log.'
+);
 runtimeCheck(
     $module->testVisualizationType() === INSTANCE_VISUALIZATION_TYPE_HTML_FULLSCREEN,
     'Fullscreen HTML visualization type is not selected.'
@@ -943,6 +955,29 @@ runtimeCheck(
     'Recovered references were not persisted exactly.'
 );
 
+$invalidReferenceModule = new TestOwnTracksPositionMapCandidate();
+$invalidReferenceModule->Create();
+$invalidReferenceModule->testSetAttribute('RegisteredReferences', '[0]');
+$invalidReferenceModule->ApplyChanges();
+runtimeCheck(
+    $invalidReferenceModule->testStatus() === 200,
+    'Invalid persisted reference state did not fail closed.'
+);
+$referenceFailureLog = $GLOBALS['ownTracksRuntimeFake']['logs'][0] ?? null;
+runtimeCheck(
+    $referenceFailureLog === [
+        'sender' => 'OwnTracksPositionMap',
+        'message' => 'ApplyChanges failed '
+            . '(phase=reference_cleanup, class=runtime_state).',
+    ],
+    'Reference startup failure was not classified safely.'
+);
+runtimeCheck(
+    $invalidReferenceModule->testDebug()[0]['data']
+        === $referenceFailureLog['message'],
+    'Reference startup debug output differs from the bounded log.'
+);
+
 $viewportModule = new TestOwnTracksPositionMapCandidate();
 $viewportModule->Create();
 $viewportModule->testNow = 1_725_184_000;
@@ -1200,6 +1235,15 @@ runtimeCheck(
     'Invalid provider did not produce a generic configuration error.'
 );
 runtimeCheck($module->testReferences() === [], 'Rejected configuration retained references.');
+$providerFailureLog = $GLOBALS['ownTracksRuntimeFake']['logs'][1] ?? null;
+runtimeCheck(
+    $providerFailureLog === [
+        'sender' => 'OwnTracksPositionMap',
+        'message' => 'ApplyChanges failed '
+            . '(phase=tile_boundary_validation, class=invalid_configuration).',
+    ],
+    'Provider startup failure was not classified safely.'
+);
 runtimeCheck(
     $module->testHookCalls() === [
         ['action' => 'register', 'address' => 'owntracks-position-map'],

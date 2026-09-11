@@ -105,6 +105,12 @@ uses the native kernel list for reference cleanup and packages the correction
 reproducibly. The exact correction was subsequently activated through the
 separately gated restart-recovery path; this repository integration prevents a
 later package built from `main` from dropping it.
+When the unchanged configuration still remained invalid after the guarded
+recovery call, the repository-only
+[startup diagnostics correction](111-bounded-startup-failure-diagnostics.md)
+added one bounded, non-private phase classification at the existing
+`ApplyChanges()` catch boundary. It introduces no variable, helper or public
+API; every package and live step remains separately gated.
 
 **Read-only inventory, synthetic offline core, fixture- and live-verified
 read-only archive adapter, provider decision, diagnostic renderer, pinned
@@ -306,6 +312,7 @@ inside the server grace window. Live activation is recorded separately.
 | `108-post-activation-identity-reseal-live-closure.md` | Records the exact live reseal, independent MCP health postflight and repeated channel-bound adapter readiness without reload or activation. |
 | `109-scope-bound-one-click-profile.md` | Composes the generic one-use channel-v8 approval runner with fixed OwnTracks postflight, inspection, rollback and reseal operations while keeping Windows installation and live use gated. |
 | `110-windows-restart-reference-reconciliation.md` | Reconciles persistent OwnTracks reference bookkeeping with an empty post-restart kernel list and records the repository-only regression, local verification and reproducible inactive package. |
+| `111-bounded-startup-failure-diagnostics.md` | Adds fixed, non-private startup phase and failure-class logging at the pre-runtime diagnostics boundary without a new variable, helper or public API. |
 
 ## Architectural Boundary
 
