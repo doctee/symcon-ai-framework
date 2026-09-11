@@ -122,13 +122,20 @@ class OwnTracksPositionMap extends IPSModuleStrict
     {
         parent::ApplyChanges();
 
+        $startupPhase = 'reference_cleanup';
         try {
             $this->clearRegisteredReferences();
+            $startupPhase = 'source_configuration';
             $sources = $this->sources();
+            $startupPhase = 'provider_configuration';
             $provider = $this->providerConfiguration();
+            $startupPhase = 'tile_access_configuration';
             $tileAccess = $this->tileAccessConfiguration();
+            $startupPhase = 'tile_authority_configuration';
             $tileAuthority = $this->tileAuthorityConfiguration();
+            $startupPhase = 'tile_fallback_configuration';
             $tileFallback = $this->tileFallbackConfiguration();
+            $startupPhase = 'tile_boundary_validation';
             $this->validateTileBoundary(
                 $provider,
                 $tileAccess,
@@ -136,15 +143,20 @@ class OwnTracksPositionMap extends IPSModuleStrict
                 $tileFallback
             );
             if (($tileAuthority['enabled'] ?? false) === true) {
+                $startupPhase = 'tile_authority_initialization';
                 new OwnTracksTileDirectoryAuthority($tileAuthority);
             }
             if (($tileFallback['enabled'] ?? false) === true) {
+                $startupPhase = 'tile_transport_initialization';
                 new OwnTracksPinnedHttpsTileTransport(
                     $tileFallback['transportConfiguration']
                 );
             }
+            $startupPhase = 'target_location_configuration';
             $targetLocations = $this->targetLocationsConfiguration();
+            $startupPhase = 'runtime_bounds_validation';
             $this->validateRuntimeBounds();
+            $startupPhase = 'reference_plan';
             $references = array_map(
                 static fn (array $source): int => $source['sourceRootId'],
                 $sources
@@ -154,6 +166,7 @@ class OwnTracksPositionMap extends IPSModuleStrict
             }
             $anchorID = $this->ReadPropertyInteger('ExternalAnchorID');
             if ($anchorID > 0) {
+                $startupPhase = 'external_anchor_validation';
                 if (!IPS_InstanceExists($anchorID)) {
                     throw new RuntimeException(
                         'Configured external anchor is missing.'
@@ -162,16 +175,24 @@ class OwnTracksPositionMap extends IPSModuleStrict
                 $references[] = $anchorID;
                 $references[] = $this->externalAnchorVariableID();
             }
+            $startupPhase = 'reference_registration';
             $this->registerReferences($references);
+            $startupPhase = 'active_status';
             $this->SetStatus(IS_ACTIVE);
+            $startupPhase = 'visualization_bootstrap';
             $this->UpdateVisualizationValue(
                 $this->encodeMessage($this->bootstrapMessage())
             );
         } catch (Throwable $exception) {
+            $diagnostic = $this->startupFailureDiagnostic(
+                $startupPhase,
+                $exception
+            );
             $this->SetStatus(self::STATUS_INVALID_CONFIGURATION);
+            IPS_LogMessage('OwnTracksPositionMap', $diagnostic);
             $this->SendDebug(
                 'OwnTracks map configuration rejected',
-                $exception->getMessage(),
+                $diagnostic,
                 0
             );
             $this->UpdateVisualizationValue(
@@ -181,6 +202,25 @@ class OwnTracksPositionMap extends IPSModuleStrict
                 ])
             );
         }
+    }
+
+    private function startupFailureDiagnostic(
+        string $phase,
+        Throwable $exception
+    ): string {
+        $failureClass = match (true) {
+            $exception instanceof JsonException => 'invalid_json',
+            $exception instanceof InvalidArgumentException =>
+                'invalid_configuration',
+            $exception instanceof RuntimeException => 'runtime_state',
+            default => 'unexpected',
+        };
+
+        return sprintf(
+            'ApplyChanges failed (phase=%s, class=%s).',
+            $phase,
+            $failureClass
+        );
     }
 
     public function RequestAction(string $ident, mixed $value): void

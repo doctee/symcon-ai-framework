@@ -79,6 +79,10 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Added bounded OwnTracks startup-failure classification at the pre-runtime
+  diagnostics boundary. Failed `ApplyChanges()` runs now log only a fixed phase
+  and error class, without exception text, ObjectIDs, paths, new variables or a
+  new public API.
 - Integrated the OwnTracks restart-reference reconciliation so module
   reconfiguration clears only references currently registered in the Symcon
   kernel and deterministically restores configured references after a host
