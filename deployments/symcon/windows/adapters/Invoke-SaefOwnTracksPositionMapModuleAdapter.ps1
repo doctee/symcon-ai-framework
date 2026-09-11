@@ -56,6 +56,12 @@ $script:mutexAcquired = $false
 $script:runtimeLocks = @()
 $script:runtimeStateSnapshot = $null
 $script:previousPackageIdentitySha256 = ''
+$script:normalInstanceStatuses = @()
+$script:recoveryEnabled = $false
+$script:recoveryArmed = $false
+$script:recoveryMode = $false
+$script:recoverySourceInstanceStatuses = @()
+$script:recoveryTargetInstanceStatuses = @()
 
 function Test-HexSha256 {
     param([Parameter(Mandatory = $true)][string] $Value)
@@ -65,6 +71,27 @@ function Test-HexSha256 {
 function Test-SymconGuid {
     param([Parameter(Mandatory = $true)][string] $Value)
     return $Value -match '^\{[A-Fa-f0-9]{8}(?:-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}\}$'
+}
+
+function ConvertTo-ValidatedInstanceStatusList {
+    param(
+        [Parameter(Mandatory = $true)] $Value,
+        [Parameter(Mandatory = $true)][string] $Name
+    )
+    $items = @($Value)
+    if ($items.Count -lt 1 -or $items.Count -gt 4) {
+        throw [InvalidOperationException]::new($Name + ' must contain one to four statuses.')
+    }
+    $statuses = @()
+    foreach ($item in $items) {
+        $status = 0
+        if (-not [int]::TryParse([string] $item, [ref] $status) -or
+            $status -lt 100 -or $status -gt 999 -or $statuses -contains $status) {
+            throw [InvalidOperationException]::new($Name + ' contains an invalid or duplicate status.')
+        }
+        $statuses += $status
+    }
+    return @($statuses)
 }
 
 function Get-Sha256 {
@@ -180,6 +207,7 @@ function Write-AdapterStatus {
         activationAttempted = [bool] $script:activationAttempted
         rollbackAttempted = [bool] $script:rollbackAttempted
         rollbackSucceeded = [bool] $script:rollbackSucceeded
+        recoveryMode = [bool] $script:recoveryMode
         failureCode = $script:failureCode
     }
     Write-AtomicJson -Path $StatusPath -Value $status
@@ -363,6 +391,65 @@ function Read-Contracts {
         [long] $script:policy.maximumStateBytes -gt 4194304) {
         throw [InvalidOperationException]::new('Adapter policy limits are invalid.')
     }
+    $script:normalInstanceStatuses = @(ConvertTo-ValidatedInstanceStatusList `
+        -Value $script:policy.allowedInstanceStatuses -Name 'allowedInstanceStatuses')
+    if ($script:normalInstanceStatuses.Count -ne 1 -or
+        [int] $script:normalInstanceStatuses[0] -ne 102) {
+        throw [InvalidOperationException]::new('Normal instance status contract must be exactly status 102.')
+    }
+    if ($script:policy.PSObject.Properties.Name -contains 'recovery') {
+        $recovery = $script:policy.recovery
+        if ($null -eq $recovery -or
+            $recovery.PSObject.Properties.Name -notcontains 'enabled' -or
+            $recovery.enabled -isnot [bool]) {
+            throw [InvalidOperationException]::new('Recovery policy enablement contract is invalid.')
+        }
+        $script:recoveryEnabled = [bool] $recovery.enabled
+        if (-not $script:recoveryEnabled) {
+            if (@($recovery.PSObject.Properties).Count -ne 1) {
+                throw [InvalidOperationException]::new('Disabled recovery policy must not retain a live binding.')
+            }
+        } else {
+            $requiredRecoveryProperties = @(
+                'enabled', 'sourcePackageIdentitySha256', 'deploymentId',
+                'packageIdentitySha256', 'sourceInstanceStatuses', 'targetInstanceStatuses'
+            )
+            if (@($recovery.PSObject.Properties).Count -ne $requiredRecoveryProperties.Count) {
+                throw [InvalidOperationException]::new('Recovery policy property set differs.')
+            }
+            foreach ($propertyName in $requiredRecoveryProperties) {
+                if ($recovery.PSObject.Properties.Name -notcontains $propertyName) {
+                    throw [InvalidOperationException]::new('Recovery policy property set differs.')
+                }
+            }
+            if (-not (Test-HexSha256 -Value ([string] $recovery.sourcePackageIdentitySha256)) -or
+                -not (Test-HexSha256 -Value ([string] $recovery.packageIdentitySha256)) -or
+                [string] $recovery.sourcePackageIdentitySha256 -eq [string] $recovery.packageIdentitySha256 -or
+                [string] $recovery.deploymentId -notmatch '^saef-[a-z0-9.-]{1,120}$') {
+                throw [InvalidOperationException]::new('Recovery package binding is invalid.')
+            }
+            $script:recoverySourceInstanceStatuses = @(ConvertTo-ValidatedInstanceStatusList `
+                -Value $recovery.sourceInstanceStatuses -Name 'recovery.sourceInstanceStatuses')
+            $script:recoveryTargetInstanceStatuses = @(ConvertTo-ValidatedInstanceStatusList `
+                -Value $recovery.targetInstanceStatuses -Name 'recovery.targetInstanceStatuses')
+            if ($script:recoverySourceInstanceStatuses.Count -ne 1 -or
+                [int] $script:recoverySourceInstanceStatuses[0] -ne 200 -or
+                $script:recoveryTargetInstanceStatuses.Count -ne 1 -or
+                [int] $script:recoveryTargetInstanceStatuses[0] -ne 102) {
+                throw [InvalidOperationException]::new('Recovery status transition must be exactly 200 to 102.')
+            }
+            $script:recoveryArmed = (
+                [string] $script:policy.expectedActivePackageIdentitySha256 -eq
+                    [string] $recovery.sourcePackageIdentitySha256
+            )
+            if ($script:recoveryArmed -and (
+                [string] $script:manifest.deploymentId -ne [string] $recovery.deploymentId -or
+                $script:packageIdentitySha256 -ne [string] $recovery.packageIdentitySha256
+            )) {
+                throw [InvalidOperationException]::new('Recovery candidate binding differs from private policy.')
+            }
+        }
+    }
     $rootNames = @('dayCache', 'providerCache', 'tileBudget', 'providerBudget', 'missState')
     $rootPaths = @()
     foreach ($rootName in $rootNames) {
@@ -474,6 +561,7 @@ function Assert-ModuleTreeIdentity {
 }
 
 function Get-InstanceSnapshot {
+    param([Parameter(Mandatory = $true)][int[]] $AllowedInstanceStatuses)
     $instanceIDs = @(Invoke-SymconRpc -Method 'IPS_GetInstanceListByModuleID' `
         -Parameters @([string] $script:policy.moduleGuid))
     if ($instanceIDs.Count -ne 1 -or [int] $instanceIDs[0] -ne [int] $script:policy.expectedInstanceId) {
@@ -491,7 +579,7 @@ function Get-InstanceSnapshot {
         $configuration = [string] (Invoke-SymconRpc -Method 'IPS_GetConfiguration' -Parameters @($instanceID))
         if ([string] $instance.ModuleInfo.ModuleID -ne [string] $script:policy.moduleGuid -or
             [int] $object.ObjectType -ne 1 -or
-            [int] $instance.InstanceStatus -notin @($script:policy.allowedInstanceStatuses) -or
+            [int] $instance.InstanceStatus -notin @($AllowedInstanceStatuses) -or
             [bool] (Invoke-SymconRpc -Method 'IPS_HasChanges' -Parameters @($instanceID)) -or
             (Get-TextSha256 -Text $configuration) -ne [string] $script:policy.expectedConfigurationSha256) {
             throw [InvalidOperationException]::new('OwnTracksPositionMap instance is not in an admissible baseline state.')
@@ -548,8 +636,12 @@ function Assert-SymconOwnership {
 }
 
 function Assert-SnapshotPreserved {
-    param([Parameter(Mandatory = $true)] $Snapshot)
-    $current = @(Get-InstanceSnapshot)
+    param(
+        [Parameter(Mandatory = $true)] $Snapshot,
+        [Parameter(Mandatory = $true)][int[]] $ExpectedInstanceStatuses,
+        [Parameter(Mandatory = $true)][bool] $RequireOriginalInstanceStatus
+    )
+    $current = @(Get-InstanceSnapshot -AllowedInstanceStatuses $ExpectedInstanceStatuses)
     if ($current.Count -ne @($Snapshot.instances).Count) {
         throw [InvalidOperationException]::new('OwnTracksPositionMap instance inventory changed during deployment.')
     }
@@ -558,11 +650,14 @@ function Assert-SnapshotPreserved {
         $after = $current[$index]
         foreach ($field in @(
             'instanceId', 'configurationBase64', 'configurationSha256', 'objectIdent',
-            'parentId', 'position', 'hidden', 'disabled', 'status'
+            'parentId', 'position', 'hidden', 'disabled'
         )) {
             if ([string] $before.$field -ne [string] $after.$field) {
                 throw [InvalidOperationException]::new('OwnTracksPositionMap configuration or object state changed.')
             }
+        }
+        if ($RequireOriginalInstanceStatus -and [int] $before.status -ne [int] $after.status) {
+            throw [InvalidOperationException]::new('OwnTracksPositionMap instance status changed unexpectedly.')
         }
     }
 }
@@ -580,13 +675,17 @@ function Invoke-TargetedReload {
 function Wait-Healthy {
     param(
         [Parameter(Mandatory = $true)] $Snapshot,
-        [Parameter(Mandatory = $true)][string] $ExpectedPackageIdentitySha256
+        [Parameter(Mandatory = $true)][string] $ExpectedPackageIdentitySha256,
+        [Parameter(Mandatory = $true)][int[]] $ExpectedInstanceStatuses,
+        [Parameter(Mandatory = $true)][bool] $RequireOriginalInstanceStatus
     )
     $timer = [Diagnostics.Stopwatch]::StartNew()
     do {
         try {
             Assert-SymconOwnership
-            Assert-SnapshotPreserved -Snapshot $Snapshot
+            Assert-SnapshotPreserved -Snapshot $Snapshot `
+                -ExpectedInstanceStatuses $ExpectedInstanceStatuses `
+                -RequireOriginalInstanceStatus $RequireOriginalInstanceStatus
             Assert-RuntimeStateSnapshot -Snapshot $script:runtimeStateSnapshot
             Assert-ModuleTreeIdentity -Path ([string] $script:policy.activeModulePath)
             if ((Get-DirectoryPackageIdentity -Path ([string] $script:policy.activeModulePath)) -ne
@@ -892,6 +991,56 @@ function Read-CompletedActivationContext {
     }
 }
 
+function Set-RecoveryModeFromCompletedContext {
+    param([Parameter(Mandatory = $true)] $Context)
+    $records = @($Context.activeState, $Context.transaction, $Context.snapshot)
+    $recordsWithMode = @($records | Where-Object {
+        $_.PSObject.Properties.Name -contains 'recoveryMode'
+    })
+    if ($recordsWithMode.Count -eq 0) {
+        $script:recoveryMode = $false
+        return
+    }
+    if ($recordsWithMode.Count -ne $records.Count) {
+        throw [InvalidOperationException]::new('Completed activation recovery evidence is incomplete.')
+    }
+    foreach ($record in $recordsWithMode) {
+        if ($record.recoveryMode -isnot [bool] -or
+            [bool] $record.recoveryMode -ne [bool] $recordsWithMode[0].recoveryMode) {
+            throw [InvalidOperationException]::new('Completed activation recovery evidence differs.')
+        }
+    }
+    $script:recoveryMode = [bool] $recordsWithMode[0].recoveryMode
+    if (-not $script:recoveryMode) {
+        if ($Context.snapshot.PSObject.Properties.Name -contains 'sourceInstanceStatuses') {
+            $sourceStatuses = @(ConvertTo-ValidatedInstanceStatusList `
+                -Value $Context.snapshot.sourceInstanceStatuses -Name 'snapshot.sourceInstanceStatuses')
+            if ($sourceStatuses.Count -ne 1 -or [int] $sourceStatuses[0] -ne 102) {
+                throw [InvalidOperationException]::new('Normal activation source status must be exactly status 102.')
+            }
+        }
+        return
+    }
+    if (-not $script:recoveryEnabled -or
+        $Context.snapshot.PSObject.Properties.Name -notcontains 'sourceInstanceStatuses') {
+        throw [InvalidOperationException]::new('Recovery transaction lacks its private policy binding.')
+    }
+    $recovery = $script:policy.recovery
+    $sourceStatuses = @(ConvertTo-ValidatedInstanceStatusList `
+        -Value $Context.snapshot.sourceInstanceStatuses -Name 'snapshot.sourceInstanceStatuses')
+    if ($sourceStatuses.Count -ne 1 -or [int] $sourceStatuses[0] -ne 200 -or
+        [string] $recovery.sourcePackageIdentitySha256 -ne
+            [string] $Context.snapshot.activePackageIdentitySha256 -or
+        [string] $recovery.deploymentId -ne [string] $script:manifest.deploymentId -or
+        [string] $recovery.packageIdentitySha256 -ne $script:packageIdentitySha256 -or
+        [string] $script:policy.expectedActivePackageIdentitySha256 -notin @(
+            [string] $recovery.sourcePackageIdentitySha256,
+            [string] $recovery.packageIdentitySha256
+        )) {
+        throw [InvalidOperationException]::new('Completed recovery transaction differs from private policy.')
+    }
+}
+
 function Restore-PreviousActiveStateFromSnapshot {
     param([Parameter(Mandatory = $true)] $Snapshot)
     if ($Snapshot.PSObject.Properties.Name -notcontains 'previousActiveState' -or
@@ -993,8 +1142,15 @@ function Invoke-Rollback {
         Restore-RuntimeStateSnapshot -Snapshot $script:runtimeStateSnapshot
         Invoke-TargetedReload
         Restore-Configurations -Snapshot $script:snapshot
+        $rollbackInstanceStatuses = if ($script:recoveryMode) {
+            @($script:recoverySourceInstanceStatuses)
+        } else {
+            @($script:normalInstanceStatuses)
+        }
         Wait-Healthy -Snapshot $script:snapshot `
-            -ExpectedPackageIdentitySha256 ([string] $script:snapshot.activePackageIdentitySha256)
+            -ExpectedPackageIdentitySha256 ([string] $script:snapshot.activePackageIdentitySha256) `
+            -ExpectedInstanceStatuses $rollbackInstanceStatuses `
+            -RequireOriginalInstanceStatus $true
         $activeStatePath = Join-Path ([string] $script:policy.adapterStateRoot) 'active.json'
         if ($script:activeStateWritten) {
             if ($null -ne $script:previousActiveState) {
@@ -1050,6 +1206,7 @@ try {
         $script:failureCode = 'inspection'
         if ($activePackageIdentity -eq $script:packageIdentitySha256) {
             $context = Read-CompletedActivationContext
+            Set-RecoveryModeFromCompletedContext -Context $context
             $script:previousPackageIdentitySha256 = [string] $context.snapshot.activePackageIdentitySha256
             Write-AdapterStatus -Outcome 'active' -ExitCode $ExitSuccess
         } else {
@@ -1085,12 +1242,20 @@ try {
         $script:snapshot = $context.snapshot
         $script:runtimeStateSnapshot = $script:snapshot.runtimeState
         $script:previousPackageIdentitySha256 = [string] $script:snapshot.activePackageIdentitySha256
+        Set-RecoveryModeFromCompletedContext -Context $context
         $script:failureCode = 'quiescence'
         Enter-RuntimeQuiescence
         if ($Operation -eq 'postflight') {
             $script:failureCode = 'post_activation_health'
+            $postActivationInstanceStatuses = if ($script:recoveryMode) {
+                @($script:recoveryTargetInstanceStatuses)
+            } else {
+                @($script:normalInstanceStatuses)
+            }
             Wait-Healthy -Snapshot $script:snapshot `
-                -ExpectedPackageIdentitySha256 $script:packageIdentitySha256
+                -ExpectedPackageIdentitySha256 $script:packageIdentitySha256 `
+                -ExpectedInstanceStatuses $postActivationInstanceStatuses `
+                -RequireOriginalInstanceStatus (-not $script:recoveryMode)
             Assert-RuntimeStateSnapshot -Snapshot $script:runtimeStateSnapshot
             $script:failureCode = 'none'
             Write-AdapterStatus -Outcome 'passed' -ExitCode $ExitSuccess
@@ -1112,6 +1277,7 @@ try {
                 transactionDirectoryName = Split-Path -Leaf $script:transactionRoot
                 deploymentId = [string] $script:manifest.deploymentId
                 packageIdentitySha256 = $script:packageIdentitySha256
+                recoveryMode = [bool] $script:recoveryMode
                 completedUtc = [DateTime]::UtcNow.ToString('o')
                 outcome = 'rolled_back'
             })
@@ -1120,7 +1286,13 @@ try {
             $script:finalExitCode = $ExitRolledBack
         }
     } else {
-        $instanceSnapshot = @(Get-InstanceSnapshot)
+        $initialInstanceStatuses = if ($script:recoveryArmed) {
+            @($script:recoverySourceInstanceStatuses)
+        } else {
+            @($script:normalInstanceStatuses)
+        }
+        $instanceSnapshot = @(Get-InstanceSnapshot -AllowedInstanceStatuses $initialInstanceStatuses)
+        $script:recoveryMode = [bool] $script:recoveryArmed
         $script:failureCode = 'quiescence'
         Enter-RuntimeQuiescence
         $script:runtimeStateSnapshot = Get-RuntimeStateSnapshot
@@ -1130,6 +1302,8 @@ try {
             deploymentId = [string] $script:manifest.deploymentId
             packageIdentitySha256 = $script:packageIdentitySha256
             activePackageIdentitySha256 = $activePackageIdentity
+            recoveryMode = [bool] $script:recoveryMode
+            sourceInstanceStatuses = @($initialInstanceStatuses)
             instances = $instanceSnapshot
             runtimeState = $script:runtimeStateSnapshot
         }
@@ -1168,13 +1342,22 @@ try {
             Invoke-TargetedReload
             $script:failureCode = 'post_activation_health'
             $null = Get-ModuleTreePackageIdentity -Path ([string] $script:policy.activeModulePath)
-            Wait-Healthy -Snapshot $script:snapshot -ExpectedPackageIdentitySha256 $script:packageIdentitySha256
+            $postActivationInstanceStatuses = if ($script:recoveryMode) {
+                @($script:recoveryTargetInstanceStatuses)
+            } else {
+                @($script:normalInstanceStatuses)
+            }
+            Wait-Healthy -Snapshot $script:snapshot `
+                -ExpectedPackageIdentitySha256 $script:packageIdentitySha256 `
+                -ExpectedInstanceStatuses $postActivationInstanceStatuses `
+                -RequireOriginalInstanceStatus (-not $script:recoveryMode)
             Assert-RuntimeStateSnapshot -Snapshot $script:runtimeStateSnapshot
             $activeRecord = [ordered]@{
                 formatVersion = 1
                 adapterProfile = 'saef-owntracks-position-map-v1'
                 deploymentId = [string] $script:manifest.deploymentId
                 packageIdentitySha256 = $script:packageIdentitySha256
+                recoveryMode = [bool] $script:recoveryMode
                 activatedUtc = [DateTime]::UtcNow.ToString('o')
                 transactionDirectoryName = $transactionID
                 rollbackDirectoryName = 'rollback'
@@ -1186,6 +1369,7 @@ try {
                 transactionDirectoryName = $transactionID
                 deploymentId = [string] $script:manifest.deploymentId
                 packageIdentitySha256 = $script:packageIdentitySha256
+                recoveryMode = [bool] $script:recoveryMode
                 completedUtc = [DateTime]::UtcNow.ToString('o')
                 outcome = 'activated'
             })
@@ -1210,6 +1394,7 @@ try {
                     transactionDirectoryName = Split-Path -Leaf $script:transactionRoot
                     deploymentId = [string] $script:manifest.deploymentId
                     packageIdentitySha256 = $script:packageIdentitySha256
+                    recoveryMode = [bool] $script:recoveryMode
                     completedUtc = [DateTime]::UtcNow.ToString('o')
                     outcome = 'rolled_back'
                 })
@@ -1225,6 +1410,7 @@ try {
                     transactionDirectoryName = Split-Path -Leaf $script:transactionRoot
                     deploymentId = [string] $script:manifest.deploymentId
                     packageIdentitySha256 = $script:packageIdentitySha256
+                    recoveryMode = [bool] $script:recoveryMode
                     completedUtc = [DateTime]::UtcNow.ToString('o')
                     outcome = 'manual_recovery_required'
                 })

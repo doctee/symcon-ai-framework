@@ -32,6 +32,9 @@
     "healthPollMilliseconds": 500,
     "quiescenceTimeoutSeconds": 30,
     "allowedInstanceStatuses": [102],
+    "recovery": {
+        "enabled": false
+    },
     "requiredInstanceCount": 1,
     "expectedInstanceId": 0,
     "expectedConfigurationSha256": "<private-sha256-of-byte-exact-instance-configuration>",
