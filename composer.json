@@ -191,7 +191,8 @@
         "test:media-carousel": [
             "@php case-studies/media-carousel/tests/module.php",
             "@php case-studies/media-carousel/tools/validate-distribution.php",
-            "@php case-studies/media-carousel/tests/module-fileset.php"
+            "@php case-studies/media-carousel/tests/module-fileset.php",
+            "@php tests/deployments/media-carousel-module-adapter.php"
         ],
         "test:module-publication": [
             "@php case-studies/open-meteo/tests/publication.php",

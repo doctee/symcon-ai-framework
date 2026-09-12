@@ -136,6 +136,10 @@ contract. Standalone publication uses
 `deployments/symcon/media-carousel-publication.json` through the generic
 publisher.
 
+The repository-only Channel-v8 deployment candidate is documented in
+`03-standalone-deployment-adapter.md`. It remains outside the installed target
+allowlist until its separate Windows, ownership-migration and live gates pass.
+
 ## Sources
 
 - [IP-Symcon HTML-SDK](https://www.symcon.de/de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/html-sdk/)

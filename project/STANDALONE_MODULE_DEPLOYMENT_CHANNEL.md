@@ -204,3 +204,11 @@ module; it is not a generic helper. Windows transaction verification, private
 target binding, installation, package preflight, activation and postflight were
 each handled as separate gates. Further activation, state migration and
 retention cleanup remain separately controlled operations.
+
+The MediaCarousel profile is the second repository-only adapter candidate. It
+reuses the existing package and dispatch boundary but keeps exact instance
+configuration, package ownership and targeted `MC_ReloadModule()` semantics in
+its target adapter. It is not allowlisted or installed, and the existing
+Git-managed live module tree must not be adopted without a separate reversible
+ownership-migration gate. Its cross-root retention remains disabled rather
+than being duplicated as target-local cleanup logic.

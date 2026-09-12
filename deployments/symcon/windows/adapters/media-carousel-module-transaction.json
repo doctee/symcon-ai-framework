@@ -1,0 +1,48 @@
+{
+    "formatVersion": 1,
+    "adapterProfile": "saef-media-carousel-v1",
+    "ownership": {
+        "mode": "adapter-owned-package-directory",
+        "repositoryMetadataAllowed": false
+    },
+    "configuration": {
+        "snapshot": "fresh-byte-exact-utf8",
+        "requireByteExactReadback": true
+    },
+    "quiescence": {
+        "required": true,
+        "writerModel": "no-server-side-writers",
+        "guard": "named-adapter-mutex"
+    },
+    "state": {
+        "candidateFormat": 1,
+        "rollbackFormat": 1,
+        "authoritative": "symcon-instance-configuration",
+        "derived": ["RegisteredMediaIDs", "RegisteredCategoryID"],
+        "clientLocal": ["sequence-index", "compressed-image-cache"],
+        "rollbackPreparation": "fresh-snapshot-no-conversion"
+    },
+    "reload": {
+        "method": "MC_ReloadModule",
+        "scope": "single-module-directory",
+        "serviceRestartAllowed": false
+    },
+    "health": {
+        "requireReadyRunlevel": true,
+        "requireLibraryAndModuleIdentity": true,
+        "requireAllInstancesConfigured": true,
+        "requireConfigurationPreserved": true
+    },
+    "rollback": {
+        "switch": "same-volume-directory-rename",
+        "reloadPreviousPackage": true,
+        "restoreFreshConfigurationOnDrift": true,
+        "requirePostRollbackHealth": true
+    },
+    "retention": {
+        "owner": "channel-v8-cross-root-contract",
+        "implemented": false,
+        "genericCleanupAllowed": false,
+        "applyRequiresSeparateAuthorization": true
+    }
+}

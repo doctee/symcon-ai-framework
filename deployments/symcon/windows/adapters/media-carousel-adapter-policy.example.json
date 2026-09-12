@@ -1,0 +1,39 @@
+{
+    "formatVersion": 1,
+    "adapterProfile": "saef-media-carousel-v1",
+    "targetId": "saef-media-carousel",
+    "libraryGuid": "{8D263598-06EF-4440-982C-9E86E3F8D130}",
+    "moduleGuid": "{41D0C5ED-8331-4B26-A44E-6FDCEC1BC41F}",
+    "libraryName": "SAEF Media Carousel",
+    "moduleName": "MediaCarousel",
+    "moduleType": 3,
+    "modulePrefix": "SAEFMC",
+    "libraryUrl": "https://github.com/doctee/saef-media-carousel",
+    "moduleControlInstanceId": 0,
+    "moduleControlModuleGuid": "{00000000-0000-0000-0000-000000000000}",
+    "moduleDirectoryName": "saef-media-carousel",
+    "activeModulePath": "<private-absolute-package-managed-module-path>",
+    "adapterStateRoot": "<private-absolute-media-carousel-adapter-state-root>",
+    "mutexName": "Global\\SAEF.MediaCarousel.ModuleAdapter",
+    "expectedReadyRunlevel": 10103,
+    "rpcTimeoutSeconds": 30,
+    "reloadTimeoutSeconds": 60,
+    "healthPollMilliseconds": 500,
+    "allowedInstanceStatuses": [102],
+    "maximumInstanceCount": 64,
+    "expectedInstances": [
+        {
+            "instanceId": 0,
+            "configurationSha256": "<private-sha256-of-byte-exact-instance-configuration>"
+        }
+    ],
+    "expectedActivePackageIdentitySha256": "<private-sha256-of-active-module-tree>",
+    "maximumCandidateBytes": 67108864,
+    "maximumStateBytes": 1048576,
+    "retention": {
+        "minimumAgeHours": 168,
+        "keepSuccessfulRollbackCount": 2,
+        "keepFailedCandidateCount": 2,
+        "maximumArtifactCount": 16
+    }
+}
