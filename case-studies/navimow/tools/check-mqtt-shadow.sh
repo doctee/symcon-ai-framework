@@ -29,6 +29,8 @@ php case-studies/navimow/tests/map-geometry-reducer.php
 php case-studies/navimow/tests/local-map-scene-prototype.php
 php case-studies/navimow/tests/local-map-svg-renderer.php
 php case-studies/navimow/tests/revision-bounded-track-store.php
+php case-studies/navimow/tests/mowing-analytics-reducer.php
+php case-studies/navimow/tests/mowing-analytics-device.php
 php case-studies/navimow/tests/local-map-evidence-contract.php
 php case-studies/navimow/tests/local-map-device-lifecycle.php
 php case-studies/navimow/tests/local-map-runtime-reducer.php
@@ -50,6 +52,7 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/libs/Navimow/LocalMapSceneProjector.php \
     case-studies/navimow/distribution/libs/Navimow/LocalMapSvgRenderer.php \
     case-studies/navimow/distribution/libs/Navimow/MapGeometryReducer.php \
+    case-studies/navimow/distribution/libs/Navimow/MowingAnalyticsReducer.php \
     case-studies/navimow/distribution/libs/Navimow/MqttCredentialMapper.php \
     case-studies/navimow/distribution/libs/Navimow/MqttContinuousOperationReducer.php \
     case-studies/navimow/distribution/libs/Navimow/MqttEnvelopeException.php \
@@ -65,9 +68,12 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/libs/Navimow/RevisionBoundedTrackStore.php \
     case-studies/navimow/distribution/libs/Navimow/ZoneStatisticsReducer.php \
     case-studies/navimow/candidate/MapGeometryReducer.php \
+    case-studies/navimow/candidate/MowingAnalyticsReducer.php \
     case-studies/navimow/candidate/LocalMapSceneProjector.php \
     case-studies/navimow/candidate/LocalMapSvgRenderer.php \
     case-studies/navimow/candidate/RevisionBoundedTrackStore.php \
+    case-studies/navimow/tests/mowing-analytics-reducer.php \
+    case-studies/navimow/tests/mowing-analytics-device.php \
     case-studies/navimow/tests/local-map-svg-renderer.php \
     case-studies/navimow/tests/revision-bounded-track-store.php \
     case-studies/navimow/tests/local-map-evidence-contract.php \
@@ -93,6 +99,7 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/libs/Navimow/LocalMapSceneProjector.php \
     case-studies/navimow/distribution/libs/Navimow/LocalMapSvgRenderer.php \
     case-studies/navimow/distribution/libs/Navimow/MapGeometryReducer.php \
+    case-studies/navimow/distribution/libs/Navimow/MowingAnalyticsReducer.php \
     case-studies/navimow/distribution/libs/Navimow/MqttCredentialMapper.php \
     case-studies/navimow/distribution/libs/Navimow/MqttContinuousOperationReducer.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPayloadParser.php \
@@ -103,6 +110,7 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/libs/Navimow/RevisionBoundedTrackStore.php \
     case-studies/navimow/distribution/libs/Navimow/ZoneStatisticsReducer.php \
     case-studies/navimow/candidate/MapGeometryReducer.php \
+    case-studies/navimow/candidate/MowingAnalyticsReducer.php \
     case-studies/navimow/candidate/LocalMapSceneProjector.php \
     case-studies/navimow/candidate/LocalMapSvgRenderer.php \
     case-studies/navimow/candidate/RevisionBoundedTrackStore.php \

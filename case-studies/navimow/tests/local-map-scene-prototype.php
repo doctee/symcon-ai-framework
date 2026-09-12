@@ -88,9 +88,16 @@ assertLocalMapScene(
         && $scene['viewport']['maximumX'] > 40.0
         && $scene['viewport']['width'] > 40.0
         && $scene['viewport']['height'] > 40.0
-        && $scene['viewport']['paddingLocal'] >= 0.75
+        && $scene['viewport']['paddingLocal'] >= 0.25
         && $scene['viewport']['paddingLocal'] < 1.5,
     'Viewport does not contain geometry, station and retained path.'
+);
+assertLocalMapScene(
+    $scene['viewport']['minimumX']
+        < $scene['station']['x'] - 3.2
+        && $scene['viewport']['minimumY']
+            < $scene['station']['y'] - 3.2,
+    'Viewport does not retain the station marker safety extent.'
 );
 assertLocalMapScene(
     $scene['overlapDiagnostics']['pairCount'] === 1
@@ -223,7 +230,8 @@ assertLocalMapScene(
     'Synthetic scene contains private installation data.'
 );
 assertLocalMapScene(
-    $scene['contracts']['geometricCoveragePercent'] === 'not-implemented'
+    $scene['contracts']['geometricCoveragePercent']
+        === 'separate-diagnostic-reducer'
         && $scene['contracts']
             ['revisionMismatchDropsPathAndStatistics'] === true,
     'Prototype overstates geometric coverage or revision compatibility.'

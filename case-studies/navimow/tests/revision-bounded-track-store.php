@@ -103,6 +103,27 @@ assertRevisionBoundedTrack(
             ['attribution']['source'] === 'geometry-fallback',
     'Retained track could not be projected for rendering.'
 );
+$legacyState = json_decode($serialized, true, 64, JSON_THROW_ON_ERROR);
+unset(
+    $legacyState['segments'][0]['passSequence'],
+    $legacyState['segments'][0]['sessionSequence'],
+    $legacyState['segments'][0]['vehicleStateCode'],
+    $legacyState['segments'][0]['points'][0]['sourceTimestamp'],
+    $legacyState['segments'][0]['points'][0]['vehicleStateCode']
+);
+$migrated = RevisionBoundedTrackStore::restoreState(json_encode(
+    $legacyState,
+    JSON_THROW_ON_ERROR
+));
+$migratedPath = RevisionBoundedTrackStore::scenePath($migrated, $firstKey);
+assertRevisionBoundedTrack(
+    $migratedPath['segments'][0]['passSequence'] === null
+        && $migratedPath['segments'][0]['sessionSequence'] === null
+        && $migratedPath['segments'][0]['vehicleStateCode'] === 0
+        && $migratedPath['segments'][0]['points'][0]['sourceTimestamp']
+            === $migratedPath['segments'][0]['points'][0]['receivedAt'],
+    'Legacy retained-track state was not migrated conservatively.'
+);
 $pruned = RevisionBoundedTrackStore::pruneBefore($restored, 1005);
 $prunedProjection = RevisionBoundedTrackStore::project($pruned);
 assertRevisionBoundedTrack(

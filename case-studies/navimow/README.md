@@ -417,6 +417,15 @@ template or a general SAEF reference implementation.
 | `390-continuous-receive-only-implementation.md` | Implements the additive continuous receive-only mode, renewable safety lease, finite credential-free recovery, operating variables and freshness-aware map behavior in an isolated offline candidate while retaining all publication and live gates. |
 | `391-continuous-receive-only-offline-validation-and-review.md` | Resolves the lock-identical toolchain, closes PHPCS, PHPStan and full Composer validation, expands update and lease-expiry evidence, and passes focused safety review without publication or live access. |
 | `392-continuous-receive-only-publication-readiness.md` | Proves fresh SAEF and standalone baselines, freezes the exact continuous-mode publication candidate and defines reduced hash-bound publication, rollout and live-validation gates without mutation. |
+| `393-continuous-receive-only-pilot-acceptance-review.md` | Accepts the 24-hour receive-only pilot, credential-free cleanup and existing Archive continuity as the evidence basis for bounded path analytics. |
+| `394-mowing-run-coverage-and-retention-contract.md` | Defines revision-bound mowing runs, diagnostic raster coverage, period totals, 7/14-day recency, optional subareas and strict retention limits. |
+| `395-mowing-analytics-offline-reducer-implementation.md` | Implements the pure bounded analytics reducer, path-metadata migration, idempotent aggregation and corrupted-state rejection. |
+| `396-html-sdk-map-and-statistics-design.md` | Designs an additive edge-to-edge HTML SDK map with local SVG navigation, marker safety, responsive controls and provider-specific map engines. |
+| `397-mowing-analytics-runtime-integration.md` | Integrates default-disabled analytics, stable Device variables and Archive-preserving lifecycle behavior without changing REST or command authority. |
+| `398-html-sdk-local-map-implementation.md` | Implements the dependency-free HTML SDK assets, escaped message bootstrap, pan/zoom/follow/zone focus and compact statistics strip. |
+| `399-mowing-analytics-and-html-sdk-offline-validation.md` | Closes focused functional, static, fileset and privacy checks while retaining publication, Symcon and Archive gates. |
+| `400-mowing-analytics-and-html-sdk-publication-readiness.md` | Verifies the current canonical base, freezes the X450-calibrated publication candidate and defines separate SAEF, standalone, disabled-rollout and live activation gates. |
+| `401-mowing-analytics-contract-revision-correction-and-pr-rereview.md` | Resolves the PR review blocker by binding retained analytics to geometry, calibration, time-zone, zone-binding and subarea contracts before merge. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

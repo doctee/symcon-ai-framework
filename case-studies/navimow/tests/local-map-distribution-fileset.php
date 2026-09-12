@@ -28,12 +28,16 @@ $publication = json_decode(
 );
 $required = [
     'libs/Navimow/MapGeometryReducer.php',
+    'libs/Navimow/MowingAnalyticsReducer.php',
     'libs/Navimow/MqttPathSegmenter.php',
     'libs/Navimow/ZoneStatisticsReducer.php',
     'libs/Navimow/LocalMapSceneProjector.php',
     'libs/Navimow/RevisionBoundedTrackStore.php',
     'libs/Navimow/LocalMapSvgRenderer.php',
     'libs/SAEF/helpers/diagnostics/ConfigurationHash.php',
+    'NavimowDevice/local-map.css',
+    'NavimowDevice/local-map.html',
+    'NavimowDevice/local-map.js',
 ];
 $targets = array_column($manifest['files'], 'target');
 foreach ($required as $target) {

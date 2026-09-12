@@ -37,6 +37,22 @@ $configuredSvg = LocalMapSvgRenderer::render(
     ]
 );
 $lightSvg = LocalMapSvgRenderer::render($scene, ['theme' => 'light']);
+$recencyScene = $scene;
+$recencyScene['analytics'] = [
+    'zones' => [
+        [
+            'zoneKey' => str_repeat('a', 64),
+            'recencyState' => 2,
+            'recencyDays' => 8,
+        ],
+        [
+            'zoneKey' => str_repeat('b', 64),
+            'recencyState' => 3,
+            'recencyDays' => 15,
+        ],
+    ],
+];
+$recencySvg = LocalMapSvgRenderer::render($recencyScene);
 
 assertLocalMapSvg(
     str_starts_with($svg, '<svg xmlns="http://www.w3.org/2000/svg"')
@@ -58,7 +74,8 @@ assertLocalMapSvg(
         && str_contains($svg, 'class="mower-body"')
         && str_contains($svg, 'class="mower-direction"')
         && str_contains($svg, 'data-heading-degrees="')
-        && str_contains($svg, 'rotate(-180)')
+        && str_contains($svg, 'rotate(-188)')
+        && str_contains($svg, 'data-zone-id="101"')
         && str_contains($svg, 'data-theme="dark"')
         && str_contains($svg, 'width="100%" height="100%"')
         && str_contains($svg, 'html,body{margin:0;padding:0')
@@ -119,6 +136,29 @@ assertLocalMapSvg(
         && str_contains($lightSvg, '.legend-background{fill:#ffffff')
         && str_contains($lightSvg, 'fill:#1f2937'),
     'Explicit light theme differs.'
+);
+assertLocalMapSvg(
+    str_contains(
+        $recencySvg,
+        'class="zone zone-recency-warning" data-zone-id="101"'
+    )
+        && str_contains(
+            $recencySvg,
+            'class="zone zone-recency-critical" data-zone-id="102"'
+        )
+        && str_contains($recencySvg, 'fill="#243a52" stroke="#78aee8"')
+        && str_contains($recencySvg, 'fill="#24483a" stroke="#67c994"')
+        && str_contains($recencySvg, 'last mowed 8 days ago')
+        && str_contains($recencySvg, 'last mowed 15 days ago')
+        && str_contains(
+            $recencySvg,
+            '.zone-recency-warning{stroke:#ffd166!important'
+        )
+        && str_contains(
+            $recencySvg,
+            '.zone-recency-critical{stroke:#ff5964!important'
+        ),
+    'Mowing recency replaced base zone color or lost its warning outline.'
 );
 assertLocalMapSvg(
     substr_count(

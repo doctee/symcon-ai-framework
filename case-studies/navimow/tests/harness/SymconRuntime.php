@@ -23,6 +23,8 @@ if (!class_exists('IPSModule')) {
         private array $registeredMessages = [];
         private array $debugEntries = [];
         private array $childMessages = [];
+        private array $visualizationMessages = [];
+        private ?int $visualizationType = null;
         private ?Closure $parentHandler = null;
         private int $status = IS_CREATING;
 
@@ -55,6 +57,11 @@ if (!class_exists('IPSModule')) {
             $this->properties[$ident] ??= $default;
         }
 
+        protected function RegisterPropertyFloat(string $ident, float $default): void
+        {
+            $this->properties[$ident] ??= $default;
+        }
+
         protected function RegisterPropertyBoolean(string $ident, bool $default): void
         {
             $this->properties[$ident] ??= $default;
@@ -68,6 +75,15 @@ if (!class_exists('IPSModule')) {
         protected function ReadPropertyInteger(string $ident): int
         {
             return (int) $this->requireEntry($this->properties, $ident, 'property');
+        }
+
+        protected function ReadPropertyFloat(string $ident): float
+        {
+            return (float) $this->requireEntry(
+                $this->properties,
+                $ident,
+                'property'
+            );
         }
 
         protected function ReadPropertyBoolean(string $ident): bool
@@ -270,6 +286,16 @@ if (!class_exists('IPSModule')) {
             $this->childMessages[] = $json;
         }
 
+        protected function SetVisualizationType(int $type): void
+        {
+            $this->visualizationType = $type;
+        }
+
+        protected function UpdateVisualizationValue(string $value): void
+        {
+            $this->visualizationMessages[] = $value;
+        }
+
         protected function SendDebug(string $message, mixed $data, int $format): void
         {
             if (count($this->debugEntries) >= 50) {
@@ -345,6 +371,16 @@ if (!class_exists('IPSModule')) {
         public function testChildMessages(): array
         {
             return $this->childMessages;
+        }
+
+        public function testVisualizationType(): ?int
+        {
+            return $this->visualizationType;
+        }
+
+        public function testVisualizationMessages(): array
+        {
+            return $this->visualizationMessages;
         }
 
         public function testSnapshotPersistentState(): array
