@@ -1,0 +1,10 @@
+{
+    "formatVersion": 1,
+    "deploymentId": "saef-media-carousel-release",
+    "targetDirectoryName": "saef-media-carousel-release-module",
+    "modulePath": "../../../../dist/symcon/saef-media-carousel-module",
+    "moduleTargetId": "saef-media-carousel",
+    "libraryGuid": "{8D263598-06EF-4440-982C-9E86E3F8D130}",
+    "transactionContractPath": "media-carousel-module-transaction.json",
+    "outputPath": "<private-absolute-output-path>.zip"
+}

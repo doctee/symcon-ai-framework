@@ -497,6 +497,26 @@ Adding these sources does not populate `standaloneModuleTargets`, install the
 adapter or its state root on Windows, migrate legacy state, change a capacity
 limit, or authorize a live preflight or activation.
 
+### MediaCarousel adapter candidate
+
+The second repository-only target profile is documented in
+`case-studies/media-carousel/03-standalone-deployment-adapter.md`. It reuses the
+same standalone-package and adapter-dispatch contracts without changing the
+five-command gateway grammar or the active target allowlist.
+
+Its target-specific boundary pins the exact MediaCarousel instance inventory,
+every byte-exact instance configuration and the active package-tree identity.
+Activation is limited to one targeted `MC_ReloadModule()` call and must restore
+the previous package and any configuration drift before it may report a
+successful rollback. The public policy contains only non-runnable placeholders.
+
+The candidate does not adopt the currently Git-managed live module tree. That
+ownership transition requires a fresh read-only Symcon inventory, a protected
+backup and a separately authorized reversible migration. MediaCarousel also
+does not introduce a target-local retention command: cross-root deletion stays
+disabled under `project/STANDALONE_MODULE_CROSS_ROOT_RETENTION.md` until the
+generic contract is implemented and qualified.
+
 ```powershell
 & .\Invoke-SaefDeploymentRetentionCleanup.ps1 `
     -PlanPath '.\deployment-retention-plan.local.json'

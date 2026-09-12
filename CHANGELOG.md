@@ -66,6 +66,11 @@ This project adheres to Semantic Versioning.
   interruption inspection and post-success rollback operations, plus a
   coordinator-bound reseal mode. Media Carousel remains a later separately
   qualified reuse target.
+- Added the repository-only MediaCarousel Channel-v8 adapter candidate with
+  exact instance/configuration and active-package pins, ordinal package
+  identities, one targeted reload path and byte-exact rollback. Target
+  allowlisting, ownership migration, Windows qualification, live activation
+  and cross-root retention remain separate closed gates.
 - Added the repository-only OwnTracks Position Map pilot adapter for deployment
   channel version 8, with exact ownership/configuration/package pins, bounded
   five-lock quiescence, format-2 state preservation, targeted Module Control
