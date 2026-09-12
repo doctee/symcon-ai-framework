@@ -23,6 +23,27 @@ function assertMowingAnalyticsDevice(bool $condition, string $message): void
     }
 }
 
+$form = json_decode(
+    file_get_contents(__DIR__ . '/../distribution/NavimowDevice/form.json'),
+    true,
+    64,
+    JSON_THROW_ON_ERROR
+);
+$formElements = [];
+foreach ($form['elements'] as $element) {
+    if (is_array($element) && is_string($element['name'] ?? null)) {
+        $formElements[$element['name']] = $element;
+    }
+}
+foreach (['MetersPerLocalUnit', 'CoverageCellSizeMeters'] as $name) {
+    assertMowingAnalyticsDevice(
+        ($formElements[$name]['type'] ?? null) === 'NumberSpinner'
+            && ($formElements[$name]['minimum'] ?? null) === 0
+            && is_int($formElements[$name]['maximum'] ?? null),
+        'Decimal analytics spinner metadata differs for ' . $name . '.'
+    );
+}
+
 $device = new MowingAnalyticsDevice(4601);
 $device->Create();
 $fixture = navimowLocalMapFixture($device->now);
