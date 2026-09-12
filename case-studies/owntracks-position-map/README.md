@@ -314,6 +314,7 @@ inside the server grace window. Live activation is recorded separately.
 | `110-windows-restart-reference-reconciliation.md` | Reconciles persistent OwnTracks reference bookkeeping with an empty post-restart kernel list and records the repository-only regression, local verification and reproducible inactive package. |
 | `111-bounded-startup-failure-diagnostics.md` | Adds fixed, non-private startup phase and failure-class logging at the pre-runtime diagnostics boundary without a new variable, helper or public API. |
 | `112-runtime-recovery-reconciliation.md` | Reconciles the earlier exact restart-recovery contract with the current scope-bound adapter while keeping Windows qualification, private policy materialization and every live operation separately gated. |
+| `113-scope-bound-one-click-live-closure.md` | Records the first exact scope-bound OwnTracks activation, independent channel and Symcon postflight, consumed approval boundary and retained cleanup gate. |
 
 ## Architectural Boundary
 

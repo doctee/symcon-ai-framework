@@ -1,7 +1,7 @@
 # Secure Child Process Execution
 
-Status: Stable Draft 1.0, repository implementation complete; exact Windows
-PowerShell 5.1 qualification and installation remain separate gates
+Status: Stable Draft 1.0, repository implementation, Windows PowerShell 5.1
+qualification and channel-version-8 installation complete
 
 ## Purpose
 
@@ -155,12 +155,21 @@ qualification evidence gain the exact child-process hash.
 Earlier Windows approval evidence remains valid only for its historical source
 generation. It cannot authorize the new runner or channel artifacts.
 
-## Remaining gates
+## Validation and future gates
 
-1. Repository review, complete SAEF checks and immutable commit.
-2. Exact Windows PowerShell 5.1 parser and child-process scratch qualification.
-3. Exact scope-bound approval Windows requalification.
-4. Read-only installed-channel preflight and backup review.
-5. Separately authorized channel installation and OpenSSH restart.
-6. Independent probe, policy/hash readback and process cleanup postflight.
-7. Separate target profile installation and live module activation gates.
+The exact contract passed its dedicated Windows PowerShell 5.1 qualification
+with four positive and four negative case groups. The approval runner then
+passed its separate six-positive/eight-negative requalification against the
+same contract hash. Protected channel installation, OpenSSH restart,
+independent policy/hash postflight and the first target-profile installation
+completed through distinct gates. OwnTracks subsequently exercised the
+installed boundary during one scope-bound live activation.
+
+These results qualify only the installed source generation. Future work must:
+
+1. requalify any changed launcher or consumer bytes under Windows PowerShell
+   5.1;
+2. repeat protected backup, installation and independent postflight for a new
+   generation; and
+3. qualify and authorize every additional target profile and live activation
+   separately.

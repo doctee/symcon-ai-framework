@@ -1,6 +1,6 @@
 # ADR-0011: Use bounded PowerShell child processes
 
-Status: Accepted for repository integration; Windows and live use remain gated
+Status: Accepted; Windows-qualified and installed for channel version 8
 Date: 2026-09-09
 
 ## Context

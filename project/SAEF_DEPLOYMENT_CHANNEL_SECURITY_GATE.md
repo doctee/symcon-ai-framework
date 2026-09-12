@@ -9,8 +9,8 @@ reassessed and version 8 verified 2026-09-04
 **Scope:** Restricted Windows OpenSSH deployment channel
 
 **Behavior state:** Corrected managed fileset active; runtime function contract,
-source mirror and version-8 transport boundary verified; standalone-module
-target allowlist empty
+source mirror and version-8 transport boundary verified; one separately
+qualified OwnTracks standalone-module target installed
 
 ## Scope
 
@@ -207,6 +207,19 @@ Windows gate then passed again against the installed channel without active
 mutation or another restart, followed by a final successful external probe. No
 standalone-module package was staged, preflighted or activated.
 
+### Subsequent OwnTracks Target and Approval Validation
+
+Later, independently gated work installed one hash-pinned OwnTracks target,
+the shared secure child-process generation and a scope-bound approval profile.
+The exact current sources passed Windows PowerShell 5.1 qualification before
+protected installation. A fresh server-generated plan then completed one
+OwnTracks activation and independent channel and Symcon postflight.
+
+This later result supersedes only the earlier empty-target operating state. It
+does not change the security result for the transport boundary, add a remote
+verb or authorize another target. MediaCarousel, cross-root retention and every
+future channel generation remain separately gated.
+
 ## Repository Verification
 
 The repository checks cover:
@@ -227,7 +240,8 @@ The repository checks cover:
 and restart-coordinator test pass after the repository hardening. The corrected
 runtime-fileset activation passed its non-mutating preflight, post-restart
 compatibility gate and independent verification. The version-8 Windows and live
-postflight gates also pass with an empty standalone-module target allowlist.
+postflight gates passed first with an empty standalone-module target allowlist;
+the later OwnTracks target and approval gates passed independently.
 
 ## Residual Risks
 
@@ -260,8 +274,9 @@ and active channel version 8 boundary are **PASS** after the distinct Windows
 parser, ACL, real-negotiation, installation and independent postflight gates.
 The historical first runtime activation remains recorded as **FAIL with
 successful rollback**; the corrected immutable runtime candidate remains
-**PASS**. Standalone-module activation remains disabled until a concrete target
-adapter passes its own separately authorized installation and activation gates.
+**PASS**. Standalone-module activation is enabled only for the separately
+qualified OwnTracks profile. Every additional target must pass its own
+installation and activation gates.
 
 ## Related Artifacts
 

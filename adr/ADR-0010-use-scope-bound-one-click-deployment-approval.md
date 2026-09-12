@@ -1,6 +1,6 @@
 # ADR-0010: Use scope-bound one-click deployment approval
 
-Status: Accepted for repository integration; live use remains gated
+Status: Accepted; OwnTracks reference profile live-validated
 Date: 2026-09-07
 
 ## Context

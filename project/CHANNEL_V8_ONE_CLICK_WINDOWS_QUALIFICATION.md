@@ -1,7 +1,7 @@
 # Channel v8 One-Click Windows Qualification
 
-Status: Repository contract updated; exact Windows PowerShell 5.1
-requalification and installation remain separate gates
+Status: Exact Windows PowerShell 5.1 requalification and first protected
+OwnTracks profile installation complete
 
 ## Scope
 
@@ -145,9 +145,15 @@ canonical JSON or its fixed SHA-256 differs. `Sort-Object` is prohibited for
 canonical strings; display or numeric cleanup ordering is outside this rule
 only when it cannot feed an identity, signature, manifest, backup or plan.
 
-## Later gates
+## Completed reference gate and later gates
 
-Qualification does not authorize installation. Installation must separately
-bind exact runner/profile hashes and protected state/secret ownership. A fresh
-read-only installed preflight must follow. OwnTracks activation, postflight,
-reseal, MediaCarousel opt-in and cross-root retention each remain distinct.
+The current recovery-capable OwnTracks generation passed the required six
+positive and eight negative case groups under Windows PowerShell 5.1. Its
+qualified profile was installed through a protected backup and independent
+postflight, then used for one separately authorized scope-bound activation.
+The live result does not extend the qualification to changed source bytes or a
+second target.
+
+MediaCarousel opt-in, cross-root retention, any new profile installation and
+every later live activation remain distinct. Qualification never authorizes
+those operations by itself.

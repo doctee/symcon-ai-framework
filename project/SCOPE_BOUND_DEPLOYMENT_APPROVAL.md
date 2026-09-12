@@ -1,7 +1,7 @@
 # Scope-Bound Deployment Approval
 
-Status: Stable Draft 1.0, repository implementation and exact Windows
-qualification complete; installation and live use remain separately gated
+Status: Stable Draft 1.0, repository implementation, exact Windows
+qualification and first OwnTracks live use complete
 
 ## Purpose
 
@@ -249,18 +249,24 @@ The one-click path requires new private approval state and secret ownership but
 does not migrate module bytes, policies or adapter state. An interrupted manual
 workflow cannot be imported implicitly; a fresh plan and baseline are required.
 
-## Remaining gates
+## Current validation and remaining gates
 
-1. Requalify the exact runner, process launcher, profile initializer and target
-   scripts under Windows PowerShell 5.1. The 2026-09-08 result remains
-   historical evidence for the earlier source generation only.
-2. Install the newly qualified runner, secret, private state root and target policy
-   through the administrative profile installer.
-3. Materialize a private OwnTracks plan and complete read-only review and
-   preflight.
-4. Approve one OwnTracks **Jetzt anwenden** activation, then perform independent
-   Symcon MCP and browser acceptance without provider-expanding behavior.
-5. Implement and qualify cross-root retention in its separate workstream; no
+The exact secure-child-process generation, approval runner, recovery-capable
+OwnTracks adapter and profile initializer passed Windows PowerShell 5.1
+qualification. Their protected installation completed without a Symcon
+restart. A fresh server plan then completed one scope-bound OwnTracks
+activation, independent channel status readback and immediate and delayed
+Symcon MCP postflight. The target remained healthy with unchanged
+configuration and no pending instance changes. This is a reference result,
+not authority for another plan or target.
+
+Remaining work is intentionally separate:
+
+1. Implement and qualify cross-root retention in its own workstream; no
    deletion is authorized here.
-6. Repeat target-adapter and Windows qualification before MediaCarousel opts
-   in.
+2. Extract, review and Windows-qualify the MediaCarousel adapter before that
+   target can opt in.
+3. Requalify every changed runner, launcher, adapter or reseal generation
+   before installation or live use.
+4. Keep service restarts, provider contact, publication and later target
+   activation outside the approval granted to this reference run.
