@@ -427,6 +427,7 @@ template or a general SAEF reference implementation.
 | `400-mowing-analytics-and-html-sdk-publication-readiness.md` | Verifies the current canonical base, freezes the X450-calibrated publication candidate and defines separate SAEF, standalone, disabled-rollout and live activation gates. |
 | `401-mowing-analytics-contract-revision-correction-and-pr-rereview.md` | Resolves the PR review blocker by binding retained analytics to geometry, calibration, time-zone, zone-binding and subarea contracts before merge. |
 | `402-html-sdk-safari-controls-and-legend-correction.md` | Corrects legend spacing, moves interactive controls below the Safari/iPad host boundary and makes the native zone selector deterministic in Dark Skin. |
+| `403-analytics-number-spinner-metadata-correction.md` | Records the stopped 12/13 metadata gate and corrects decimal analytics spinner bounds without changing stored values or reducer validation. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
