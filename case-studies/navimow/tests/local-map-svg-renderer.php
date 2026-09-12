@@ -129,6 +129,30 @@ assertLocalMapSvg(
         && substr_count($svg, '<polygon class="obstacle') === 3,
     'Legend content or semantic layer isolation differs.'
 );
+$legendWidthPattern = '/<g class="legend"[^>]*><title>Symbollegende<\/title><rect class="legend-background" width="([0-9.]+)"/';
+assertLocalMapSvg(
+    preg_match($legendWidthPattern, $svg, $legendWidthMatch) === 1
+        && abs(
+            (float) $legendWidthMatch[1]
+            - min(
+                $scene['viewport']['width'] * 0.52,
+                max(
+                    26.0,
+                    max(
+                        1.35,
+                        min(
+                            1.9,
+                            max(
+                                $scene['viewport']['width'],
+                                $scene['viewport']['height']
+                            ) / 58.0
+                        )
+                    ) * 19.0
+                )
+            )
+        ) < 0.001,
+    'Legend width does not retain balanced right and bottom padding.'
+);
 assertLocalMapSvg(
     str_contains($lightSvg, 'data-theme="light"')
         && str_contains($lightSvg, '.background{fill:#f8fafc}')
