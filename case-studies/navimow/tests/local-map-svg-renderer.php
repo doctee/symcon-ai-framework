@@ -147,11 +147,18 @@ assertLocalMapSvg(
                                 $scene['viewport']['height']
                             ) / 58.0
                         )
-                    ) * 19.0
+                    ) * 16.5
                 )
             )
         ) < 0.001,
-    'Legend width does not retain balanced right and bottom padding.'
+    'Legend width does not retain the compact two-column contract.'
+);
+assertLocalMapSvg(
+    preg_match(
+        '/<g class="legend" data-anchor-x="[0-9.-]+" data-anchor-y="[0-9.-]+" transform="translate\([0-9.-]+ [0-9.-]+\)">/',
+        $svg
+    ) === 1,
+    'Legend viewport-alignment anchors are missing.'
 );
 assertLocalMapSvg(
     str_contains($lightSvg, 'data-theme="light"')
