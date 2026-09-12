@@ -124,8 +124,8 @@ The final standalone candidate identity is:
 
 ```text
 fileCount:         47
-filesetSha256:      0b5dc43109a54188a383f390c945155eb3f4781dc9fdd88dad87c754fc57ae69
-publicationSha256: dab590234382c101189a56be57c7e4f78b2881ace4dfb8db73221eeed57ae644
+filesetSha256:      af05215075f633f87ab1a7cda5d51a85d1a15db135214089e656af3284748aa6
+publicationSha256: f356fdbe03de8e4c3233227f1fdb6446dc826d07a95884582ba67067f20c0d7e
 ```
 
 No private paths, credentials, tokens, device identifiers, MQTT topics,

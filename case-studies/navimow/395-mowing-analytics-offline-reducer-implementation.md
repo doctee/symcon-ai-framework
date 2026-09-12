@@ -28,6 +28,12 @@ distance and duration, rasterizes optional cutting corridors, excludes
 obstacles, deduplicates cells and merges the snapshot idempotently into a
 bounded retained state.
 
+Each retained revision also carries a deterministic analytics-contract hash.
+It binds geometry, physical scale, cutting width, raster resolution, time
+zone, zone bindings and subarea polygons. Projection must present the exact
+matching contract only; changing one of those inputs starts a separate bounded
+revision instead of mixing or reinterpreting older values.
+
 The distribution and candidate copies are behaviorally identical apart from
 their established namespaces.
 

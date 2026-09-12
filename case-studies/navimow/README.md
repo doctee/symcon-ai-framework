@@ -425,6 +425,7 @@ template or a general SAEF reference implementation.
 | `398-html-sdk-local-map-implementation.md` | Implements the dependency-free HTML SDK assets, escaped message bootstrap, pan/zoom/follow/zone focus and compact statistics strip. |
 | `399-mowing-analytics-and-html-sdk-offline-validation.md` | Closes focused functional, static, fileset and privacy checks while retaining publication, Symcon and Archive gates. |
 | `400-mowing-analytics-and-html-sdk-publication-readiness.md` | Verifies the current canonical base, freezes the X450-calibrated publication candidate and defines separate SAEF, standalone, disabled-rollout and live activation gates. |
+| `401-mowing-analytics-contract-revision-correction-and-pr-rereview.md` | Resolves the PR review blocker by binding retained analytics to geometry, calibration, time-zone, zone-binding and subarea contracts before merge. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

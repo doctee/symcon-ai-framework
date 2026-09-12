@@ -171,6 +171,10 @@ $options = [
     'coverageCellSizeMeters' => 0.5,
     'recencyWarningDays' => 7,
     'recencyCriticalDays' => 14,
+    'zoneBindings' => [[
+        'zoneId' => 101,
+        'zoneKey' => $zoneKey,
+    ]],
     'subareas' => [[
         'key' => 'west-half',
         'zoneKey' => $zoneKey,
@@ -233,6 +237,76 @@ assertMowingAnalytics(
     abs($again['latestRun']['distanceMeters'] - 8.0) < 0.0001
         && $again['counters']['updateCount'] === 2,
     'Repeated retained-scene reduction double-counted a run.'
+);
+
+$widerOptions = $options;
+$widerOptions['cuttingWidthMeters'] = 2.0;
+$stateWithWiderContract = MowingAnalyticsReducer::update(
+    $stateAgain,
+    $scene,
+    $start + 600,
+    $widerOptions
+);
+$originalContractProjection = MowingAnalyticsReducer::project(
+    $stateWithWiderContract,
+    $geometryKey,
+    $start + 600,
+    $options
+);
+$widerContractProjection = MowingAnalyticsReducer::project(
+    $stateWithWiderContract,
+    $geometryKey,
+    $start + 600,
+    $widerOptions
+);
+assertMowingAnalytics(
+    count($stateWithWiderContract['revisions']) === 2
+        && $originalContractProjection['latestRun']['estimatedArea']
+            === $again['latestRun']['estimatedArea']
+        && $widerContractProjection['latestRun']['estimatedArea']
+            > $again['latestRun']['estimatedArea'],
+    'Physical calibration drift mixed incompatible analytics revisions.'
+);
+
+$changedSubareaOptions = $options;
+$changedSubareaOptions['subareas'][0]['ring'][1] = [4.0, 0.0];
+$changedSubareaOptions['subareas'][0]['ring'][2] = [4.0, 10.0];
+$stateWithSubareaContract = MowingAnalyticsReducer::update(
+    $stateWithWiderContract,
+    $scene,
+    $start + 700,
+    $changedSubareaOptions
+);
+assertMowingAnalytics(
+    count($stateWithSubareaContract['revisions']) === 3,
+    'Subarea geometry drift did not create a separate analytics revision.'
+);
+
+$mismatchedBindingOptions = $options;
+$mismatchedBindingOptions['zoneBindings'][0]['zoneKey'] = hash(
+    'sha256',
+    'different-zone'
+);
+assertMowingAnalyticsRejected(
+    static fn (): array => MowingAnalyticsReducer::update(
+        $stateAgain,
+        $scene,
+        $start + 800,
+        $mismatchedBindingOptions
+    ),
+    'A zone-binding mismatch was accepted.'
+);
+
+$invalidTimeZoneOptions = $options;
+$invalidTimeZoneOptions['timeZone'] = 123;
+assertMowingAnalyticsRejected(
+    static fn (): array => MowingAnalyticsReducer::project(
+        $stateAgain,
+        $geometryKey,
+        $start + 800,
+        $invalidTimeZoneOptions
+    ),
+    'A non-string time zone was accepted.'
 );
 
 $warning = MowingAnalyticsReducer::project(

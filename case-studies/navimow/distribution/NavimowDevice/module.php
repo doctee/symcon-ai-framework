@@ -1624,8 +1624,13 @@ class NavimowDevice extends IPSModule
     private function mowingAnalyticsOptions(array $package): array
     {
         $definitions = [];
+        $zoneBindings = [];
         foreach ($this->statisticsZoneDefinitions($package) as $definition) {
             $definitions[$definition['zoneId']] = $definition['zoneKey'];
+            $zoneBindings[] = [
+                'zoneId' => $definition['zoneId'],
+                'zoneKey' => $definition['zoneKey'],
+            ];
         }
         $decoded = json_decode(
             $this->ReadPropertyString('StatisticsSubareas'),
@@ -1666,6 +1671,7 @@ class NavimowDevice extends IPSModule
                 $this->ReadPropertyInteger('MowingRecencyWarningDays'),
             'recencyCriticalDays' =>
                 $this->ReadPropertyInteger('MowingRecencyCriticalDays'),
+            'zoneBindings' => $zoneBindings,
             'subareas' => $subareas,
         ];
     }

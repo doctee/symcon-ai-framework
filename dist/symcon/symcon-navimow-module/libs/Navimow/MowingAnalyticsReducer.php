@@ -64,6 +64,8 @@ final class MowingAnalyticsReducer
         $state = self::state($state);
         $policy = self::policy($options);
         $input = self::scene($scene);
+        self::validateZoneBindings($input['zones'], $policy['zoneBindings']);
+        $contractKey = self::contractKey($input['geometryKey'], $policy);
         $snapshot = self::snapshot($input, $policy);
         $zoneDefinitions = array_map(
             static fn (array $zone): array => [
@@ -85,7 +87,10 @@ final class MowingAnalyticsReducer
 
         $revisionIndex = null;
         foreach ($state['revisions'] as $index => $revision) {
-            if (hash_equals($input['geometryKey'], $revision['geometryKey'])) {
+            if (
+                hash_equals($input['geometryKey'], $revision['geometryKey'])
+                && hash_equals($contractKey, $revision['contractKey'])
+            ) {
                 $revisionIndex = $index;
                 break;
             }
@@ -93,6 +98,7 @@ final class MowingAnalyticsReducer
         if ($revisionIndex === null) {
             $state['revisions'][] = [
                 'geometryKey' => $input['geometryKey'],
+                'contractKey' => $contractKey,
                 'firstObservedAt' => $observedAt,
                 'lastObservedAt' => $observedAt,
                 'zones' => $zoneDefinitions,
@@ -184,9 +190,13 @@ final class MowingAnalyticsReducer
         }
         $state = self::state($state);
         $policy = self::policy($options);
+        $contractKey = self::contractKey($geometryKey, $policy);
         $revision = null;
         foreach ($state['revisions'] as $candidate) {
-            if (hash_equals($geometryKey, $candidate['geometryKey'])) {
+            if (
+                hash_equals($geometryKey, $candidate['geometryKey'])
+                && hash_equals($contractKey, $candidate['contractKey'])
+            ) {
                 $revision = $candidate;
                 break;
             }
@@ -359,6 +369,51 @@ final class MowingAnalyticsReducer
             'cuttingStateEvidence' => 'vehicle-state-running-candidate',
             'accuracyClaim' => 'estimate-not-measurement',
         ];
+    }
+
+    /** @param array<string, mixed> $policy */
+    private static function contractKey(
+        string $geometryKey,
+        array $policy
+    ): string {
+        $subareas = array_map(
+            static fn (array $subarea): array => [
+                'key' => $subarea['key'],
+                'zoneKey' => $subarea['zoneKey'],
+                'ring' => $subarea['ring'],
+            ],
+            $policy['subareas']
+        );
+        usort(
+            $subareas,
+            static fn (array $left, array $right): int =>
+                $left['key'] <=> $right['key']
+        );
+        try {
+            $encoded = json_encode(
+                [
+                    'algorithmVersion' => 1,
+                    'geometryKey' => $geometryKey,
+                    'timeZone' => $policy['timeZone'],
+                    'metersPerLocalUnit' =>
+                        $policy['metersPerLocalUnit'],
+                    'cuttingWidthMeters' =>
+                        $policy['cuttingWidthMeters'],
+                    'coverageCellSizeMeters' =>
+                        $policy['coverageCellSizeMeters'],
+                    'zoneBindings' => $policy['zoneBindings'],
+                    'subareas' => $subareas,
+                ],
+                JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION
+            );
+        } catch (JsonException $exception) {
+            throw new InvalidArgumentException(
+                'Mowing analytics contract is not serializable.',
+                0,
+                $exception
+            );
+        }
+        return hash('sha256', $encoded);
     }
 
     /**
@@ -793,8 +848,13 @@ final class MowingAnalyticsReducer
     private static function policy(array $options): array
     {
         $timeZone = $options['timeZone'] ?? 'UTC';
+        if (!is_string($timeZone) || $timeZone === '') {
+            throw new InvalidArgumentException(
+                'Mowing analytics time zone is invalid.'
+            );
+        }
         try {
-            new DateTimeZone(is_string($timeZone) ? $timeZone : '');
+            new DateTimeZone($timeZone);
         } catch (Throwable) {
             throw new InvalidArgumentException(
                 'Mowing analytics time zone is invalid.'
@@ -839,8 +899,82 @@ final class MowingAnalyticsReducer
             'coverageCellSizeMeters' => $cellSize,
             'recencyWarningDays' => $warningDays,
             'recencyCriticalDays' => $criticalDays,
+            'zoneBindings' => self::zoneBindings(
+                $options['zoneBindings'] ?? []
+            ),
             'subareas' => self::subareas($options['subareas'] ?? []),
         ];
+    }
+
+    /** @return list<array{zoneId: int, zoneKey: string}> */
+    private static function zoneBindings(mixed $value): array
+    {
+        if (
+            !is_array($value)
+            || !array_is_list($value)
+            || count($value) > self::MAX_ZONES
+        ) {
+            throw new InvalidArgumentException(
+                'Mowing analytics zone bindings are invalid.'
+            );
+        }
+        $result = [];
+        $ids = [];
+        $keys = [];
+        foreach ($value as $binding) {
+            $zoneId = is_array($binding) ? ($binding['zoneId'] ?? null) : null;
+            $zoneKey = is_array($binding)
+                ? ($binding['zoneKey'] ?? null)
+                : null;
+            if (
+                !is_int($zoneId)
+                || $zoneId <= 0
+                || isset($ids[$zoneId])
+                || !is_string($zoneKey)
+                || preg_match(self::HASH_PATTERN, $zoneKey) !== 1
+                || isset($keys[$zoneKey])
+            ) {
+                throw new InvalidArgumentException(
+                    'Mowing analytics zone binding is invalid.'
+                );
+            }
+            $ids[$zoneId] = true;
+            $keys[$zoneKey] = true;
+            $result[] = ['zoneId' => $zoneId, 'zoneKey' => $zoneKey];
+        }
+        usort(
+            $result,
+            static fn (array $left, array $right): int =>
+                $left['zoneId'] <=> $right['zoneId']
+        );
+        return $result;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $zones
+     * @param list<array{zoneId: int, zoneKey: string}> $bindings
+     */
+    private static function validateZoneBindings(
+        array $zones,
+        array $bindings
+    ): void {
+        $actual = array_map(
+            static fn (array $zone): array => [
+                'zoneId' => $zone['zoneId'],
+                'zoneKey' => $zone['zoneKey'],
+            ],
+            $zones
+        );
+        usort(
+            $actual,
+            static fn (array $left, array $right): int =>
+                $left['zoneId'] <=> $right['zoneId']
+        );
+        if ($actual !== $bindings) {
+            throw new InvalidArgumentException(
+                'Mowing analytics zone bindings do not match the scene.'
+            );
+        }
     }
 
     /** @return list<array<string, mixed>> */
@@ -925,6 +1059,8 @@ final class MowingAnalyticsReducer
                 !is_array($revision)
                 || !is_string($revision['geometryKey'] ?? null)
                 || preg_match(self::HASH_PATTERN, $revision['geometryKey']) !== 1
+                || !is_string($revision['contractKey'] ?? null)
+                || preg_match(self::HASH_PATTERN, $revision['contractKey']) !== 1
                 || !is_int($revision['firstObservedAt'] ?? null)
                 || !is_int($revision['lastObservedAt'] ?? null)
                 || $revision['firstObservedAt'] <= 0

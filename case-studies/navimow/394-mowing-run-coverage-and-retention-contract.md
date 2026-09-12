@@ -29,13 +29,21 @@ Only retained path segments with MQTT vehicle-state candidate code `Running`
 contribute mowing distance, duration or area. This is evidence of likely
 cutting, not proof that the blade was active.
 
+Retained aggregates are selected by an analytics-contract fingerprint that
+binds the accepted geometry revision, local-to-metre scale, cutting width,
+raster resolution, statistics time zone, zone bindings and subarea polygons.
+A change to any bound input starts a separate retained analytics revision and
+cannot reinterpret or merge earlier aggregates.
+
 ## 3. Run Identity
 
-A run is revision- and zone-bound. Its identity uses the retained task-pass
-sequence when present, otherwise the transport-session sequence plus first
-point timestamp. A run never crosses:
+A run is analytics-revision- and zone-bound. Its identity uses the retained
+task-pass sequence when present, otherwise the transport-session sequence plus
+first point timestamp. A run never crosses:
 
 - a geometry revision;
+- a physical calibration or statistics-time-zone revision;
+- a zone-binding or subarea-geometry revision;
 - a zone boundary;
 - a task-pass boundary; or
 - an unrelated transport session.

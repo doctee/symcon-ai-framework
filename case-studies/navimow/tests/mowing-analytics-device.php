@@ -31,8 +31,8 @@ $device->testSetProperty('EnableLocalMap', true);
 $device->testSetProperty('EnableZoneStatistics', true);
 $device->testSetProperty('EnableMowingAnalytics', true);
 $device->testSetProperty('StatisticsTimeZone', 'UTC');
-$device->testSetProperty('CuttingWidthMeters', 0.5);
-$device->testSetProperty('CoverageCellSizeMeters', 0.25);
+$device->testSetProperty('CuttingWidthMeters', 0.43);
+$device->testSetProperty('CoverageCellSizeMeters', 0.1);
 $device->testSetProperty(
     'AcceptedMapProjection',
     json_encode($fixture['package'], JSON_THROW_ON_ERROR)
