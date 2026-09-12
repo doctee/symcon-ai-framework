@@ -37,6 +37,12 @@ $configuredSvg = LocalMapSvgRenderer::render(
     ]
 );
 $lightSvg = LocalMapSvgRenderer::render($scene, ['theme' => 'light']);
+$zeroDirectionScene = $scene;
+$zeroDirectionScene['station']['direction'] = 0.0;
+$zeroDirectionSvg = LocalMapSvgRenderer::render($zeroDirectionScene);
+$unknownDirectionScene = $scene;
+$unknownDirectionScene['station']['direction'] = null;
+$unknownDirectionSvg = LocalMapSvgRenderer::render($unknownDirectionScene);
 $recencyScene = $scene;
 $recencyScene['analytics'] = [
     'zones' => [
@@ -74,7 +80,7 @@ assertLocalMapSvg(
         && str_contains($svg, 'class="mower-body"')
         && str_contains($svg, 'class="mower-direction"')
         && str_contains($svg, 'data-heading-degrees="')
-        && str_contains($svg, 'rotate(-188)')
+        && str_contains($svg, 'rotate(-7)')
         && str_contains($svg, 'data-zone-id="101"')
         && str_contains($svg, 'data-theme="dark"')
         && str_contains($svg, 'width="100%" height="100%"')
@@ -96,6 +102,11 @@ assertLocalMapSvg(
         && str_contains($svg, 'fill-opacity:.06')
         && str_contains($svg, 'stroke-dasharray:1.1 .8'),
     'Expected map layers are missing.'
+);
+assertLocalMapSvg(
+    str_contains($zeroDirectionSvg, 'rotate(173)')
+        && str_contains($unknownDirectionSvg, 'rotate(-7)'),
+    'Station direction reversal or clockwise calibration differs.'
 );
 assertLocalMapSvg(
     substr_count($svg, '<g class="legend"') === 1
@@ -247,6 +258,14 @@ assertLocalMapSvg(
         && str_contains(
             $dockedSvg,
             'station-docked .station-occupancy'
+        )
+        && str_contains(
+            $dockedSvg,
+            'rotate(-7)'
+        )
+        && str_contains(
+            $dockedSvg,
+            'class="station-occupancy" d="M-1.35-.85H.45L1.35 0'
         )
         && str_contains(
             $undockedSvg = LocalMapSvgRenderer::render(

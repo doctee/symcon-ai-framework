@@ -429,6 +429,7 @@ template or a general SAEF reference implementation.
 | `402-html-sdk-safari-controls-and-legend-correction.md` | Corrects legend spacing, moves interactive controls below the Safari/iPad host boundary and makes the native zone selector deterministic in Dark Skin. |
 | `403-analytics-number-spinner-metadata-correction.md` | Records the stopped 12/13 metadata gate and corrects decimal analytics spinner bounds without changing stored values or reducer validation. |
 | `404-html-sdk-map-overlay-layout-correction.md` | Moves the complete map navigation to the free upper-left area, aligns the legend with the actual browser edge across SVG letterboxing and tightens its two-column width without changing map or transport semantics. |
+| `405-local-map-station-orientation-refinement.md` | Rotates the station presentation one degree clockwise and reverses the direction-aware dock occupancy so the docked mower points right without changing accepted geometry. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

@@ -123,7 +123,7 @@ assertMowingAnalyticsDevice(
         && $latestMessage['theme'] === 'dark'
         && $latestMessage['analytics']['state'] === 'available'
         && str_contains($latestMessage['svg'], 'data-zone-id="101"')
-        && str_contains($latestMessage['svg'], 'rotate(-188)'),
+        && str_contains($latestMessage['svg'], 'rotate(-7)'),
     'HTML SDK visualization message or station rotation differs.'
 );
 

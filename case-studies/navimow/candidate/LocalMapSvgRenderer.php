@@ -257,8 +257,8 @@ final class LocalMapSvgRenderer
             ], $viewport);
             $direction = $scene['station']['direction'] ?? null;
             $rotation = $direction === null
-                ? -8.0
-                : -rad2deg(self::finite($direction)) - 8.0;
+                ? -7.0
+                : 180.0 - rad2deg(self::finite($direction)) - 7.0;
             $stationState = $presentation['stationState'];
             $stationMarkup = sprintf(
                 '<g class="station station-%s" transform="translate(%s %s) rotate(%s)"><title>%s</title>%s</g>',
