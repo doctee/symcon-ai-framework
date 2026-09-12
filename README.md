@@ -31,6 +31,7 @@ SAEF helps engineers and AI coding agents create Symcon solutions that are:
 | `knowledge/` | Reusable engineering knowledge and design guidance |
 | `helpers/` | Reusable PHP helper functions for IP-Symcon engineering patterns |
 | `templates/` | Reusable script and artifact templates |
+| `case-studies/` | Sanitized engineering evidence from concrete projects |
 | `references/` | Complete reference implementations |
 | `prompts/` | Reusable implementation prompts for SAEF development workflows |
 | `glossary/` | Shared terminology |
@@ -63,7 +64,10 @@ Important current artifacts include:
 - `project/AI_PROJECT.md`
 - `project/SYMCON_MCP_SCRIPT_READBACK.md`
 - `project/WORKSTREAM_COORDINATION.md`
+- `templates/README.md`
+- `templates/module/README.md`
 - `templates/workstream/README.md`
+- `case-studies/README.md`
 - `tools/repository/check-workstream-handover.sh`
 - `project/COMPOSER_TOOLCHAIN_OWNERSHIP.md`
 - `project/SCOPE_BOUND_DEPLOYMENT_APPROVAL.md`
@@ -86,6 +90,7 @@ Important current artifacts include:
 - `project/SAEF_V0_4_PUBLIC_API_AUDIT.md`
 - `project/SAEF_V0_4_RELEASE_READINESS.md`
 - `project/SAEF_V0_5_INVENTORY.md`
+- `project/SAEF_V0_5_REPOSITORY_RECONCILIATION.md`
 - `project/SAEF_DEPLOYMENT_CHANNEL_SECURITY_GATE.md`
 - `project/STANDALONE_MODULE_DEPLOYMENT_CHANNEL.md`
 - `adr/ADR-0005-generate-symcon-helper-bundles.md`
@@ -165,24 +170,29 @@ complete module distributions, worktree-isolated tooling, safer object
 mutation, serialized Statistics updates and substantial MediaCarousel,
 Open-Meteo, Navimow, ControlLight and MQTT case-study evolution.
 
-Current `main` starts the post-v0.4 development line. The initial v0.5
-inventory admits no feature automatically: GitHub issue #1 is the only
-confirmed public engineering candidate. Its bounded latest-command-wins
-architecture, live inventory and deterministic offline implementation are now
-complete, while all live gates remain closed. Live
-Symcon operations, standalone-module publication, private observations and
-local retention remain separate gates. See `project/SAEF_V0_5_INVENTORY.md`
-for the current intake and explicit non-commitments.
+Current `main` is the post-v0.4 development line. Its repository-integrated
+work now includes the bounded latest-command-wins MQTT implementation,
+worktree and handover guardrails, target-bound standalone-module deployment,
+scope-bound one-click approval and the shared secure child-process boundary.
+OwnTracks has completed the first separately gated Windows qualification,
+profile installation and one-click live activation. Navimow has exercised the
+standalone publisher and controlled module-update path through mowing
+analytics, the HTML SDK map and physical iPad validation. These operational
+results do not authorize another target, publication, live mutation or
+cleanup. See `project/SAEF_V0_5_INVENTORY.md` and
+`project/SAEF_V0_5_REPOSITORY_RECONCILIATION.md` for the current release
+intake and remaining gates.
 
 The Diagnostics helper set covers configuration hashes, Registry metadata,
 Statistics and bounded error ring buffers; `RI-002` demonstrates their
 composition. The restricted deployment channel uses a hash-pinned OpenSSH
 forced command on Windows and the same SSH protocol from macOS or a suitable
 iPhone/iPad terminal. Channel version 8 is installed and live-verified; it
-preserves runtime-fileset deployments and advertises the target-bound
-standalone-module capability. Its module target allowlist is intentionally
-empty, so no standalone-module activation is enabled. The channel does not
-expose a general remote PowerShell session.
+preserves runtime-fileset deployments and exposes target-bound standalone
+module deployment only for separately installed, hash-pinned profiles. The
+first such profile is OwnTracks. No other module receives authority from that
+installation, and the channel does not expose a general remote PowerShell
+session.
 
 The post-v0.4 line also contains a repository-complete scope-bound approval
 path for channel version 8. It turns one reviewed standalone-module plan into
@@ -197,9 +207,12 @@ retention remains specified but disabled.
 The current repository line adds a shared internal Windows child-process
 contract for hash-pinned PowerShell children. It provides explicit timeout,
 combined output bounds and process-tree termination, and keeps approval
-capabilities out of ordinary child command lines. The channel remains version
-8 with the same five remote verbs. Exact Windows PowerShell 5.1
-requalification, installation and live use remain separate closed gates.
+capabilities out of ordinary child command lines. The exact contract passed
+Windows PowerShell 5.1 qualification, was installed with protected backup and
+postflight, and was then exercised by the OwnTracks approval profile. The
+channel remains version 8 with the same five remote verbs. Every later source
+generation or target still requires its own exact qualification and
+installation gate.
 
 ## Licensing
 

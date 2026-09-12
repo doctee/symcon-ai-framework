@@ -33,6 +33,20 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added the reconciled v0.5 repository inventory and current-state report,
+  separating integrated framework capabilities, completed reference gates and
+  still-closed publication, live and cleanup authority.
+- Restored and updated the generic template, module-start and case-study
+  concepts from historical recovery input, including current workstream,
+  Diagnostics and deployment-gate boundaries.
+- Added the sanitized OwnTracks scope-bound one-click closure. The exact plan
+  completed activation, independent channel status and immediate and delayed
+  Symcon postflight while retaining its consumed approval and recovery
+  evidence boundaries.
+- Added bounded Navimow mowing analytics and an HTML SDK local map, followed by
+  Safari control, number-spinner metadata, overlay layout, station orientation
+  and fixed-size legend corrections. Canonical standalone publication,
+  controlled live rollout and physical iPad legend validation are complete.
 - Added a versioned private cross-task handover contract, public neutral
   templates and a read-only Git-backed validator so task-list summaries remain
   navigation aids rather than unverified engineering state.
@@ -79,6 +93,10 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Reconciled the Channel-v8 documentation with the separately qualified and
+  installed secure child-process generation, the first hash-pinned OwnTracks
+  target profile and its completed scope-bound reference activation. Other
+  targets and every future source generation remain separately gated.
 - Corrected channel-v8 approval-plan generation and approved activation to
   inspect ordered deployment and status records through their dictionary keys.
   Present package-transfer identities and generated plans are now recognized,
