@@ -123,7 +123,7 @@ assertMowingAnalyticsDevice(
         && $latestMessage['theme'] === 'dark'
         && $latestMessage['analytics']['state'] === 'available'
         && str_contains($latestMessage['svg'], 'data-zone-id="101"')
-        && str_contains($latestMessage['svg'], 'rotate(-188)'),
+        && str_contains($latestMessage['svg'], 'rotate(-7)'),
     'HTML SDK visualization message or station rotation differs.'
 );
 
@@ -136,6 +136,11 @@ assertMowingAnalyticsDevice(
         && str_contains($tile, 'top: 52px')
         && str_contains($tile, 'touch-action: manipulation')
         && str_contains($tile, 'height: 44px')
+        && str_contains($tile, 'left: 6px')
+        && str_contains($tile, 'right: auto')
+        && str_contains($tile, 'alignLegendRight')
+        && str_contains($tile, 'viewportEdgeInset = 6')
+        && str_contains($tile, "querySelector('.legend[data-anchor-x][data-anchor-y]')")
         && str_contains($tile, '--nav-panel-solid: #20262b')
         && str_contains($tile, '.nav-map[data-theme="light"]')
         && str_contains($tile, 'color-scheme: inherit')
