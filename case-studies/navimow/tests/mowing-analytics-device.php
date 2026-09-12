@@ -112,6 +112,13 @@ assertMowingAnalyticsDevice(
         && strlen($tile) < 2 * 1024 * 1024
         && str_contains($tile, 'data-navimow-map')
         && str_contains($tile, 'touch-action: none')
+        && str_contains($tile, 'top: 52px')
+        && str_contains($tile, 'touch-action: manipulation')
+        && str_contains($tile, 'height: 44px')
+        && str_contains($tile, '--nav-panel-solid: #20262b')
+        && str_contains($tile, '.nav-map[data-theme="light"]')
+        && str_contains($tile, 'color-scheme: inherit')
+        && str_contains($tile, '.nav-map__navigation select option')
         && str_contains($tile, 'window.handleMessage = handleMessage')
         && str_contains($tile, "addEventListener('wheel'")
         && str_contains($tile, "addEventListener('pointermove'")
