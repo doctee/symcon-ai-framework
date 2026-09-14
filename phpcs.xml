@@ -25,6 +25,7 @@
     <file>deployments/symcon/windows/SaefRuntimeHealthProbe.php</file>
     <file>case-studies/control-light/candidate</file>
     <file>case-studies/mqtt-discovery-exporter/candidate</file>
+    <file>case-studies/mqtt-discovery-exporter/deployment</file>
     <file>case-studies/navimow/distribution</file>
     <file>case-studies/navimow/tools</file>
     <file>case-studies/media-carousel/distribution</file>

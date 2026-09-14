@@ -41,8 +41,12 @@ immutable event payloads, bounded generation arbitration, existing Registry and
 Statistics responsibilities and deterministic concurrency tests. It adds no
 public helper API.
 
-The initial issue remains open because the private live-migration evidence has
-not yet been reconciled into a complete, current postflight record. Repository
+The repository now also contains the case-study-local, hash-bound owner
+migration preparation with a one-use append-only claim and deterministic
+rollback, replay, drift and interruption tests. A fresh inventory confirms that
+the installation still loads the historical runtime generation and historical
+three-argument owner dispatches. Current runtime activation, owner migration
+and functional rapid-command evidence remain separate live gates, so repository
 completion must not be presented as confirmed live adoption.
 
 ### V05-002: Reproducible isolated workstreams
@@ -119,7 +123,8 @@ The proposed v0.5 scope does not include:
 ## Remaining Gates
 
 1. Review and merge the repository reconciliation and scope decision.
-2. Reconcile GitHub issue 1 with current repository and fresh live evidence.
+2. Complete the separately gated MQTT runtime-fileset and owner adoption, then
+   reconcile GitHub issue 1 with independent live postflight evidence.
 3. Extract the MediaCarousel adapter from its historical recovery worktree into
    a current clean workstream before any integration decision.
 4. Inventory and separately authorize retention cleanup for historical

@@ -57,10 +57,13 @@ authorized cleanup classification remains.
 
 ### MQTT latest-command-wins
 
-The repository implementation and deterministic tests are integrated. The
-private live-migration directory contains planning and rollback inputs but no
-canonical completion record. Issue closure and any live-completion statement
-therefore require a fresh bounded owner and consumer check.
+The repository implementation and deterministic tests are integrated. A later
+fresh bounded inventory found the same finite owner, event and consumer set but
+confirmed that live Symcon still loads the historical runtime and historical
+owner dispatch contract. The repository now prepares a separate hash-bound
+owner migration with append-only one-use claims and deterministic rollback.
+Runtime activation, owner apply, independent postflight and issue closure remain
+separate live gates.
 
 ## Drift Corrected by This Reconciliation
 
@@ -97,7 +100,8 @@ version, generated-artifact and release-readiness checks.
 
 ## Open Repository Work
 
-1. Reconcile and, after fresh live evidence, close or revise GitHub issue 1.
+1. Complete the gated MQTT runtime and owner adoption and, after independent
+   live evidence, close or revise GitHub issue 1.
 2. Extract the uncommitted MediaCarousel adapter from its historical worktree;
    do not build or publish from that recovery checkout.
 3. Implement cross-root standalone retention only in its own deletion-authority
