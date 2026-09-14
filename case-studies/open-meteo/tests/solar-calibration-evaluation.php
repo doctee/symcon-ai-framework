@@ -99,6 +99,35 @@ evaluationCheck(
     'Empty lead bucket differs.'
 );
 
+$withTerminalGap = $analyses;
+$withTerminalGap[] = [
+    'schemaVersion' => 2,
+    'targetKey' => 'solar_a',
+    'configurationHash' => str_repeat('a', 64),
+    'analysisVersion' => '2.0.0',
+    'analysisPolicyHash' => str_repeat('b', 64),
+    'analysisOutcome' => 'terminal_data_gap',
+    'issuedAt' => $interval - 72 * 3600,
+    'powerSamples' => [],
+];
+$gapEvaluation = SolarCalibrationEvaluationCore::evaluate($withTerminalGap);
+evaluationCheck($gapEvaluation['analysisCount'] === 3, 'Terminal gap analysis was not retained.');
+evaluationCheck(
+    $gapEvaluation['inputSampleCountWithOverlap'] === 4
+        && $gapEvaluation['operationalDistinctIntervalCount'] === 2,
+    'Terminal gap analysis influenced calibration samples.'
+);
+
+$terminalGapWithSampleRejected = false;
+try {
+    $invalidGap = $withTerminalGap;
+    $invalidGap[2]['powerSamples'] = [evaluationSample($interval + 7200, 0.5, 0.4)];
+    SolarCalibrationEvaluationCore::evaluate($invalidGap);
+} catch (InvalidArgumentException) {
+    $terminalGapWithSampleRejected = true;
+}
+evaluationCheck($terminalGapWithSampleRejected, 'Terminal gap with power samples was accepted.');
+
 $mixedTargetsRejected = false;
 try {
     $mixed = $analyses;

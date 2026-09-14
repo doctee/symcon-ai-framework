@@ -47,6 +47,7 @@ final class SolarCalibrationEvaluationCore
             $candidateAnalysisPolicyHash = $analysis['analysisPolicyHash'] ?? null;
             $issuedAt = $analysis['issuedAt'] ?? null;
             $samples = $analysis['powerSamples'] ?? null;
+            $analysisOutcome = $analysis['analysisOutcome'] ?? 'complete';
             if (
                 !is_string($analysisTarget)
                 || preg_match('/^[a-z][a-z0-9_]{0,63}$/', $analysisTarget) !== 1
@@ -59,6 +60,9 @@ final class SolarCalibrationEvaluationCore
                 || !is_int($issuedAt)
                 || $issuedAt <= 0
                 || !is_array($samples)
+                || !is_string($analysisOutcome)
+                || !in_array($analysisOutcome, ['complete', 'terminal_data_gap'], true)
+                || ($analysisOutcome === 'terminal_data_gap' && $samples !== [])
             ) {
                 throw new InvalidArgumentException('Evaluation analysis metadata is invalid.');
             }
