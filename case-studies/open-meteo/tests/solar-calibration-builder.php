@@ -68,6 +68,9 @@ try {
             "'solar_test'",
             "'zero_export_storage'",
             "'analysisVersion'",
+            "'terminal_data_gap'",
+            "'retention_limit_reached'",
+            "'collection-limit-reached.json'",
             '$sender !== \'TimerEvent\'',
             'IPS_GetKernelDir',
         ] as $needle

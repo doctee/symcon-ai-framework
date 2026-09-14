@@ -45,6 +45,35 @@ Analysis begins only after a snapshot's complete forecast horizon has elapsed,
 so a newly activated collector initially accumulates evidence rather than
 claiming calibration quality prematurely.
 
+Completed horizons without any alignable power measurement remain pending for
+a six-hour ingestion grace period. After that period the collector writes an
+immutable terminal `data_gap` analysis with empty power samples and preserved
+daily-energy comparisons. Such a gap is evidence of missing measurement
+coverage, never zero generation, and it no longer blocks later snapshots.
+
+Backlog processing is deliberately bounded to four newly written analyses per
+target and execution. This lets a scheduled collector catch up after an archive
+gap without turning one timer execution into an unbounded history job. The
+result reports the created batch size and how many terminal data gaps it
+contains.
+
+The existing limit of 1,000 forecast snapshots per target is a non-destructive
+collection ceiling. An already captured issue remains an immutable no-op. A new
+issue at the ceiling returns `retention_limit_reached` without failing the
+collector, while analysis of existing snapshots continues. No evidence is
+deleted automatically; archival or retention cleanup remains a separately
+authorized maintenance decision.
+
+The first rejected forecast issue also creates one immutable ceiling marker and
+one bounded Symcon warning. Later timer executions verify that marker and stay
+quiet. Any future retention operation must handle the marker explicitly before
+collection can be considered resumed.
+
+Before analysis, the runtime compares the issue timestamp and configuration
+hash encoded in every snapshot filename with the immutable JSON content. A
+valid hash sidecar therefore proves unchanged bytes, while the additional
+identity check rejects a validly hashed file stored under the wrong name.
+
 ## Guarded Activation
 
 The live preflight proved an unchanged root presentation, the intended parent
@@ -77,6 +106,10 @@ The public implementation adds:
 - a deterministic builder that embeds only ignored local configuration;
 - regression tests for calculations and generated source; and
 - canonical Symcon stubs for the cache and archive APIs used by the runtime.
+
+Runtime regression coverage additionally proves bounded backlog draining,
+terminal handling of expired measurement gaps and the non-failing snapshot
+ceiling.
 
 Syntax, executable regression, PHPStan and PHPCS checks cover these artifacts.
 The complete repository gate remains the final hand-off check.

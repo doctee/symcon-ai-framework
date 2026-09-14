@@ -12,6 +12,8 @@ final class SolarCalibrationCollectorRuntime
     private const SOLAR_MODULE_GUID = '{C86E5442-13CF-4145-B23C-EF2B7635D79E}';
     private const ARCHIVE_MODULE_GUID = '{43192F0B-135B-4CE7-A0A7-1475603F3060}';
     private const MAX_SNAPSHOTS_PER_TARGET = 1000;
+    private const MAX_ANALYSES_PER_TARGET_PER_RUN = 4;
+    private const MEASUREMENT_GRACE_SECONDS = 6 * 3600;
     private const MAX_ARCHIVE_PAGES = 8;
     private const ARCHIVE_PAGE_SIZE = 10000;
 
@@ -35,7 +37,7 @@ final class SolarCalibrationCollectorRuntime
             $analyses = [];
             foreach ($configuration['targets'] as $target) {
                 $captures[$target['key']] = $this->capture($configuration, $target);
-                $analyses[$target['key']] = $this->analyzeOne($configuration, $target);
+                $analyses[$target['key']] = $this->analyzeBatch($configuration, $target);
             }
 
             return [
@@ -73,14 +75,27 @@ final class SolarCalibrationCollectorRuntime
         $targetDirectory = $configuration['snapshotDirectory'] . DIRECTORY_SEPARATOR . $target['key'];
         $this->ensureDirectory($targetDirectory);
         $snapshotCount = count($this->baseSnapshotPaths($targetDirectory));
-        if ($snapshotCount >= self::MAX_SNAPSHOTS_PER_TARGET) {
-            throw new RuntimeException('Snapshot retention limit reached.');
+        $limitMarkerPath = $targetDirectory . DIRECTORY_SEPARATOR . 'collection-limit-reached.json';
+        if ($this->verifiedImmutableFileExists($limitMarkerPath)) {
+            return $this->retentionLimitOutcome(
+                $targetDirectory,
+                $target['key'],
+                $lastSuccess,
+                $snapshotCount
+            );
         }
-
         $baseName = sprintf('forecast-%d-%s.json', $lastSuccess, $configurationHash);
         $snapshotPath = $targetDirectory . DIRECTORY_SEPARATOR . $baseName;
         if ($this->verifiedImmutableFileExists($snapshotPath)) {
             return ['outcome' => 'unchanged', 'issuedAt' => $lastSuccess];
+        }
+        if ($snapshotCount >= self::MAX_SNAPSHOTS_PER_TARGET) {
+            return $this->retentionLimitOutcome(
+                $targetDirectory,
+                $target['key'],
+                $lastSuccess,
+                $snapshotCount
+            );
         }
 
         $powerResult = $this->decodeModuleResult(OMSOLAR_GetPowerForecastJson(
@@ -122,32 +137,45 @@ final class SolarCalibrationCollectorRuntime
      * @param array<string, mixed> $target
      * @return array<string, mixed>
      */
-    private function analyzeOne(array $configuration, array $target): array
+    private function analyzeBatch(array $configuration, array $target): array
     {
         $targetDirectory = $configuration['snapshotDirectory'] . DIRECTORY_SEPARATOR . $target['key'];
         $snapshotPaths = $this->baseSnapshotPaths($targetDirectory);
         $analysisPolicyHash = $this->analysisPolicyHash($target['curtailmentPolicy']);
+        $createdCount = 0;
+        $terminalDataGapCount = 0;
+        $waitingForMeasurementsCount = 0;
+        $waitingForCompleteHorizonCount = 0;
+        $lastCreated = null;
         foreach ($snapshotPaths as $snapshotPath) {
             $analysisPath = substr($snapshotPath, 0, -5)
                 . '.analysis-v2-' . $analysisPolicyHash . '.json';
             if ($this->verifiedImmutableFileExists($analysisPath)) {
                 continue;
             }
+            if ($createdCount >= self::MAX_ANALYSES_PER_TARGET_PER_RUN) {
+                break;
+            }
             if (!$this->verifiedImmutableFileExists($snapshotPath)) {
                 throw new RuntimeException('Incomplete forecast snapshot found.');
             }
             $snapshot = json_decode((string)file_get_contents($snapshotPath), true, 64, JSON_THROW_ON_ERROR);
-            if (!is_array($snapshot) || ($snapshot['targetKey'] ?? null) !== $target['key']) {
+            $pathIdentity = $this->snapshotPathIdentity($snapshotPath);
+            if (
+                !is_array($snapshot)
+                || ($snapshot['schemaVersion'] ?? null) !== 1
+                || ($snapshot['targetKey'] ?? null) !== $target['key']
+                || ($snapshot['issuedAt'] ?? null) !== $pathIdentity['issuedAt']
+                || ($snapshot['configurationHash'] ?? null) !== $pathIdentity['configurationHash']
+            ) {
                 throw new RuntimeException('Forecast snapshot identity mismatch.');
             }
             if (($snapshot['forecastValidTo'] ?? PHP_INT_MAX) > time()) {
-                return ['outcome' => 'waiting_for_complete_horizon'];
+                $waitingForCompleteHorizonCount++;
+                continue;
             }
 
-            $issuedAt = $snapshot['issuedAt'] ?? null;
-            if (!is_int($issuedAt) || $issuedAt <= 0) {
-                throw new RuntimeException('Forecast snapshot issue time is invalid.');
-            }
+            $issuedAt = $pathIdentity['issuedAt'];
             $forecastPoints = array_values(array_filter(
                 is_array($snapshot['power'] ?? null) ? $snapshot['power'] : [],
                 static fn(mixed $point): bool => is_array($point)
@@ -176,7 +204,29 @@ final class SolarCalibrationCollectorRuntime
                 $target['maxNonZeroCarrySeconds']
             );
             if ($samples === []) {
-                return ['outcome' => 'waiting_for_measurements'];
+                if (time() < $analysisTo + self::MEASUREMENT_GRACE_SECONDS) {
+                    $waitingForMeasurementsCount++;
+                    continue;
+                }
+                $analysis = $this->terminalDataGapAnalysis(
+                    $configuration,
+                    $target,
+                    $snapshot,
+                    $snapshotPath,
+                    $analysisPolicyHash,
+                    $issuedAt,
+                    $analysisFrom,
+                    $analysisTo
+                );
+                $this->writeImmutable($analysisPath, SolarCalibrationCore::encode($analysis));
+                $createdCount++;
+                $terminalDataGapCount++;
+                $lastCreated = [
+                    'issuedAt' => $issuedAt,
+                    'analysisOutcome' => 'terminal_data_gap',
+                    'sampleCount' => 0,
+                ];
+                continue;
             }
 
             $signalEvents = [];
@@ -215,6 +265,7 @@ final class SolarCalibrationCollectorRuntime
                 'schemaVersion' => 2,
                 'analysisVersion' => self::ANALYSIS_VERSION,
                 'analysisPolicyHash' => $analysisPolicyHash,
+                'analysisOutcome' => 'complete',
                 'targetKey' => $target['key'],
                 'issuedAt' => $snapshot['issuedAt'],
                 'configurationHash' => $snapshot['configurationHash'],
@@ -233,10 +284,10 @@ final class SolarCalibrationCollectorRuntime
                 'dailyEnergy' => $daily,
             ];
             $this->writeImmutable($analysisPath, SolarCalibrationCore::encode($analysis));
-
-            return [
-                'outcome' => 'created',
+            $createdCount++;
+            $lastCreated = [
                 'issuedAt' => $snapshot['issuedAt'],
+                'analysisOutcome' => 'complete',
                 'sampleCount' => count($classifiedSamples),
                 'coverage' => $realizedMetrics['coverage'],
                 'classificationCounts' => $classificationSummary['counts'],
@@ -244,7 +295,149 @@ final class SolarCalibrationCollectorRuntime
             ];
         }
 
+        if ($createdCount > 0) {
+            return [
+                'outcome' => 'created',
+                'createdCount' => $createdCount,
+                'terminalDataGapCount' => $terminalDataGapCount,
+                'batchLimit' => self::MAX_ANALYSES_PER_TARGET_PER_RUN,
+                'lastCreated' => $lastCreated,
+            ];
+        }
+        if ($waitingForMeasurementsCount > 0) {
+            return [
+                'outcome' => 'waiting_for_measurements',
+                'pendingCount' => $waitingForMeasurementsCount,
+                'graceSeconds' => self::MEASUREMENT_GRACE_SECONDS,
+            ];
+        }
+        if ($waitingForCompleteHorizonCount > 0) {
+            return [
+                'outcome' => 'waiting_for_complete_horizon',
+                'pendingCount' => $waitingForCompleteHorizonCount,
+            ];
+        }
+
         return ['outcome' => 'nothing_pending'];
+    }
+
+    /**
+     * @param array<string, mixed> $configuration
+     * @param array<string, mixed> $target
+     * @param array<string, mixed> $snapshot
+     * @return array<string, mixed>
+     */
+    private function terminalDataGapAnalysis(
+        array $configuration,
+        array $target,
+        array $snapshot,
+        string $snapshotPath,
+        string $analysisPolicyHash,
+        int $issuedAt,
+        int $analysisFrom,
+        int $analysisTo
+    ): array {
+        $daily = $this->dailyEnergyComparison(
+            $configuration['archiveId'],
+            $target['dailyEnergyVariableId'],
+            is_array($snapshot['dailyEnergy'] ?? null) ? $snapshot['dailyEnergy'] : [],
+            $issuedAt
+        );
+
+        return [
+            'schemaVersion' => 2,
+            'analysisVersion' => self::ANALYSIS_VERSION,
+            'analysisPolicyHash' => $analysisPolicyHash,
+            'analysisOutcome' => 'terminal_data_gap',
+            'dataGapReason' => 'no_measurement_samples_after_grace',
+            'targetKey' => $target['key'],
+            'issuedAt' => $issuedAt,
+            'configurationHash' => $snapshot['configurationHash'],
+            'snapshotSha256' => hash_file('sha256', $snapshotPath),
+            'analyzedAt' => time(),
+            'analysisValidFrom' => $analysisFrom,
+            'analysisValidTo' => $analysisTo,
+            'measurementGraceSeconds' => self::MEASUREMENT_GRACE_SECONDS,
+            'realizedPowerMetrics' => null,
+            'calibrationPowerMetrics' => null,
+            'classificationSummary' => [
+                'counts' => $this->emptyClassificationCounts(),
+                'durationSeconds' => $this->emptyClassificationCounts(),
+                'calibrationEligibleCount' => 0,
+            ],
+            'powerSamples' => [],
+            'dailyEnergy' => $this->annotateDailyClassifications($daily, []),
+        ];
+    }
+
+    /** @return array<string, int> */
+    private function emptyClassificationCounts(): array
+    {
+        return [
+            'unconstrained' => 0,
+            'curtailed' => 0,
+            'uncertain' => 0,
+            'data_gap' => 0,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function retentionLimitOutcome(
+        string $targetDirectory,
+        string $targetKey,
+        int $rejectedIssuedAt,
+        int $snapshotCount
+    ): array {
+        $markerPath = $targetDirectory . DIRECTORY_SEPARATOR . 'collection-limit-reached.json';
+        $alreadyReported = $this->verifiedImmutableFileExists($markerPath);
+        if (!$alreadyReported) {
+            $marker = [
+                'schemaVersion' => 1,
+                'targetKey' => $targetKey,
+                'snapshotCount' => $snapshotCount,
+                'snapshotLimit' => self::MAX_SNAPSHOTS_PER_TARGET,
+                'firstRejectedIssuedAt' => $rejectedIssuedAt,
+                'recordedAt' => time(),
+                'outcome' => 'collection_paused',
+                'requiredAction' => 'separate_retention_or_test_end_decision',
+            ];
+            $this->writeImmutable($markerPath, SolarCalibrationCore::encode($marker));
+            IPS_LogMessage(
+                'OpenMeteoCalibration',
+                'Snapshot collection paused at the configured limit for target ' . $targetKey . '.'
+            );
+        }
+
+        return [
+            'outcome' => 'retention_limit_reached',
+            'snapshotCount' => $snapshotCount,
+            'limit' => self::MAX_SNAPSHOTS_PER_TARGET,
+            'notification' => $alreadyReported ? 'unchanged' : 'created',
+        ];
+    }
+
+    /** @return array{issuedAt: int, configurationHash: string} */
+    private function snapshotPathIdentity(string $snapshotPath): array
+    {
+        $matches = [];
+        if (
+            preg_match(
+                '/^forecast-([0-9]+)-([a-f0-9]{64})\.json$/',
+                basename($snapshotPath),
+                $matches
+            ) !== 1
+        ) {
+            throw new RuntimeException('Forecast snapshot path is invalid.');
+        }
+        $issuedAt = filter_var($matches[1], FILTER_VALIDATE_INT);
+        if (!is_int($issuedAt) || $issuedAt <= 0) {
+            throw new RuntimeException('Forecast snapshot path issue time is invalid.');
+        }
+
+        return [
+            'issuedAt' => $issuedAt,
+            'configurationHash' => $matches[2],
+        ];
     }
 
     /** @return array<string, mixed> */

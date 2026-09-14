@@ -26,6 +26,7 @@ for test in \
     solar-calculator \
     solar-calibration-core \
     solar-calibration-evaluation \
+    solar-calibration-runtime \
     solar-calibration-builder \
     state-reducer \
     module-scaffold \

@@ -125,3 +125,10 @@ shorter-lead forecast later supersedes. It remains a pure candidate component: r
 files, choosing a retention window and publishing or applying a correction
 factor stay outside the collector and require a separate installation-specific
 workflow and decision.
+
+Schema-v2 analysis files may also carry `analysisOutcome=terminal_data_gap`
+with an empty `powerSamples` array when a complete horizon still has no
+alignable measurement after the documented grace period. The evaluator accepts
+that immutable evidence as an analysis with zero eligible samples; it cannot
+influence a calibration factor. This terminal state prevents one irreparable
+archive gap from blocking later, usable forecasts.

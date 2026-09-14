@@ -60,7 +60,7 @@ and consumer mappings belong in `private/` or an ignored `*.local.*` file.
 | `20-curtailment-aware-calibration.md` | Defines policy-versioned, zero-export-aware classification without rewriting raw snapshots. |
 | `21-solar-kernel-start-recovery.md` | Defines the bounded, request-free Solar dependency reconciliation after `IPS_KERNELSTARTED`. |
 | `candidate/SolarCalibrationCore.php` | Pure snapshot normalization, archive-event alignment and calibration metrics. |
-| `candidate/SolarCalibrationCollectorRuntime.php` | Bounded cache and archive adapter with immutable private evidence files. |
+| `candidate/SolarCalibrationCollectorRuntime.php` | Bounded cache and archive adapter with immutable private evidence files, terminal gap handling and a non-destructive collection ceiling. |
 | `tools/build-calibration-collector.php` | Deterministically combines public runtime code with ignored installation-local configuration. |
 | `distribution/libs/OpenMeteo/` | Pure request, parsing, interval, PV and runtime-state domain classes. |
 | `distribution/libs/DwdNowcast/` | Pure DWD WMS request, response, window-projection and HTML-rendering classes. |
