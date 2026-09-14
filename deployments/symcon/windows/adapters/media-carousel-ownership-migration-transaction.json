@@ -1,0 +1,51 @@
+{
+    "formatVersion": 1,
+    "migrationProfile": "saef-media-carousel-package-ownership-v1",
+    "source": {
+        "owner": "module-control-git-checkout",
+        "repositoryMetadataRequired": true,
+        "preserveByteExactRollback": true
+    },
+    "candidate": {
+        "owner": "channel-v8-adapter-package",
+        "repositoryMetadataAllowed": false,
+        "requireManifestIdentity": true
+    },
+    "locks": {
+        "order": ["channel", "adapter"],
+        "waitMilliseconds": 0
+    },
+    "approval": {
+        "planHashRequired": true,
+        "hostAndUserBindingRequired": true,
+        "nonceClaimMode": "create-new-file",
+        "expiredPlanAllowedForApply": false
+    },
+    "operationSequence": [
+        "persist-prepared-state",
+        "fresh-pre-mutation-recheck",
+        "move-source-to-rollback",
+        "move-candidate-to-active",
+        "targeted-module-reload",
+        "independent-postflight"
+    ],
+    "switch": {
+        "mode": "same-volume-directory-move",
+        "activeDirectoryNamePreserved": true,
+        "maximumReloadCountPerDirection": 1
+    },
+    "rollback": {
+        "automaticAfterSourceMove": true,
+        "retainFailedCandidate": true,
+        "restoreConfigurationOnlyOnDrift": true,
+        "requireSourceAndRuntimePostflight": true,
+        "manualRecoveryOnUnprovenRestore": true
+    },
+    "forbidden": {
+        "moduleUpdate": true,
+        "serviceRestart": true,
+        "providerContact": true,
+        "publication": true,
+        "retentionDeletion": true
+    }
+}

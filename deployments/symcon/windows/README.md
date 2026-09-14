@@ -517,6 +517,18 @@ does not introduce a target-local retention command: cross-root deletion stays
 disabled under `project/STANDALONE_MODULE_CROSS_ROOT_RETENTION.md` until the
 generic contract is implemented and qualified.
 
+The repository implementation in
+`case-studies/media-carousel/04-package-ownership-migration-design.md` keeps the
+existing loader directory name while changing its owner through a hash-bound,
+same-volume transaction. The untouched Git checkout is the rollback artifact;
+the candidate comes only from the exact reviewed standalone package. The
+target-specific coordinator is
+`adapters/Invoke-SaefMediaCarouselModuleOwnershipMigration.ps1`; its
+non-runnable policy example and immutable transaction contract use the same
+filename prefix. These artifacts deliberately do not remove `.git` in place,
+extend the gateway, install a target or authorize migration. Windows
+PowerShell 5.1 qualification and every live gate remain outstanding.
+
 ```powershell
 & .\Invoke-SaefDeploymentRetentionCleanup.ps1 `
     -PlanPath '.\deployment-retention-plan.local.json'
