@@ -54,9 +54,11 @@ its strict protected-parent assumption did not match the inherited ACL of the
 shared production SAEF root. The first production read-only preflight stopped
 before mutation. The replacement repository contract uses exclusive native
 creation with the final protected DACL and adds production-like inherited-parent,
-parent-delete and between-check-and-create collision scenarios. Replacement
-Windows PowerShell 5.1 qualification, production preflight and provisioning
-remain separate gates.
+parent-delete and between-check-and-create collision scenarios. The replacement
+Windows PowerShell 5.1 qualification passed all five positive and six negative
+cases with successful scratch cleanup and no production or live action.
+Repository integration, production preflight and provisioning remain separate
+gates.
 
 ### V05-002: Reproducible isolated workstreams
 

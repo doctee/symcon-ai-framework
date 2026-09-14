@@ -1,6 +1,6 @@
 # Atomic Claim-Root Production Correction
 
-**Status:** Repository implementation complete; replacement Windows PowerShell 5.1 qualification pending
+**Status:** Repository implementation and replacement Windows PowerShell 5.1 qualification complete; integration pending
 **Preparation date:** 2026-09-14
 **Repository base:** `36c7ecaa569f072a5673b649c231d6969c558146`
 **Production mutation:** None
@@ -76,6 +76,26 @@ negative cases:
 Every scenario runs through the existing hash-pinned secure child-process
 contract. The qualification may change only its random `%TEMP%` scratch tree.
 
+## Qualification Evidence
+
+Windows PowerShell `5.1.26100.9444` completed the exact flat package from
+repository commit `e293cd20c4a230a4f92c54392a8efae6512a21c2`. The package bound:
+
+- initializer SHA-256
+  `8a00462e2dff22fefac9a02e44eac2a67573a46fc1ca97945e8648737b853a5b`;
+- secure child-process SHA-256
+  `c5d2200b15e7bda563c7ce2e393d3a45c79f04ba672e140990c5556febc493c3`;
+  and
+- package SHA-256
+  `4c6bee6005510e519b6f498aff9f19319e3a488f5b5b224e3c523ede28c1fcb8`.
+
+The result had exit code `0`, outcome `passed`, five positive cases and six
+negative cases. Scratch mutation and cleanup both completed. Production,
+Symcon RPC, owner, event, MQTT, device, service, publication and retention
+flags all remained false. The retained private status is 1023 bytes with
+SHA-256
+`c2e40803cfef5172700036646e42d5a7837b8a66c0377efc2dea6c6f0d5c4eae`.
+
 ## Security and Compatibility
 
 No channel verb, target allowlist, Symcon RPC, owner script, event, MQTT topic,
@@ -88,16 +108,15 @@ the reusable facts needed to explain the corrected contract.
 
 ## Ordered Gates
 
-1. Complete repository tests and review the exact replacement source hashes.
-2. Run the flat replacement gate on Windows PowerShell 5.1 and retain its
-   complete status as private evidence.
-3. Integrate the qualified sources through the protected-main pull-request
+1. Repository tests, source review and the exact flat Windows PowerShell 5.1
+   qualification are complete.
+2. Integrate the qualified sources through the protected-main pull-request
    workflow.
-4. Run a fresh production read-only preflight from the merged source.
-5. Create an absent-baseline backup/recovery record and review its exact plan.
-6. Obtain a separate exact authorization for atomic production installation.
-7. Run installation once and then an independent read-only postflight.
-8. Only after the root is proven exact may runtime-fileset staging resume.
+3. Run a fresh production read-only preflight from the merged source.
+4. Create an absent-baseline backup/recovery record and review its exact plan.
+5. Obtain a separate exact authorization for atomic production installation.
+6. Run installation once and then an independent read-only postflight.
+7. Only after the root is proven exact may runtime-fileset staging resume.
 
 Shared `%ProgramData%\SAEF` ACL hardening, runtime staging, activation, owner
 migration, MQTT traffic, device action, restart, publication and retention

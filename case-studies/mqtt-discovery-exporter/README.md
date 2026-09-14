@@ -146,8 +146,9 @@ mutation.
 Report 43 corrects that installation boundary without changing the shared SAEF
 parent. The final leaf is created exclusively and atomically with its protected
 DACL; a concurrent or pre-existing path is never re-ACL'd or removed. The
-replacement Windows PowerShell 5.1 qualification and all production mutation
-remain separate pending gates.
+replacement Windows PowerShell 5.1 qualification passed all five positive and
+six negative cases using only a cleaned scratch tree. Repository integration
+and all production mutation remain separate pending gates.
 
 The current supervised client-transport pilot manages two light entities. The
 second state-only entity has additionally demonstrated fail-closed handling
