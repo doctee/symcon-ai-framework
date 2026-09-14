@@ -119,6 +119,9 @@
         "test:mqtt-exporter-fixtures": [
             "@php tests/mqtt-discovery-exporter/discovery-fixtures.php"
         ],
+        "test:mqtt-exporter-supersession-migration": [
+            "@php tests/mqtt-discovery-exporter/supersession-owner-migration.php"
+        ],
         "test:control-light-core": [
             "@php tests/control-light/core.php"
         ],
@@ -251,6 +254,7 @@
             "@test:mqtt-exporter-dispatch",
             "@test:mqtt-exporter-cleanup",
             "@test:mqtt-exporter-fixtures",
+            "@test:mqtt-exporter-supersession-migration",
             "@test:control-light-core",
             "@test:control-light-color-analysis",
             "@test:control-light-runtime",

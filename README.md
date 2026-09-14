@@ -174,6 +174,9 @@ Current `main` is the post-v0.4 development line. Its repository-integrated
 work now includes the bounded latest-command-wins MQTT implementation,
 worktree and handover guardrails, target-bound standalone-module deployment,
 scope-bound one-click approval and the shared secure child-process boundary.
+The MQTT work also contains repository-only live-adoption preparation that
+keeps current runtime-fileset activation separate from the later two-owner
+source migration; neither live gate has been performed.
 OwnTracks has completed the first separately gated Windows qualification,
 profile installation and one-click live activation. Navimow has exercised the
 standalone publisher and controlled module-update path through mowing

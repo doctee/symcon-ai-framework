@@ -33,6 +33,11 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added repository-only MQTT latest-command-wins live-adoption preparation:
+  exact owner-source transformation, a hash-bound two-owner transaction,
+  append-only one-use claims, deterministic drift/replay/interruption/rollback
+  tests and an explicit Symcon MCP mutation-transport gate. No live runtime,
+  owner, event, MQTT or device state was changed.
 - Added the repository-only MediaCarousel package-ownership migration for a
   reversible transition from an exactly reviewed Module Control checkout to
   the Channel-v8 adapter-owned package directory. Its target-specific
