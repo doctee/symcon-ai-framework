@@ -139,6 +139,12 @@ publisher.
 The repository-only Channel-v8 deployment candidate is documented in
 `03-standalone-deployment-adapter.md`. It remains outside the installed target
 allowlist until its separate Windows, ownership-migration and live gates pass.
+The reviewed ownership boundary and reversible Git-checkout-to-package
+transition are specified in `04-package-ownership-migration-design.md`. Its
+target-specific coordinator, non-runnable policy example, transaction contract
+and platform-neutral regression are implemented repository-only. They add no
+live authority; Windows qualification, backup, migration and target
+allowlisting remain separate gates.
 
 ## Sources
 

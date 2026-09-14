@@ -33,6 +33,12 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added the repository-only MediaCarousel package-ownership migration for a
+  reversible transition from an exactly reviewed Module Control checkout to
+  the Channel-v8 adapter-owned package directory. Its target-specific
+  coordinator binds independent source and candidate identities, protected
+  same-volume rollback, preserved configurations and references, one targeted
+  reload and separately gated Windows qualification and live migration.
 - Added the reconciled v0.5 repository inventory and current-state report,
   separating integrated framework capabilities, completed reference gates and
   still-closed publication, live and cleanup authority.
