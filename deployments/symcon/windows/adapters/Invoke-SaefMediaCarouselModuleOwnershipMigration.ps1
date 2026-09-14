@@ -73,6 +73,11 @@ $script:rollbackSucceeded = $false
 $script:productionMutationAttempted = $false
 $script:privateEvidenceMutationAttempted = $false
 $script:failureCode = 'initialization'
+$script:failureType = ''
+$script:failureId = ''
+$script:failureLine = 0
+$script:failureColumn = 0
+$script:failureCommand = ''
 $script:finalOutcome = 'failed'
 $script:finalExitCode = $ExitManualRecovery
 $script:inspectionState = ''
@@ -285,6 +290,11 @@ function Write-MigrationStatus {
         outcome = $script:finalOutcome
         exitCode = $script:finalExitCode
         failureCode = $script:failureCode
+        failureType = $script:failureType
+        failureId = $script:failureId
+        failureLine = $script:failureLine
+        failureColumn = $script:failureColumn
+        failureCommand = $script:failureCommand
         inspectionState = $script:inspectionState
         policySha256 = $script:policySha256
         transactionContractSha256 = $script:transactionSha256
@@ -807,6 +817,143 @@ function Get-ReferenceIdentity {
     }
 }
 
+function Assert-ImageMediaReference {
+    param([Parameter(Mandatory = $true)][int] $MediaId)
+
+    if (-not [bool] (Invoke-SymconRpc -Method 'IPS_MediaExists' -Parameters @($MediaId))) {
+        throw [InvalidOperationException]::new('MediaCarousel references a missing media object.')
+    }
+    $media = Invoke-SymconRpc -Method 'IPS_GetMedia' -Parameters @($MediaId)
+    if ([int] $media.MediaType -ne 1 -or
+        [string]::IsNullOrEmpty([string] $media.MediaFile)) {
+        throw [InvalidOperationException]::new('MediaCarousel reference is not usable image media.')
+    }
+}
+
+function Get-SemanticReferenceObservation {
+    param(
+        [Parameter(Mandatory = $true)][int] $InstanceId,
+        [Parameter(Mandatory = $true)][string] $Configuration
+    )
+
+    try {
+        $configurationRecord = $Configuration | ConvertFrom-Json
+    } catch {
+        throw [InvalidOperationException]::new('MediaCarousel configuration JSON is invalid.')
+    }
+    [string[]] $requiredProperties = @(
+        'SourceMode', 'MediaItems', 'SourceCategoryID', 'CategoryItemLimit'
+    )
+    foreach ($propertyName in $requiredProperties) {
+        if ($configurationRecord.PSObject.Properties.Name -notcontains $propertyName) {
+            throw [InvalidOperationException]::new(
+                'MediaCarousel configuration lacks a source property.'
+            )
+        }
+    }
+
+    $references = Get-ReferenceIdentity -InstanceId $InstanceId
+    $sourceMode = [string] $configurationRecord.SourceMode
+    if ($sourceMode -ceq 'category') {
+        $categoryId = [int] $configurationRecord.SourceCategoryID
+        $categoryItemLimit = [int] $configurationRecord.CategoryItemLimit
+        if ($categoryId -le 0 -or $categoryItemLimit -lt 1 -or $categoryItemLimit -gt 50 -or
+            -not [bool] (Invoke-SymconRpc -Method 'IPS_CategoryExists' -Parameters @($categoryId)) -or
+            [int] $references.count -lt 2 -or
+            [int] $references.count -gt ($categoryItemLimit + 1) -or
+            $categoryId -notin @($references.ids)) {
+            throw [InvalidOperationException]::new(
+                'MediaCarousel category reference observation is invalid.'
+            )
+        }
+        foreach ($referenceId in @($references.ids)) {
+            if ([int] $referenceId -eq $categoryId) {
+                continue
+            }
+            Assert-ImageMediaReference -MediaId ([int] $referenceId)
+            $object = Invoke-SymconRpc -Method 'IPS_GetObject' -Parameters @([int] $referenceId)
+            $parentId = if ($object.PSObject.Properties.Name -contains 'ParentID') {
+                [int] $object.ParentID
+            } else {
+                [int] $object.ObjectParentID
+            }
+            if ([int] $object.ObjectType -ne 5 -or $parentId -ne $categoryId) {
+                throw [InvalidOperationException]::new(
+                    'MediaCarousel category reference is outside the configured category.'
+                )
+            }
+        }
+    } elseif ($sourceMode -ceq 'list') {
+        try {
+            $decodedRows = [string] $configurationRecord.MediaItems | ConvertFrom-Json
+        } catch {
+            throw [InvalidOperationException]::new('MediaCarousel MediaItems JSON is invalid.')
+        }
+        $rows = @($decodedRows)
+        if ($rows.Count -gt 50) {
+            throw [InvalidOperationException]::new('MediaCarousel MediaItems exceeds its bound.')
+        }
+        $configured = @{}
+        $resolved = New-Object Collections.Generic.List[int]
+        foreach ($row in $rows) {
+            if ($null -eq $row) {
+                throw [InvalidOperationException]::new('MediaCarousel MediaItems row is invalid.')
+            }
+            $enabled = $true
+            if ($row.PSObject.Properties.Name -contains 'Enabled') {
+                if ($row.Enabled -isnot [bool]) {
+                    throw [InvalidOperationException]::new(
+                        'MediaCarousel MediaItems Enabled value is invalid.'
+                    )
+                }
+                $enabled = [bool] $row.Enabled
+            }
+            if (-not $enabled) {
+                continue
+            }
+            if ($row.PSObject.Properties.Name -notcontains 'MediaID') {
+                throw [InvalidOperationException]::new(
+                    'MediaCarousel MediaItems row lacks a media identity.'
+                )
+            }
+            $mediaId = [int] $row.MediaID
+            if ($mediaId -le 0 -or $configured.ContainsKey($mediaId)) {
+                throw [InvalidOperationException]::new(
+                    'MediaCarousel MediaItems identity is invalid.'
+                )
+            }
+            $configured[$mediaId] = $true
+            if ([bool] (Invoke-SymconRpc -Method 'IPS_MediaExists' -Parameters @($mediaId))) {
+                Assert-ImageMediaReference -MediaId $mediaId
+                $resolved.Add($mediaId)
+            }
+        }
+        [int[]] $resolvedIds = @($resolved)
+        [Array]::Sort($resolvedIds)
+        if ([int] $references.count -ne $resolvedIds.Count) {
+            throw [InvalidOperationException]::new(
+                'MediaCarousel list reference observation differs from configuration.'
+            )
+        }
+        for ($index = 0; $index -lt $resolvedIds.Count; $index++) {
+            if ([int] $references.ids[$index] -ne $resolvedIds[$index]) {
+                throw [InvalidOperationException]::new(
+                    'MediaCarousel list reference observation differs from configuration.'
+                )
+            }
+        }
+    } else {
+        throw [InvalidOperationException]::new('MediaCarousel source mode is invalid.')
+    }
+
+    return [ordered]@{
+        mode = $sourceMode
+        count = [int] $references.count
+        sha256 = [string] $references.sha256
+        ids = @($references.ids)
+    }
+}
+
 function Get-InstanceSnapshot {
     $instanceIds = @(Invoke-SymconRpc -Method 'IPS_GetInstanceListByModuleID' -Parameters @(
         [string] $script:policy.moduleGuid
@@ -836,14 +983,14 @@ function Get-InstanceSnapshot {
         $object = Invoke-SymconRpc -Method 'IPS_GetObject' -Parameters @($instanceId)
         $configuration = [string] (Invoke-SymconRpc -Method 'IPS_GetConfiguration' -Parameters @($instanceId))
         $configurationSha256 = Get-TextSha256 -Text $configuration
-        $references = Get-ReferenceIdentity -InstanceId $instanceId
+        $references = Get-SemanticReferenceObservation `
+            -InstanceId $instanceId `
+            -Configuration $configuration
         if ([string] $instance.ModuleInfo.ModuleID -cne [string] $script:policy.moduleGuid -or
             [int] $object.ObjectType -ne 1 -or
             [int] $instance.InstanceStatus -notin @($script:policy.allowedInstanceStatuses) -or
             [bool] (Invoke-SymconRpc -Method 'IPS_HasChanges' -Parameters @($instanceId)) -or
-            $configurationSha256 -cne [string] $expected.configurationSha256 -or
-            [int] $references.count -ne [int] $expected.referenceCount -or
-            [string] $references.sha256 -cne [string] $expected.referencesSha256) {
+            $configurationSha256 -cne [string] $expected.configurationSha256) {
             throw [InvalidOperationException]::new('MediaCarousel instance baseline differs from policy.')
         }
         $configurationBytes = [Text.UTF8Encoding]::new($false).GetBytes($configuration)
@@ -852,6 +999,7 @@ function Get-InstanceSnapshot {
                 instanceId = $instanceId
                 configurationBase64 = [Convert]::ToBase64String($configurationBytes)
                 configurationSha256 = $configurationSha256
+                referenceMode = [string] $references.mode
                 references = @($references.ids)
                 referencesSha256 = [string] $references.sha256
                 objectIdent = [string] $object.ObjectIdent
@@ -874,7 +1022,6 @@ function Get-InstanceSnapshot {
         $totalReferenceCount += [int] $references.count
         $null = $identity.Append([string] $record.instanceId).Append([char] 0)
         $null = $identity.Append([string] $record.configurationSha256).Append([char] 0)
-        $null = $identity.Append([string] $record.referencesSha256).Append([char] 0)
         $null = $identity.Append([string] $record.objectIdent).Append([char] 0)
         $null = $identity.Append([string] $record.objectName).Append([char] 0)
         $null = $identity.Append([string] $record.parentId).Append([char] 0)
@@ -908,8 +1055,7 @@ function Assert-SnapshotPreserved {
 
     $current = Get-InstanceSnapshot
     if ([string] $current.identitySha256 -cne [string] $Snapshot.identitySha256 -or
-        [int] $current.instanceCount -ne [int] $Snapshot.instanceCount -or
-        [int] $current.referenceCount -ne [int] $Snapshot.referenceCount) {
+        [int] $current.instanceCount -ne [int] $Snapshot.instanceCount) {
         throw [InvalidOperationException]::new('MediaCarousel runtime state changed.')
     }
 }
@@ -1040,10 +1186,6 @@ function Restore-RuntimeSnapshot {
             } finally {
                 [Array]::Clear($bytes, 0, $bytes.Length)
             }
-        }
-        $references = Get-ReferenceIdentity -InstanceId $instanceId
-        if ([string] $references.sha256 -cne [string] $record.referencesSha256) {
-            $applyRequired = $true
         }
         if ($applyRequired) {
             $null = Invoke-SymconRpc -Method 'IPS_ApplyChanges' -Parameters @($instanceId)
@@ -1226,12 +1368,10 @@ function Read-PolicyAndContracts {
     }
     foreach ($expected in @($script:policy.expectedInstances)) {
         Assert-ExactProperties -Value $expected -Label 'Expected instance' -Expected @(
-            'instanceId', 'configurationSha256', 'referenceCount', 'referencesSha256'
+            'instanceId', 'configurationSha256'
         )
         if ([int] $expected.instanceId -le 0 -or
-            -not (Test-HexSha256 -Value ([string] $expected.configurationSha256)) -or
-            [int] $expected.referenceCount -lt 0 -or
-            -not (Test-HexSha256 -Value ([string] $expected.referencesSha256))) {
+            -not (Test-HexSha256 -Value ([string] $expected.configurationSha256))) {
             throw [InvalidOperationException]::new('Expected instance binding is invalid.')
         }
     }
@@ -1298,7 +1438,7 @@ function New-ReviewPlan {
         candidatePackageIdentitySha256 = [string] $Candidate.packageIdentitySha256
         instanceSnapshotSha256 = [string] $Snapshot.identitySha256
         instanceCount = [int] $Snapshot.instanceCount
-        referenceCount = [int] $Snapshot.referenceCount
+        observedReferenceCount = [int] $Snapshot.referenceCount
         operationSequence = @($script:transaction.operationSequence)
     }
     $bytes = ConvertTo-Utf8JsonBytes -Value $plan -Depth 10
@@ -1334,7 +1474,7 @@ function Read-And-ValidatePlan {
         'transactionContractSha256', 'sourcePath', 'sourceTreeSha256', 'sourceAclSha256',
         'sourceRepositoryUrl', 'sourceBranch', 'sourceCommit', 'candidatePath',
         'candidateManifestSha256', 'candidatePackageIdentitySha256',
-        'instanceSnapshotSha256', 'instanceCount', 'referenceCount', 'operationSequence'
+        'instanceSnapshotSha256', 'instanceCount', 'observedReferenceCount', 'operationSequence'
     )
     $currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     if ($script:plan.formatVersion -ne 1 -or
@@ -1366,7 +1506,11 @@ function Read-And-ValidatePlan {
         [string] $script:plan.candidateManifestSha256 -cne
             [string] $script:policy.expectedCandidateManifestSha256 -or
         [string] $script:plan.candidatePackageIdentitySha256 -cne
-            [string] $script:policy.expectedCandidatePackageIdentitySha256) {
+            [string] $script:policy.expectedCandidatePackageIdentitySha256 -or
+        -not (Test-HexSha256 -Value ([string] $script:plan.instanceSnapshotSha256)) -or
+        [int] $script:plan.instanceCount -lt 1 -or
+        [int] $script:plan.instanceCount -gt [int] $script:policy.maximumInstanceCount -or
+        [int] $script:plan.observedReferenceCount -lt 0) {
         throw [Security.SecurityException]::new('Review plan binding is invalid.')
     }
     [string[]] $planSequence = @($script:plan.operationSequence | ForEach-Object { [string] $_ })
@@ -1472,8 +1616,7 @@ function Assert-FreshPlanBaseline {
             [string] $script:plan.candidatePackageIdentitySha256 -or
         [string] $candidate.manifestSha256 -cne [string] $script:plan.candidateManifestSha256 -or
         [string] $snapshot.identitySha256 -cne [string] $script:plan.instanceSnapshotSha256 -or
-        [int] $snapshot.instanceCount -ne [int] $script:plan.instanceCount -or
-        [int] $snapshot.referenceCount -ne [int] $script:plan.referenceCount) {
+        [int] $snapshot.instanceCount -ne [int] $script:plan.instanceCount) {
         throw [InvalidOperationException]::new('Fresh baseline differs from the reviewed plan.')
     }
     $script:sourceIdentity = $source
@@ -1625,9 +1768,11 @@ try {
         $script:failureCode = 'candidate'
         $script:candidateIdentity = Get-CandidateIdentity -Root ([string] $script:policy.candidateModulePath)
         $script:credential = Import-MachineCredential -Path ([string] $script:policy.credentialPath)
-        $script:failureCode = 'runtime'
+        $script:failureCode = 'runtime_ownership'
         Assert-SymconOwnership
+        $script:failureCode = 'runtime_loader'
         Assert-LoaderUniqueness -ExpectedPath ([string] $script:policy.activeModulePath)
+        $script:failureCode = 'runtime_snapshot'
         $script:snapshot = Get-InstanceSnapshot
         $script:failureCode = 'plan'
         New-ReviewPlan `
@@ -1754,6 +1899,15 @@ try {
         $script:finalExitCode = $ExitRolledBack
     }
 } catch {
+    $script:failureType = $_.Exception.GetType().FullName
+    $script:failureId = [string] $_.FullyQualifiedErrorId
+    if ($null -ne $_.InvocationInfo) {
+        $script:failureLine = [int] $_.InvocationInfo.ScriptLineNumber
+        $script:failureColumn = [int] $_.InvocationInfo.OffsetInLine
+        if ($null -ne $_.InvocationInfo.MyCommand) {
+            $script:failureCommand = [string] $_.InvocationInfo.MyCommand.Name
+        }
+    }
     if ($Operation -eq 'apply' -and ($script:sourceMoved -or $script:candidateActivated)) {
         $originalFailureCode = $script:failureCode
         Invoke-MigrationRollback -Snapshot $script:snapshot
