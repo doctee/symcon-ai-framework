@@ -175,7 +175,8 @@ function Invoke-InitializerScenario {
         [Parameter(Mandatory = $true)][string] $ClaimRoot,
         [Parameter(Mandatory = $true)][int] $ExpectedExitCode,
         [Parameter()][string] $Confirmation = '',
-        [Parameter()][switch] $InjectPostAclFailure
+        [Parameter()][switch] $InjectPostAclFailure,
+        [Parameter()][switch] $InjectCreationCollision
     )
 
     Write-Host ('[SAEF] scenario-start: ' + $Label)
@@ -192,6 +193,9 @@ function Invoke-InitializerScenario {
     if ($InjectPostAclFailure) {
         $arguments += '-InjectPostAclFailure'
     }
+    if ($InjectCreationCollision) {
+        $arguments += '-InjectCreationCollision'
+    }
     $result = Invoke-SaefPowerShellChildProcess -ScriptPath $InitializerPath `
         -ExpectedScriptSha256 $ExpectedInitializerSha256 `
         -Arguments $arguments -TimeoutSeconds 60 -MaximumOutputBytes 65536
@@ -206,7 +210,9 @@ function Invoke-InitializerScenario {
         -not [bool] $status.eventMutationAttempted -and
         -not [bool] $status.mqttPublishAttempted -and
         -not [bool] $status.deviceActionAttempted -and
-        -not [bool] $status.serviceRestartAttempted) `
+        -not [bool] $status.serviceRestartAttempted -and
+        -not [bool] $status.publicationAttempted -and
+        -not [bool] $status.retentionCleanupAttempted) `
         -Message ('Initializer scenario escaped the scratch boundary: ' + $Label)
     Write-Host ('[SAEF] scenario-finished: ' + $Label + ' exit=' + $ExpectedExitCode)
     return $status
@@ -221,6 +227,85 @@ function New-ScenarioParent {
     [IO.Directory]::CreateDirectory($path) | Out-Null
     Set-ProtectedScratchAcl -Path $path
     return $path
+}
+
+function New-ProductionLikeParent {
+    param([Parameter(Mandatory = $true)][string] $Label)
+
+    $container = Join-Path $scratchRoot (
+        'programdata-like-' + $Label + '-' + [Guid]::NewGuid().ToString('N')
+    )
+    [IO.Directory]::CreateDirectory($container) | Out-Null
+
+    $system = [Security.Principal.SecurityIdentifier]::new('S-1-5-18')
+    $administrators = [Security.Principal.SecurityIdentifier]::new('S-1-5-32-544')
+    $creatorOwner = [Security.Principal.SecurityIdentifier]::new('S-1-3-0')
+    $users = [Security.Principal.SecurityIdentifier]::new('S-1-5-32-545')
+    $containerAndObjects = [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor
+        [Security.AccessControl.InheritanceFlags]::ObjectInherit
+    $allow = [Security.AccessControl.AccessControlType]::Allow
+    $acl = [Security.AccessControl.DirectorySecurity]::new()
+    $acl.SetAccessRuleProtection($true, $false)
+    $acl.SetOwner($administrators)
+    foreach ($sid in @($system, $administrators)) {
+        $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new(
+            $sid,
+            [Security.AccessControl.FileSystemRights]::FullControl,
+            $containerAndObjects,
+            [Security.AccessControl.PropagationFlags]::None,
+            $allow
+        ))
+    }
+    $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new(
+        $creatorOwner,
+        [Security.AccessControl.FileSystemRights]::FullControl,
+        $containerAndObjects,
+        [Security.AccessControl.PropagationFlags]::InheritOnly,
+        $allow
+    ))
+    $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new(
+        $users,
+        [Security.AccessControl.FileSystemRights]::ReadAndExecute -bor
+            [Security.AccessControl.FileSystemRights]::Synchronize,
+        $containerAndObjects,
+        [Security.AccessControl.PropagationFlags]::None,
+        $allow
+    ))
+    $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new(
+        $users,
+        [Security.AccessControl.FileSystemRights]::Write,
+        [Security.AccessControl.InheritanceFlags]::ContainerInherit,
+        [Security.AccessControl.PropagationFlags]::None,
+        $allow
+    ))
+    Set-Acl -LiteralPath $container -AclObject $acl
+
+    $parent = Join-Path $container (
+        'saef-mqtt-supersession-qualification-' + $Label + '-' +
+        [Guid]::NewGuid().ToString('N')
+    )
+    [IO.Directory]::CreateDirectory($parent) | Out-Null
+    & icacls.exe $parent '/setowner' '*S-1-5-32-544' | Out-Null
+    Assert-Condition -Condition ($LASTEXITCODE -eq 0) `
+        -Message 'Production-like parent owner setup failed.'
+    $parentAcl = Get-Acl -LiteralPath $parent
+    Assert-Condition -Condition (-not [bool] $parentAcl.AreAccessRulesProtected) `
+        -Message 'Production-like parent unexpectedly has a protected DACL.'
+    return $parent
+}
+
+function Add-UntrustedParentDeleteChildAccess {
+    param([Parameter(Mandatory = $true)][string] $Path)
+
+    $acl = Get-Acl -LiteralPath $Path
+    $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new(
+        [Security.Principal.SecurityIdentifier]::new('S-1-5-32-545'),
+        [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles,
+        [Security.AccessControl.InheritanceFlags]::None,
+        [Security.AccessControl.PropagationFlags]::None,
+        [Security.AccessControl.AccessControlType]::Allow
+    ))
+    Set-Acl -LiteralPath $Path -AclObject $acl
 }
 
 try {
@@ -261,7 +346,8 @@ try {
     }
 
     $script:failedCheck = 'read_only_preflight'
-    $claimRoot = Join-Path $scratchRoot 'MqttSupersessionOwnerMigrationClaims'
+    $productionLikeParent = New-ProductionLikeParent -Label 'positive'
+    $claimRoot = Join-Path $productionLikeParent 'MqttSupersessionOwnerMigrationClaims'
     $preflight = Invoke-InitializerScenario -Label 'preflight-missing' -Operation 'preflight' `
         -ClaimRoot $claimRoot -ExpectedExitCode 0
     Assert-Condition -Condition ([string] $preflight.outcome -ceq 'passed' -and
@@ -325,8 +411,36 @@ try {
         -Message 'Claim-root path collision was changed or accepted.'
     $script:negativeCaseCount++
 
+    $script:failedCheck = 'parent_delete_child_negative'
+    $unsafeParent = New-ProductionLikeParent -Label 'delete-child'
+    Add-UntrustedParentDeleteChildAccess -Path $unsafeParent
+    $unsafeRoot = Join-Path $unsafeParent 'MqttSupersessionOwnerMigrationClaims'
+    $unsafe = Invoke-InitializerScenario -Label 'parent-delete-child' -Operation 'preflight' `
+        -ClaimRoot $unsafeRoot -ExpectedExitCode 10
+    Assert-Condition -Condition ([string] $unsafe.outcome -ceq 'failed' -and
+        [string] $unsafe.failureCode -ceq 'claim_root_parent' -and
+        -not [bool] $unsafe.creationAttempted -and -not (Test-Path -LiteralPath $unsafeRoot)) `
+        -Message 'Untrusted parent delete-child access was accepted or changed.'
+    $script:negativeCaseCount++
+
+    $script:failedCheck = 'atomic_collision_negative'
+    $raceParent = New-ProductionLikeParent -Label 'atomic-collision'
+    $raceRoot = Join-Path $raceParent 'MqttSupersessionOwnerMigrationClaims'
+    $race = Invoke-InitializerScenario -Label 'atomic-collision' -Operation 'install' `
+        -ClaimRoot $raceRoot -ExpectedExitCode 20 `
+        -Confirmation 'provision-saef-mqtt-supersession-claim-root' `
+        -InjectCreationCollision
+    $collisionMarker = Join-Path $raceRoot 'untrusted-collision.txt'
+    Assert-Condition -Condition ([string] $race.outcome -ceq 'failed' -and
+        [string] $race.failureCode -ceq 'claim_root_creation' -and
+        [bool] $race.creationAttempted -and -not [bool] $race.claimRootCreated -and
+        -not [bool] $race.rollbackAttempted -and
+        (Test-Path -LiteralPath $collisionMarker -PathType Leaf)) `
+        -Message 'Atomic creation did not preserve a competing path fail-closed.'
+    $script:negativeCaseCount++
+
     $script:failedCheck = 'automatic_rollback'
-    $rollbackParent = New-ScenarioParent -Label 'rollback'
+    $rollbackParent = New-ProductionLikeParent -Label 'rollback'
     $rollbackRoot = Join-Path $rollbackParent 'MqttSupersessionOwnerMigrationClaims'
     $rolledBack = Invoke-InitializerScenario -Label 'post-acl-failure' -Operation 'install' `
         -ClaimRoot $rollbackRoot -ExpectedExitCode 30 `
@@ -340,7 +454,7 @@ try {
 
     $script:failedCheck = 'case_counts'
     Assert-Condition -Condition ($script:positiveCaseCount -eq 5 -and
-        $script:negativeCaseCount -eq 4) -Message 'Qualification case counts differ.'
+        $script:negativeCaseCount -eq 6) -Message 'Qualification case counts differ.'
 
     Remove-Item -LiteralPath $scratchRoot -Recurse -Force
     $script:scratchCleanupSucceeded = -not (Test-Path -LiteralPath $scratchRoot)

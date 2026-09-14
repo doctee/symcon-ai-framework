@@ -19,7 +19,10 @@ param(
     [switch] $QualificationMode,
 
     [Parameter()]
-    [switch] $InjectPostAclFailure
+    [switch] $InjectPostAclFailure,
+
+    [Parameter()]
+    [switch] $InjectCreationCollision
 )
 
 Set-StrictMode -Version 2.0
@@ -45,6 +48,71 @@ $script:failureType = ''
 $script:failureId = ''
 $script:finalOutcome = 'failed'
 $script:finalExitCode = $ExitManualRecovery
+$script:parentAclProtected = $false
+$script:parentAclSha256 = ''
+
+$atomicDirectorySource = @'
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+
+public static class SaefMqttAtomicDirectory
+{
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SecurityAttributes
+    {
+        internal int Length;
+        internal IntPtr SecurityDescriptor;
+
+        [MarshalAs(UnmanagedType.Bool)]
+        internal bool InheritHandle;
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true,
+        EntryPoint = "CreateDirectoryW")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CreateDirectoryNative(
+        string path,
+        ref SecurityAttributes securityAttributes
+    );
+
+    public static void Create(string path, byte[] securityDescriptor)
+    {
+        if (String.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("Atomic directory path is missing.", "path");
+        }
+        if (securityDescriptor == null || securityDescriptor.Length == 0)
+        {
+            throw new ArgumentException(
+                "Atomic directory security descriptor is missing.",
+                "securityDescriptor"
+            );
+        }
+
+        GCHandle pinnedDescriptor = GCHandle.Alloc(
+            securityDescriptor,
+            GCHandleType.Pinned
+        );
+        try
+        {
+            SecurityAttributes attributes = new SecurityAttributes();
+            attributes.Length = Marshal.SizeOf(typeof(SecurityAttributes));
+            attributes.SecurityDescriptor = pinnedDescriptor.AddrOfPinnedObject();
+            attributes.InheritHandle = false;
+
+            if (!CreateDirectoryNative(path, ref attributes))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
+        }
+        finally
+        {
+            pinnedDescriptor.Free();
+        }
+    }
+}
+'@
 
 function Get-TextSha256 {
     param([Parameter(Mandatory = $true)][string] $Value)
@@ -113,6 +181,8 @@ function Write-ClaimRootStatus {
         creationAttempted = [bool] $script:creationAttempted
         claimRootCreated = [bool] $script:claimRootCreated
         aclMutationAttempted = [bool] $script:aclMutationAttempted
+        parentAclProtected = [bool] $script:parentAclProtected
+        parentAclSha256 = $script:parentAclSha256
         rollbackAttempted = [bool] $script:rollbackAttempted
         rollbackSucceeded = [bool] $script:rollbackSucceeded
         qualificationMode = [bool] $QualificationMode
@@ -167,35 +237,65 @@ function Test-PathContains {
     )
 }
 
-function Test-BroadWriteAccess {
+function Test-ParentControlAccess {
     param([Parameter(Mandatory = $true)][Security.AccessControl.FileSystemRights] $Rights)
 
-    $mutationRights = [Security.AccessControl.FileSystemRights]::WriteData -bor
-        [Security.AccessControl.FileSystemRights]::AppendData -bor
-        [Security.AccessControl.FileSystemRights]::WriteExtendedAttributes -bor
-        [Security.AccessControl.FileSystemRights]::WriteAttributes -bor
-        [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles -bor
+    $controlRights = [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles -bor
         [Security.AccessControl.FileSystemRights]::Delete -bor
         [Security.AccessControl.FileSystemRights]::ChangePermissions -bor
         [Security.AccessControl.FileSystemRights]::TakeOwnership
 
-    return ($Rights -band $mutationRights) -ne 0
+    return ($Rights -band $controlRights) -ne 0
 }
 
-function Assert-ProtectedParentAcl {
+function Assert-SafeClaimRootParentAcl {
     param([Parameter(Mandatory = $true)][string] $Path)
 
     $acl = Get-Acl -LiteralPath $Path
-    if (-not $acl.AreAccessRulesProtected) {
-        throw [Security.SecurityException]::new('Claim-root parent ACL inherits from its parent.')
+    $script:parentAclProtected = [bool] $acl.AreAccessRulesProtected
+    $parentSections = [Security.AccessControl.AccessControlSections]::Access -bor
+        [Security.AccessControl.AccessControlSections]::Owner -bor
+        [Security.AccessControl.AccessControlSections]::Group
+    $parentSddl = $acl.GetSecurityDescriptorSddlForm($parentSections)
+    $script:parentAclSha256 = Get-TextSha256 -Value $parentSddl
+    $ownerSid = $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value
+    if ($ownerSid -notin @('S-1-5-18', 'S-1-5-32-544')) {
+        throw [Security.SecurityException]::new('Claim-root parent owner is untrusted.')
     }
-    foreach ($entry in @($acl.Access)) {
-        $sid = $entry.IdentityReference.Translate(
-            [Security.Principal.SecurityIdentifier]
-        ).Value
-        if ($sid -notin @('S-1-5-18', 'S-1-5-32-544') -and
-            (Test-BroadWriteAccess -Rights $entry.FileSystemRights)) {
-            throw [Security.SecurityException]::new('Claim-root parent grants untrusted write access.')
+    $entries = @($acl.GetAccessRules(
+        $true,
+        $true,
+        [Security.Principal.SecurityIdentifier]
+    ))
+    $requiredFullControl = @{
+        'S-1-5-18' = $false
+        'S-1-5-32-544' = $false
+    }
+    foreach ($entry in $entries) {
+        $appliesToParent = ($entry.PropagationFlags -band
+            [Security.AccessControl.PropagationFlags]::InheritOnly) -eq 0
+        $sid = [string] $entry.IdentityReference.Value
+        if ($appliesToParent -and
+            $entry.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow -and
+            $requiredFullControl.ContainsKey($sid) -and
+            ($entry.FileSystemRights -band [Security.AccessControl.FileSystemRights]::FullControl) -eq
+                [Security.AccessControl.FileSystemRights]::FullControl) {
+            $requiredFullControl[$sid] = $true
+        }
+        if ($appliesToParent -and
+            $entry.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow -and
+            $sid -notin @('S-1-5-18', 'S-1-5-32-544') -and
+            (Test-ParentControlAccess -Rights $entry.FileSystemRights)) {
+            throw [Security.SecurityException]::new(
+                'Claim-root parent grants untrusted delete or ACL-control access.'
+            )
+        }
+    }
+    foreach ($sid in @('S-1-5-18', 'S-1-5-32-544')) {
+        if (-not $requiredFullControl[$sid]) {
+            throw [Security.SecurityException]::new(
+                'Claim-root parent lacks required trusted full control.'
+            )
         }
     }
 }
@@ -248,21 +348,44 @@ function Assert-ProtectedClaimRootAcl {
     }
 }
 
-function Set-ProtectedClaimRootAcl {
+function New-ClaimRootSecurityDescriptor {
+    $system = [Security.Principal.SecurityIdentifier]::new('S-1-5-18')
+    $administrators = [Security.Principal.SecurityIdentifier]::new('S-1-5-32-544')
+    $inheritance = [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor
+        [Security.AccessControl.InheritanceFlags]::ObjectInherit
+    $acl = [Security.AccessControl.DirectorySecurity]::new()
+    $acl.SetAccessRuleProtection($true, $false)
+    $acl.SetOwner($administrators)
+    $acl.SetGroup($administrators)
+    foreach ($sid in @($system, $administrators)) {
+        $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new(
+            $sid,
+            [Security.AccessControl.FileSystemRights]::FullControl,
+            $inheritance,
+            [Security.AccessControl.PropagationFlags]::None,
+            [Security.AccessControl.AccessControlType]::Allow
+        ))
+    }
+    [byte[]] $securityDescriptor = $acl.GetSecurityDescriptorBinaryForm()
+    return ,$securityDescriptor
+}
+
+function New-AtomicProtectedClaimRoot {
     param([Parameter(Mandatory = $true)][string] $Path)
 
-    & icacls.exe $Path '/inheritance:r' | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw [InvalidOperationException]::new('Cannot disable claim-root ACL inheritance.')
+    [byte[]] $securityDescriptor = New-ClaimRootSecurityDescriptor
+    try {
+        [SaefMqttAtomicDirectory]::Create($Path, $securityDescriptor)
+    } finally {
+        [Array]::Clear($securityDescriptor, 0, $securityDescriptor.Length)
     }
-    & icacls.exe $Path '/grant:r' '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' |
-        Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw [InvalidOperationException]::new('Cannot apply the protected claim-root ACL.')
-    }
-    & icacls.exe $Path '/setowner' '*S-1-5-32-544' | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw [InvalidOperationException]::new('Cannot set the protected claim-root owner.')
+}
+
+function Assert-EmptyClaimRoot {
+    param([Parameter(Mandatory = $true)][string] $Path)
+
+    if ($null -ne (Get-ChildItem -LiteralPath $Path -Force | Select-Object -First 1)) {
+        throw [Security.SecurityException]::new('New claim root is not empty.')
     }
 }
 
@@ -278,6 +401,16 @@ try {
     $script:failureCode = 'platform'
     if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
         throw [PlatformNotSupportedException]::new('Claim-root installation requires Windows.')
+    }
+    $script:failureCode = 'atomic_directory_contract'
+    if ($null -ne ('SaefMqttAtomicDirectory' -as [type])) {
+        throw [Security.SecurityException]::new(
+            'Atomic directory host type already exists before contract import.'
+        )
+    }
+    Add-Type -TypeDefinition $atomicDirectorySource -Language CSharp -ErrorAction Stop
+    if ($null -eq ('SaefMqttAtomicDirectory' -as [type])) {
+        throw [InvalidOperationException]::new('Atomic directory host type is unavailable.')
     }
     $script:failureCode = 'status_path'
     if (-not [IO.Path]::IsPathRooted($StatusPath)) {
@@ -302,13 +435,13 @@ try {
     } elseif (-not $script:claimRoot.Equals($productionRoot, [StringComparison]::OrdinalIgnoreCase)) {
         throw [Security.SecurityException]::new('Production claim-root path differs from the fixed boundary.')
     }
-    if ($InjectPostAclFailure -and -not $QualificationMode) {
+    if (($InjectPostAclFailure -or $InjectCreationCollision) -and -not $QualificationMode) {
         throw [Security.SecurityException]::new('Fault injection is qualification-only.')
     }
 
     $script:failureCode = 'claim_root_parent'
     Assert-PlainAncestorChain -Path $claimParent
-    Assert-ProtectedParentAcl -Path $claimParent
+    Assert-SafeClaimRootParentAcl -Path $claimParent
 
     $script:failureCode = 'mutex'
     $script:mutex = [Threading.Mutex]::new($false, 'Global\SAEF.MqttSupersessionClaimRoot')
@@ -336,13 +469,28 @@ try {
             throw [Security.SecurityException]::new('Explicit claim-root confirmation is missing.')
         }
         Assert-Elevated
+        $script:failureCode = 'fresh_parent_baseline'
+        Assert-PlainAncestorChain -Path $claimParent
+        Assert-SafeClaimRootParentAcl -Path $claimParent
+        if (Test-Path -LiteralPath $script:claimRoot) {
+            throw [IO.IOException]::new('Claim-root path appeared after baseline validation.')
+        }
+        if ($InjectCreationCollision) {
+            [IO.Directory]::CreateDirectory($script:claimRoot) | Out-Null
+            [IO.File]::WriteAllText(
+                (Join-Path $script:claimRoot 'untrusted-collision.txt'),
+                'qualification collision',
+                [Text.UTF8Encoding]::new($false)
+            )
+        }
         $script:failureCode = 'claim_root_creation'
         $script:creationAttempted = $true
-        [IO.Directory]::CreateDirectory($script:claimRoot) | Out-Null
-        $script:claimRootCreated = $true
-        $script:failureCode = 'claim_root_acl'
         $script:aclMutationAttempted = $true
-        Set-ProtectedClaimRootAcl -Path $script:claimRoot
+        New-AtomicProtectedClaimRoot -Path $script:claimRoot
+        $script:claimRootCreated = $true
+        $script:failureCode = 'claim_root_postflight'
+        Assert-PlainDirectory -Path $script:claimRoot
+        Assert-EmptyClaimRoot -Path $script:claimRoot
         if ($InjectPostAclFailure) {
             throw [InvalidOperationException]::new('Injected post-ACL qualification failure.')
         }
@@ -356,6 +504,7 @@ try {
     if ($script:claimRootCreated) {
         $script:rollbackAttempted = $true
         try {
+            Assert-EmptyClaimRoot -Path $script:claimRoot
             Remove-Item -LiteralPath $script:claimRoot -Force
             $script:rollbackSucceeded = -not (Test-Path -LiteralPath $script:claimRoot)
         } catch {
