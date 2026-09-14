@@ -1,6 +1,6 @@
 # Supersession Claim-Root Windows Qualification
 
-**Status:** Repository implementation complete; Windows execution pending
+**Status:** Windows PowerShell 5.1 qualification passed; production gate pending
 **Preparation date:** 2026-09-14
 **Repository base:** `6065a565b3054482c4c1ecbc7cf2bd73915a8af7`
 **Production mutation:** None
@@ -89,10 +89,28 @@ The qualification deletes only its own random scratch tree. Its status fixes
 all production, Symcon RPC, owner, event, MQTT, device, service, publication and
 retention mutation flags to false.
 
+## Qualification Result
+
+The exact flat gate package passed on Windows PowerShell `5.1.26100.9444` on
+2026-09-14. The native parser accepted the bound sources. All five positive and
+four negative cases passed, including the expected exit codes for wrong
+confirmation (`20`), broad ACL and path collision (`10`), and injected
+post-ACL rollback (`30`).
+
+The successful status bound initializer SHA-256
+`8bdede8ccacc55aec616472853c68942d74af824f867441f6de65f4c9e499cfb`
+and secure child-process SHA-256
+`c5d2200b15e7bda563c7ce2e393d3a45c79f04ba672e140990c5556febc493c3`.
+Scratch mutation and cleanup both completed as designed. Production mutation,
+live Symcon contact, owner and event mutation, MQTT publication, device action,
+service restart, repository publication and retention cleanup all remained
+false.
+
 ## Ordered Gates
 
-1. Run the exact flat qualification bundle in elevated Windows PowerShell 5.1.
-2. Retain and review the successful status file and source hashes.
+1. Retain the successful Windows status file and its exact source hashes.
+2. Integrate the repository change through the protected-main pull-request
+   workflow.
 3. Run production `preflight`; it must either verify an existing exact root or
    report only `repairRequired=true`.
 4. If missing, create a private backup/recovery record for the absent baseline
