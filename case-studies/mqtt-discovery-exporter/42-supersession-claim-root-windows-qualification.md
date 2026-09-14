@@ -1,9 +1,15 @@
 # Supersession Claim-Root Windows Qualification
 
-**Status:** Windows PowerShell 5.1 qualification passed; production gate pending
+**Status:** Historical Windows qualification passed; production parent assumption superseded by report 43
 **Preparation date:** 2026-09-14
 **Repository base:** `6065a565b3054482c4c1ecbc7cf2bd73915a8af7`
 **Production mutation:** None
+
+The first production read-only preflight found that the shared SAEF parent
+uses inherited local-user directory-write access. The strict parent contract
+stopped before mutation as designed. Report 43 replaces the create-then-harden
+implementation with an atomic protected-leaf contract; this report remains the
+exact historical record for the earlier source hashes and qualification.
 
 ## Purpose
 

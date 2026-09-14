@@ -40,16 +40,22 @@ $initializerFragments = [
     "[string] \$ClaimRootPath = (Join-Path",
     '[switch] $QualificationMode',
     '[switch] $InjectPostAclFailure',
+    '[switch] $InjectCreationCollision',
     'Fault injection is qualification-only.',
     'Production claim-root path differs from the fixed boundary.',
     'Qualification claim-root path is outside scratch.',
     'Assert-PlainAncestorChain -Path $claimParent',
-    'Assert-ProtectedParentAcl -Path $claimParent',
+    'Assert-SafeClaimRootParentAcl -Path $claimParent',
+    'Claim-root parent owner is untrusted.',
+    'Claim-root parent lacks required trusted full control.',
+    'Claim-root parent grants untrusted delete or ACL-control access.',
     'Assert-ProtectedClaimRootAcl -Path $script:claimRoot',
     '$entry.IsInherited',
-    "& icacls.exe \$Path '/inheritance:r'",
-    "'*S-1-5-18:(OI)(CI)F'",
-    "'*S-1-5-32-544:(OI)(CI)F'",
+    'public static class SaefMqttAtomicDirectory',
+    'EntryPoint = "CreateDirectoryW"',
+    'GetSecurityDescriptorBinaryForm()',
+    '[SaefMqttAtomicDirectory]::Create($Path, $securityDescriptor)',
+    'Assert-EmptyClaimRoot -Path $script:claimRoot',
     '[IO.Directory]::CreateDirectory($script:claimRoot)',
     'Remove-Item -LiteralPath $script:claimRoot -Force',
     "\$script:finalOutcome = 'manual_recovery_required'",
@@ -71,8 +77,26 @@ foreach ($initializerFragments as $fragment) {
 }
 
 assertMqttSupersessionClaimRootWindows(
-    substr_count($initializer, '[IO.Directory]::CreateDirectory($script:claimRoot)') === 1,
-    'Claim root must have exactly one creation call site.'
+    substr_count(
+        $initializer,
+        '[SaefMqttAtomicDirectory]::Create($Path, $securityDescriptor)'
+    ) === 1,
+    'Claim root must have exactly one atomic production creation call site.'
+);
+assertMqttSupersessionClaimRootWindows(
+    substr_count($initializer, '[IO.Directory]::CreateDirectory($script:claimRoot)') === 1
+        && is_int($collisionInjection = strpos($initializer, 'if ($InjectCreationCollision) {'))
+        && is_int($qualificationCollisionCreation = strpos(
+            $initializer,
+            '[IO.Directory]::CreateDirectory($script:claimRoot)'
+        ))
+        && $collisionInjection < $qualificationCollisionCreation,
+    'Qualification-only collision injection differs.'
+);
+assertMqttSupersessionClaimRootWindows(
+    !str_contains($initializer, 'Set-Acl -LiteralPath $script:claimRoot')
+        && !str_contains($initializer, "& icacls.exe \$script:claimRoot"),
+    'Claim root is re-ACLd after creation.'
 );
 assertMqttSupersessionClaimRootWindows(
     substr_count($initializer, 'Remove-Item -LiteralPath $script:claimRoot -Force') === 1
@@ -83,7 +107,7 @@ assertMqttSupersessionClaimRootWindows(
     is_int($preflightBranch = strpos($initializer, "} elseif (\$Operation -eq 'preflight') {"))
         && is_int($creation = strpos(
             $initializer,
-            '[IO.Directory]::CreateDirectory($script:claimRoot)'
+            'New-AtomicProtectedClaimRoot -Path $script:claimRoot'
         ))
         && $preflightBranch < $creation,
     'Read-only preflight does not guard claim-root creation.'
@@ -99,11 +123,14 @@ $qualificationFragments = [
     "'postflight-existing'",
     "'broad-acl'",
     "'path-collision'",
+    "'parent-delete-child'",
+    "'atomic-collision'",
     "'post-acl-failure'",
     "'provision-saef-mqtt-supersession-claim-root'",
     '-InjectPostAclFailure',
+    '-InjectCreationCollision',
     'positiveCaseCount -eq 5',
-    'negativeCaseCount -eq 4',
+    'negativeCaseCount -eq 6',
     'productionMutationAttempted = $false',
     'liveSymconRpcContactAttempted = $false',
     'ownerMutationAttempted = $false',

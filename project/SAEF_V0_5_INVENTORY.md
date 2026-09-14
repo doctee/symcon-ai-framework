@@ -49,12 +49,14 @@ three-argument owner dispatches. Current runtime activation, owner migration
 and functional rapid-command evidence remain separate live gates, so repository
 completion must not be presented as confirmed live adoption.
 
-The first deferred Windows boundary now has a qualified repository
-implementation: a fixed-path claim-root initializer and scratch-only PowerShell
-5.1 qualification reuse the secure child-process and protected-DACL contracts.
-All five positive and four negative Windows cases passed without production or
-live mutation. Production root preflight and provisioning remain separate
-gates.
+The first deferred Windows boundary initially passed scratch qualification, but
+its strict protected-parent assumption did not match the inherited ACL of the
+shared production SAEF root. The first production read-only preflight stopped
+before mutation. The replacement repository contract uses exclusive native
+creation with the final protected DACL and adds production-like inherited-parent,
+parent-delete and between-check-and-create collision scenarios. Replacement
+Windows PowerShell 5.1 qualification, production preflight and provisioning
+remain separate gates.
 
 ### V05-002: Reproducible isolated workstreams
 

@@ -67,6 +67,7 @@ become an SAEF reference implementation.
 | `40-latest-command-wins-offline-implementation.md` | Repository-only generation arbitration, immutable event payload, bounded diagnostics, deterministic concurrency verification and still-closed live gates. |
 | `41-latest-command-wins-live-adoption-preparation.md` | Two-sequence runtime and owner adoption, hash-bound owner transaction, replay/crash/rollback controls, MCP transport boundary and deferred live gates. |
 | `42-supersession-claim-root-windows-qualification.md` | Windows PowerShell 5.1 and protected-DACL gate for the one-use owner-migration claim root, with scratch-only qualification and empty-leaf rollback. |
+| `43-atomic-claim-root-production-correction.md` | Production-evidence correction using exclusive native creation with the final protected DACL, collision rejection and production-like inherited-parent qualification. |
 | `candidate/MqttDiscoveryExporterCore.php` | Side-effect-free normalization, payload, parsing, hashing and cleanup-planning core. |
 | `candidate/MqttDiscoveryExporterRuntime.php` | Runtime adapter for diagnostics, reconcile, MQTT execution, indexed dispatch and exact cleanup. |
 | `../../tests/mqtt-discovery-exporter/fixtures/discovery-capabilities.json` | Sanitized deterministic discovery fixtures for every supported capability combination. |
@@ -138,8 +139,15 @@ Report 42 implements the repository side of the first deferred gate. A fixed,
 MQTT-specific initializer can provision only the missing private claim root
 with a protected `SYSTEM`/Administrators DACL. Its companion Windows
 PowerShell 5.1 qualification uses the existing secure child-process contract
-and touches only a random scratch tree. Windows execution and every production
-mutation remain pending.
+and touches only a random scratch tree. Its original protected-parent
+assumption was rejected by the first production read-only preflight without
+mutation.
+
+Report 43 corrects that installation boundary without changing the shared SAEF
+parent. The final leaf is created exclusively and atomically with its protected
+DACL; a concurrent or pre-existing path is never re-ACL'd or removed. The
+replacement Windows PowerShell 5.1 qualification and all production mutation
+remain separate pending gates.
 
 The current supervised client-transport pilot manages two light entities. The
 second state-only entity has additionally demonstrated fail-closed handling
