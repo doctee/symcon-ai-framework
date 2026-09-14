@@ -120,7 +120,8 @@
             "@php tests/mqtt-discovery-exporter/discovery-fixtures.php"
         ],
         "test:mqtt-exporter-supersession-migration": [
-            "@php tests/mqtt-discovery-exporter/supersession-owner-migration.php"
+            "@php tests/mqtt-discovery-exporter/supersession-owner-migration.php",
+            "@php tests/mqtt-discovery-exporter/supersession-claim-root-windows.php"
         ],
         "test:control-light-core": [
             "@php tests/control-light/core.php"

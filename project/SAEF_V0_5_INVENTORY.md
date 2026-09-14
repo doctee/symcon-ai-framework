@@ -49,6 +49,12 @@ three-argument owner dispatches. Current runtime activation, owner migration
 and functional rapid-command evidence remain separate live gates, so repository
 completion must not be presented as confirmed live adoption.
 
+The first deferred Windows boundary now has a repository implementation: a
+fixed-path claim-root initializer and scratch-only PowerShell 5.1 qualification
+reuse the secure child-process and protected-DACL contracts. Windows execution
+and production root provisioning are not yet evidence and remain separate
+gates.
+
 ### V05-002: Reproducible isolated workstreams
 
 The primary-checkout guard, fail-closed fast-forward synchronization, clean

@@ -33,6 +33,10 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added the MQTT supersession claim-root Windows gate: a fixed-path,
+  non-repairing protected-DACL initializer and a scratch-only Windows
+  PowerShell 5.1 qualification through the existing secure child-process
+  contract. No production root or live Symcon state was changed.
 - Added repository-only MQTT latest-command-wins live-adoption preparation:
   exact owner-source transformation, a hash-bound two-owner transaction,
   append-only one-use claims, deterministic drift/replay/interruption/rollback

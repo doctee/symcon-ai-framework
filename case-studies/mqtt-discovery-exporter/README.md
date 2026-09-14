@@ -66,6 +66,7 @@ become an SAEF reference implementation.
 | `39-latest-command-wins-live-inventory.md` | Fresh read-only owner, consumer, event, runtime, diagnostics and timing inventory admitting bounded offline implementation without live mutation. |
 | `40-latest-command-wins-offline-implementation.md` | Repository-only generation arbitration, immutable event payload, bounded diagnostics, deterministic concurrency verification and still-closed live gates. |
 | `41-latest-command-wins-live-adoption-preparation.md` | Two-sequence runtime and owner adoption, hash-bound owner transaction, replay/crash/rollback controls, MCP transport boundary and deferred live gates. |
+| `42-supersession-claim-root-windows-qualification.md` | Windows PowerShell 5.1 and protected-DACL gate for the one-use owner-migration claim root, with scratch-only qualification and empty-leaf rollback. |
 | `candidate/MqttDiscoveryExporterCore.php` | Side-effect-free normalization, payload, parsing, hashing and cleanup-planning core. |
 | `candidate/MqttDiscoveryExporterRuntime.php` | Runtime adapter for diagnostics, reconcile, MQTT execution, indexed dispatch and exact cleanup. |
 | `../../tests/mqtt-discovery-exporter/fixtures/discovery-capabilities.json` | Sanitized deterministic discovery fixtures for every supported capability combination. |
@@ -132,6 +133,13 @@ configuration, events, runtime identity, plan expiry and a one-use append-only
 claim, with byte-exact source rollback and manual recovery for mixed states.
 Its mutating execution still requires a separately proven Symcon MCP transport
 and explicit live gates.
+
+Report 42 implements the repository side of the first deferred gate. A fixed,
+MQTT-specific initializer can provision only the missing private claim root
+with a protected `SYSTEM`/Administrators DACL. Its companion Windows
+PowerShell 5.1 qualification uses the existing secure child-process contract
+and touches only a random scratch tree. Windows execution and every production
+mutation remain pending.
 
 The current supervised client-transport pilot manages two light entities. The
 second state-only entity has additionally demonstrated fail-closed handling
