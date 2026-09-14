@@ -37,7 +37,8 @@ assertMediaCarouselOwnershipMigration(
 assertMediaCarouselOwnershipMigration(
     $policy['moduleControlInstanceId'] === 0
         && $policy['moduleControlModuleGuid'] === '{00000000-0000-0000-0000-000000000000}'
-        && $policy['expectedInstances'][0]['instanceId'] === 0,
+        && $policy['expectedInstances'][0]['instanceId'] === 0
+        && array_keys($policy['expectedInstances'][0]) === ['instanceId', 'configurationSha256'],
     'Example policy contains a live Symcon identity.'
 );
 assertMediaCarouselOwnershipMigration(
@@ -133,6 +134,14 @@ $requiredFragments = [
     'Get-SourceIdentity -Root $script:rollbackPath',
     'Get-CandidateIdentity -Root $script:candidateStagingPath',
     "-Method 'IPS_GetReferenceList'",
+    "-Method 'IPS_CategoryExists'",
+    "-Method 'IPS_MediaExists'",
+    "-Method 'IPS_GetMedia'",
+    '[string] $references.sha256',
+    'referenceMode = [string] $references.mode',
+    'observedReferenceCount = [int] $Snapshot.referenceCount',
+    'failureType = $script:failureType',
+    'failureId = $script:failureId',
     "-Method 'IPS_SetConfiguration'",
     "-Method 'IPS_ApplyChanges'",
     "Write-TransactionState -Outcome 'migrated'",
@@ -177,6 +186,12 @@ assertMediaCarouselOwnershipMigration(
 assertMediaCarouselOwnershipMigration(
     substr_count($script, "-Method 'MC_ReloadModule'") === 1,
     'Migration must expose one targeted reload call site.'
+);
+assertMediaCarouselOwnershipMigration(
+    !str_contains($script, '[int] $references.count -ne [int] $expected.referenceCount')
+        && !str_contains($script, '[string] $references.sha256 -cne [string] $expected.referencesSha256')
+        && !str_contains($script, '[int] $snapshot.referenceCount -ne [int] $script:plan.referenceCount'),
+    'Dynamic reference observations must not be stable policy or plan bindings.'
 );
 
 $channelLock = strpos($script, '$script:channelMutex.WaitOne(0)');

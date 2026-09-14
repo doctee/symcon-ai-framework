@@ -43,9 +43,7 @@
     "expectedInstances": [
         {
             "instanceId": 0,
-            "configurationSha256": "<private-sha256-of-byte-exact-instance-configuration>",
-            "referenceCount": 0,
-            "referencesSha256": "<private-sha256-of-ordered-reference-identity>"
+            "configurationSha256": "<private-sha256-of-byte-exact-instance-configuration>"
         }
     ],
     "maximumSourceBytes": 67108864,
