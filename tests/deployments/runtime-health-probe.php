@@ -6,6 +6,21 @@ function ExampleRequiredFunction(): void
 {
 }
 
+$probePath = realpath(__DIR__ . '/../../deployments/symcon/windows/SaefRuntimeHealthProbe.php');
+if ($probePath === false) {
+    throw new RuntimeException('Runtime health probe source is missing.');
+}
+$probeSource = file_get_contents($probePath);
+if (
+    !is_string($probeSource)
+    || substr_count(
+        $probeSource,
+        'const SAEF_RUNTIME_HEALTH_MAX_CONTRACT_BYTES = 32768; /*NO_ID_CHECK*/'
+    ) !== 1
+) {
+    throw new RuntimeException('Runtime health probe lost its IntegrityCheck ID-scan exclusion.');
+}
+
 $_IPS = [
     'SAEF_RUNTIME_HEALTH_CONTRACT' => json_encode(
         ['ExampleRequiredFunction', 'function_exists'],
@@ -29,10 +44,6 @@ if (
 
 fwrite(STDOUT, "PASS: Runtime health probe verified the bounded global function contract.\n");
 
-$probePath = realpath(__DIR__ . '/../../deployments/symcon/windows/SaefRuntimeHealthProbe.php');
-if ($probePath === false) {
-    throw new RuntimeException('Runtime health probe source is missing.');
-}
 $missingContract = json_encode(['SAEF_FunctionThatMustNotExist'], JSON_THROW_ON_ERROR);
 $childCode = sprintf(
     '$_IPS = ["SAEF_RUNTIME_HEALTH_CONTRACT" => %s]; require %s;',

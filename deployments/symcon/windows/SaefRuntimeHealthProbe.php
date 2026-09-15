@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 const SAEF_RUNTIME_HEALTH_MAX_FUNCTIONS = 256;
-const SAEF_RUNTIME_HEALTH_MAX_CONTRACT_BYTES = 32768;
+const SAEF_RUNTIME_HEALTH_MAX_CONTRACT_BYTES = 32768; /*NO_ID_CHECK*/
 
 $contractJson = $_IPS['SAEF_RUNTIME_HEALTH_CONTRACT'] ?? null;
 if (!is_string($contractJson) || $contractJson === '' || strlen($contractJson) > SAEF_RUNTIME_HEALTH_MAX_CONTRACT_BYTES) {

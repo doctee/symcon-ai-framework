@@ -246,6 +246,11 @@ normal script context. The restart coordinator verifies the script object type
 and source hash, runs the probe before activation, runs it again after the new
 kernel reaches the ready runlevel, and repeats it after any rollback restart.
 
+The fixed contract-byte limit carries the `/*NO_ID_CHECK*/` marker so Symcon
+IntegrityCheck does not interpret the five-digit byte bound as an object ID.
+The marker has no runtime effect and remains part of the probe's byte-exact,
+hash-pinned source contract.
+
 Runlevel readiness alone is not functional acceptance. If the post-restart
 probe finds a missing function or rejects its contract, the restart coordinator
 uses the existing byte-exact bootstrap rollback and does not report the
