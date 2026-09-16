@@ -9,6 +9,18 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+- Added the initial v0.6 engineering inventory with explicit admission gates
+  for deferred operational observations, helper activation and retention work.
+
+### Changed
+
+- Reconciled the project overview and v0.5 scope, inventory, repository and
+  readiness records with the protected-main merge, closed MQTT engineering
+  issue, published annotated tag, exact-revision CI and successful GitHub
+  Release.
+
 ## [0.5.0] - 2026-09-16
 
 ### Security

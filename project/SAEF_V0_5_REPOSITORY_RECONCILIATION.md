@@ -1,9 +1,9 @@
 # SAEF v0.5 Repository Reconciliation
 
-**Status:** Reconciled for release-candidate preparation
+**Status:** Released
 **Date:** 2026-09-16
 **Published baseline:** `v0.4.0`
-**Reconciled revision:** `b30dad4bee001d852029bb78b6fd94917e0eaccc`
+**Reconciled revision:** `f02d36a8c404f949b8d4433db8f28fa2d52dd66b`
 
 ## Purpose
 
@@ -14,15 +14,15 @@ authority.
 
 ## Repository State
 
-At the reconciled revision:
+At the release revision:
 
 - the primary checkout is clean and equal to `origin/main`;
-- pull requests 74 through 129 are integrated after `v0.4.0`;
+- pull requests 74 through 130 are integrated after `v0.4.0`;
 - 195 commits changed 535 paths after the published baseline;
-- the latest CI run for `main` is green;
+- the exact release-revision CI and tag-triggered release workflow are green;
 - no pull request is open;
-- GitHub issue 1 remains open pending merge of its sanitized terminal result;
-  and
+- GitHub issue 1 is closed with its sanitized terminal result on `main`;
+- annotated tag `v0.5.0` and its GitHub Release are published; and
 - the public helper contract remains 30 functions and three constants.
 
 The post-v0.4 delta falls into five public groups:
@@ -90,7 +90,6 @@ The delta is additive and suitable for `v0.5.0`.
 
 ## Open Work Outside The Release
 
-- Close GitHub issue 1 after its terminal public report is merged.
 - Retain Open-Meteo analysis and rollback evidence until its observation and
   retention decisions close.
 - Revalidate the deferred Shared Statistics helper before any restart-bound
@@ -102,6 +101,11 @@ The delta is additive and suitable for `v0.5.0`.
 
 ## Decision
 
-The public v0.5 scope is frozen and ready for release-candidate verification.
-This reconciliation grants no protected-main merge, issue mutation, tag,
-GitHub Release, live mutation, restart or cleanup authority.
+The repository justified and completed the `v0.5.0` release line. Pull-request
+and post-merge CI passed, issue 1 closed after its report reached `main`, and
+the annotated tag plus GitHub Release were published from the exact release
+revision. New work is not implicitly part of v0.5 and enters the separate v0.6
+inventory before any future scope decision.
+
+This reconciliation grants no live mutation, restart, standalone-module
+publication or cleanup authority.

@@ -1,23 +1,25 @@
 # SAEF v0.5 Scope
 
-**Status:** Frozen release-candidate scope
+**Status:** Published historical release scope
 **Target:** `v0.5.0`
 **Freeze date:** 2026-09-16
 **Published baseline:** `v0.4.0`
 **Scope-freeze base:** `b30dad4bee001d852029bb78b6fd94917e0eaccc`
+**Release date:** 2026-09-16
+**Release revision:** `f02d36a8c404f949b8d4433db8f28fa2d52dd66b`
 
 ## Version Decision
 
-The release after `v0.4.0` is classified as `v0.5.0`. The delta adds
+The release after `v0.4.0` was correctly classified as `v0.5.0`. The delta adds
 reproducible workstream coordination, target-bound Channel-v8 deployment,
 scope-bound one-click approval, secure Windows child execution and bounded
 latest-command-wins behavior. Those capabilities are larger than a patch while
 remaining compatible with the existing public helper API.
 
-This freeze admits only release-preparation corrections required to verify the
-scope below. New feature work requires an explicit reopening. The freeze does
-not itself authorize merge, issue mutation, tagging, release publication, live
-operation or cleanup.
+This document preserves the frozen historical release boundary. Work after the
+release revision enters a later inventory and does not retroactively change
+the v0.5 scope. Repository publication did not authorize a live operation,
+standalone-module publication or cleanup.
 
 ## Included Scope
 
@@ -57,21 +59,14 @@ operation or cleanup.
 - another live target, restart, command or provider action; and
 - Stable 1.0 or `v1.0.0` status.
 
-## Release Gates
+## Release Outcome
 
-Before publication, the release candidate must:
+Pull request 130 merged the verified candidate as release revision
+`f02d36a8c404f949b8d4433db8f28fa2d52dd66b`. Exact-revision post-merge CI
+passed, GitHub issue 1 was closed only after its terminal report was present on
+`main`, and the annotated `v0.5.0` tag plus non-draft, non-prerelease GitHub
+Release were published on 2026-09-16.
 
-1. reconcile every changelog entry with this frozen scope;
-2. confirm the unchanged public API contract;
-3. update both canonical framework-version constants to `0.5.0`;
-4. regenerate deterministic bundles and filesets twice with identical output;
-5. pass focused and complete repository checks;
-6. pass pull-request CI on the exact candidate;
-7. merge only through explicit protected-main authorization;
-8. close GitHub issue 1 only after its terminal report exists on `main`;
-9. pass post-merge CI on the exact release revision; and
-10. create and independently verify the annotated tag and GitHub Release under
-    a separate publication authorization.
-
-Repository release does not authorize live Symcon work, standalone-module
-publication, device action, service restart or retention cleanup.
+The repository release did not authorize live Symcon work, standalone-module
+publication, device action, service restart or retention cleanup. Subsequent
+intake is governed by `project/SAEF_V0_6_INVENTORY.md`.
