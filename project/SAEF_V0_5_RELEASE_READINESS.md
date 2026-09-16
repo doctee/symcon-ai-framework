@@ -3,7 +3,7 @@
 **Assessment date:** 2026-09-16
 **Target:** `v0.5.0`
 **Scope-freeze base:** `b30dad4bee001d852029bb78b6fd94917e0eaccc`
-**Current decision:** READY FOR PULL REQUEST
+**Current decision:** RELEASED
 
 ## Summary
 
@@ -13,9 +13,9 @@ deployment, scope-bound approval, secure Windows child execution, bounded MQTT
 latest-command-wins behavior and the admitted case-study evolution.
 
 The public helper contract remains 30 functions and three constants. Both
-canonical framework-version owners are prepared for `0.5.0`. Protected-main
-merge, GitHub issue mutation, annotated tag and GitHub Release remain separate
-pending gates.
+canonical framework-version owners use `0.5.0`. Pull request 130, post-merge
+CI, GitHub issue 1 closure and the tag-triggered release workflow completed on
+the exact release revision.
 
 ## Gate Matrix
 
@@ -32,12 +32,12 @@ pending gates.
 | Generated artifact drift checks | PASS | All bundle and fileset checks reproduce the tracked candidate. |
 | Dated changelog section | PASS | `[0.5.0] - 2026-09-16`; release extraction returns 160 non-empty lines. |
 | Full repository checks | PASS | Complete `make check` passed in the isolated candidate worktree with the lock-identical external toolchain. |
-| Pull-request CI | PENDING | Requires the exact pushed candidate. |
-| Protected-main merge | PENDING | Requires explicit authorization naming the PR and `main`. |
-| GitHub issue 1 closure | PENDING | Close only after report 44 is on `main`. |
-| Post-merge CI | PENDING | Verify the exact release revision. |
-| Annotated `v0.5.0` tag | PENDING | Separate publication gate. |
-| GitHub Release | PENDING | Tag-triggered workflow and independent verification. |
+| Pull-request CI | PASS | Both validate runs passed on candidate `3c0ffc13c7ebc9267b33f125fb4049b47865ff9c` in PR 130. |
+| Protected-main merge | PASS | PR 130 merged as release revision `f02d36a8c404f949b8d4433db8f28fa2d52dd66b`. |
+| GitHub issue 1 closure | PASS | Report 44 was present on `main`; the prepared closure comment was posted and the issue was closed on 2026-09-16. |
+| Post-merge CI | PASS | Run `35105335059` passed on the exact release revision. |
+| Annotated `v0.5.0` tag | PASS | Tag object `0a5cc550ba3f6c3322285b84353300f05255ce82` resolves to the release revision. |
+| GitHub Release | PASS | Run `35106400520` published SAEF v0.5.0 as neither draft nor prerelease. |
 
 ## Version Inventory
 
@@ -76,8 +76,15 @@ multi-line declaration formatting defect introduced immediately before the
 scope freeze. Those corrections change neither runtime policy nor generated
 module fileset bytes.
 
-## Publication Boundary
+## Publication Outcome
 
-Release preparation does not publish a standalone module, update Module
+The annotated `v0.5.0` tag resolves to
+`f02d36a8c404f949b8d4433db8f28fa2d52dd66b`. Release workflow
+`35106400520` reran the repository checks, extracted the dated v0.5 changelog
+section and published [SAEF v0.5.0](https://github.com/doctee/symcon-ai-framework/releases/tag/v0.5.0)
+as neither a draft nor a prerelease on 2026-09-16. The published notes match
+the reviewed changelog section.
+
+This repository release did not publish a standalone module, update Module
 Control, activate a fileset, restart Symcon, issue a device command or delete
 retained evidence. Those operations retain independent gates.

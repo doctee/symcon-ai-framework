@@ -94,6 +94,7 @@ Important current artifacts include:
 - `project/SAEF_V0_5_SCOPE.md`
 - `project/SAEF_V0_5_PUBLIC_API_AUDIT.md`
 - `project/SAEF_V0_5_RELEASE_READINESS.md`
+- `project/SAEF_V0_6_INVENTORY.md`
 - `project/SAEF_DEPLOYMENT_CHANNEL_SECURITY_GATE.md`
 - `project/STANDALONE_MODULE_DEPLOYMENT_CHANNEL.md`
 - `adr/ADR-0005-generate-symcon-helper-bundles.md`
@@ -166,21 +167,24 @@ articles, reusable helpers, templates and reference implementations.
 Standard for SAEF (`Stable Draft 1.0`). The earlier draft remains available in
 `drafts/SYMCON_STANDARDS.md` for comparison.
 
-Versions `v0.2.0`, `v0.3.0` and `v0.4.0` are published and immutable. Their
-dated scope and release-readiness documents remain historical evidence.
-Version `v0.4.0` adds the manifest-driven standalone-module publisher,
-complete module distributions, worktree-isolated tooling, safer object
-mutation, serialized Statistics updates and substantial MediaCarousel,
-Open-Meteo, Navimow, ControlLight and MQTT case-study evolution.
+Versions `v0.2.0` through `v0.5.0` are published and immutable. Their dated
+scope and release-readiness documents remain historical evidence. Version
+`v0.5.0` adds bounded latest-command-wins MQTT behavior, reproducible
+workstream coordination, target-bound Channel-v8 deployment, scope-bound
+one-click approval, secure Windows child execution and the admitted case-study
+evolution.
 
-Current `main` is the post-v0.4 development line prepared for the v0.5 release
-candidate. Its repository-integrated work includes the bounded
-latest-command-wins MQTT implementation, worktree and handover guardrails,
-target-bound standalone-module deployment, scope-bound one-click approval and
-the shared secure child-process boundary. The MQTT runtime fileset is active,
-its two owners were migrated through the one-use transaction, and a supervised
-rapid-command scenario independently confirmed supersession without a new
-failure while restoring the starting device state.
+Current `main` starts the post-v0.5 development line. The initial v0.6
+inventory admits no work automatically: operational observations, helper
+activation, retention and later case-study changes require fresh evidence and
+their own explicit gates. See `project/SAEF_V0_6_INVENTORY.md` for the current
+intake and non-commitments.
+
+The v0.5 MQTT runtime fileset is active, its two owners were migrated through
+the one-use transaction, and a supervised rapid-command scenario independently
+confirmed supersession without a new failure while restoring the starting
+device state. GitHub issue 1 is closed with the sanitized terminal report on
+the published release revision.
 
 OwnTracks completed the first separately gated Windows qualification, profile
 installation and one-click live activation. MediaCarousel completed its
@@ -204,7 +208,7 @@ first such profile is OwnTracks. No other module receives authority from that
 installation, and the channel does not expose a general remote PowerShell
 session.
 
-The post-v0.4 line also contains a repository-complete scope-bound approval
+The v0.5 release also contains a repository-complete scope-bound approval
 path for channel version 8. It turns one reviewed standalone-module plan into
 one explicit **Jetzt anwenden** action while retaining qualification, fresh
 preflight, server lock ordering, independent postflight, automatic rollback
@@ -214,7 +218,7 @@ target activation remain independent gates. OwnTracks is the first reference
 profile; Media Carousel is a later reuse target. Standalone-module cross-root
 retention remains specified but disabled.
 
-The current repository line adds a shared internal Windows child-process
+The v0.5 release adds a shared internal Windows child-process
 contract for hash-pinned PowerShell children. It provides explicit timeout,
 combined output bounds and process-tree termination, and keeps approval
 capabilities out of ordinary child command lines. The exact contract passed

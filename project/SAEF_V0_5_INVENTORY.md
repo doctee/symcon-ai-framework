@@ -1,10 +1,11 @@
 # SAEF v0.5 Engineering Inventory
 
-**Status:** Release scope frozen; release candidate preparation in progress
+**Status:** Published historical release inventory
 **Inventory date:** 2026-09-16
 **Published baseline:** `v0.4.0`
 **Baseline revision:** `de8a59d9f8d30e38d0fa18058057c620446f12c0`
-**Reconciled revision:** `b30dad4bee001d852029bb78b6fd94917e0eaccc`
+**Reconciled revision:** `f02d36a8c404f949b8d4433db8f28fa2d52dd66b`
+**Release revision:** `f02d36a8c404f949b8d4433db8f28fa2d52dd66b`
 
 ## Purpose
 
@@ -16,10 +17,10 @@ granting another live, release or deletion authority.
 
 ## Baseline And API
 
-At the reconciled revision:
+At the release revision:
 
-- `v0.4.0` remains the latest published release;
-- `origin/main` contains 195 commits and 535 changed paths after `v0.4.0`;
+- `v0.5.0` is the latest published release;
+- the annotated tag resolves to the exact protected-main merge revision;
 - the public helper contract remains 30 functions and three constants;
 - no post-v0.4 public helper signature or constant changed; and
 - Runtime Diagnostics still composes ConfigurationHash, Registry, Statistics
@@ -122,17 +123,13 @@ The frozen v0.5 scope excludes:
 - another live target, command, restart, provider or device action; and
 - a Stable 1.0 or `v1.0.0` declaration.
 
-## Remaining Release Gates
+## Release Outcome
 
-1. Complete the release-candidate version, changelog, API and generated-artifact
-   checks in the dedicated clean workstream.
-2. Review and merge that exact candidate through a protected-main pull request.
-3. Reconcile and close GitHub issue 1 only after the sanitized terminal result
-   is present on `main`.
-4. Verify exact-revision post-merge CI, then create and independently verify the
-   annotated `v0.5.0` tag and GitHub Release through separate publication gates.
-5. Keep worktree, branch, backup and private-evidence retention as later exact
-   allowlist deletion gates.
+The exact candidate passed full local and pull-request checks, merged through
+PR 130, passed post-merge CI and carried the sanitized MQTT terminal report on
+`main`. GitHub issue 1 was then closed. The annotated `v0.5.0` tag and GitHub
+Release were published and independently verified on 2026-09-16.
 
-The release scope is coherent and frozen. This inventory grants no merge, tag,
-release, live mutation or cleanup authority.
+Worktree, branch, backup and private-evidence retention remain later exact
+allowlist deletion gates. This historical inventory grants no new live
+mutation, publication or cleanup authority.
