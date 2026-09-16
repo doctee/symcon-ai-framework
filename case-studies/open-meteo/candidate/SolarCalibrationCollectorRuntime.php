@@ -754,8 +754,7 @@ final class SolarCalibrationCollectorRuntime
         array $daily,
         array $samples,
         float $minimumClassificationCoverage
-    ): array
-    {
+    ): array {
         foreach ($daily as &$day) {
             $counts = [
                 'unconstrained' => 0,

@@ -91,6 +91,9 @@ Important current artifacts include:
 - `project/SAEF_V0_4_RELEASE_READINESS.md`
 - `project/SAEF_V0_5_INVENTORY.md`
 - `project/SAEF_V0_5_REPOSITORY_RECONCILIATION.md`
+- `project/SAEF_V0_5_SCOPE.md`
+- `project/SAEF_V0_5_PUBLIC_API_AUDIT.md`
+- `project/SAEF_V0_5_RELEASE_READINESS.md`
 - `project/SAEF_DEPLOYMENT_CHANNEL_SECURITY_GATE.md`
 - `project/STANDALONE_MODULE_DEPLOYMENT_CHANNEL.md`
 - `adr/ADR-0005-generate-symcon-helper-bundles.md`
@@ -170,21 +173,25 @@ complete module distributions, worktree-isolated tooling, safer object
 mutation, serialized Statistics updates and substantial MediaCarousel,
 Open-Meteo, Navimow, ControlLight and MQTT case-study evolution.
 
-Current `main` is the post-v0.4 development line. Its repository-integrated
-work now includes the bounded latest-command-wins MQTT implementation,
-worktree and handover guardrails, target-bound standalone-module deployment,
-scope-bound one-click approval and the shared secure child-process boundary.
-The MQTT work also contains repository-only live-adoption preparation that
-keeps current runtime-fileset activation separate from the later two-owner
-source migration; neither live gate has been performed.
-OwnTracks has completed the first separately gated Windows qualification,
-profile installation and one-click live activation. Navimow has exercised the
-standalone publisher and controlled module-update path through mowing
-analytics, the HTML SDK map and physical iPad validation. These operational
-results do not authorize another target, publication, live mutation or
-cleanup. See `project/SAEF_V0_5_INVENTORY.md` and
-`project/SAEF_V0_5_REPOSITORY_RECONCILIATION.md` for the current release
-intake and remaining gates.
+Current `main` is the post-v0.4 development line prepared for the v0.5 release
+candidate. Its repository-integrated work includes the bounded
+latest-command-wins MQTT implementation, worktree and handover guardrails,
+target-bound standalone-module deployment, scope-bound one-click approval and
+the shared secure child-process boundary. The MQTT runtime fileset is active,
+its two owners were migrated through the one-use transaction, and a supervised
+rapid-command scenario independently confirmed supersession without a new
+failure while restoring the starting device state.
+
+OwnTracks completed the first separately gated Windows qualification, profile
+installation and one-click live activation. MediaCarousel completed its
+reversible package-ownership migration and independent postflight. Navimow
+exercised the standalone publisher and controlled module-update path through
+mowing analytics, the HTML SDK map and physical iPad validation. Open-Meteo
+completed bounded calibration-evidence retention and deployed its refined
+calibration policy; its passive analysis backlog continues without blocking
+the framework release. These operational results do not authorize another
+target, publication, live mutation or cleanup. See the v0.5 inventory, scope,
+API audit and release-readiness documents for the exact boundary.
 
 The Diagnostics helper set covers configuration hashes, Registry metadata,
 Statistics and bounded error ring buffers; `RI-002` demonstrates their

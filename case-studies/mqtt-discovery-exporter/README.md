@@ -68,6 +68,7 @@ become an SAEF reference implementation.
 | `41-latest-command-wins-live-adoption-preparation.md` | Two-sequence runtime and owner adoption, hash-bound owner transaction, replay/crash/rollback controls, MCP transport boundary and deferred live gates. |
 | `42-supersession-claim-root-windows-qualification.md` | Windows PowerShell 5.1 and protected-DACL gate for the one-use owner-migration claim root, with scratch-only qualification and empty-leaf rollback. |
 | `43-atomic-claim-root-production-correction.md` | Production-evidence correction using exclusive native creation with the final protected DACL, collision rejection and production-like inherited-parent qualification. |
+| `44-latest-command-wins-live-adoption-result.md` | Sanitized terminal runtime activation, two-owner migration, independent postflight and supervised rapid-command evidence. |
 | `candidate/MqttDiscoveryExporterCore.php` | Side-effect-free normalization, payload, parsing, hashing and cleanup-planning core. |
 | `candidate/MqttDiscoveryExporterRuntime.php` | Runtime adapter for diagnostics, reconcile, MQTT execution, indexed dispatch and exact cleanup. |
 | `../../tests/mqtt-discovery-exporter/fixtures/discovery-capabilities.json` | Sanitized deterministic discovery fixtures for every supported capability combination. |
@@ -109,9 +110,11 @@ The completed implementation demonstrates:
   shared gateway;
 - repeatable offline tests and supervised live integration evidence.
 
-Post-v0.4 work now implements the bounded latest-command-wins model in the
-repository candidate and deterministically generated fileset. The live owners
-and active Symcon fileset remain unchanged.
+Post-v0.4 work implements the bounded latest-command-wins model in the
+repository candidate and deterministically generated fileset. The generated
+runtime fileset is active, the two live owners use the current dispatch
+contract, and independent postflight plus a supervised rapid-command scenario
+confirmed the intended supersession classification.
 
 The read-only inventory in report 39 confirmed the complete two-owner consumer
 set and the then-current repository-identical active runtime. It admitted
@@ -147,8 +150,17 @@ Report 43 corrects that installation boundary without changing the shared SAEF
 parent. The final leaf is created exclusively and atomically with its protected
 DACL; a concurrent or pre-existing path is never re-ACL'd or removed. The
 replacement Windows PowerShell 5.1 qualification passed all five positive and
-six negative cases using only a cleaned scratch tree. Repository integration
-and all production mutation remain separate pending gates.
+six negative cases using only a cleaned scratch tree.
+
+Report 44 closes the separately gated production sequence. The current runtime
+fileset was activated through the restricted channel, two owners and their ten
+events were migrated exactly once, and independent read-only inspection
+confirmed the resulting state. A passive observation remained intentionally
+inconclusive because no natural command occurred. The later supervised
+`ON`-then-`OFF` scenario used an independent temporary producer and confirmed
+one superseded intermediate command, one accepted newest command, unchanged
+failure diagnostics and restoration of the starting state. The producer was
+then absent. No second migration or command apply is authorized.
 
 The current supervised client-transport pilot manages two light entities. The
 second state-only entity has additionally demonstrated fail-closed handling

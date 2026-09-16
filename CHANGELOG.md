@@ -9,6 +9,8 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-16
+
 ### Security
 
 - Added a shared hash-pinned Windows PowerShell child-process contract with
@@ -32,6 +34,16 @@ This project adheres to Semantic Versioning.
   remain unchanged; shared vendor activation requires matching lockfiles.
 
 ### Added
+
+- Added the sanitized terminal MQTT latest-command-wins adoption result. The
+  current runtime fileset and two owners were migrated through independent
+  gates, and a supervised rapid command proved that the intermediate command
+  is classified as superseded while the newest command is confirmed without a
+  new failure.
+- Added bounded Open-Meteo calibration backlog processing, immutable evidence
+  retention controls and a refined curtailment-aware policy that distinguishes
+  signed storage flow, shared-grid diagnostics, local shading and minimum
+  daily coverage without activating a calibration factor.
 
 - Added the MQTT supersession claim-root Windows gate: a fixed-path,
   non-repairing protected-DACL initializer and a scratch-only Windows
