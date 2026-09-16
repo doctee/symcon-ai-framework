@@ -33,11 +33,16 @@ collector driver. The remaining work is a read-only fachliches review after
 the analysis backlog drains. Calibration-factor activation, manual collection,
 source rollback and later evidence deletion remain separate gates.
 
-### Shared Statistics activation
+### Shared Statistics reconciliation
 
-The deferred shared Statistics helper and its restart-dependent regressions
-must be revalidated against current owners and runtime state before admission.
-No helper activation or restart is implied by this inventory.
+Repository and retained private evidence showed that the helper activation was
+already completed through the earliest effective owner during v0.4. The
+currently activated v0.5 MQTT runtime package contains the same byte-identical
+Statistics helper as the canonical source and both generated consumers.
+
+The stale deferral is therefore closed without a new live gate, activation or
+restart. See `project/SAEF_V0_6_SHARED_STATISTICS_RECONCILIATION.md` for the
+evidence and remaining retention boundary.
 
 ### Natural-cycle and optional case-study work
 
@@ -69,4 +74,5 @@ A candidate enters a future frozen scope only after it has:
 This inventory does not decide the next version number beyond the working v0.6
 label, freeze a release scope, change the public helper API, activate a helper
 or calibration factor, publish a module, mutate a live system, restart a
-service or delete retained material.
+service or delete retained material. The Shared Statistics reconciliation
+records a completed historical gate; it does not admit a new v0.6 feature.
