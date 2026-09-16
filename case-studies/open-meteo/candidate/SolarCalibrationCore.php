@@ -2,6 +2,28 @@
 
 declare(strict_types=1);
 
+/**
+ * @phpstan-type CurtailmentThresholds array{
+ *   minimumForecastKw: float,
+ *   maximumRealizedToForecastRatio: float,
+ *   minimumMeasurementCoverage: float,
+ *   minimumAuxiliaryCoverage: float,
+ *   minimumHeartbeatCoverage: float,
+ *   fullSocPercent: float,
+ *   minimumPossibleFullSocFraction: float,
+ *   minimumFullSocFraction: float,
+ *   minimumBatteryChargingAverageW: float,
+ *   maximumGridExportAverageW: float,
+ *   maximumGridImportAverageW: float,
+ *   minimumDailyClassificationCoverage: float,
+ *   batteryChargingSign: 'positive'|'negative',
+ *   gridFlowEvidenceMode: 'exclusive_target'|'diagnostic_only',
+ *   localTimezone: string,
+ *   knownShadingWindows: array<int, array{startMinuteOfDay: int, endMinuteOfDay: int}>,
+ *   signalCarrySeconds: int,
+ *   heartbeatMaxGapSeconds: int
+ * }
+ */
 final class SolarCalibrationCore
 {
     private const MAX_POINTS = 256;
@@ -446,26 +468,7 @@ final class SolarCalibrationCore
 
     /**
      * @param array<string, mixed> $policy
-     * @return array{
-     *   minimumForecastKw: float,
-     *   maximumRealizedToForecastRatio: float,
-     *   minimumMeasurementCoverage: float,
-     *   minimumAuxiliaryCoverage: float,
-     *   minimumHeartbeatCoverage: float,
-     *   fullSocPercent: float,
-     *   minimumPossibleFullSocFraction: float,
-     *   minimumFullSocFraction: float,
-     *   minimumBatteryChargingAverageW: float,
-     *   maximumGridExportAverageW: float,
-     *   maximumGridImportAverageW: float,
-     *   minimumDailyClassificationCoverage: float,
-     *   batteryChargingSign: string,
-     *   gridFlowEvidenceMode: string,
-     *   localTimezone: string,
-     *   knownShadingWindows: array<int, array{startMinuteOfDay: int, endMinuteOfDay: int}>,
-     *   signalCarrySeconds: int,
-     *   heartbeatMaxGapSeconds: int
-     * }
+     * @return CurtailmentThresholds
      */
     private static function validatedCurtailmentThresholds(array $policy): array
     {
@@ -533,11 +536,11 @@ final class SolarCalibrationCore
         return $validated;
     }
 
-    /** @param array<string, mixed> $thresholds */
+    /** @param CurtailmentThresholds $thresholds */
     private static function matchesKnownShadingWindow(int $from, int $to, array $thresholds): bool
     {
-        $windows = $thresholds['knownShadingWindows'] ?? [];
-        if (!is_array($windows) || $windows === []) {
+        $windows = $thresholds['knownShadingWindows'];
+        if ($windows === []) {
             return false;
         }
         $timezone = new DateTimeZone((string)$thresholds['localTimezone']);
@@ -738,7 +741,7 @@ final class SolarCalibrationCore
 
     /**
      * @param array<string, array<string, float|null>> $summaries
-     * @param array<string, int|float> $thresholds
+     * @param CurtailmentThresholds $thresholds
      * @return array{string, bool, array<int, string>}
      */
     private static function classifyCurtailmentEvidence(

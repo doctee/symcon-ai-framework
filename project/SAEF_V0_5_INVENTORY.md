@@ -1,148 +1,138 @@
 # SAEF v0.5 Engineering Inventory
 
-**Status:** Repository scope reconciled; release scope proposed, not frozen
-**Inventory date:** 2026-09-12
+**Status:** Release scope frozen; release candidate preparation in progress
+**Inventory date:** 2026-09-16
 **Published baseline:** `v0.4.0`
 **Baseline revision:** `de8a59d9f8d30e38d0fa18058057c620446f12c0`
-**Reconciled revision:** `d278226bf8f038e501ba1479b0bc2ea2ab867244`
+**Reconciled revision:** `b30dad4bee001d852029bb78b6fd94917e0eaccc`
 
 ## Purpose
 
-This inventory reconciles the post-v0.4 development line after its initial
-single-candidate intake. It distinguishes repository-integrated framework work,
-case-study evidence, completed target-specific live gates and work that remains
-outside the proposed v0.5 release.
+This inventory freezes the public v0.5 release boundary after repository,
+Windows qualification and independently gated operational work overtook the
+initial 2026-09-12 intake. It records reusable framework changes and sanitized
+case-study evidence without carrying forward installation identities or
+granting another live, release or deletion authority.
 
-An operational result does not grant authority for another publication, target,
-live mutation, restart or cleanup. Those gates remain independent even when the
-underlying reusable contract is proposed for v0.5.
-
-## Baseline and API
+## Baseline And API
 
 At the reconciled revision:
 
 - `v0.4.0` remains the latest published release;
-- `origin/main` contains the complete post-v0.4 repository history through pull
-  request 119;
+- `origin/main` contains 195 commits and 535 changed paths after `v0.4.0`;
 - the public helper contract remains 30 functions and three constants;
-- no post-v0.4 public helper signature was added or changed; and
-- Runtime Diagnostics continues to compose ConfigurationHash, Registry,
-  Statistics and ErrorRingBuffer without another storage API.
+- no post-v0.4 public helper signature or constant changed; and
+- Runtime Diagnostics still composes ConfigurationHash, Registry, Statistics
+  and ErrorRingBuffer without another public storage abstraction.
 
-The release is therefore expected to be minor because of new operational
-capabilities and case-study behavior, not because of a helper API break.
+The target is a minor release because it adds operational framework
+capabilities and case-study behavior without breaking the helper API.
 
-## Proposed v0.5 Scope
+## Frozen v0.5 Scope
 
 ### V05-001: Rapid MQTT command supersession
 
-The exporter-private latest-command-wins implementation is integrated. It uses
-immutable event payloads, bounded generation arbitration, existing Registry and
-Statistics responsibilities and deterministic concurrency tests. It adds no
-public helper API.
+The exporter-private latest-command-wins implementation uses immutable event
+payloads, bounded generation arbitration, existing Registry and Statistics
+responsibilities and deterministic concurrency tests. The deterministic
+runtime fileset was activated, exactly two owners and ten events were migrated
+through a one-use transaction, and independent postflight confirmed the
+resulting state.
 
-The repository now also contains the case-study-local, hash-bound owner
-migration preparation with a one-use append-only claim and deterministic
-rollback, replay, drift and interruption tests. A fresh inventory confirms that
-the installation still loads the historical runtime generation and historical
-three-argument owner dispatches. Current runtime activation, owner migration
-and functional rapid-command evidence remain separate live gates, so repository
-completion must not be presented as confirmed live adoption.
-
-The first deferred Windows boundary initially passed scratch qualification, but
-its strict protected-parent assumption did not match the inherited ACL of the
-shared production SAEF root. The first production read-only preflight stopped
-before mutation. The replacement repository contract uses exclusive native
-creation with the final protected DACL and adds production-like inherited-parent,
-parent-delete and between-check-and-create collision scenarios. The replacement
-Windows PowerShell 5.1 qualification passed all five positive and six negative
-cases with successful scratch cleanup and no production or live action.
-Repository integration, production preflight and provisioning remain separate
-gates.
+A passive observation remained non-conclusive because no natural command
+occurred. A separate supervised reversible scenario then confirmed one
+superseded intermediate command, successful authoritative confirmation of the
+newest command, unchanged failure diagnostics and restoration of the starting
+device state. The temporary producer was absent afterward. No public helper
+API was added.
 
 ### V05-002: Reproducible isolated workstreams
 
 The primary-checkout guard, fail-closed fast-forward synchronization, clean
 workstream creation, lock-identical Composer toolchain reuse and verifiable
-private handover contract are integrated. These rules make isolated worktrees
-the only supported build, publication and deployment source.
+private handover contract make isolated worktrees the supported build,
+publication and deployment source.
 
 ### V05-003: Target-bound standalone-module deployment
 
 Channel version 8 extends the existing five-verb restricted transport with
 manifest-driven standalone-module packages and hash-pinned server-local target
-profiles. It does not accept client-selected paths or commands. OwnTracks
-completed the first separately gated profile installation and activation.
+profiles. OwnTracks completed the first profile installation and activation.
+MediaCarousel later completed its reversible package-ownership migration and
+independent read-only postflight without widening target authority.
 
 ### V05-004: Scope-bound one-click approval
 
 The one-use HMAC approval contract binds one canonical plan, target, adapter,
 ordered operation set, baseline identities, expiry, nonce and opaque user and
 host identities. Fresh preflight, lock ordering, postflight, rollback and crash
-reconciliation remain distinct internal phases behind one conscious
-**Jetzt anwenden** action.
+reconciliation remain explicit internal phases behind one conscious apply
+action.
 
 ### V05-005: Secure Windows child-process execution
 
 The shared internal launcher pins Windows PowerShell 5.1 scripts by hash,
 bounds arguments, environment, output and runtime, closes standard input and
-uses a kill-on-close Job Object. It adds no remote verb or public API. Exact
-Windows qualification, protected installation and first OwnTracks use are
-complete for the current source generation.
+uses a kill-on-close Job Object. Exact Windows qualification, protected
+installation and target use are complete for the admitted source generations.
 
-## Case-Study Evidence in the Development Line
+## Included Case-Study Evidence
 
 ### OwnTracks
 
 OwnTracks proves the Channel-v8 standalone target, recovery-capable adapter,
-active-identity reseal and scope-bound approval composition. The first exact
-one-click plan completed activation and independent live postflight without a
-service restart, provider contact or expanded target authority.
+active-identity reseal and scope-bound approval composition. Its exact plan
+completed activation and independent live postflight without expanding target
+authority.
+
+### MediaCarousel
+
+MediaCarousel proves the separately gated transition from a reviewed Module
+Control checkout to an adapter-owned Channel-v8 package. The one targeted
+reload, preserved configuration and reference set, transaction inspection and
+independent read-only postflight completed without a service restart.
 
 ### Navimow
 
-Navimow progressed beyond the original v0.5 inventory through bounded
-receive-only MQTT operation, revision-bound local maps, zone state and
-statistics, mowing analytics and an HTML SDK map. The current standalone module
-was published and rolled out through controlled gates; Safari controls, overlay
-layout, station orientation and fixed-size legend behavior were corrected and
-the final legend behavior was confirmed on a physical iPad.
+Navimow contributes bounded receive-only operation, revision-bounded local
+maps, mowing analytics, the HTML SDK map and subsequent Safari and physical
+iPad validation. These results remain case-study evidence, not generic device
+or provider authority.
 
-These are substantial case-study additions. They do not create another generic
-deployment authority or helper API.
+### Open-Meteo
 
-### Open-Meteo and other case studies
-
-Open-Meteo received a bounded nowcast presentation correction. Other case-study
-work remains part of v0.5 only where it changed public repository artifacts;
-installation-specific observations and private cleanup remain outside the
-release contract.
+Open-Meteo contributes bounded calibration backlog processing, fail-closed
+snapshot limits, protected evidence retention and curtailment-aware policy
+version 2.1. A separately authorized cleanup retained a bounded rollback set.
+The refined policy was deployed and observed through its natural scheduled
+cycle without activating a calibration factor. Its passive analysis backlog
+does not block v0.5.
 
 ## Explicit Deferrals
 
-The proposed v0.5 scope does not include:
+The frozen v0.5 scope excludes:
 
 - a new public helper API;
 - implementation or live use of cross-root standalone-module retention;
-- extraction, integration or live activation of the MediaCarousel Channel-v8
-  adapter;
-- unverified MQTT exporter live-migration claims;
-- service restarts, provider contact or device commands;
-- local worktree, transfer-package, deployment-state or backup deletion; or
+- calibration-factor activation or manual Open-Meteo collector execution;
+- Shared Statistics helper activation and its restart-dependent regressions;
+- optional Seestall legacy-pie, irrigation-cycle and retained rollback cleanup;
+- local worktree, branch, transfer-package, deployment-state or backup
+  deletion;
+- another live target, command, restart, provider or device action; and
 - a Stable 1.0 or `v1.0.0` declaration.
 
-## Remaining Gates
+## Remaining Release Gates
 
-1. Review and merge the repository reconciliation and scope decision.
-2. Complete the separately gated MQTT runtime-fileset and owner adoption, then
-   reconcile GitHub issue 1 with independent live postflight evidence.
-3. Extract the MediaCarousel adapter from its historical recovery worktree into
-   a current clean workstream before any integration decision.
-4. Inventory and separately authorize retention cleanup for historical
-   worktrees, branches and immutable deployment backups.
-5. Freeze the exact v0.5 scope, audit the 30-function API, update framework
-   versions and generated artifacts, and run release readiness.
-6. Tag and publish v0.5 only through later explicit release gates.
+1. Complete the release-candidate version, changelog, API and generated-artifact
+   checks in the dedicated clean workstream.
+2. Review and merge that exact candidate through a protected-main pull request.
+3. Reconcile and close GitHub issue 1 only after the sanitized terminal result
+   is present on `main`.
+4. Verify exact-revision post-merge CI, then create and independently verify the
+   annotated `v0.5.0` tag and GitHub Release through separate publication gates.
+5. Keep worktree, branch, backup and private-evidence retention as later exact
+   allowlist deletion gates.
 
-The current evidence supports a coherent v0.5 release line. It does not yet
-authorize the version bump, tag, GitHub release, live migration or cleanup.
+The release scope is coherent and frozen. This inventory grants no merge, tag,
+release, live mutation or cleanup authority.
