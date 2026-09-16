@@ -154,7 +154,10 @@ function calibrationCurtailmentPolicy(mixed $policy): array
     }
     $mode = $policy['mode'] ?? null;
     if ($mode === 'none') {
-        return ['mode' => 'none'];
+        return [
+            'mode' => 'none',
+            'minimumDailyClassificationCoverage' => calibrationDailyCoverage($policy),
+        ];
     }
     if ($mode !== 'zero_export_storage') {
         throw new InvalidArgumentException('Curtailment policy mode is invalid.');
@@ -198,9 +201,10 @@ function calibrationCurtailmentPolicy(mixed $policy): array
         'fullSocPercent' => [0.0, 100.0],
         'minimumPossibleFullSocFraction' => [0.0, 1.0],
         'minimumFullSocFraction' => [0.0, 1.0],
-        'maximumChargeAbsoluteAverageW' => [0.0, 10 * 1000.0],
+        'minimumBatteryChargingAverageW' => [0.0, 10 * 1000.0],
         'maximumGridExportAverageW' => [0.0, 10 * 1000.0],
         'maximumGridImportAverageW' => [0.0, 10 * 1000.0],
+        'minimumDailyClassificationCoverage' => [0.0, 1.0],
     ];
     $normalized = [
         'mode' => $mode,
@@ -217,6 +221,40 @@ function calibrationCurtailmentPolicy(mixed $policy): array
         }
         $normalized[$key] = $number;
     }
+    $batteryChargingSign = $policy['batteryChargingSign'] ?? null;
+    if (!in_array($batteryChargingSign, ['positive', 'negative'], true)) {
+        throw new InvalidArgumentException('Battery charging sign is invalid.');
+    }
+    $normalized['batteryChargingSign'] = $batteryChargingSign;
+    $gridFlowEvidenceMode = $policy['gridFlowEvidenceMode'] ?? null;
+    if (!in_array($gridFlowEvidenceMode, ['exclusive_target', 'diagnostic_only'], true)) {
+        throw new InvalidArgumentException('Grid-flow evidence mode is invalid.');
+    }
+    $normalized['gridFlowEvidenceMode'] = $gridFlowEvidenceMode;
+    $localTimezone = $policy['localTimezone'] ?? null;
+    if (!is_string($localTimezone)) {
+        throw new InvalidArgumentException('Local timezone is invalid.');
+    }
+    try {
+        new DateTimeZone($localTimezone);
+    } catch (Exception) {
+        throw new InvalidArgumentException('Local timezone is invalid.');
+    }
+    $normalized['localTimezone'] = $localTimezone;
+    $windows = $policy['knownShadingWindows'] ?? null;
+    if (!is_array($windows) || count($windows) > 8) {
+        throw new InvalidArgumentException('Known-shading windows are invalid.');
+    }
+    $normalizedWindows = [];
+    foreach ($windows as $window) {
+        $start = is_array($window) ? ($window['startMinuteOfDay'] ?? null) : null;
+        $end = is_array($window) ? ($window['endMinuteOfDay'] ?? null) : null;
+        if (!is_int($start) || !is_int($end) || $start < 0 || $start > 1439 || $end < 1 || $end > 1440 || $start === $end) {
+            throw new InvalidArgumentException('Known-shading window is invalid.');
+        }
+        $normalizedWindows[] = ['startMinuteOfDay' => $start, 'endMinuteOfDay' => $end];
+    }
+    $normalized['knownShadingWindows'] = $normalizedWindows;
     $possibleFullSocFraction = $normalized['minimumPossibleFullSocFraction'] ?? null;
     $confirmedFullSocFraction = $normalized['minimumFullSocFraction'] ?? null;
     if (!is_float($possibleFullSocFraction) || !is_float($confirmedFullSocFraction)) {
@@ -234,4 +272,19 @@ function calibrationCurtailmentPolicy(mixed $policy): array
     }
 
     return $normalized;
+}
+
+/** @param array<string, mixed> $policy */
+function calibrationDailyCoverage(array $policy): float
+{
+    $value = $policy['minimumDailyClassificationCoverage'] ?? 0.9;
+    if (!is_int($value) && !is_float($value)) {
+        throw new InvalidArgumentException('Daily classification coverage is not numeric.');
+    }
+    $number = (float)$value;
+    if (!is_finite($number) || $number < 0.0 || $number > 1.0) {
+        throw new InvalidArgumentException('Daily classification coverage is out of range.');
+    }
+
+    return $number;
 }

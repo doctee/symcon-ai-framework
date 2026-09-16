@@ -210,6 +210,42 @@ try {
     $runtime = new SolarCalibrationCollectorRuntime(
         calibrationRuntimeConfiguration($firstDirectory, 'solar_test')
     );
+    $annotateDaily = new ReflectionMethod(SolarCalibrationCollectorRuntime::class, 'annotateDailyClassifications');
+    $dayFrom = 1704067200;
+    $partialDaily = $annotateDaily->invoke($runtime, [[
+        'validFrom' => $dayFrom,
+        'validTo' => $dayFrom + 86400,
+        'forecastKwh' => 4.0,
+        'measuredKwh' => 3.5,
+    ]], [[
+        'validFrom' => $dayFrom,
+        'validTo' => $dayFrom + 3600,
+        'durationSeconds' => 3600,
+        'coverage' => 1.0,
+        'classification' => 'unconstrained',
+    ]], 0.9);
+    calibrationRuntimeCheck(
+        $partialDaily[0]['calibrationEligible'] === false
+            && abs((float)$partialDaily[0]['classificationCoverage'] - (1 / 24)) < 0.000001,
+        'Partial daily classification coverage was incorrectly eligible.'
+    );
+    $completeDaily = $annotateDaily->invoke($runtime, [[
+        'validFrom' => $dayFrom,
+        'validTo' => $dayFrom + 86400,
+        'forecastKwh' => 4.0,
+        'measuredKwh' => 3.5,
+    ]], [[
+        'validFrom' => $dayFrom,
+        'validTo' => $dayFrom + 86400,
+        'durationSeconds' => 86400,
+        'coverage' => 0.95,
+        'classification' => 'unconstrained',
+    ]], 0.9);
+    calibrationRuntimeCheck(
+        $completeDaily[0]['calibrationEligible'] === true
+            && abs((float)$completeDaily[0]['classificationCoverage'] - 0.95) < 0.000001,
+        'Complete daily classification coverage was not eligible.'
+    );
     $first = $runtime->run();
     calibrationRuntimeCheck($first['success'] === true, 'First runtime batch failed.');
     calibrationRuntimeCheck(

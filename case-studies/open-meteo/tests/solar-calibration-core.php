@@ -67,9 +67,14 @@ $policy = [
     'fullSocPercent' => 98.0,
     'minimumPossibleFullSocFraction' => 0.1,
     'minimumFullSocFraction' => 0.5,
-    'maximumChargeAbsoluteAverageW' => 50.0,
+    'minimumBatteryChargingAverageW' => 50.0,
     'maximumGridExportAverageW' => 25.0,
     'maximumGridImportAverageW' => 25.0,
+    'minimumDailyClassificationCoverage' => 0.9,
+    'batteryChargingSign' => 'positive',
+    'gridFlowEvidenceMode' => 'exclusive_target',
+    'localTimezone' => 'Europe/Berlin',
+    'knownShadingWindows' => [],
     'signalCarrySeconds' => 900,
     'heartbeatMaxGapSeconds' => 900,
 ];
@@ -93,6 +98,10 @@ calibrationCheck(
     'Curtailment was not classified: ' . json_encode($classified[0], JSON_THROW_ON_ERROR)
 );
 calibrationCheck($classified[0]['calibrationEligible'] === false, 'Curtailment was calibration eligible.');
+calibrationCheck(
+    ($classified[0]['constraintEvidence']['chargeAverageW'] ?? null) === 0.0,
+    'Signed charge average is missing.'
+);
 
 $unconstrainedSignals = $signals;
 $unconstrainedSignals['stateOfChargePercent'] = [['timestamp' => 900, 'value' => 80]];
@@ -114,6 +123,62 @@ $partialSignals['stateOfChargePercent'] = [
 ];
 $uncertain = SolarCalibrationCore::classifyPowerSamples($classificationSample, $partialSignals, $policy);
 calibrationCheck($uncertain[0]['classification'] === 'uncertain', 'Partial curtailment was not uncertain.');
+
+$chargingSignals = $signals;
+$chargingSignals['chargePowerW'] = array_map(
+    static fn(array $event): array => ['timestamp' => $event['timestamp'], 'value' => 120],
+    $activeEvents
+);
+$charging = SolarCalibrationCore::classifyPowerSamples($classificationSample, $chargingSignals, $policy);
+calibrationCheck(
+    $charging[0]['classification'] === 'unconstrained'
+        && $charging[0]['classificationReasons'] === ['battery_charging_absorbs_generation'],
+    'Confirmed battery charging was not treated as unconstrained.'
+);
+
+$dischargingSignals = $signals;
+$dischargingSignals['chargePowerW'] = array_map(
+    static fn(array $event): array => ['timestamp' => $event['timestamp'], 'value' => -120],
+    $activeEvents
+);
+$discharging = SolarCalibrationCore::classifyPowerSamples($classificationSample, $dischargingSignals, $policy);
+calibrationCheck(
+    $discharging[0]['classification'] === 'curtailed',
+    'Battery discharge incorrectly exculpated curtailment.'
+);
+
+$diagnosticGridPolicy = $policy;
+$diagnosticGridPolicy['gridFlowEvidenceMode'] = 'diagnostic_only';
+$diagnosticGridSignals = $signals;
+$diagnosticGridSignals['gridExportW'] = array_map(
+    static fn(array $event): array => ['timestamp' => $event['timestamp'], 'value' => 500],
+    $activeEvents
+);
+$diagnosticGrid = SolarCalibrationCore::classifyPowerSamples(
+    $classificationSample,
+    $diagnosticGridSignals,
+    $diagnosticGridPolicy
+);
+calibrationCheck(
+    $diagnosticGrid[0]['classification'] === 'curtailed'
+        && in_array('grid_flow_diagnostic_only', $diagnosticGrid[0]['classificationReasons'], true),
+    'Diagnostic-only site grid flow incorrectly changed the Solar-A classification.'
+);
+
+$shadingPolicy = $policy;
+$shadingPolicy['knownShadingWindows'] = [[
+    'startMinuteOfDay' => 0,
+    'endMinuteOfDay' => 600,
+]];
+$shadingSample = $classificationSample;
+$shadingSample[0]['validFrom'] = 1789455600;
+$shadingSample[0]['validTo'] = 1789459200;
+$shading = SolarCalibrationCore::classifyPowerSamples($shadingSample, $signals, $shadingPolicy);
+calibrationCheck(
+    $shading[0]['classification'] === 'uncertain'
+        && $shading[0]['classificationReasons'] === ['known_shading_window'],
+    'Known morning shading was not excluded from calibration.'
+);
 
 $gapSignals = $signals;
 $gapSignals['solarPowerW'] = [['timestamp' => 900, 'value' => 200]];
