@@ -35,7 +35,10 @@ Every hourly power interval is classified as one of:
 All measured intervals remain in realized metrics. Only `unconstrained`
 intervals enter calibration metrics. Daily energy comparisons are retained and
 annotated with the interval classifications; a day is calibration-eligible only
-when every represented interval is unequivocally unconstrained.
+when every represented interval is unequivocally unconstrained, a measured
+daily value exists and the configured fraction of the complete local day is
+represented. This prevents a handful of hourly samples from qualifying a
+whole-day ratio.
 
 ## Conservative Evidence Rules
 
@@ -49,16 +52,31 @@ interval:
 1. material forecast power and a material realized shortfall;
 2. battery state of charge at the configured full threshold for the required
    fraction of the interval;
-3. no material battery power flow;
-4. grid export and grid import both near zero; and
+3. no confirmed battery charging that could absorb generation;
+4. grid export and grid import both near zero when the grid meter exclusively
+   represents this target; and
 5. sufficient archive measurement, auxiliary-signal and heartbeat coverage.
 
-Active charging or discharging, material import/export, a battery that is not
-full, or an insignificant forecast shortfall rules out the curtailment label.
+Signed battery power is interpreted using an explicit installation-local sign
+convention. Confirmed charging rules out curtailment; discharging does not,
+because it cannot absorb PV generation. Rapid mixed-direction flow whose signed
+average is inconclusive becomes `uncertain`.
+
+Site-grid flow can be configured as `diagnostic_only` when another independent
+generator shares the meter. In that mode, export or import remains recorded but
+cannot exculpate this target. Material import/export rules out curtailment only
+for the `exclusive_target` mode. A battery that is not full or an insignificant
+forecast shortfall still rules out the curtailment label.
 Partial full-battery evidence becomes `uncertain`; incomplete evidence becomes
 `data_gap`. Status, output and house-load summaries remain preserved as
 diagnostic evidence but no undocumented vendor status code is made a mandatory
 classifier gate.
+
+Known, installation-specific shading can be represented as bounded local-time
+windows with an IANA timezone. A material forecast interval whose midpoint lies
+inside such a window is marked `uncertain` with
+`known_shading_window` and is excluded from physical calibration. The window is
+private policy data; public code contains no site-specific hours or location.
 
 ## Safety and Migration Boundary
 

@@ -296,6 +296,7 @@ final class SolarCalibrationCore
                 $thresholds['heartbeatMaxGapSeconds']
             );
             $ratio = $forecastKw > 0.0 ? $measuredKw / $forecastKw : null;
+            $knownShadingWindow = self::matchesKnownShadingWindow($from, $to, $thresholds);
 
             [$classification, $eligible, $reasons] = self::classifyCurtailmentEvidence(
                 $forecastKw,
@@ -303,6 +304,7 @@ final class SolarCalibrationCore
                 $measurementCoverage,
                 $summaries,
                 $heartbeat,
+                $knownShadingWindow,
                 $thresholds
             );
 
@@ -316,12 +318,14 @@ final class SolarCalibrationCore
                     'fullSocFraction' => $summaries['stateOfChargePercent']['thresholdFraction'],
                     'socMinimumPercent' => $summaries['stateOfChargePercent']['minimum'],
                     'socMaximumPercent' => $summaries['stateOfChargePercent']['maximum'],
+                    'chargeAverageW' => $summaries['chargePowerW']['average'],
                     'chargeAbsoluteAverageW' => $summaries['chargePowerW']['absoluteAverage'],
                     'outputAverageW' => $summaries['outputPowerW']['average'],
                     'homeLoadAverageW' => $summaries['homeLoadW']['average'],
                     'gridExportAverageW' => $summaries['gridExportW']['average'],
                     'gridImportAverageW' => $summaries['gridImportW']['average'],
                     'statusDominantCode' => $summaries['statusCode']['dominantValue'],
+                    'knownShadingWindow' => $knownShadingWindow,
                     'auxiliaryCoverage' => self::minimumSignalCoverage($summaries),
                     'signalCoverage' => array_map(
                         static fn(array $summary): float|null => $summary['coverage'],
@@ -451,9 +455,14 @@ final class SolarCalibrationCore
      *   fullSocPercent: float,
      *   minimumPossibleFullSocFraction: float,
      *   minimumFullSocFraction: float,
-     *   maximumChargeAbsoluteAverageW: float,
+     *   minimumBatteryChargingAverageW: float,
      *   maximumGridExportAverageW: float,
      *   maximumGridImportAverageW: float,
+     *   minimumDailyClassificationCoverage: float,
+     *   batteryChargingSign: string,
+     *   gridFlowEvidenceMode: string,
+     *   localTimezone: string,
+     *   knownShadingWindows: array<int, array{startMinuteOfDay: int, endMinuteOfDay: int}>,
      *   signalCarrySeconds: int,
      *   heartbeatMaxGapSeconds: int
      * }
@@ -469,9 +478,10 @@ final class SolarCalibrationCore
             'fullSocPercent' => self::finiteRange($policy['fullSocPercent'] ?? null, 0.0, 100.0, 'fullSocPercent'),
             'minimumPossibleFullSocFraction' => self::finiteRange($policy['minimumPossibleFullSocFraction'] ?? null, 0.0, 1.0, 'minimumPossibleFullSocFraction'),
             'minimumFullSocFraction' => self::finiteRange($policy['minimumFullSocFraction'] ?? null, 0.0, 1.0, 'minimumFullSocFraction'),
-            'maximumChargeAbsoluteAverageW' => self::finiteRange($policy['maximumChargeAbsoluteAverageW'] ?? null, 0.0, 10 * 1000.0, 'maximumChargeAbsoluteAverageW'),
+            'minimumBatteryChargingAverageW' => self::finiteRange($policy['minimumBatteryChargingAverageW'] ?? null, 0.0, 10 * 1000.0, 'minimumBatteryChargingAverageW'),
             'maximumGridExportAverageW' => self::finiteRange($policy['maximumGridExportAverageW'] ?? null, 0.0, 10 * 1000.0, 'maximumGridExportAverageW'),
             'maximumGridImportAverageW' => self::finiteRange($policy['maximumGridImportAverageW'] ?? null, 0.0, 10 * 1000.0, 'maximumGridImportAverageW'),
+            'minimumDailyClassificationCoverage' => self::finiteRange($policy['minimumDailyClassificationCoverage'] ?? 0.9, 0.0, 1.0, 'minimumDailyClassificationCoverage'),
             'signalCarrySeconds' => 0,
             'heartbeatMaxGapSeconds' => 0,
         ];
@@ -485,8 +495,67 @@ final class SolarCalibrationCore
             }
             $validated[$key] = $value;
         }
+        $batteryChargingSign = $policy['batteryChargingSign'] ?? null;
+        if (!in_array($batteryChargingSign, ['positive', 'negative'], true)) {
+            throw new InvalidArgumentException('Invalid battery charging sign.');
+        }
+        $validated['batteryChargingSign'] = $batteryChargingSign;
+        $gridFlowEvidenceMode = $policy['gridFlowEvidenceMode'] ?? null;
+        if (!in_array($gridFlowEvidenceMode, ['exclusive_target', 'diagnostic_only'], true)) {
+            throw new InvalidArgumentException('Invalid grid-flow evidence mode.');
+        }
+        $validated['gridFlowEvidenceMode'] = $gridFlowEvidenceMode;
+        $localTimezone = $policy['localTimezone'] ?? null;
+        if (!is_string($localTimezone)) {
+            throw new InvalidArgumentException('Invalid local timezone.');
+        }
+        try {
+            new DateTimeZone($localTimezone);
+        } catch (Exception) {
+            throw new InvalidArgumentException('Invalid local timezone.');
+        }
+        $validated['localTimezone'] = $localTimezone;
+        $windows = $policy['knownShadingWindows'] ?? null;
+        if (!is_array($windows) || count($windows) > 8) {
+            throw new InvalidArgumentException('Invalid known-shading windows.');
+        }
+        $validatedWindows = [];
+        foreach ($windows as $window) {
+            $start = is_array($window) ? ($window['startMinuteOfDay'] ?? null) : null;
+            $end = is_array($window) ? ($window['endMinuteOfDay'] ?? null) : null;
+            if (!is_int($start) || !is_int($end) || $start < 0 || $start > 1439 || $end < 1 || $end > 1440 || $start === $end) {
+                throw new InvalidArgumentException('Invalid known-shading window.');
+            }
+            $validatedWindows[] = ['startMinuteOfDay' => $start, 'endMinuteOfDay' => $end];
+        }
+        $validated['knownShadingWindows'] = $validatedWindows;
 
         return $validated;
+    }
+
+    /** @param array<string, mixed> $thresholds */
+    private static function matchesKnownShadingWindow(int $from, int $to, array $thresholds): bool
+    {
+        $windows = $thresholds['knownShadingWindows'] ?? [];
+        if (!is_array($windows) || $windows === []) {
+            return false;
+        }
+        $timezone = new DateTimeZone((string)$thresholds['localTimezone']);
+        $midpoint = $from + intdiv($to - $from, 2);
+        $local = (new DateTimeImmutable('@' . $midpoint))->setTimezone($timezone);
+        $minuteOfDay = ((int)$local->format('G') * 60) + (int)$local->format('i');
+        foreach ($windows as $window) {
+            $start = $window['startMinuteOfDay'];
+            $end = $window['endMinuteOfDay'];
+            $matches = $start < $end
+                ? $minuteOfDay >= $start && $minuteOfDay < $end
+                : $minuteOfDay >= $start || $minuteOfDay < $end;
+            if ($matches) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -678,6 +747,7 @@ final class SolarCalibrationCore
         float $measurementCoverage,
         array $summaries,
         float $heartbeatCoverage,
+        bool $knownShadingWindow,
         array $thresholds
     ): array {
         if ($measurementCoverage < $thresholds['minimumMeasurementCoverage']) {
@@ -685,6 +755,9 @@ final class SolarCalibrationCore
         }
         if ($forecastKw < $thresholds['minimumForecastKw']) {
             return ['unconstrained', true, ['forecast_below_curtailment_scope']];
+        }
+        if ($knownShadingWindow) {
+            return ['uncertain', false, ['known_shading_window']];
         }
         if ($ratio === null || $ratio > $thresholds['maximumRealizedToForecastRatio']) {
             return ['unconstrained', true, ['realized_power_not_materially_constrained']];
@@ -704,29 +777,47 @@ final class SolarCalibrationCore
             return ['uncertain', false, ['battery_full_only_partially']];
         }
 
-        $charge = $summaries['chargePowerW']['absoluteAverage'];
+        $chargeAverage = $summaries['chargePowerW']['average'];
+        $chargeAbsoluteAverage = $summaries['chargePowerW']['absoluteAverage'];
         $export = $summaries['gridExportW']['average'];
         $import = $summaries['gridImportW']['average'];
-        if (!is_float($charge) || !is_float($export) || !is_float($import)) {
+        if (!is_float($chargeAverage) || !is_float($chargeAbsoluteAverage) || !is_float($export) || !is_float($import)) {
             return ['data_gap', false, ['required_flow_summary_missing']];
         }
-        if ($charge > $thresholds['maximumChargeAbsoluteAverageW']) {
-            return ['unconstrained', true, ['battery_power_flow_active']];
+        $chargingAverage = $thresholds['batteryChargingSign'] === 'positive'
+            ? $chargeAverage
+            : -$chargeAverage;
+        if ($chargingAverage > $thresholds['minimumBatteryChargingAverageW']) {
+            return ['unconstrained', true, ['battery_charging_absorbs_generation']];
         }
-        if ($export > $thresholds['maximumGridExportAverageW']) {
-            return ['unconstrained', true, ['grid_export_absorbs_generation']];
+        if (
+            $chargeAbsoluteAverage > $thresholds['minimumBatteryChargingAverageW']
+            && abs($chargeAverage) <= $thresholds['minimumBatteryChargingAverageW']
+        ) {
+            return ['uncertain', false, ['battery_power_direction_ambiguous']];
         }
-        if ($import > $thresholds['maximumGridImportAverageW']) {
-            return ['unconstrained', true, ['grid_import_indicates_unmet_demand']];
+        if ($thresholds['gridFlowEvidenceMode'] === 'exclusive_target') {
+            if ($export > $thresholds['maximumGridExportAverageW']) {
+                return ['unconstrained', true, ['grid_export_absorbs_generation']];
+            }
+            if ($import > $thresholds['maximumGridImportAverageW']) {
+                return ['unconstrained', true, ['grid_import_indicates_unmet_demand']];
+            }
         }
 
-        return ['curtailed', false, [
+        $reasons = [
             'battery_full',
             'realized_power_below_forecast',
-            'battery_not_absorbing',
-            'grid_export_near_zero',
-            'grid_import_near_zero',
-        ]];
+            'battery_not_charging',
+        ];
+        if ($thresholds['gridFlowEvidenceMode'] === 'exclusive_target') {
+            $reasons[] = 'grid_export_near_zero';
+            $reasons[] = 'grid_import_near_zero';
+        } else {
+            $reasons[] = 'grid_flow_diagnostic_only';
+        }
+
+        return ['curtailed', false, $reasons];
     }
 
     /** @param array<string, array<string, float|null>> $summaries */

@@ -8,7 +8,7 @@ if (!class_exists('SolarCalibrationCore')) {
 
 final class SolarCalibrationCollectorRuntime
 {
-    private const ANALYSIS_VERSION = '2.0.0';
+    private const ANALYSIS_VERSION = '2.1.0';
     private const SOLAR_MODULE_GUID = '{C86E5442-13CF-4145-B23C-EF2B7635D79E}';
     private const ARCHIVE_MODULE_GUID = '{43192F0B-135B-4CE7-A0A7-1475603F3060}';
     private const MAX_SNAPSHOTS_PER_TARGET = 1000;
@@ -260,7 +260,11 @@ final class SolarCalibrationCollectorRuntime
                 $snapshot['dailyEnergy'] ?? [],
                 $issuedAt
             );
-            $daily = $this->annotateDailyClassifications($daily, $classifiedSamples);
+            $daily = $this->annotateDailyClassifications(
+                $daily,
+                $classifiedSamples,
+                $target['curtailmentPolicy']['minimumDailyClassificationCoverage']
+            );
             $analysis = [
                 'schemaVersion' => 2,
                 'analysisVersion' => self::ANALYSIS_VERSION,
@@ -366,7 +370,11 @@ final class SolarCalibrationCollectorRuntime
                 'calibrationEligibleCount' => 0,
             ],
             'powerSamples' => [],
-            'dailyEnergy' => $this->annotateDailyClassifications($daily, []),
+            'dailyEnergy' => $this->annotateDailyClassifications(
+                $daily,
+                [],
+                $target['curtailmentPolicy']['minimumDailyClassificationCoverage']
+            ),
         ];
     }
 
@@ -512,7 +520,10 @@ final class SolarCalibrationCollectorRuntime
     {
         $mode = $policy['mode'] ?? null;
         if ($mode === 'none') {
-            return ['mode' => 'none'];
+            return [
+                'mode' => 'none',
+                'minimumDailyClassificationCoverage' => $this->normalizedDailyCoverage($policy),
+            ];
         }
         if ($mode !== 'zero_export_storage') {
             throw new InvalidArgumentException('Curtailment policy mode is invalid.');
@@ -553,9 +564,10 @@ final class SolarCalibrationCollectorRuntime
             'fullSocPercent' => [0.0, 100.0],
             'minimumPossibleFullSocFraction' => [0.0, 1.0],
             'minimumFullSocFraction' => [0.0, 1.0],
-            'maximumChargeAbsoluteAverageW' => [0.0, 10 * 1000.0],
+            'minimumBatteryChargingAverageW' => [0.0, 10 * 1000.0],
             'maximumGridExportAverageW' => [0.0, 10 * 1000.0],
             'maximumGridImportAverageW' => [0.0, 10 * 1000.0],
+            'minimumDailyClassificationCoverage' => [0.0, 1.0],
         ];
         $validated = [
             'mode' => $mode,
@@ -572,6 +584,40 @@ final class SolarCalibrationCollectorRuntime
             }
             $validated[$key] = $number;
         }
+        $batteryChargingSign = $policy['batteryChargingSign'] ?? null;
+        if (!in_array($batteryChargingSign, ['positive', 'negative'], true)) {
+            throw new InvalidArgumentException('Battery charging sign is invalid.');
+        }
+        $validated['batteryChargingSign'] = $batteryChargingSign;
+        $gridFlowEvidenceMode = $policy['gridFlowEvidenceMode'] ?? null;
+        if (!in_array($gridFlowEvidenceMode, ['exclusive_target', 'diagnostic_only'], true)) {
+            throw new InvalidArgumentException('Grid-flow evidence mode is invalid.');
+        }
+        $validated['gridFlowEvidenceMode'] = $gridFlowEvidenceMode;
+        $localTimezone = $policy['localTimezone'] ?? null;
+        if (!is_string($localTimezone)) {
+            throw new InvalidArgumentException('Local timezone is invalid.');
+        }
+        try {
+            new DateTimeZone($localTimezone);
+        } catch (Exception) {
+            throw new InvalidArgumentException('Local timezone is invalid.');
+        }
+        $validated['localTimezone'] = $localTimezone;
+        $windows = $policy['knownShadingWindows'] ?? null;
+        if (!is_array($windows) || count($windows) > 8) {
+            throw new InvalidArgumentException('Known-shading windows are invalid.');
+        }
+        $validatedWindows = [];
+        foreach ($windows as $window) {
+            $start = is_array($window) ? ($window['startMinuteOfDay'] ?? null) : null;
+            $end = is_array($window) ? ($window['endMinuteOfDay'] ?? null) : null;
+            if (!is_int($start) || !is_int($end) || $start < 0 || $start > 1439 || $end < 1 || $end > 1440 || $start === $end) {
+                throw new InvalidArgumentException('Known-shading window is invalid.');
+            }
+            $validatedWindows[] = ['startMinuteOfDay' => $start, 'endMinuteOfDay' => $end];
+        }
+        $validated['knownShadingWindows'] = $validatedWindows;
         $possibleFullSocFraction = $validated['minimumPossibleFullSocFraction'] ?? null;
         $confirmedFullSocFraction = $validated['minimumFullSocFraction'] ?? null;
         if (!is_float($possibleFullSocFraction) || !is_float($confirmedFullSocFraction)) {
@@ -589,6 +635,21 @@ final class SolarCalibrationCollectorRuntime
         }
 
         return $validated;
+    }
+
+    /** @param array<string, mixed> $policy */
+    private function normalizedDailyCoverage(array $policy): float
+    {
+        $value = $policy['minimumDailyClassificationCoverage'] ?? 0.9;
+        if (!is_int($value) && !is_float($value)) {
+            throw new InvalidArgumentException('Daily classification coverage is not numeric.');
+        }
+        $number = (float)$value;
+        if (!is_finite($number) || $number < 0.0 || $number > 1.0) {
+            throw new InvalidArgumentException('Daily classification coverage is out of range.');
+        }
+
+        return $number;
     }
 
     /** @param array<string, mixed> $policy */
@@ -689,7 +750,11 @@ final class SolarCalibrationCollectorRuntime
      * @param array<int, array<string, mixed>> $samples
      * @return array<int, array<string, mixed>>
      */
-    private function annotateDailyClassifications(array $daily, array $samples): array
+    private function annotateDailyClassifications(
+        array $daily,
+        array $samples,
+        float $minimumClassificationCoverage
+    ): array
     {
         foreach ($daily as &$day) {
             $counts = [
@@ -698,6 +763,8 @@ final class SolarCalibrationCollectorRuntime
                 'uncertain' => 0,
                 'data_gap' => 0,
             ];
+            $expectedSeconds = max(0, (int)($day['validTo'] ?? 0) - (int)($day['validFrom'] ?? 0));
+            $representedSeconds = 0.0;
             foreach ($samples as $sample) {
                 if (
                     ($sample['validFrom'] ?? PHP_INT_MAX) < ($day['validTo'] ?? 0)
@@ -707,10 +774,25 @@ final class SolarCalibrationCollectorRuntime
                     if (is_string($classification) && array_key_exists($classification, $counts)) {
                         $counts[$classification]++;
                     }
+                    $overlapFrom = max((int)$sample['validFrom'], (int)$day['validFrom']);
+                    $overlapTo = min((int)$sample['validTo'], (int)$day['validTo']);
+                    $coverage = $sample['coverage'] ?? 0.0;
+                    if ((is_int($coverage) || is_float($coverage)) && $overlapTo > $overlapFrom) {
+                        $representedSeconds += ($overlapTo - $overlapFrom) * max(0.0, min(1.0, (float)$coverage));
+                    }
                 }
             }
+            $representedSeconds = min((float)$expectedSeconds, $representedSeconds);
+            $classificationCoverage = $expectedSeconds > 0
+                ? $representedSeconds / $expectedSeconds
+                : 0.0;
             $day['classificationCounts'] = $counts;
+            $day['expectedDurationSeconds'] = $expectedSeconds;
+            $day['representedDurationSeconds'] = $representedSeconds;
+            $day['classificationCoverage'] = $classificationCoverage;
             $day['calibrationEligible'] = array_sum($counts) > 0
+                && ($day['measuredKwh'] ?? null) !== null
+                && $classificationCoverage >= $minimumClassificationCoverage
                 && $counts['curtailed'] === 0
                 && $counts['uncertain'] === 0
                 && $counts['data_gap'] === 0;
