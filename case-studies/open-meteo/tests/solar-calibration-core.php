@@ -99,6 +99,53 @@ calibrationCheck(
     'Solar model-input snapshot contract differs.'
 );
 
+$halfOpenTemperature = [$temperature[0]];
+$halfOpenTemperature[0]['sourceTimestamp'] = 200;
+$halfOpenTemperature[0]['validFrom'] = 200;
+$halfOpenTemperature[0]['validTo'] = 200;
+$halfOpenSnapshot = SolarCalibrationCore::buildSnapshot(
+    'solar_a',
+    150,
+    str_repeat('a', 64),
+    $power,
+    $daily,
+    $baselinePower,
+    $baselineDaily,
+    $irradiance,
+    $baselineIrradiance,
+    $dni,
+    $halfOpenTemperature
+);
+calibrationCheck(
+    $halfOpenSnapshot['schemaVersion'] === 3
+        && count($halfOpenSnapshot['airTemperature']) === 1,
+    'Boundary temperature coverage must support adjacent forecast intervals.'
+);
+
+$temperatureGapRejected = false;
+try {
+    $gappedTemperature = [$temperature[0]];
+    $gappedTemperature[0]['sourceTimestamp'] = 99;
+    $gappedTemperature[0]['validFrom'] = 99;
+    $gappedTemperature[0]['validTo'] = 99;
+    SolarCalibrationCore::buildSnapshot(
+        'solar_a',
+        150,
+        str_repeat('a', 64),
+        $power,
+        $daily,
+        $baselinePower,
+        $baselineDaily,
+        $irradiance,
+        $baselineIrradiance,
+        $dni,
+        $gappedTemperature
+    );
+} catch (InvalidArgumentException) {
+    $temperatureGapRejected = true;
+}
+calibrationCheck($temperatureGapRejected, 'Temperature coverage gaps must be rejected.');
+
 $metrics = SolarCalibrationCore::calculatePowerMetrics([
     ['forecastKw' => 0.4, 'measuredKw' => 0.5, 'durationSeconds' => 3600, 'coverage' => 1.0],
     ['forecastKw' => 0.8, 'measuredKw' => 0.6, 'durationSeconds' => 3600, 'coverage' => 0.5],

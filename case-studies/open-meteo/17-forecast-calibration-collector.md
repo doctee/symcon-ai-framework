@@ -58,6 +58,11 @@ baseline GTI, direct normal irradiance and air temperature from the same atomic
 forecast run. These model inputs support later horizon and residual-error
 reviews without altering current calibration metrics. Schema-1 and schema-2
 snapshots remain valid and analyzable.
+The irradiance series use the same preceding-interval grid as the power
+forecast. Air temperature remains an instantaneous series and may therefore
+contain one fewer endpoint than the interval series. The collector accepts this
+only when every forecast interval contains at least one temperature timestamp;
+real coverage gaps still fail closed.
 
 Completed horizons without any alignable power measurement remain pending for
 a six-hour ingestion grace period. After that period the collector writes an
