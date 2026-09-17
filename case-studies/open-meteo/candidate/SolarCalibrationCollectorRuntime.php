@@ -11,7 +11,7 @@ final class SolarCalibrationCollectorRuntime
     private const ANALYSIS_VERSION = '2.1.0';
     private const SOLAR_MODULE_GUID = '{C86E5442-13CF-4145-B23C-EF2B7635D79E}';
     private const ARCHIVE_MODULE_GUID = '{43192F0B-135B-4CE7-A0A7-1475603F3060}';
-    private const MAX_SNAPSHOTS_PER_TARGET = 1000;
+    private const MAX_SNAPSHOTS_PER_TARGET = 1200;
     private const MAX_ANALYSES_PER_TARGET_PER_RUN = 4;
     private const MEASUREMENT_GRACE_SECONDS = 6 * 3600;
     private const MAX_ARCHIVE_PAGES = 8;
@@ -110,12 +110,26 @@ final class SolarCalibrationCollectorRuntime
             $validTo,
             'system'
         ));
+        $baselinePowerResult = $this->decodeModuleResult(OMSOLAR_GetPowerForecastJson(
+            $instanceId,
+            $validFrom,
+            $validTo,
+            'baseline'
+        ), 'baseline');
+        $baselineDailyResult = $this->decodeModuleResult(OMSOLAR_GetDailyEnergyForecastJson(
+            $instanceId,
+            $validFrom,
+            $validTo,
+            'baseline'
+        ), 'baseline');
         $snapshot = SolarCalibrationCore::buildSnapshot(
             $target['key'],
             $lastSuccess,
             $configurationHash,
             $powerResult['data']['system'] ?? [],
-            $dailyResult['data']['system'] ?? []
+            $dailyResult['data']['system'] ?? [],
+            $baselinePowerResult['data']['baseline'] ?? [],
+            $baselineDailyResult['data']['baseline'] ?? []
         );
         $snapshot['capturedAt'] = time();
         $snapshot['solarInstanceId'] = $instanceId;
@@ -129,6 +143,8 @@ final class SolarCalibrationCollectorRuntime
             'issuedAt' => $lastSuccess,
             'powerPointCount' => count($snapshot['power']),
             'dailyPointCount' => count($snapshot['dailyEnergy']),
+            'baselinePowerPointCount' => count($snapshot['baselinePower']),
+            'baselineDailyPointCount' => count($snapshot['baselineDailyEnergy']),
         ];
     }
 
@@ -163,7 +179,7 @@ final class SolarCalibrationCollectorRuntime
             $pathIdentity = $this->snapshotPathIdentity($snapshotPath);
             if (
                 !is_array($snapshot)
-                || ($snapshot['schemaVersion'] ?? null) !== 1
+                || !in_array($snapshot['schemaVersion'] ?? null, [1, 2], true)
                 || ($snapshot['targetKey'] ?? null) !== $target['key']
                 || ($snapshot['issuedAt'] ?? null) !== $pathIdentity['issuedAt']
                 || ($snapshot['configurationHash'] ?? null) !== $pathIdentity['configurationHash']
@@ -677,13 +693,19 @@ final class SolarCalibrationCollectorRuntime
     }
 
     /** @return array<string, mixed> */
-    private function decodeModuleResult(string $json): array
+    private function decodeModuleResult(string $json, string $breakdown = 'system'): array
     {
         if (strlen($json) > 1024 * 1024) {
             throw new RuntimeException('Forecast cache result is unbounded.');
         }
         $result = json_decode($json, true, 64, JSON_THROW_ON_ERROR);
-        if (!is_array($result) || ($result['success'] ?? null) !== true || !is_array($result['data']['system'] ?? null)) {
+        if (
+            !in_array($breakdown, ['system', 'baseline'], true)
+            || !is_array($result)
+            || ($result['success'] ?? null) !== true
+            || ($result['breakdown'] ?? $breakdown) !== $breakdown
+            || !is_array($result['data'][$breakdown] ?? null)
+        ) {
             throw new RuntimeException('Forecast cache result is invalid.');
         }
 

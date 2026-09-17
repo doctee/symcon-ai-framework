@@ -45,6 +45,14 @@ Analysis begins only after a snapshot's complete forecast horizon has elapsed,
 so a newly activated collector initially accumulates evidence rather than
 claiming calibration quality prematurely.
 
+Snapshot schema 2 retains both the operative `system` forecast and the
+simultaneous unshaded `baseline` calculated from the same Open-Meteo response.
+This avoids extra provider calls and shadow instances. Existing schema-1
+snapshots remain valid and analyzable; only newly captured forecasts carry the
+comparison pair. Calibration metrics continue to use `system`, while the
+baseline series is evidence for separating known horizon effects from residual
+equipment, weather and curtailment error.
+
 Completed horizons without any alignable power measurement remain pending for
 a six-hour ingestion grace period. After that period the collector writes an
 immutable terminal `data_gap` analysis with empty power samples and preserved
@@ -57,12 +65,18 @@ gap without turning one timer execution into an unbounded history job. The
 result reports the created batch size and how many terminal data gaps it
 contains.
 
-The existing limit of 1,000 forecast snapshots per target is a non-destructive
+The limit of 1,200 forecast snapshots per target is a non-destructive
 collection ceiling. An already captured issue remains an immutable no-op. A new
 issue at the ceiling returns `retention_limit_reached` without failing the
 collector, while analysis of existing snapshots continues. No evidence is
 deleted automatically; archival or retention cleanup remains a separately
 authorized maintenance decision.
+
+The previous 1,000-snapshot ceiling was raised without deleting evidence when
+the live horizon comparison began. Starting from the established 720-snapshot
+retention baseline, 1,200 leaves about twenty days at one forecast issue per
+hour. That covers a preferred fourteen-day observation plus weather-related
+selection loss while retaining a finite fail-closed bound.
 
 The first rejected forecast issue also creates one immutable ceiling marker and
 one bounded Symcon warning. Later timer executions verify that marker and stay
