@@ -69,7 +69,7 @@ assertLocalMapSvg(
 assertLocalMapSvg(
     substr_count($svg, '<polygon class="zone"') === 4
         && substr_count($svg, '<polygon class="obstacle') === 3
-        && substr_count($svg, '<polyline class="path"') > 0
+        && substr_count($svg, '<polyline class="path path-age-') > 0
         && substr_count($svg, 'class="station station-unknown"') === 1
         && substr_count(
             $svg,
@@ -79,6 +79,9 @@ assertLocalMapSvg(
         && str_contains($svg, 'class="station-occupancy"')
         && str_contains($svg, 'class="mower-body"')
         && str_contains($svg, 'class="mower-direction"')
+        && str_contains($svg, 'class="mower-time-label"')
+        && str_contains($svg, 'data-position-received-at="')
+        && str_contains($svg, 'text-anchor="')
         && str_contains($svg, 'data-heading-degrees="')
         && str_contains($svg, 'rotate(-7)')
         && str_contains($svg, 'data-zone-id="101"')
@@ -135,7 +138,13 @@ assertLocalMapSvg(
             $svg,
             'class="mower mower-unknown mower-position-fresh"'
         ) === 1
-        && substr_count($svg, '<polyline class="path"') === 5
+        && substr_count($svg, '<polyline class="path path-age-') === 5
+        && str_contains($svg, 'class="path path-age-0"')
+        && str_contains($svg, 'class="path path-age-1"')
+        && str_contains($svg, 'class="path path-age-2"')
+        && str_contains($svg, 'class="path path-age-3"')
+        && str_contains($svg, 'class="legend-path path-age-0"')
+        && str_contains($svg, 'class="legend-path path-age-3"')
         && substr_count($svg, '<circle class="path-point') === 2
         && substr_count($svg, '<polygon class="obstacle') === 3,
     'Legend content or semantic layer isolation differs.'
@@ -174,7 +183,9 @@ assertLocalMapSvg(
 assertLocalMapSvg(
     str_contains($lightSvg, 'data-theme="light"')
         && str_contains($lightSvg, '.background{fill:#f8fafc}')
-        && str_contains($lightSvg, '.path{fill:none;stroke:#111827')
+        && str_contains($lightSvg, '.path{fill:none;stroke-width:')
+        && str_contains($lightSvg, '.path-age-0{stroke:#111827}')
+        && str_contains($lightSvg, '.path-age-3{stroke:#cbd5e1}')
         && str_contains($lightSvg, '.legend-background{fill:#ffffff')
         && str_contains($lightSvg, 'fill:#1f2937'),
     'Explicit light theme differs.'
@@ -304,6 +315,11 @@ foreach (
             && str_contains(
                 $stateSvg,
                 'class="legend-mower legend-mower-' . $mowerState . '"'
+            )
+            && (
+                $mowerState === 'docked'
+                    ? !str_contains($stateSvg, 'class="mower-time-label"')
+                    : str_contains($stateSvg, 'class="mower-time-label"')
             ),
         'Mower-state presentation differs for ' . $mowerState . '.'
     );
@@ -322,6 +338,10 @@ assertLocalMapSvg(
             '<title>Mower active; position delayed</title>'
         )
         && str_contains($delayedSvg, 'class="mower-freshness-halo"')
+        && str_contains(
+            $delayedSvg,
+            '.mower-time-label[data-visible="true"]{display:inline}'
+        )
         && str_contains(
             $delayedSvg,
             '.mower-position-delayed .mower-freshness-halo{display:inline}'

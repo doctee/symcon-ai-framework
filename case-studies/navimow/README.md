@@ -434,6 +434,7 @@ template or a general SAEF reference implementation.
 | `406-html-sdk-fixed-size-legend-zoom-correction.md` | Counter-scales and screen-pins the SVG legend so map zoom, pan and zone focus retain its Fit-view size and keep it clear of the statistics strip. |
 | `407-fixed-size-legend-publication-and-live-rollout.md` | Records the canonical SAEF and standalone publication plus the one-shot Symcon update and live HTML SDK contract verification for the fixed-size legend. |
 | `408-fixed-size-legend-physical-ipad-validation-and-closure.md` | Closes the fixed-size legend rollout after successful physical iPad zoom validation without another repository, module or Symcon mutation. |
+| `409-html-sdk-responsive-statistics-and-track-age-refinement.md` | Compacts small-screen navigation, reserves map space for populated statistics, adds delayed-position time and four-step path age, and softens zone labels without changing transport or command authority. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
