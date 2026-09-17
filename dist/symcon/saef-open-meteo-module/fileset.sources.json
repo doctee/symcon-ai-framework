@@ -49,8 +49,8 @@
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoSolarForecast/module.php",
             "target": "OpenMeteoSolarForecast/module.php",
-            "sha256": "c6c29a2fe2a4badd74558a39efc1a608536f5a9cf4c33b7458ec7c146d9f2804",
-            "bytes": 26466
+            "sha256": "33da65f80390c2ecd217f6bbcaea959cccefa99123be6c69be256de6ece9a2e1",
+            "bytes": 29031
         },
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/form.json",
@@ -73,8 +73,8 @@
         {
             "source": "case-studies/open-meteo/distribution/OpenMeteoWeather/module.php",
             "target": "OpenMeteoWeather/module.php",
-            "sha256": "123a745e8364c4841af5cddc6fe652a957b4781f7844dfacafd5b3db54a4f0d5",
-            "bytes": 28895
+            "sha256": "a38f359bb2721b24d50c2619b43afe0674be35645765da0001c3733742e28536",
+            "bytes": 29240
         },
         {
             "source": "case-studies/open-meteo/distribution/SharedLocation/form.json",
@@ -145,8 +145,8 @@
         {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/FieldCatalog.php",
             "target": "libs/OpenMeteo/FieldCatalog.php",
-            "sha256": "6b5f632f366f9618d2a7874ef06a871711b5c06c72eeb0efa3d0dbfb2331e843",
-            "bytes": 7371
+            "sha256": "0f515b9df40f555e12b78f4cdc5cf50ad8f505dce13fc1c07ba812fbfda5570b",
+            "bytes": 7602
         },
         {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/ForecastPoint.php",
@@ -199,8 +199,8 @@
         {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/Profiles.php",
             "target": "libs/OpenMeteo/Profiles.php",
-            "sha256": "3c5d930ee9ddb55fa462bc2e630338cce7f2092666acc9fd39583e628d6c6eb8",
-            "bytes": 2132
+            "sha256": "912bb498c9bc3102a01ad98feb86c4bc6b8a37e38b8bb341b6affea48bb20f42",
+            "bytes": 2215
         },
         {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/PvConfiguration.php",
@@ -217,8 +217,8 @@
         {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/ResponseParser.php",
             "target": "libs/OpenMeteo/ResponseParser.php",
-            "sha256": "291f63359672719e5674d679082284a2261805c088cc784ad797703c7f36d39c",
-            "bytes": 10208
+            "sha256": "d5586c73135aec8e41e43b0bc4e4ad1100f6750a8e66e91ab241ee142db719ab",
+            "bytes": 10370
         },
         {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/SolarForecastCalculator.php",
@@ -229,14 +229,14 @@
         {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/SolarForecastProjector.php",
             "target": "libs/OpenMeteo/SolarForecastProjector.php",
-            "sha256": "7aa2614f48c94425f733658e8957ab7b88576367eb5996cd848038640c435019",
-            "bytes": 7164
+            "sha256": "3c327c072d01ceb49923801134e602ae56a9975abe8cb52a032013d2a267a9c3",
+            "bytes": 11872
         },
         {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/WeatherForecastProjector.php",
             "target": "libs/OpenMeteo/WeatherForecastProjector.php",
-            "sha256": "8305a5a0df569569239cbf5ec8e0b7ed6c5f1c3751fe91cb5239cf0ce3cb5c19",
-            "bytes": 7979
+            "sha256": "c0edd4cf5373dc5a168dd88f3dd29d8f05ecfcf2a91d90e9ece94c1fe6af8d3b",
+            "bytes": 8102
         },
         {
             "source": "helpers/common/Validation.php",
@@ -257,7 +257,7 @@
             "bytes": 3308
         }
     ],
-    "filesetSha256": "b16e50bdb04d3e8017d87820de58302471ca5d3c94f04a05606b49d5c19094cc",
+    "filesetSha256": "05cf7e060f7296f573bf7248b359d5819d6eeffe7e5a7cc6cab8908510617759",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

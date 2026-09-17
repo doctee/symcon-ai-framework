@@ -39,8 +39,9 @@ cloud movement or the exact optical transmission of nearby objects.
   moving clockwise, matching the PVGIS user-horizon convention.
 - The complete JSON input is bounded to 16 KiB.
 
-The runtime requests `direct_normal_irradiance` only while the model is
-enabled. Missing, negative, misaligned or otherwise invalid radiation series
+The runtime always requests `direct_normal_irradiance` so a forecast can retain
+the exact model input even while the local-horizon layer is disabled. Missing,
+negative, misaligned or otherwise invalid radiation series
 reject the complete candidate and preserve the last-good forecast.
 
 ## Separation From Calibration

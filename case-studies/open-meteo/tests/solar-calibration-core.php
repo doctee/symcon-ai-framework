@@ -57,6 +57,48 @@ try {
 }
 calibrationCheck($incompleteBaselineRejected, 'Incomplete baseline pair must be rejected.');
 
+$irradiance = array_map(
+    static fn(array $point): array => array_replace($point, ['value' => 500.0, 'unit' => 'W/m²']),
+    $power
+);
+$baselineIrradiance = array_map(
+    static fn(array $point): array => array_replace($point, ['value' => 600.0, 'unit' => 'W/m²']),
+    $power
+);
+$dni = array_map(
+    static fn(array $point): array => array_replace($point, ['value' => 700.0, 'unit' => 'W/m²']),
+    $power
+);
+$temperature = array_map(
+    static fn(array $point): array => array_replace($point, [
+        'validFrom' => $point['sourceTimestamp'],
+        'validTo' => $point['sourceTimestamp'],
+        'value' => -2.0,
+        'unit' => '°C',
+        'semantics' => 'instant',
+    ]),
+    $power
+);
+$modelSnapshot = SolarCalibrationCore::buildSnapshot(
+    'solar_a',
+    150,
+    str_repeat('a', 64),
+    $power,
+    $daily,
+    $baselinePower,
+    $baselineDaily,
+    $irradiance,
+    $baselineIrradiance,
+    $dni,
+    $temperature
+);
+calibrationCheck(
+    $modelSnapshot['schemaVersion'] === 3
+        && count($modelSnapshot['irradiance']) === 2
+        && (float) $modelSnapshot['airTemperature'][0]['value'] === -2.0,
+    'Solar model-input snapshot contract differs.'
+);
+
 $metrics = SolarCalibrationCore::calculatePowerMetrics([
     ['forecastKw' => 0.4, 'measuredKw' => 0.5, 'durationSeconds' => 3600, 'coverage' => 1.0],
     ['forecastKw' => 0.8, 'measuredKw' => 0.6, 'durationSeconds' => 3600, 'coverage' => 0.5],

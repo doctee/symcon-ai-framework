@@ -257,7 +257,15 @@ final class ResponseParser
             );
         }
         if (
-            in_array($field, ['global_tilted_irradiance', 'direct_normal_irradiance'], true)
+            in_array(
+                $field,
+                [
+                    'global_tilted_irradiance',
+                    'direct_normal_irradiance',
+                    'diffuse_radiation',
+                ],
+                true
+            )
             && $value < 0
         ) {
             throw new UnexpectedValueException(

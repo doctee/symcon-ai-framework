@@ -44,8 +44,8 @@ Each update:
 1. validates the linked weather module, bounded location descriptor, PV JSON
    and runtime policy before transport;
 2. acquires an instance-scoped semaphore;
-3. requests `temperature_2m` and `global_tilted_irradiance` serially for each
-   unique `(tilt, azimuth)` pair;
+3. requests `temperature_2m`, `global_tilted_irradiance` and
+   `direct_normal_irradiance` serially for each unique `(tilt, azimuth)` pair;
 4. validates every response and interval before calculating power;
 5. applies temperature correction and static derating, followed in
    `direct_ac` mode by inverter efficiency and the configured AC limit; and
@@ -56,7 +56,7 @@ partial multi-orientation forecast is published. URLs, coordinates, response
 bodies and PV configuration are not logged.
 
 A request-relevant configuration change produces a new deterministic hash,
-hides the incompatible cache and resets the three curated forecast values until
+hides the incompatible cache and resets the curated forecast values until
 a complete forecast for the new configuration succeeds. The cache schema
 version participates in that hash, so a module revision that changes the cache
 contract also fails closed instead of exposing a structurally stale cache.
@@ -65,16 +65,19 @@ contract also fails closed instead of exposing a structurally stale cache.
 
 The configuration-bound cache exposes:
 
-- `GetPowerForecastJson(from, to, breakdown)`; and
-- `GetDailyEnergyForecastJson(from, to, breakdown)`.
+- `GetPowerForecastJson(from, to, breakdown)`;
+- `GetDailyEnergyForecastJson(from, to, breakdown)`;
+- `GetIrradianceForecastJson(from, to, breakdown)`; and
+- `GetSolarInputForecastJson(from, to)`.
 
 Ranges are limited to ten days. `system` is the operative forecast and
 `baseline` is calculated from the same provider response before the optional
 local-horizon adjustment. With the horizon disabled both series are identical.
 Array and inverter breakdowns fail with `breakdown_unsupported` instead of
-returning an ambiguous approximation. Public values contain only the operative
-current power in kW plus today's and tomorrow's energy in kWh for the configured
-output mode.
+returning an ambiguous approximation. Public values contain operative and
+simultaneous baseline power, weighted system and baseline GTI, the resulting
+current horizon loss plus today's and tomorrow's operative energy. Exact DNI
+and air temperature series remain bounded cache data for calibration evidence.
 
 ## Storage-Coupled Systems
 

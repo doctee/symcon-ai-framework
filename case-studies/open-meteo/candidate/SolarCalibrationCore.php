@@ -36,6 +36,10 @@ final class SolarCalibrationCore
      * @param array<int, array<string, mixed>> $dailyEnergyPoints
      * @param null|array<int, array<string, mixed>> $baselinePowerPoints
      * @param null|array<int, array<string, mixed>> $baselineDailyEnergyPoints
+     * @param null|array<int, array<string, mixed>> $irradiancePoints
+     * @param null|array<int, array<string, mixed>> $baselineIrradiancePoints
+     * @param null|array<int, array<string, mixed>> $directNormalIrradiancePoints
+     * @param null|array<int, array<string, mixed>> $airTemperaturePoints
      * @return array<string, mixed>
      */
     public static function buildSnapshot(
@@ -45,7 +49,11 @@ final class SolarCalibrationCore
         array $powerPoints,
         array $dailyEnergyPoints,
         ?array $baselinePowerPoints = null,
-        ?array $baselineDailyEnergyPoints = null
+        ?array $baselineDailyEnergyPoints = null,
+        ?array $irradiancePoints = null,
+        ?array $baselineIrradiancePoints = null,
+        ?array $directNormalIrradiancePoints = null,
+        ?array $airTemperaturePoints = null
     ): array {
         if (preg_match('/^[a-z][a-z0-9_]{0,63}$/', $targetKey) !== 1) {
             throw new InvalidArgumentException('Invalid calibration target key.');
@@ -91,6 +99,60 @@ final class SolarCalibrationCore
             $snapshot['schemaVersion'] = 2;
             $snapshot['baselinePower'] = $baselinePower;
             $snapshot['baselineDailyEnergy'] = $baselineDailyEnergy;
+        }
+
+        $modelInputs = [
+            $irradiancePoints,
+            $baselineIrradiancePoints,
+            $directNormalIrradiancePoints,
+            $airTemperaturePoints,
+        ];
+        $presentModelInputs = count(array_filter(
+            $modelInputs,
+            static fn(?array $points): bool => $points !== null
+        ));
+        if ($presentModelInputs !== 0 && $presentModelInputs !== count($modelInputs)) {
+            throw new InvalidArgumentException('Solar model input series are incomplete.');
+        }
+        if ($presentModelInputs === count($modelInputs)) {
+            if (
+                $irradiancePoints === null
+                || $baselineIrradiancePoints === null
+                || $directNormalIrradiancePoints === null
+                || $airTemperaturePoints === null
+            ) {
+                throw new InvalidArgumentException('Solar model input series are incomplete.');
+            }
+            $irradiance = self::normalizePoints(
+                $irradiancePoints,
+                'W/m²',
+                'preceding_interval'
+            );
+            $baselineIrradiance = self::normalizePoints(
+                $baselineIrradiancePoints,
+                'W/m²',
+                'preceding_interval'
+            );
+            $directNormalIrradiance = self::normalizePoints(
+                $directNormalIrradiancePoints,
+                'W/m²',
+                'preceding_interval'
+            );
+            $airTemperature = self::normalizePoints(
+                $airTemperaturePoints,
+                '°C',
+                'instant',
+                true
+            );
+            self::assertIntervalsMatch($power, $irradiance);
+            self::assertIntervalsMatch($power, $baselineIrradiance);
+            self::assertIntervalsMatch($power, $directNormalIrradiance);
+            self::assertSourceTimestampsMatch($power, $airTemperature);
+            $snapshot['schemaVersion'] = 3;
+            $snapshot['irradiance'] = $irradiance;
+            $snapshot['baselineIrradiance'] = $baselineIrradiance;
+            $snapshot['directNormalIrradiance'] = $directNormalIrradiance;
+            $snapshot['airTemperature'] = $airTemperature;
         }
 
         return $snapshot;
@@ -433,8 +495,12 @@ final class SolarCalibrationCore
      * @param array<int, array<string, mixed>> $points
      * @return non-empty-array<int, array{sourceTimestamp: int, validFrom: int, validTo: int, value: float, unit: string, semantics: string}>
      */
-    private static function normalizePoints(array $points, string $unit, string $semantics): array
-    {
+    private static function normalizePoints(
+        array $points,
+        string $unit,
+        string $semantics,
+        bool $allowNegative = false
+    ): array {
         if ($points === [] || count($points) > self::MAX_POINTS) {
             throw new InvalidArgumentException('Forecast point count is invalid.');
         }
@@ -447,7 +513,8 @@ final class SolarCalibrationCore
             $validTo = $point['validTo'] ?? null;
             if (
                 !is_int($sourceTimestamp) || !is_int($validFrom) || !is_int($validTo)
-                || $sourceTimestamp <= 0 || $validFrom <= 0 || $validTo <= $validFrom
+                || $sourceTimestamp <= 0 || $validFrom <= 0
+                || ($semantics === 'instant' ? $validTo < $validFrom : $validTo <= $validFrom)
             ) {
                 throw new InvalidArgumentException('Invalid forecast interval.');
             }
@@ -463,7 +530,14 @@ final class SolarCalibrationCore
                 'sourceTimestamp' => $sourceTimestamp,
                 'validFrom' => $validFrom,
                 'validTo' => $validTo,
-                'value' => self::finiteNonNegative($point['value'] ?? null, 'forecast value'),
+                'value' => $allowNegative
+                    ? self::finiteRange(
+                        $point['value'] ?? null,
+                        -PHP_FLOAT_MAX,
+                        PHP_FLOAT_MAX,
+                        'forecast value'
+                    )
+                    : self::finiteNonNegative($point['value'] ?? null, 'forecast value'),
                 'unit' => $unit,
                 'semantics' => $semantics,
             ];
@@ -491,6 +565,22 @@ final class SolarCalibrationCore
                 || $point['validTo'] !== $baselinePoint['validTo']
             ) {
                 throw new InvalidArgumentException('Baseline forecast intervals differ.');
+            }
+        }
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $forecast
+     * @param array<int, array<string, mixed>> $input
+     */
+    private static function assertSourceTimestampsMatch(array $forecast, array $input): void
+    {
+        if (count($forecast) !== count($input)) {
+            throw new InvalidArgumentException('Solar input timestamps differ.');
+        }
+        foreach ($forecast as $index => $point) {
+            if ($point['sourceTimestamp'] !== $input[$index]['sourceTimestamp']) {
+                throw new InvalidArgumentException('Solar input timestamps differ.');
             }
         }
     }

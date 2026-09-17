@@ -53,6 +53,12 @@ comparison pair. Calibration metrics continue to use `system`, while the
 baseline series is evidence for separating known horizon effects from residual
 equipment, weather and curtailment error.
 
+Snapshot schema 3 additionally retains peak-power-weighted operative and
+baseline GTI, direct normal irradiance and air temperature from the same atomic
+forecast run. These model inputs support later horizon and residual-error
+reviews without altering current calibration metrics. Schema-1 and schema-2
+snapshots remain valid and analyzable.
+
 Completed horizons without any alignable power measurement remain pending for
 a six-hour ingestion grace period. After that period the collector writes an
 immutable terminal `data_gap` analysis with empty power samples and preserved
