@@ -31,6 +31,14 @@ check(
     str_contains($solar, 'temperature_2m%2Cglobal_tilted_irradiance'),
     'Solar field profile differs.'
 );
+$solarWithHorizon = RequestBuilder::solar($configuration, 30.0, -90.0, true);
+check(
+    str_contains(
+        $solarWithHorizon,
+        'temperature_2m%2Cglobal_tilted_irradiance%2Cdirect_normal_irradiance'
+    ),
+    'Local-horizon solar field profile differs.'
+);
 
 throws(
     static fn (): string => RequestBuilder::weather(array_merge($configuration, ['latitude' => 91])),

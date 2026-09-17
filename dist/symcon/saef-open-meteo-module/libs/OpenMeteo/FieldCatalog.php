@@ -138,6 +138,7 @@ final class FieldCatalog
         'sunrise' => ['unixtime', 'iso8601'],
         'sunset' => ['unixtime', 'iso8601'],
         'global_tilted_irradiance' => ['W/m²'],
+        'direct_normal_irradiance' => ['W/m²'],
         'ac_power' => ['kW'],
         'daily_energy' => ['kWh'],
         'soil_temperature_0cm' => ['°C'],
@@ -177,6 +178,17 @@ final class FieldCatalog
         return self::SOIL_HOURLY_FIELDS;
     }
 
+    /** @return list<string> */
+    public static function solarHourlyFields(bool $withLocalHorizon): array
+    {
+        $fields = ['temperature_2m', 'global_tilted_irradiance'];
+        if ($withLocalHorizon) {
+            $fields[] = 'direct_normal_irradiance';
+        }
+
+        return $fields;
+    }
+
     public static function permitsNullGap(string $section, string $field): bool
     {
         return in_array($section, ['hourly', 'daily'], true);
@@ -210,6 +222,7 @@ final class FieldCatalog
             'sunshine_duration',
             'et0_fao_evapotranspiration',
             'global_tilted_irradiance',
+            'direct_normal_irradiance',
             ], true)
         ) {
             return self::SEMANTICS_PRECEDING_INTERVAL;

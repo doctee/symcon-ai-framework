@@ -59,6 +59,7 @@ and consumer mappings belong in `private/` or an ignored `*.local.*` file.
 | `19-nowcast-html-chart.md` | Defines the cache-only minute presentation, absolute colors, HTMLBox ownership and lifecycle behavior. |
 | `20-curtailment-aware-calibration.md` | Defines policy-versioned, zero-export-aware classification without rewriting raw snapshots. |
 | `21-solar-kernel-start-recovery.md` | Defines the bounded, request-free Solar dependency reconciliation after `IPS_KERNELSTARTED`. |
+| `22-local-horizon-model.md` | Defines the optional beam-only local-horizon correction, private profile contract and offline proof. |
 | `candidate/SolarCalibrationCore.php` | Pure snapshot normalization, archive-event alignment and calibration metrics. |
 | `candidate/SolarCalibrationCollectorRuntime.php` | Bounded cache and archive adapter with immutable private evidence files, terminal gap handling and a non-destructive collection ceiling. |
 | `tools/build-calibration-collector.php` | Deterministically combines public runtime code with ignored installation-local configuration. |
@@ -96,7 +97,11 @@ controlled live pilots and scheduled-cycle observation:
     forecast-to-actual metrics; zero-export/storage constraints are classified
     separately from unconstrained calibration samples; and
 11. the Solar runtime has an offline-verified one-shot post-kernel dependency
-    reconciliation that cannot issue a provider request or retry indefinitely.
+    reconciliation that cannot issue a provider request or retry indefinitely;
+    and
+12. an optional local-horizon layer removes only blocked direct plane-of-array
+    radiation while retaining diffuse irradiance and keeping private horizon
+    values out of the public repository.
 
 The generated fileset contains the shared profile and configuration-hash
 helpers required by the modules without duplicating their canonical sources.
@@ -105,8 +110,8 @@ SAEF remains the editable source of truth. The public module repository is a
 generated release mirror and must not be edited independently. The controlled
 workflow is documented in `07-controlled-publication-workflow.md`.
 
-Provider deactivation, consumer migration, shading and any change to calibrated
-model parameters remain separate later gates.
+Provider deactivation, consumer migration, live horizon activation and any
+change to calibrated model parameters remain separate later gates.
 
 The DWD nowcast runtime was published separately. The HTML chart introduced by
 this workstream remains an offline candidate; publication, a live library
@@ -134,6 +139,8 @@ The curtailment-aware analysis contract is recorded in
 `20-curtailment-aware-calibration.md`.
 The bounded Solar startup-ordering recovery is recorded in
 `21-solar-kernel-start-recovery.md`.
+The separate local-horizon model is recorded in
+`22-local-horizon-model.md`.
 
 Run the focused gate from the repository root:
 

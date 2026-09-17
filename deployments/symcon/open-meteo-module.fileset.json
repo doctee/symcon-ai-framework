@@ -117,6 +117,14 @@
             "target": "libs/OpenMeteo/IntervalAligner.php"
         },
         {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/LocalHorizonModel.php",
+            "target": "libs/OpenMeteo/LocalHorizonModel.php"
+        },
+        {
+            "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/LocalHorizonProfile.php",
+            "target": "libs/OpenMeteo/LocalHorizonProfile.php"
+        },
+        {
             "source": "case-studies/open-meteo/distribution/libs/OpenMeteo/LocationDefinition.php",
             "target": "libs/OpenMeteo/LocationDefinition.php"
         },

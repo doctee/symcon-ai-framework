@@ -64,6 +64,8 @@
     "libs/OpenMeteo/ForecastSeries.php",
     "libs/OpenMeteo/ForecastStateReducer.php",
     "libs/OpenMeteo/IntervalAligner.php",
+    "libs/OpenMeteo/LocalHorizonModel.php",
+    "libs/OpenMeteo/LocalHorizonProfile.php",
     "libs/OpenMeteo/LocationDefinition.php",
     "libs/OpenMeteo/ParsedForecast.php",
     "libs/OpenMeteo/Profiles.php",

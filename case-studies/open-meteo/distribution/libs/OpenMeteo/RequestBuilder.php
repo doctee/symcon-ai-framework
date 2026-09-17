@@ -38,7 +38,8 @@ final class RequestBuilder
     public static function solar(
         array $locationConfiguration,
         float $tiltDegrees,
-        float $azimuthDegrees
+        float $azimuthDegrees,
+        bool $withLocalHorizon = false
     ): string {
         $normalized = self::normalizeLocationConfiguration($locationConfiguration, 7);
         self::assertFiniteRange($tiltDegrees, 0.0, 90.0, 'tilt');
@@ -47,7 +48,7 @@ final class RequestBuilder
         $query = self::baseQuery($normalized);
         $query['tilt'] = self::formatFloat($tiltDegrees);
         $query['azimuth'] = self::formatFloat($azimuthDegrees);
-        $query['hourly'] = 'temperature_2m,global_tilted_irradiance';
+        $query['hourly'] = implode(',', FieldCatalog::solarHourlyFields($withLocalHorizon));
 
         return self::DWD_ICON_ENDPOINT . '?' . http_build_query(
             $query,

@@ -258,7 +258,8 @@ be evaluated separately. It must not replace `dwd_icon` silently.
 | `PollingIntervalMinutes` | integer | yes | no | Default `60`, minimum `30` |
 | `Arrays` | list | yes | installation-specific | At least one validated array |
 | `Inverters` | list | yes | installation-specific | At least one validated inverter group |
-| `EnableShadingProfile` | boolean | no | installation-specific | Default `false`; later extension |
+| `EnableShadingProfile` | boolean | no | installation-specific | Default `false`; enables the separate local-horizon model |
+| `LocalHorizonProfileJson` | list | if enabled | installation-specific | Equal-angle elevations from north clockwise, `8..720` values in `0..90` |
 | `EnableCalibration` | boolean | no | installation-specific | Fixed `false` in first implementation |
 | `EnableRawDiagnostics` | boolean | no | no | Default `false` |
 | `HttpTimeoutSeconds` | integer | yes | no | Explicit bounded value |
@@ -701,6 +702,8 @@ Rules:
 
 - non-finite inputs reject the interval;
 - negative GTI rejects the response before calculation;
+- enabled local-horizon processing requires aligned non-negative DNI and GTI;
+- only the blocked direct plane component is removed; diffuse irradiance remains;
 - calculated negative array power is clamped to zero;
 - arrays are summed by `InverterIdent`;
 - `pv_harvest` publishes that summed DC-side result before storage dispatch;

@@ -23,6 +23,7 @@ for test in \
     request-builder \
     response-parser \
     interval-alignment \
+    local-horizon-model \
     solar-calculator \
     solar-calibration-core \
     solar-calibration-evaluation \

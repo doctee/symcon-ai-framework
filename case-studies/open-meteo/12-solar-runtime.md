@@ -85,11 +85,11 @@ while the surplus charges the battery. Conversely, house-grid output can come
 from the battery when current irradiance is low. The first runtime therefore
 does not claim to forecast storage dispatch, state of charge or actual feed-in.
 
-## Deferred Calibration Boundary
+## Calibration and Horizon Boundary
 
-`EnableCalibration` and `EnableShadingProfile` continue to fail closed. The
-first runtime has no hidden learning, no archive mutation and no flat horizon
-correction.
+`EnableCalibration` continues to fail closed. The local-horizon model is a
+separate optional layer described in `22-local-horizon-model.md`; it has no
+hidden learning, performs no archive mutation and is not a flat loss factor.
 
 Later calibration must preserve immutable forecast snapshots and compare them
 with exact UTC measurement intervals. In `pv_harvest` mode, a Solarbank PV-input
@@ -97,8 +97,8 @@ measurement is the primary comparison. Local house-feed measurements describe
 the separate storage-dispatch/AC-output path and must not be interpreted as PV
 loss. Charge, discharge, state of charge, clipping, outages and incomplete
 intervals must be classified explicitly. Calibration starts with a bounded
-static factor; a time- or sun-position-dependent shading model requires a
-separate contract and evidence gate.
+static factor. The known local horizon is applied before later residual
+calibration, while storage curtailment remains a separate classification.
 
 ## Offline Proof
 
@@ -109,7 +109,8 @@ Weather descriptor, bounded fail-closed recovery, two serialized orientation req
 direct-AC and PV-input clipping, storage-coupled PV harvest, bounded cache
 access, last-good
 retention, manual-mode retry suppression, automatic polling and the first retry
-interval. The deterministic fileset includes `SolarForecastProjector`.
+interval. The deterministic fileset includes `SolarForecastProjector` and the
+separate local-horizon classes.
 
 Publication, installed-library update, private configuration, one controlled
 manual request, observation and later SolCast consumer migration remain
