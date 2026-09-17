@@ -147,7 +147,7 @@ final class SolarCalibrationCore
             self::assertIntervalsMatch($power, $irradiance);
             self::assertIntervalsMatch($power, $baselineIrradiance);
             self::assertIntervalsMatch($power, $directNormalIrradiance);
-            self::assertSourceTimestampsMatch($power, $airTemperature);
+            self::assertInstantSeriesCoversIntervals($power, $airTemperature);
             $snapshot['schemaVersion'] = 3;
             $snapshot['irradiance'] = $irradiance;
             $snapshot['baselineIrradiance'] = $baselineIrradiance;
@@ -573,13 +573,25 @@ final class SolarCalibrationCore
      * @param array<int, array<string, mixed>> $forecast
      * @param array<int, array<string, mixed>> $input
      */
-    private static function assertSourceTimestampsMatch(array $forecast, array $input): void
+    private static function assertInstantSeriesCoversIntervals(array $forecast, array $input): void
     {
-        if (count($forecast) !== count($input)) {
+        if ($input === []) {
             throw new InvalidArgumentException('Solar input timestamps differ.');
         }
-        foreach ($forecast as $index => $point) {
-            if ($point['sourceTimestamp'] !== $input[$index]['sourceTimestamp']) {
+
+        $inputIndex = 0;
+        $inputCount = count($input);
+        foreach ($forecast as $point) {
+            while (
+                $inputIndex < $inputCount
+                && $input[$inputIndex]['sourceTimestamp'] < $point['validFrom']
+            ) {
+                $inputIndex++;
+            }
+            if (
+                $inputIndex >= $inputCount
+                || $input[$inputIndex]['sourceTimestamp'] > $point['validTo']
+            ) {
                 throw new InvalidArgumentException('Solar input timestamps differ.');
             }
         }
