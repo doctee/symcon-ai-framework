@@ -122,6 +122,10 @@ assertMowingAnalyticsDevice(
     $latestMessage['action'] === 'render'
         && $latestMessage['theme'] === 'dark'
         && $latestMessage['analytics']['state'] === 'available'
+        && count($latestMessage['statistics']) === 3
+        && $latestMessage['statistics'][0]['zoneId'] === 101
+        && $latestMessage['statistics'][0]['passProgressPercent'] === 100.0
+        && $latestMessage['statistics'][0]['observedArea'] === 90.0
         && str_contains($latestMessage['svg'], 'data-zone-id="101"')
         && str_contains($latestMessage['svg'], 'rotate(-7)'),
     'HTML SDK visualization message or station rotation differs.'
@@ -133,9 +137,12 @@ assertMowingAnalyticsDevice(
         && strlen($tile) < 2 * 1024 * 1024
         && str_contains($tile, 'data-navimow-map')
         && str_contains($tile, 'touch-action: none')
+        && str_contains($tile, '--nav-statistics-height: 0px')
+        && str_contains($tile, 'inset: 0 0 var(--nav-statistics-height) 0')
         && str_contains($tile, 'top: 52px')
+        && !str_contains($tile, 'top: 4px')
         && str_contains($tile, 'touch-action: manipulation')
-        && str_contains($tile, 'height: 44px')
+        && str_contains($tile, 'height: 38px')
         && str_contains($tile, 'left: 6px')
         && str_contains($tile, 'right: auto')
         && str_contains($tile, 'alignLegendRight')
@@ -145,6 +152,13 @@ assertMowingAnalyticsDevice(
         && str_contains($tile, 'legend.getBBox()')
         && str_contains($tile, 'matrix.inverse()')
         && str_contains($tile, "') scale(' + counterScale + ')'")
+        && str_contains($tile, 'scheduleStatisticsLayout')
+        && str_contains($tile, 'updateMowerTimeLabel')
+        && str_contains($tile, 'ageSeconds <= 60')
+        && str_contains($tile, "root.style.setProperty('--nav-statistics-height'")
+        && str_contains($tile, "Array.isArray(payload.statistics)")
+        && str_contains($tile, "'Fortschritt '")
+        && str_contains($tile, "'Beobachtet '")
         && str_contains($tile, '--nav-panel-solid: #20262b')
         && str_contains($tile, '.nav-map[data-theme="light"]')
         && str_contains($tile, 'color-scheme: inherit')
@@ -176,6 +190,21 @@ assertMowingAnalyticsDevice(
         && $device->testVariableDefinitions() === $beforeDisable
         && $device->RefreshLocalMap() === 'Local map refresh succeeded.',
     'Disabled analytics changed variables or blocked the existing map.'
+);
+$messages = $device->testVisualizationMessages();
+$fallbackMessage = json_decode(
+    $messages[array_key_last($messages)],
+    true,
+    64,
+    JSON_THROW_ON_ERROR
+);
+assertMowingAnalyticsDevice(
+    $fallbackMessage['analytics']['state'] === 'no-data'
+        && count($fallbackMessage['statistics']) === 3
+        && $fallbackMessage['statistics'][0]['passProgressPercent'] === 100.0
+        && $fallbackMessage['statistics'][0]['latestRunCoveragePercent']
+            === null,
+    'Disabled analytics did not preserve useful zone-statistics presentation.'
 );
 
 echo "Navimow mowing analytics Device checks passed.\n";

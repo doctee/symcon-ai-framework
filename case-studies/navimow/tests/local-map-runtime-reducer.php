@@ -88,7 +88,7 @@ assertLocalMapRuntime(
         )
         && str_contains(
             $device->testReadVariable('LocalMap'),
-            '<polyline class="path"'
+            '<polyline class="path path-age-'
         ),
     'Delayed MQTT evidence did not retain the marker and path.'
 );
@@ -101,7 +101,7 @@ assertLocalMapRuntime(
         )
         && str_contains(
             $device->testReadVariable('LocalMap'),
-            '<polyline class="path"'
+            '<polyline class="path path-age-'
         ),
     'Stale MQTT evidence did not hide only the current marker.'
 );
