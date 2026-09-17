@@ -1379,6 +1379,23 @@ scaffoldCheck(
     (float) $horizonSolar->testReadValue('CurrentPowerForecast') < 0.8,
     'Local horizon did not reduce the blocked solar forecast.'
 );
+$horizonSystem = json_decode(
+    $horizonSolar->GetPowerForecastJson(1735714800, 1735725601, 'system'),
+    true,
+    64,
+    JSON_THROW_ON_ERROR
+);
+$horizonBaseline = json_decode(
+    $horizonSolar->GetPowerForecastJson(1735714800, 1735725601, 'baseline'),
+    true,
+    64,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    (float) ($horizonSystem['data']['system'][1]['value'] ?? 0.0)
+        < (float) ($horizonBaseline['data']['baseline'][1]['value'] ?? 0.0),
+    'Local-horizon cache did not retain the simultaneous unshaded baseline.'
+);
 
 $runtimeSolar = new TestOpenMeteoSolarForecast();
 $runtimeSolar->Create();
@@ -1420,6 +1437,16 @@ foreach ($powerPoints as $powerPoint) {
         'Solar power cache unit, semantics or value differs.'
     );
 }
+$baselineForecast = json_decode(
+    $runtimeSolar->GetPowerForecastJson(1735714800, 1735725601, 'baseline'),
+    true,
+    64,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    ($baselineForecast['data']['baseline'] ?? null) === $powerPoints,
+    'Disabled local horizon did not expose an identical baseline.'
+);
 $dailyEnergyForecast = json_decode(
     $runtimeSolar->GetDailyEnergyForecastJson(1735686000, 1735772400),
     true,

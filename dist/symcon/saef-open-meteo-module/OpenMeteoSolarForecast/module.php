@@ -44,6 +44,7 @@ class OpenMeteoSolarForecast extends IPSModule
     private const MAXIMUM_CACHE_QUERY_SECONDS = 864000;
     private const MAXIMUM_LOCATION_DESCRIPTOR_BYTES = 4096;
     private const MAXIMUM_HORIZON_PROFILE_BYTES = 16384;
+    private const CACHE_SCHEMA_VERSION = 2;
     private const WEATHER_MODULE_ID = '{B52FE951-7FBE-4882-B0E6-E143E5B5F31A}';
 
     /** @var array<string, int> */
@@ -454,7 +455,7 @@ class OpenMeteoSolarForecast extends IPSModule
         if ($from < 0 || $to <= $from || $to - $from > self::MAXIMUM_CACHE_QUERY_SECONDS) {
             return $this->result(false, 'range_invalid');
         }
-        if ($breakdown !== 'system') {
+        if (!in_array($breakdown, ['system', 'baseline'], true)) {
             return $this->result(false, 'breakdown_unsupported');
         }
         $cache = $this->readCache();
@@ -463,7 +464,11 @@ class OpenMeteoSolarForecast extends IPSModule
         }
 
         $points = [];
-        foreach ($cache[$section]['system'] as $point) {
+        $series = $cache[$section][$breakdown] ?? null;
+        if (!is_array($series)) {
+            return $this->result(false, 'cache_invalid');
+        }
+        foreach ($series as $point) {
             if (!is_array($point)) {
                 return $this->result(false, 'cache_invalid');
             }
@@ -479,8 +484,8 @@ class OpenMeteoSolarForecast extends IPSModule
 
         return $this->encodeResult([
             'success' => true,
-            'breakdown' => 'system',
-            'data' => ['system' => $points],
+            'breakdown' => $breakdown,
+            'data' => [$breakdown => $points],
         ]);
     }
 
@@ -501,8 +506,11 @@ class OpenMeteoSolarForecast extends IPSModule
         if (
             !is_array($cache)
             || ($cache['configurationHash'] ?? null) !== $configurationHash
+            || ($cache['schemaVersion'] ?? null) !== self::CACHE_SCHEMA_VERSION
             || !is_array($cache['power']['system'] ?? null)
+            || !is_array($cache['power']['baseline'] ?? null)
             || !is_array($cache['dailyEnergy']['system'] ?? null)
+            || !is_array($cache['dailyEnergy']['baseline'] ?? null)
         ) {
             return null;
         }
@@ -558,6 +566,7 @@ class OpenMeteoSolarForecast extends IPSModule
                 'arrays' => $pv->arrays(),
                 'inverters' => $pv->inverters(),
                 'localHorizon' => $localHorizonProfile?->values(),
+                'cacheSchemaVersion' => self::CACHE_SCHEMA_VERSION,
             ]),
         ];
     }

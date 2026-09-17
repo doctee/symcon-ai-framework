@@ -34,6 +34,8 @@ final class SolarCalibrationCore
     /**
      * @param array<int, array<string, mixed>> $powerPoints
      * @param array<int, array<string, mixed>> $dailyEnergyPoints
+     * @param null|array<int, array<string, mixed>> $baselinePowerPoints
+     * @param null|array<int, array<string, mixed>> $baselineDailyEnergyPoints
      * @return array<string, mixed>
      */
     public static function buildSnapshot(
@@ -41,7 +43,9 @@ final class SolarCalibrationCore
         int $issuedAt,
         string $configurationHash,
         array $powerPoints,
-        array $dailyEnergyPoints
+        array $dailyEnergyPoints,
+        ?array $baselinePowerPoints = null,
+        ?array $baselineDailyEnergyPoints = null
     ): array {
         if (preg_match('/^[a-z][a-z0-9_]{0,63}$/', $targetKey) !== 1) {
             throw new InvalidArgumentException('Invalid calibration target key.');
@@ -58,7 +62,7 @@ final class SolarCalibrationCore
         $firstPowerPoint = $power[0];
         $lastPowerPoint = $power[count($power) - 1];
 
-        return [
+        $snapshot = [
             'schemaVersion' => 1,
             'targetKey' => $targetKey,
             'issuedAt' => $issuedAt,
@@ -68,6 +72,28 @@ final class SolarCalibrationCore
             'forecastValidFrom' => $firstPowerPoint['validFrom'],
             'forecastValidTo' => $lastPowerPoint['validTo'],
         ];
+        if (($baselinePowerPoints === null) !== ($baselineDailyEnergyPoints === null)) {
+            throw new InvalidArgumentException('Baseline forecast series are incomplete.');
+        }
+        if ($baselinePowerPoints !== null && $baselineDailyEnergyPoints !== null) {
+            $baselinePower = self::normalizePoints(
+                $baselinePowerPoints,
+                'kW',
+                'preceding_interval'
+            );
+            $baselineDailyEnergy = self::normalizePoints(
+                $baselineDailyEnergyPoints,
+                'kWh',
+                'local_day'
+            );
+            self::assertIntervalsMatch($power, $baselinePower);
+            self::assertIntervalsMatch($dailyEnergy, $baselineDailyEnergy);
+            $snapshot['schemaVersion'] = 2;
+            $snapshot['baselinePower'] = $baselinePower;
+            $snapshot['baselineDailyEnergy'] = $baselineDailyEnergy;
+        }
+
+        return $snapshot;
     }
 
     /**
@@ -446,6 +472,27 @@ final class SolarCalibrationCore
         usort($normalized, static fn(array $left, array $right): int => $left['validFrom'] <=> $right['validFrom']);
 
         return $normalized;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $forecast
+     * @param array<int, array<string, mixed>> $baseline
+     */
+    private static function assertIntervalsMatch(array $forecast, array $baseline): void
+    {
+        if (count($forecast) !== count($baseline)) {
+            throw new InvalidArgumentException('Baseline forecast intervals differ.');
+        }
+        foreach ($forecast as $index => $point) {
+            $baselinePoint = $baseline[$index];
+            if (
+                $point['sourceTimestamp'] !== $baselinePoint['sourceTimestamp']
+                || $point['validFrom'] !== $baselinePoint['validFrom']
+                || $point['validTo'] !== $baselinePoint['validTo']
+            ) {
+                throw new InvalidArgumentException('Baseline forecast intervals differ.');
+            }
+        }
     }
 
     private static function finiteNonNegative(mixed $value, string $label): float

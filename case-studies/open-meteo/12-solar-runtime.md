@@ -57,7 +57,9 @@ bodies and PV configuration are not logged.
 
 A request-relevant configuration change produces a new deterministic hash,
 hides the incompatible cache and resets the three curated forecast values until
-a complete forecast for the new configuration succeeds.
+a complete forecast for the new configuration succeeds. The cache schema
+version participates in that hash, so a module revision that changes the cache
+contract also fails closed instead of exposing a structurally stale cache.
 
 ## Cache and Consumer API
 
@@ -66,11 +68,13 @@ The configuration-bound cache exposes:
 - `GetPowerForecastJson(from, to, breakdown)`; and
 - `GetDailyEnergyForecastJson(from, to, breakdown)`.
 
-Ranges are limited to ten days. The first runtime supports the explicit
-`system` breakdown; array and inverter breakdowns fail with
-`breakdown_unsupported` instead of returning an ambiguous approximation.
-Public values contain current power in kW plus today's and tomorrow's energy
-in kWh for the configured output mode.
+Ranges are limited to ten days. `system` is the operative forecast and
+`baseline` is calculated from the same provider response before the optional
+local-horizon adjustment. With the horizon disabled both series are identical.
+Array and inverter breakdowns fail with `breakdown_unsupported` instead of
+returning an ambiguous approximation. Public values contain only the operative
+current power in kW plus today's and tomorrow's energy in kWh for the configured
+output mode.
 
 ## Storage-Coupled Systems
 
@@ -109,8 +113,10 @@ Weather descriptor, bounded fail-closed recovery, two serialized orientation req
 direct-AC and PV-input clipping, storage-coupled PV harvest, bounded cache
 access, last-good
 retention, manual-mode retry suppression, automatic polling and the first retry
-interval. The deterministic fileset includes `SolarForecastProjector` and the
-separate local-horizon classes.
+interval. It also verifies that `system` and `baseline` share exact intervals,
+that they remain identical without a horizon and that a blocking horizon only
+reduces `system`. The deterministic fileset includes `SolarForecastProjector`
+and the separate local-horizon classes.
 
 Publication, installed-library update, private configuration, one controlled
 manual request, observation and later SolCast consumer migration remain

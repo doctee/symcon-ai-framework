@@ -50,6 +50,12 @@ Calibration continues to evaluate residual error after known horizon effects
 have been applied. A later factor must therefore not relearn morning shading,
 and storage-related curtailment remains classified independently.
 
+For controlled observation the cache also retains a `baseline` series from the
+same provider response before horizon processing. It uses no additional HTTP
+request and creates no shadow instance. The operative public values and the
+`system` API remain horizon-adjusted; baseline data is exposed only through the
+bounded forecast API and copied into new immutable calibration snapshots.
+
 ## Offline Proof
 
 The focused suite covers:

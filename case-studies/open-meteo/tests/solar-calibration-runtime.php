@@ -91,8 +91,12 @@ function OMSOLAR_GetPowerForecastJson(int $instanceId, int $from, int $to, strin
 {
     global $calibrationRuntimeState;
 
+    $points = $scope === 'baseline'
+        ? $calibrationRuntimeState['baselinePowerForecast']
+        : $calibrationRuntimeState['powerForecast'];
+
     return json_encode(
-        ['success' => true, 'data' => ['system' => $calibrationRuntimeState['powerForecast']]],
+        ['success' => true, 'breakdown' => $scope, 'data' => [$scope => $points]],
         JSON_THROW_ON_ERROR
     );
 }
@@ -101,8 +105,12 @@ function OMSOLAR_GetDailyEnergyForecastJson(int $instanceId, int $from, int $to,
 {
     global $calibrationRuntimeState;
 
+    $points = $scope === 'baseline'
+        ? $calibrationRuntimeState['baselineDailyForecast']
+        : $calibrationRuntimeState['dailyForecast'];
+
     return json_encode(
-        ['success' => true, 'data' => ['system' => $calibrationRuntimeState['dailyForecast']]],
+        ['success' => true, 'breakdown' => $scope, 'data' => [$scope => $points]],
         JSON_THROW_ON_ERROR
     );
 }
@@ -205,6 +213,8 @@ try {
         ],
         'powerForecast' => [],
         'dailyForecast' => [],
+        'baselinePowerForecast' => [],
+        'baselineDailyForecast' => [],
     ];
 
     $runtime = new SolarCalibrationCollectorRuntime(
@@ -278,10 +288,65 @@ try {
         'Drained runtime backlog was not stable.'
     );
 
+    $comparisonDirectory = $temporaryDirectory . DIRECTORY_SEPARATOR . 'comparison';
+    $comparisonTargetDirectory = $comparisonDirectory . DIRECTORY_SEPARATOR . 'solar_comparison';
+    mkdir($comparisonTargetDirectory, 0700, true);
+    $comparisonIssuedAt = time();
+    $comparisonPower = [[
+        'sourceTimestamp' => $comparisonIssuedAt + 3660,
+        'validFrom' => $comparisonIssuedAt + 60,
+        'validTo' => $comparisonIssuedAt + 3660,
+        'value' => 0.4,
+        'unit' => 'kW',
+        'semantics' => 'preceding_interval',
+    ]];
+    $comparisonDaily = [[
+        'sourceTimestamp' => $comparisonIssuedAt + 7200,
+        'validFrom' => $comparisonIssuedAt + 60,
+        'validTo' => $comparisonIssuedAt + 7200,
+        'value' => 0.8,
+        'unit' => 'kWh',
+        'semantics' => 'local_day',
+    ]];
+    $calibrationRuntimeState['values'][201] = $comparisonIssuedAt;
+    $calibrationRuntimeState['values'][202] = $comparisonIssuedAt + 60;
+    $calibrationRuntimeState['values'][203] = $comparisonIssuedAt + 3660;
+    $calibrationRuntimeState['powerForecast'] = $comparisonPower;
+    $calibrationRuntimeState['dailyForecast'] = $comparisonDaily;
+    $calibrationRuntimeState['baselinePowerForecast'] = array_replace_recursive(
+        $comparisonPower,
+        [0 => ['value' => 0.5]]
+    );
+    $calibrationRuntimeState['baselineDailyForecast'] = array_replace_recursive(
+        $comparisonDaily,
+        [0 => ['value' => 1.0]]
+    );
+    $comparisonRuntime = new SolarCalibrationCollectorRuntime(
+        calibrationRuntimeConfiguration($comparisonDirectory, 'solar_comparison')
+    );
+    $comparisonResult = $comparisonRuntime->run();
+    calibrationRuntimeCheck(
+        ($comparisonResult['captures']['solar_comparison']['baselinePowerPointCount'] ?? null) === 1,
+        'Simultaneous baseline was not captured.'
+    );
+    $comparisonPaths = glob($comparisonTargetDirectory . DIRECTORY_SEPARATOR . 'forecast-*.json') ?: [];
+    $comparisonSnapshot = json_decode(
+        (string) file_get_contents($comparisonPaths[0]),
+        true,
+        64,
+        JSON_THROW_ON_ERROR
+    );
+    calibrationRuntimeCheck(
+        ($comparisonSnapshot['schemaVersion'] ?? null) === 2
+            && (float) ($comparisonSnapshot['baselinePower'][0]['value'] ?? -1.0) === 0.5
+            && (float) ($comparisonSnapshot['baselineDailyEnergy'][0]['value'] ?? -1.0) === 1.0,
+        'Comparison snapshot contract differs.'
+    );
+
     $capDirectory = $temporaryDirectory . DIRECTORY_SEPARATOR . 'cap';
     $capTargetDirectory = $capDirectory . DIRECTORY_SEPARATOR . 'solar_cap';
     mkdir($capTargetDirectory, 0700, true);
-    for ($offset = 0; $offset < 1000; $offset++) {
+    for ($offset = 0; $offset < 1200; $offset++) {
         $snapshotIssuedAt = $firstIssuedAt + $offset;
         $path = $capTargetDirectory
             . DIRECTORY_SEPARATOR

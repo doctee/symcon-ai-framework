@@ -22,6 +22,40 @@ $snapshot = SolarCalibrationCore::buildSnapshot('solar_a', 150, str_repeat('a', 
 calibrationCheck($snapshot['forecastValidFrom'] === 100, 'Snapshot start differs.');
 calibrationCheck($snapshot['forecastValidTo'] === 300, 'Snapshot end differs.');
 calibrationCheck(count($snapshot['power']) === 2, 'Snapshot power count differs.');
+$baselinePower = $power;
+$baselinePower[0]['value'] = 0.6;
+$baselineDaily = $daily;
+$baselineDaily[0]['value'] = 4.8;
+$comparisonSnapshot = SolarCalibrationCore::buildSnapshot(
+    'solar_a',
+    150,
+    str_repeat('a', 64),
+    $power,
+    $daily,
+    $baselinePower,
+    $baselineDaily
+);
+calibrationCheck($comparisonSnapshot['schemaVersion'] === 2, 'Comparison snapshot schema differs.');
+calibrationCheck(
+    count($comparisonSnapshot['baselinePower']) === 2
+        && count($comparisonSnapshot['baselineDailyEnergy']) === 1,
+    'Comparison snapshot baseline counts differ.'
+);
+$incompleteBaselineRejected = false;
+try {
+    SolarCalibrationCore::buildSnapshot(
+        'solar_a',
+        150,
+        str_repeat('a', 64),
+        $power,
+        $daily,
+        $baselinePower,
+        null
+    );
+} catch (InvalidArgumentException) {
+    $incompleteBaselineRejected = true;
+}
+calibrationCheck($incompleteBaselineRejected, 'Incomplete baseline pair must be rejected.');
 
 $metrics = SolarCalibrationCore::calculatePowerMetrics([
     ['forecastKw' => 0.4, 'measuredKw' => 0.5, 'durationSeconds' => 3600, 'coverage' => 1.0],

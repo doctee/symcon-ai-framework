@@ -673,8 +673,8 @@ The first runtime-facing methods should remain bounded:
 | Method | Result |
 | --- | --- |
 | `UpdateData()` | Fetches all unique orientations serially and atomically publishes only a complete valid result |
-| `GetPowerForecastJson(from, to, breakdown)` | Returns bounded AC power intervals; first runtime supports `system` explicitly |
-| `GetDailyEnergyForecastJson(fromDate, toDate, breakdown)` | Returns bounded local-day energy totals; first runtime supports `system` explicitly |
+| `GetPowerForecastJson(from, to, breakdown)` | Returns bounded power intervals for `system` or the simultaneous unshaded `baseline` |
+| `GetDailyEnergyForecastJson(fromDate, toDate, breakdown)` | Returns bounded local-day energy totals for `system` or `baseline` |
 
 Bounds are enforced even for local callers. Unknown fields and out-of-cache
 ranges return a classified error instead of an unbounded raw cache dump.
