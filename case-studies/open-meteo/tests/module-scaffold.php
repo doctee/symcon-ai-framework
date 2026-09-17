@@ -752,8 +752,8 @@ $weather = new OpenMeteoWeather();
 $weather->Create();
 $weather->ApplyChanges();
 scaffoldCheck($weather->testStatus() === 104, 'Unconfigured weather scaffold must be inactive.');
-scaffoldCheck(count($weather->testVariables()) === 41, 'Weather variable contract differs.');
-scaffoldCheck(count($scaffoldProfiles) === 11, 'Open-Meteo profile contract differs.');
+scaffoldCheck(count($weather->testVariables()) === 43, 'Weather variable contract differs.');
+scaffoldCheck(count($scaffoldProfiles) === 12, 'Open-Meteo profile contract differs.');
 $profiles = $scaffoldProfiles;
 $weatherVariables = $weather->testVariables();
 $soilVariableIdents = [
@@ -928,6 +928,7 @@ function scaffoldWeatherUnits(array $fields): array
             $field === 'sunshine_duration' => 's',
             $field === 'precipitation_hours' => 'h',
             $field === 'shortwave_radiation_sum' => 'MJ/m²',
+            $field === 'direct_normal_irradiance', $field === 'diffuse_radiation' => 'W/m²',
             $field === 'sunrise', $field === 'sunset' => 'unixtime',
             default => 'mm',
         };
@@ -1253,23 +1254,22 @@ function scaffoldConfigureSolar(IPSModule $solar, int $weatherInstanceId): void
 
 function scaffoldSolarResponse(float $irradiance, ?float $directNormalIrradiance = null): string
 {
+    $directNormalIrradiance ??= $irradiance;
     $hourlyUnits = [
         'temperature_2m' => '°C',
         'global_tilted_irradiance' => 'W/m²',
+        'direct_normal_irradiance' => 'W/m²',
     ];
     $hourly = [
         'time' => [1735718400, 1735722000, 1735725600],
         'temperature_2m' => [25.0, 25.0, 25.0],
         'global_tilted_irradiance' => [$irradiance, $irradiance, $irradiance],
+        'direct_normal_irradiance' => [
+            $directNormalIrradiance,
+            $directNormalIrradiance,
+            $directNormalIrradiance,
+        ],
     ];
-    if ($directNormalIrradiance !== null) {
-        $hourlyUnits['direct_normal_irradiance'] = 'W/m²';
-        $hourly['direct_normal_irradiance'] = [
-            $directNormalIrradiance,
-            $directNormalIrradiance,
-            $directNormalIrradiance,
-        ];
-    }
 
     return json_encode([
         'latitude' => 48.0,
@@ -1292,7 +1292,7 @@ $solar = new OpenMeteoSolarForecast();
 $solar->Create();
 $solar->ApplyChanges();
 scaffoldCheck($solar->testStatus() === 104, 'Unconfigured solar module must be inactive.');
-scaffoldCheck(count($solar->testVariables()) === 10, 'Solar variable contract differs.');
+scaffoldCheck(count($solar->testVariables()) === 14, 'Solar variable contract differs.');
 scaffoldCheck($solar->testTimerRegistrations() === 2, 'Solar timer contract differs.');
 scaffoldCheck($solar->testTimerInterval('UpdateData') === 0, 'Solar timer must start disabled.');
 scaffoldCheck(
@@ -1412,6 +1412,19 @@ scaffoldCheck(
     'Solar inverter clipping differs.'
 );
 scaffoldCheck(
+    abs((float) $runtimeSolar->testReadValue('CurrentBaselinePowerForecast') - 0.8) < 0.000001,
+    'Solar baseline power differs.'
+);
+scaffoldCheck(
+    abs((float) $runtimeSolar->testReadValue('CurrentGtiSystem') - 1000.0) < 0.000001
+        && abs((float) $runtimeSolar->testReadValue('CurrentGtiBaseline') - 1000.0) < 0.000001,
+    'Solar current irradiance differs.'
+);
+scaffoldCheck(
+    abs((float) $runtimeSolar->testReadValue('CurrentHorizonLossPercent')) < 0.000001,
+    'Disabled local horizon reported a loss.'
+);
+scaffoldCheck(
     (float) $runtimeSolar->testReadValue('TodayEnergyForecast') > 0.0,
     'Solar daily energy was not projected.'
 );
@@ -1446,6 +1459,30 @@ $baselineForecast = json_decode(
 scaffoldCheck(
     ($baselineForecast['data']['baseline'] ?? null) === $powerPoints,
     'Disabled local horizon did not expose an identical baseline.'
+);
+$irradianceForecast = json_decode(
+    $runtimeSolar->GetIrradianceForecastJson(1735714800, 1735725601, 'system'),
+    true,
+    64,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    count($irradianceForecast['data']['system'] ?? []) === 3
+        && abs(
+            (float) ($irradianceForecast['data']['system'][1]['value'] ?? -1.0) - 1000.0
+        ) < 0.000001,
+    'Bounded system irradiance forecast differs.'
+);
+$solarInputForecast = json_decode(
+    $runtimeSolar->GetSolarInputForecastJson(1735714800, 1735725601),
+    true,
+    64,
+    JSON_THROW_ON_ERROR
+);
+scaffoldCheck(
+    count($solarInputForecast['data']['directNormalIrradiance'] ?? []) === 3
+        && count($solarInputForecast['data']['airTemperature'] ?? []) === 3,
+    'Bounded solar input forecast differs.'
 );
 $dailyEnergyForecast = json_decode(
     $runtimeSolar->GetDailyEnergyForecastJson(1735686000, 1735772400),

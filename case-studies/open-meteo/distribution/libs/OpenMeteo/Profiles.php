@@ -37,6 +37,7 @@ final class Profiles
         self::integerProfile('OPENMETEO.Duration', ' s', 0, 172800);
         self::floatProfile('OPENMETEO.Power', ' kW', 0.0, 100000.0, 0.01, 2);
         self::floatProfile('OPENMETEO.Energy', ' kWh', 0.0, 1000000.0, 0.01, 2);
+        self::floatProfile('OPENMETEO.Irradiance', ' W/m²', 0.0, 2000.0, 0.1, 1);
     }
 
     private static function integerProfile(

@@ -485,7 +485,7 @@ https://api.open-meteo.com/v1/dwd-icon
   &forecast_days=<1..7>
   &tilt=<0..90>
   &azimuth=<-180..180>
-  &hourly=temperature_2m,global_tilted_irradiance
+  &hourly=temperature_2m,global_tilted_irradiance,direct_normal_irradiance
 ```
 
 Arrays with identical normalized orientation share one request result. Requests
@@ -559,6 +559,8 @@ types are stable API.
 | `CloudCover` | integer | `~Intensity.100` | user-owned/off | percent |
 | `IsDay` | boolean | default boolean | user-owned/off | model/astronomical flag |
 | `CurrentValidAt` | integer | `~UnixTimestamp` | no | Source validity timestamp |
+| `DirectNormalIrradiance` | float | `OPENMETEO.Irradiance` | user-owned/off | preceding-interval DNI, W/m2 |
+| `DiffuseRadiation` | float | `OPENMETEO.Irradiance` | user-owned/off | preceding-interval diffuse radiation, W/m2 |
 
 The module never enables, disables or rewrites Archive Control logging during
 normal registration or update. Existing variable identity and user archive
@@ -613,6 +615,10 @@ that behavior.
 | `ForecastValidTo` | integer | `~UnixTimestamp` | no | Latest PV interval |
 | `ForecastAgeMinutes` | integer | none | no | Age since last success |
 | `CurrentPowerForecast` | float | `OPENMETEO.Power` | user-owned/off | Forecast AC power for current valid interval |
+| `CurrentBaselinePowerForecast` | float | `OPENMETEO.Power` | user-owned/off | Simultaneous forecast before local-horizon correction |
+| `CurrentGtiSystem` | float | `OPENMETEO.Irradiance` | user-owned/off | Peak-power-weighted GTI after local horizon |
+| `CurrentGtiBaseline` | float | `OPENMETEO.Irradiance` | user-owned/off | Peak-power-weighted GTI before local horizon |
+| `CurrentHorizonLossPercent` | float | `~Intensity.100` | user-owned/off | Current relative GTI reduction from local horizon |
 | `TodayEnergyForecast` | float | `OPENMETEO.Energy` | user-owned/off | Forecast local-day AC energy kWh |
 | `TomorrowEnergyForecast` | float | `OPENMETEO.Energy` | user-owned/off | Next local-day AC energy kWh |
 | `ConfigurationHash` | string | none | no | Diagnostic normalized PV configuration hash |
@@ -639,6 +645,7 @@ method is permitted and has no device side effect.
 | `OPENMETEO.Duration` | integer | seconds or duration presentation |
 | `OPENMETEO.Power` | float | kW |
 | `OPENMETEO.Energy` | float | kWh |
+| `OPENMETEO.Irradiance` | float | W/m2 |
 
 `OPENMETEO.DataState` initial associations:
 
@@ -838,9 +845,10 @@ history of `TodayEnergyForecast` alone. A snapshot record contains:
 | `actualValue` | Added only after the actual interval closes |
 | `qualityFlags` | Missing actual, curtailment, outage, excluded day, etc. |
 
-Snapshot retention and actual-variable linkage are not part of the first
-module implementation. They require a separate bounded archive/evaluation
-design and private consumer configuration.
+The bounded calibration collector stores this evidence outside Archive Control.
+Snapshot schema 3 adds simultaneous system/baseline GTI, DNI and air
+temperature while preserving schema-1 and schema-2 compatibility. Live scalar
+logging and chart composition remain explicit, installation-owned decisions.
 
 ## 19. Offline Core Boundary
 

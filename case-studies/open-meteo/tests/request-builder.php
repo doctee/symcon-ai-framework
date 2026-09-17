@@ -28,7 +28,10 @@ $solar = RequestBuilder::solar($configuration, 30.0, -90.0);
 check(str_contains($solar, 'tilt=30'), 'Solar tilt is missing.');
 check(str_contains($solar, 'azimuth=-90'), 'Solar azimuth is missing.');
 check(
-    str_contains($solar, 'temperature_2m%2Cglobal_tilted_irradiance'),
+    str_contains(
+        $solar,
+        'temperature_2m%2Cglobal_tilted_irradiance%2Cdirect_normal_irradiance'
+    ),
     'Solar field profile differs.'
 );
 $solarWithHorizon = RequestBuilder::solar($configuration, 30.0, -90.0, true);

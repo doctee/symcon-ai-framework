@@ -8,7 +8,7 @@ use UnexpectedValueException;
 
 final class WeatherForecastProjector
 {
-    private const SCHEMA_VERSION = 1;
+    private const SCHEMA_VERSION = 2;
 
     /**
      * @return array{
@@ -138,6 +138,8 @@ final class WeatherForecastProjector
             'Snowfall' => 'snowfall',
             'WeatherCode' => 'weather_code',
             'CloudCover' => 'cloud_cover',
+            'DirectNormalIrradiance' => 'direct_normal_irradiance',
+            'DiffuseRadiation' => 'diffuse_radiation',
             'IsDay' => 'is_day',
         ];
         $values = [];

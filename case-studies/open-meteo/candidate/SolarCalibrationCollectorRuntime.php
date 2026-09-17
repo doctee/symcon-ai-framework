@@ -122,6 +122,23 @@ final class SolarCalibrationCollectorRuntime
             $validTo,
             'baseline'
         ), 'baseline');
+        $irradianceResult = $this->decodeModuleResult(OMSOLAR_GetIrradianceForecastJson(
+            $instanceId,
+            $validFrom,
+            $validTo,
+            'system'
+        ));
+        $baselineIrradianceResult = $this->decodeModuleResult(OMSOLAR_GetIrradianceForecastJson(
+            $instanceId,
+            $validFrom,
+            $validTo,
+            'baseline'
+        ), 'baseline');
+        $solarInputResult = $this->decodeSolarInputResult(OMSOLAR_GetSolarInputForecastJson(
+            $instanceId,
+            $validFrom,
+            $validTo
+        ));
         $snapshot = SolarCalibrationCore::buildSnapshot(
             $target['key'],
             $lastSuccess,
@@ -129,7 +146,11 @@ final class SolarCalibrationCollectorRuntime
             $powerResult['data']['system'] ?? [],
             $dailyResult['data']['system'] ?? [],
             $baselinePowerResult['data']['baseline'] ?? [],
-            $baselineDailyResult['data']['baseline'] ?? []
+            $baselineDailyResult['data']['baseline'] ?? [],
+            $irradianceResult['data']['system'] ?? [],
+            $baselineIrradianceResult['data']['baseline'] ?? [],
+            $solarInputResult['data']['directNormalIrradiance'] ?? [],
+            $solarInputResult['data']['airTemperature'] ?? []
         );
         $snapshot['capturedAt'] = time();
         $snapshot['solarInstanceId'] = $instanceId;
@@ -145,6 +166,8 @@ final class SolarCalibrationCollectorRuntime
             'dailyPointCount' => count($snapshot['dailyEnergy']),
             'baselinePowerPointCount' => count($snapshot['baselinePower']),
             'baselineDailyPointCount' => count($snapshot['baselineDailyEnergy']),
+            'irradiancePointCount' => count($snapshot['irradiance']),
+            'solarInputPointCount' => count($snapshot['directNormalIrradiance']),
         ];
     }
 
@@ -179,7 +202,7 @@ final class SolarCalibrationCollectorRuntime
             $pathIdentity = $this->snapshotPathIdentity($snapshotPath);
             if (
                 !is_array($snapshot)
-                || !in_array($snapshot['schemaVersion'] ?? null, [1, 2], true)
+                || !in_array($snapshot['schemaVersion'] ?? null, [1, 2, 3], true)
                 || ($snapshot['targetKey'] ?? null) !== $target['key']
                 || ($snapshot['issuedAt'] ?? null) !== $pathIdentity['issuedAt']
                 || ($snapshot['configurationHash'] ?? null) !== $pathIdentity['configurationHash']
@@ -707,6 +730,25 @@ final class SolarCalibrationCollectorRuntime
             || !is_array($result['data'][$breakdown] ?? null)
         ) {
             throw new RuntimeException('Forecast cache result is invalid.');
+        }
+
+        return $result;
+    }
+
+    /** @return array<string, mixed> */
+    private function decodeSolarInputResult(string $json): array
+    {
+        if (strlen($json) > 1024 * 1024) {
+            throw new RuntimeException('Solar input cache result is unbounded.');
+        }
+        $result = json_decode($json, true, 64, JSON_THROW_ON_ERROR);
+        if (
+            !is_array($result)
+            || ($result['success'] ?? null) !== true
+            || !is_array($result['data']['directNormalIrradiance'] ?? null)
+            || !is_array($result['data']['airTemperature'] ?? null)
+        ) {
+            throw new RuntimeException('Solar input cache result is invalid.');
         }
 
         return $result;

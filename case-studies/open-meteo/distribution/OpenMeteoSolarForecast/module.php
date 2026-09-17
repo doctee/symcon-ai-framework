@@ -44,7 +44,7 @@ class OpenMeteoSolarForecast extends IPSModule
     private const MAXIMUM_CACHE_QUERY_SECONDS = 864000;
     private const MAXIMUM_LOCATION_DESCRIPTOR_BYTES = 4096;
     private const MAXIMUM_HORIZON_PROFILE_BYTES = 16384;
-    private const CACHE_SCHEMA_VERSION = 2;
+    private const CACHE_SCHEMA_VERSION = 3;
     private const WEATHER_MODULE_ID = '{B52FE951-7FBE-4882-B0E6-E143E5B5F31A}';
 
     /** @var array<string, int> */
@@ -162,6 +162,10 @@ class OpenMeteoSolarForecast extends IPSModule
             $this->SetValue('ConfigurationHash', $context['configurationHash']);
             if (!$state['hasData']) {
                 $this->SetValue('CurrentPowerForecast', 0.0);
+                $this->SetValue('CurrentBaselinePowerForecast', 0.0);
+                $this->SetValue('CurrentGtiSystem', 0.0);
+                $this->SetValue('CurrentGtiBaseline', 0.0);
+                $this->SetValue('CurrentHorizonLossPercent', 0.0);
                 $this->SetValue('TodayEnergyForecast', 0.0);
                 $this->SetValue('TomorrowEnergyForecast', 0.0);
             }
@@ -223,6 +227,49 @@ class OpenMeteoSolarForecast extends IPSModule
         string $breakdown = 'system'
     ): string {
         return $this->forecastSlice('dailyEnergy', $from, $to, $breakdown);
+    }
+
+    public function GetIrradianceForecastJson(
+        int $from,
+        int $to,
+        string $breakdown = 'system'
+    ): string {
+        return $this->forecastSlice('irradiance', $from, $to, $breakdown);
+    }
+
+    public function GetSolarInputForecastJson(int $from, int $to): string
+    {
+        if ($from < 0 || $to <= $from || $to - $from > self::MAXIMUM_CACHE_QUERY_SECONDS) {
+            return $this->result(false, 'range_invalid');
+        }
+        $cache = $this->readCache();
+        if ($cache === null) {
+            return $this->result(false, 'cache_empty');
+        }
+
+        $result = [];
+        foreach (['directNormalIrradiance', 'airTemperature'] as $field) {
+            $series = $cache['solarInput'][$field] ?? null;
+            if (!is_array($series)) {
+                return $this->result(false, 'cache_invalid');
+            }
+            $result[$field] = [];
+            foreach ($series as $point) {
+                if (!is_array($point)) {
+                    return $this->result(false, 'cache_invalid');
+                }
+                $validFrom = $point['validFrom'] ?? null;
+                $validTo = $point['validTo'] ?? null;
+                if (!is_int($validFrom) || !is_int($validTo)) {
+                    return $this->result(false, 'cache_invalid');
+                }
+                if ($validTo > $from && $validFrom < $to) {
+                    $result[$field][] = $point;
+                }
+            }
+        }
+
+        return $this->encodeResult(['success' => true, 'data' => $result]);
     }
 
     /**
@@ -511,6 +558,10 @@ class OpenMeteoSolarForecast extends IPSModule
             || !is_array($cache['power']['baseline'] ?? null)
             || !is_array($cache['dailyEnergy']['system'] ?? null)
             || !is_array($cache['dailyEnergy']['baseline'] ?? null)
+            || !is_array($cache['irradiance']['system'] ?? null)
+            || !is_array($cache['irradiance']['baseline'] ?? null)
+            || !is_array($cache['solarInput']['directNormalIrradiance'] ?? null)
+            || !is_array($cache['solarInput']['airTemperature'] ?? null)
         ) {
             return null;
         }
@@ -700,9 +751,13 @@ class OpenMeteoSolarForecast extends IPSModule
         $this->RegisterVariableInteger('ForecastValidTo', 'Forecast Valid To', '~UnixTimestamp', 50);
         $this->RegisterVariableInteger('ForecastAgeMinutes', 'Forecast Age Minutes', '', 60);
         $this->RegisterVariableFloat('CurrentPowerForecast', 'Current Power Forecast', 'OPENMETEO.Power', 100);
-        $this->RegisterVariableFloat('TodayEnergyForecast', 'Today Energy Forecast', 'OPENMETEO.Energy', 110);
-        $this->RegisterVariableFloat('TomorrowEnergyForecast', 'Tomorrow Energy Forecast', 'OPENMETEO.Energy', 120);
-        $this->RegisterVariableString('ConfigurationHash', 'Configuration Hash', '', 130);
+        $this->RegisterVariableFloat('CurrentBaselinePowerForecast', 'Current Baseline Power Forecast', 'OPENMETEO.Power', 110);
+        $this->RegisterVariableFloat('CurrentGtiSystem', 'Current GTI System', 'OPENMETEO.Irradiance', 120);
+        $this->RegisterVariableFloat('CurrentGtiBaseline', 'Current GTI Baseline', 'OPENMETEO.Irradiance', 130);
+        $this->RegisterVariableFloat('CurrentHorizonLossPercent', 'Current Horizon Loss', '~Intensity.100', 140);
+        $this->RegisterVariableFloat('TodayEnergyForecast', 'Today Energy Forecast', 'OPENMETEO.Energy', 150);
+        $this->RegisterVariableFloat('TomorrowEnergyForecast', 'Tomorrow Energy Forecast', 'OPENMETEO.Energy', 160);
+        $this->RegisterVariableString('ConfigurationHash', 'Configuration Hash', '', 170);
     }
 
     private function result(bool $success, string $code): string

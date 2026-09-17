@@ -24,6 +24,8 @@ final class FieldCatalog
         'snowfall',
         'weather_code',
         'cloud_cover',
+        'direct_normal_irradiance',
+        'diffuse_radiation',
         'pressure_msl',
         'surface_pressure',
         'wind_speed_10m',
@@ -50,6 +52,8 @@ final class FieldCatalog
         'cloud_cover_low',
         'cloud_cover_mid',
         'cloud_cover_high',
+        'direct_normal_irradiance',
+        'diffuse_radiation',
         'visibility',
         'wind_speed_10m',
         'wind_direction_10m',
@@ -139,6 +143,7 @@ final class FieldCatalog
         'sunset' => ['unixtime', 'iso8601'],
         'global_tilted_irradiance' => ['W/m²'],
         'direct_normal_irradiance' => ['W/m²'],
+        'diffuse_radiation' => ['W/m²'],
         'ac_power' => ['kW'],
         'daily_energy' => ['kWh'],
         'soil_temperature_0cm' => ['°C'],
@@ -179,14 +184,13 @@ final class FieldCatalog
     }
 
     /** @return list<string> */
-    public static function solarHourlyFields(bool $withLocalHorizon): array
+    public static function solarHourlyFields(bool $_withLocalHorizon): array
     {
-        $fields = ['temperature_2m', 'global_tilted_irradiance'];
-        if ($withLocalHorizon) {
-            $fields[] = 'direct_normal_irradiance';
-        }
-
-        return $fields;
+        return [
+            'temperature_2m',
+            'global_tilted_irradiance',
+            'direct_normal_irradiance',
+        ];
     }
 
     public static function permitsNullGap(string $section, string $field): bool
@@ -207,6 +211,8 @@ final class FieldCatalog
             'showers',
             'snowfall',
             'wind_gusts_10m',
+            'direct_normal_irradiance',
+            'diffuse_radiation',
             ], true)
         ) {
             return self::SEMANTICS_PRECEDING_INTERVAL;
@@ -223,6 +229,7 @@ final class FieldCatalog
             'et0_fao_evapotranspiration',
             'global_tilted_irradiance',
             'direct_normal_irradiance',
+            'diffuse_radiation',
             ], true)
         ) {
             return self::SEMANTICS_PRECEDING_INTERVAL;

@@ -115,6 +115,36 @@ function OMSOLAR_GetDailyEnergyForecastJson(int $instanceId, int $from, int $to,
     );
 }
 
+function OMSOLAR_GetIrradianceForecastJson(int $instanceId, int $from, int $to, string $scope): string
+{
+    global $calibrationRuntimeState;
+
+    $points = $scope === 'baseline'
+        ? $calibrationRuntimeState['baselineIrradianceForecast']
+        : $calibrationRuntimeState['irradianceForecast'];
+
+    return json_encode(
+        ['success' => true, 'breakdown' => $scope, 'data' => [$scope => $points]],
+        JSON_THROW_ON_ERROR
+    );
+}
+
+function OMSOLAR_GetSolarInputForecastJson(int $instanceId, int $from, int $to): string
+{
+    global $calibrationRuntimeState;
+
+    return json_encode(
+        [
+            'success' => true,
+            'data' => [
+                'directNormalIrradiance' => $calibrationRuntimeState['directNormalIrradianceForecast'],
+                'airTemperature' => $calibrationRuntimeState['airTemperatureForecast'],
+            ],
+        ],
+        JSON_THROW_ON_ERROR
+    );
+}
+
 require_once __DIR__ . '/../candidate/SolarCalibrationCollectorRuntime.php';
 
 function calibrationRuntimeCheck(bool $condition, string $message): void
@@ -215,6 +245,10 @@ try {
         'dailyForecast' => [],
         'baselinePowerForecast' => [],
         'baselineDailyForecast' => [],
+        'irradianceForecast' => [],
+        'baselineIrradianceForecast' => [],
+        'directNormalIrradianceForecast' => [],
+        'airTemperatureForecast' => [],
     ];
 
     $runtime = new SolarCalibrationCollectorRuntime(
@@ -321,6 +355,29 @@ try {
         $comparisonDaily,
         [0 => ['value' => 1.0]]
     );
+    $irradiancePoint = array_replace_recursive(
+        $comparisonPower,
+        [0 => ['value' => 500.0, 'unit' => 'W/m²']]
+    );
+    $calibrationRuntimeState['irradianceForecast'] = $irradiancePoint;
+    $calibrationRuntimeState['baselineIrradianceForecast'] = array_replace_recursive(
+        $irradiancePoint,
+        [0 => ['value' => 600.0]]
+    );
+    $calibrationRuntimeState['directNormalIrradianceForecast'] = array_replace_recursive(
+        $irradiancePoint,
+        [0 => ['value' => 700.0]]
+    );
+    $calibrationRuntimeState['airTemperatureForecast'] = array_replace_recursive(
+        $comparisonPower,
+        [0 => [
+            'validFrom' => $comparisonPower[0]['sourceTimestamp'],
+            'validTo' => $comparisonPower[0]['sourceTimestamp'],
+            'value' => 12.0,
+            'unit' => '°C',
+            'semantics' => 'instant',
+        ]]
+    );
     $comparisonRuntime = new SolarCalibrationCollectorRuntime(
         calibrationRuntimeConfiguration($comparisonDirectory, 'solar_comparison')
     );
@@ -337,7 +394,7 @@ try {
         JSON_THROW_ON_ERROR
     );
     calibrationRuntimeCheck(
-        ($comparisonSnapshot['schemaVersion'] ?? null) === 2
+        ($comparisonSnapshot['schemaVersion'] ?? null) === 3
             && (float) ($comparisonSnapshot['baselinePower'][0]['value'] ?? -1.0) === 0.5
             && (float) ($comparisonSnapshot['baselineDailyEnergy'][0]['value'] ?? -1.0) === 1.0,
         'Comparison snapshot contract differs.'

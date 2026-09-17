@@ -673,6 +673,18 @@ class OpenMeteoWeather extends IPSModule
         $this->RegisterVariableInteger('CloudCover', 'Cloud Cover', '~Intensity.100', 240);
         $this->RegisterVariableBoolean('IsDay', 'Is Day', '', 250);
         $this->RegisterVariableInteger('CurrentValidAt', 'Current Valid At', '~UnixTimestamp', 260);
+        $this->RegisterVariableFloat(
+            'DirectNormalIrradiance',
+            'Direct Normal Irradiance',
+            'OPENMETEO.Irradiance',
+            270
+        );
+        $this->RegisterVariableFloat(
+            'DiffuseRadiation',
+            'Diffuse Radiation',
+            'OPENMETEO.Irradiance',
+            280
+        );
 
         $this->RegisterVariableInteger('TodayWeatherCode', 'Today Weather Code', 'OPENMETEO.WeatherCode', 300);
         $this->RegisterVariableFloat('TodayTemperatureMin', 'Today Temperature Min', '~Temperature', 310);
