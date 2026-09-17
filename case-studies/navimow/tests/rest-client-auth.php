@@ -66,6 +66,92 @@ assertContainsValue(
     'OAuth request should contain the configured client secret.'
 );
 
+$capturedTokens = PayloadMapper::parseTokenResponse(
+    loadRestFixture('auth-token-success.json')
+);
+assertSameValue(
+    'Bearer',
+    $capturedTokens['tokenType'],
+    'Captured token fixture should preserve the bearer token type.'
+);
+assertSameValue(
+    3600,
+    $capturedTokens['expiresIn'],
+    'Captured token fixture should preserve its expiry.'
+);
+
+$capturedDevices = PayloadMapper::mapDiscovery(
+    loadRestFixture('auth-list-success.json')
+);
+assertSameValue(
+    1,
+    count($capturedDevices),
+    'Captured discovery fixture should contain one device.'
+);
+assertSameValue(
+    [
+        'id' => 'DEVICE_001',
+        'name' => 'Navimow Test Mower',
+        'model' => 'X450',
+        'firmware' => '004C',
+    ],
+    $capturedDevices[0],
+    'Captured discovery fixture should preserve the sanitized device fields.'
+);
+
+$capturedDockedStatus = PayloadMapper::mapStatus(
+    loadRestFixture('vehicle-status-docked.json'),
+    'DEVICE_001'
+);
+assertSameValue(
+    PayloadMapper::VEHICLE_STATE_DOCKED,
+    $capturedDockedStatus['vehicleState'],
+    'Captured docked fixture should map to Docked.'
+);
+assertSameValue(
+    81,
+    $capturedDockedStatus['batteryLevel'],
+    'Captured docked fixture should preserve its battery percentage.'
+);
+assertSameValue(
+    null,
+    $capturedDockedStatus['online'],
+    'A missing online field must not be interpreted as offline.'
+);
+
+$capturedRunningStatus = PayloadMapper::mapStatus(
+    loadRestFixture('vehicle-status-mowing.json'),
+    'DEVICE_001'
+);
+assertSameValue(
+    PayloadMapper::VEHICLE_STATE_RUNNING,
+    $capturedRunningStatus['vehicleState'],
+    'Captured mowing fixture should map to Running.'
+);
+assertSameValue(
+    92,
+    $capturedRunningStatus['batteryLevel'],
+    'Captured mowing fixture should preserve its battery percentage.'
+);
+
+$unknownStatus = PayloadMapper::mapStatus([
+    'data' => [
+        'payload' => [
+            'devices' => [
+                [
+                    'id' => 'DEVICE_001',
+                    'vehicleState' => 'unexpectedState',
+                ],
+            ],
+        ],
+    ],
+], 'DEVICE_001');
+assertSameValue(
+    PayloadMapper::VEHICLE_STATE_UNKNOWN,
+    $unknownStatus['vehicleState'],
+    'Unknown vehicle states should map to Unknown.'
+);
+
 $statusRequests = [];
 $statusTransport = static function (array $request) use (&$statusRequests): array {
     $statusRequests[] = $request;
@@ -429,15 +515,18 @@ assertNotContainsValue(
     'HTTP exception must not contain token or response body.'
 );
 
-$authError = PayloadMapper::mapApiError([
-    'code' => 4005,
-    'desc' => 'CODE_OAUTH_INFO_ILLEGAL',
-    'data' => null,
-]);
+$authError = PayloadMapper::mapApiError(
+    loadRestFixture('auth-invalid-token.json')
+);
 assertSameValue(
     true,
     $authError['reauthRequired'],
-    'API code 4005 should require reauthentication.'
+    'Captured API code 4005 should require reauthentication.'
+);
+assertSameValue(
+    4005,
+    $authError['code'],
+    'Captured authentication error should preserve its API code.'
 );
 
 $multiDeviceStatus = PayloadMapper::mapStatus([
@@ -809,4 +898,20 @@ function captureException(callable $callback): Throwable
     }
 
     throw new RuntimeException('Expected callback to throw.');
+}
+
+function loadRestFixture(string $name): array
+{
+    $fixturePath = __DIR__ . '/../fixtures/rest/' . $name;
+    $fixtureJson = file_get_contents($fixturePath);
+    if ($fixtureJson === false) {
+        throw new RuntimeException('Unable to read REST fixture: ' . $name);
+    }
+
+    $fixture = json_decode($fixtureJson, true, 512, JSON_THROW_ON_ERROR);
+    if (!is_array($fixture)) {
+        throw new RuntimeException('REST fixture is not a JSON object: ' . $name);
+    }
+
+    return $fixture;
 }
