@@ -11,6 +11,8 @@ require_once __DIR__ . '/../libs/OpenMeteo/RequestBuilder.php';
 require_once __DIR__ . '/../libs/OpenMeteo/ResponseParser.php';
 require_once __DIR__ . '/../libs/OpenMeteo/ForecastStateReducer.php';
 require_once __DIR__ . '/../libs/OpenMeteo/PvConfiguration.php';
+require_once __DIR__ . '/../libs/OpenMeteo/LocalHorizonProfile.php';
+require_once __DIR__ . '/../libs/OpenMeteo/LocalHorizonModel.php';
 require_once __DIR__ . '/../libs/OpenMeteo/SolarForecastCalculator.php';
 require_once __DIR__ . '/../libs/OpenMeteo/SolarForecastProjector.php';
 if (!function_exists('SAEF_CreateConfigurationHash')) {
@@ -23,6 +25,8 @@ require_once __DIR__ . '/../libs/OpenMeteo/Profiles.php';
 
 use SAEF\CaseStudy\OpenMeteo\FieldCatalog;
 use SAEF\CaseStudy\OpenMeteo\ForecastStateReducer;
+use SAEF\CaseStudy\OpenMeteo\LocalHorizonModel;
+use SAEF\CaseStudy\OpenMeteo\LocalHorizonProfile;
 use SAEF\CaseStudy\OpenMeteo\Profiles;
 use SAEF\CaseStudy\OpenMeteo\PvConfiguration;
 use SAEF\CaseStudy\OpenMeteo\RequestBuilder;
@@ -39,6 +43,7 @@ class OpenMeteoSolarForecast extends IPSModule
     private const STARTUP_RECOVERY_DELAY_MILLISECONDS = 5 * 1000;
     private const MAXIMUM_CACHE_QUERY_SECONDS = 864000;
     private const MAXIMUM_LOCATION_DESCRIPTOR_BYTES = 4096;
+    private const MAXIMUM_HORIZON_PROFILE_BYTES = 16384;
     private const WEATHER_MODULE_ID = '{B52FE951-7FBE-4882-B0E6-E143E5B5F31A}';
 
     /** @var array<string, int> */
@@ -70,6 +75,7 @@ class OpenMeteoSolarForecast extends IPSModule
         $this->RegisterPropertyString('ArraysJson', '[]');
         $this->RegisterPropertyString('InvertersJson', '[]');
         $this->RegisterPropertyBoolean('EnableShadingProfile', false);
+        $this->RegisterPropertyString('LocalHorizonProfileJson', '[]');
         $this->RegisterPropertyBoolean('EnableCalibration', false);
         $this->RegisterPropertyInteger('HttpTimeoutSeconds', 10);
         $this->RegisterPropertyInteger('StaleAfterMinutes', 180);
@@ -223,6 +229,7 @@ class OpenMeteoSolarForecast extends IPSModule
      *     weatherInstanceId: int,
      *     location: array{latitude: float, longitude: float, timezone: string, forecastDays: int, elevation: ?float},
      *     pv: PvConfiguration,
+     *     localHorizonModel: ?LocalHorizonModel,
      *     configurationHash: string
      * } $context
      */
@@ -235,11 +242,13 @@ class OpenMeteoSolarForecast extends IPSModule
 
         try {
             $forecasts = [];
+            $withLocalHorizon = $context['localHorizonModel'] !== null;
             foreach ($context['pv']->uniqueOrientations() as $orientationKey => $orientation) {
                 $url = RequestBuilder::solar(
                     $context['location'],
                     $orientation['tiltDegrees'],
-                    $orientation['azimuthDegrees']
+                    $orientation['azimuthDegrees'],
+                    $withLocalHorizon
                 );
                 try {
                     $body = $this->fetchUrl(
@@ -265,7 +274,7 @@ class OpenMeteoSolarForecast extends IPSModule
                 $forecasts[$orientationKey] = ResponseParser::parse(
                     $body,
                     [],
-                    ['temperature_2m', 'global_tilted_irradiance'],
+                    FieldCatalog::solarHourlyFields($withLocalHorizon),
                     []
                 );
             }
@@ -274,7 +283,8 @@ class OpenMeteoSolarForecast extends IPSModule
                 $context['pv'],
                 $forecasts,
                 $attemptedAt,
-                $this->ReadPropertyString('ForecastOutputMode')
+                $this->ReadPropertyString('ForecastOutputMode'),
+                $context['localHorizonModel']
             );
             $state = ForecastStateReducer::success(
                 $state,
@@ -513,6 +523,7 @@ class OpenMeteoSolarForecast extends IPSModule
      *     weatherInstanceId: int,
      *     location: array{latitude: float, longitude: float, timezone: string, forecastDays: int, elevation: ?float},
      *     pv: PvConfiguration,
+     *     localHorizonModel: ?LocalHorizonModel,
      *     configurationHash: string
      * }
      */
@@ -527,18 +538,42 @@ class OpenMeteoSolarForecast extends IPSModule
         );
         $pv = new PvConfiguration($arrays, $inverters);
         $location = $this->weatherLocationConfiguration($weatherInstanceId);
+        $localHorizonProfile = $this->localHorizonProfile();
+        $localHorizonModel = $localHorizonProfile === null
+            ? null
+            : new LocalHorizonModel(
+                $localHorizonProfile,
+                $location['latitude'],
+                $location['longitude']
+            );
 
         return [
             'weatherInstanceId' => $weatherInstanceId,
             'location' => $location,
             'pv' => $pv,
+            'localHorizonModel' => $localHorizonModel,
             'configurationHash' => SAEF_CreateConfigurationHash([
                 'location' => $location,
                 'forecastOutputMode' => $this->ReadPropertyString('ForecastOutputMode'),
                 'arrays' => $pv->arrays(),
                 'inverters' => $pv->inverters(),
+                'localHorizon' => $localHorizonProfile?->values(),
             ]),
         ];
+    }
+
+    private function localHorizonProfile(): ?LocalHorizonProfile
+    {
+        if (!$this->ReadPropertyBoolean('EnableShadingProfile')) {
+            return null;
+        }
+
+        $json = $this->ReadPropertyString('LocalHorizonProfileJson');
+        if (strlen($json) > self::MAXIMUM_HORIZON_PROFILE_BYTES) {
+            throw new InvalidArgumentException('Local horizon profile is too large.');
+        }
+
+        return LocalHorizonProfile::fromJson($json);
     }
 
     /** @return list<array<string, mixed>> */
@@ -575,7 +610,6 @@ class OpenMeteoSolarForecast extends IPSModule
             || $timeout > 60
             || $staleAfter < $pollingInterval
             || !in_array($outputMode, ['direct_ac', 'pv_harvest'], true)
-            || $this->ReadPropertyBoolean('EnableShadingProfile')
             || $this->ReadPropertyBoolean('EnableCalibration')
         ) {
             throw new InvalidArgumentException('Solar runtime policy is invalid.');

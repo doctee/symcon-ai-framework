@@ -1251,22 +1251,33 @@ function scaffoldConfigureSolar(IPSModule $solar, int $weatherInstanceId): void
     );
 }
 
-function scaffoldSolarResponse(float $irradiance): string
+function scaffoldSolarResponse(float $irradiance, ?float $directNormalIrradiance = null): string
 {
+    $hourlyUnits = [
+        'temperature_2m' => '°C',
+        'global_tilted_irradiance' => 'W/m²',
+    ];
+    $hourly = [
+        'time' => [1735718400, 1735722000, 1735725600],
+        'temperature_2m' => [25.0, 25.0, 25.0],
+        'global_tilted_irradiance' => [$irradiance, $irradiance, $irradiance],
+    ];
+    if ($directNormalIrradiance !== null) {
+        $hourlyUnits['direct_normal_irradiance'] = 'W/m²';
+        $hourly['direct_normal_irradiance'] = [
+            $directNormalIrradiance,
+            $directNormalIrradiance,
+            $directNormalIrradiance,
+        ];
+    }
+
     return json_encode([
         'latitude' => 48.0,
         'longitude' => 11.0,
         'timezone' => 'Europe/Berlin',
         'utc_offset_seconds' => 3600,
-        'hourly_units' => [
-            'temperature_2m' => '°C',
-            'global_tilted_irradiance' => 'W/m²',
-        ],
-        'hourly' => [
-            'time' => [1735718400, 1735722000, 1735725600],
-            'temperature_2m' => [25.0, 25.0, 25.0],
-            'global_tilted_irradiance' => [$irradiance, $irradiance, $irradiance],
-        ],
+        'hourly_units' => $hourlyUnits,
+        'hourly' => $hourly,
     ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 }
 
@@ -1333,6 +1344,41 @@ $solar->testSetProperty('EnableCalibration', true);
 $solar->ApplyChanges();
 scaffoldCheck($solar->testStatus() === 200, 'Deferred calibration must fail closed.');
 scaffoldCheck($solar->testTimerInterval('UpdateData') === 0, 'Invalid solar timer must be disabled.');
+
+$invalidHorizonSolar = new TestOpenMeteoSolarForecast();
+$invalidHorizonSolar->Create();
+scaffoldConfigureSolar($invalidHorizonSolar, 1001);
+$invalidHorizonSolar->testSetProperty('EnableShadingProfile', true);
+$invalidHorizonSolar->ApplyChanges();
+scaffoldCheck(
+    $invalidHorizonSolar->testStatus() === 200,
+    'Enabled empty local horizon must fail closed.'
+);
+
+$horizonSolar = new TestOpenMeteoSolarForecast();
+$horizonSolar->Create();
+scaffoldConfigureSolar($horizonSolar, 1001);
+$horizonSolar->testSetProperty('EnableShadingProfile', true);
+$horizonSolar->testSetProperty(
+    'LocalHorizonProfileJson',
+    json_encode(array_fill(0, 360, 90.0), JSON_THROW_ON_ERROR)
+);
+$horizonSolar->ApplyChanges();
+scaffoldCheck($horizonSolar->testStatus() === 102, 'Valid local horizon must become active.');
+$horizonSolar->testQueueResponse(scaffoldSolarResponse(600.0, 600.0));
+$horizonSolar->testQueueResponse(scaffoldSolarResponse(600.0, 600.0));
+$horizonSuccess = json_decode($horizonSolar->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($horizonSuccess['success'] ?? null) === true, 'Local-horizon update failed.');
+foreach ($horizonSolar->testRequestedUrls() as $requestedUrl) {
+    scaffoldCheck(
+        str_contains($requestedUrl, 'direct_normal_irradiance'),
+        'Local-horizon request omitted direct normal irradiance.'
+    );
+}
+scaffoldCheck(
+    (float) $horizonSolar->testReadValue('CurrentPowerForecast') < 0.8,
+    'Local horizon did not reduce the blocked solar forecast.'
+);
 
 $runtimeSolar = new TestOpenMeteoSolarForecast();
 $runtimeSolar->Create();

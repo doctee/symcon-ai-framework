@@ -256,9 +256,12 @@ final class ResponseParser
                 sprintf('Open-Meteo field "%s" contains a non-finite value.', $field)
             );
         }
-        if ($field === 'global_tilted_irradiance' && $value < 0) {
+        if (
+            in_array($field, ['global_tilted_irradiance', 'direct_normal_irradiance'], true)
+            && $value < 0
+        ) {
             throw new UnexpectedValueException(
-                'Open-Meteo tilted irradiance must not be negative.'
+                'Open-Meteo irradiance must not be negative.'
             );
         }
 

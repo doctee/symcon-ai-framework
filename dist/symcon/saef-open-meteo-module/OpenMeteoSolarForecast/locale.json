@@ -11,13 +11,15 @@
       "Polling interval in minutes": "Abfrageintervall in Minuten",
       "PV arrays JSON": "PV-Flaechen als JSON",
       "Inverter groups JSON": "Wechselrichtergruppen als JSON",
-      "Enable shading profile": "Verschattungsprofil aktivieren",
+      "Enable local horizon profile": "Lokales Horizontprofil aktivieren",
+      "Local horizon elevations JSON": "Lokale Horizonthoehen als JSON",
       "Enable calibration": "Kalibrierung aktivieren",
       "HTTP timeout in seconds": "HTTP-Timeout in Sekunden",
       "Stale threshold in minutes": "Veraltet-Schwelle in Minuten",
       "Update solar forecast now": "Solarvorhersage jetzt aktualisieren",
       "Automatic updates default to off and ApplyChanges never performs a request.": "Automatische Aktualisierungen sind standardmaessig aus und ApplyChanges fuehrt niemals eine Abfrage aus.",
-      "Installation-specific PV data belongs in private configuration and must not be committed.": "Installationsspezifische PV-Daten gehoeren in eine private Konfiguration und duerfen nicht committed werden."
+      "Installation-specific PV data belongs in private configuration and must not be committed.": "Installationsspezifische PV-Daten gehoeren in eine private Konfiguration und duerfen nicht committed werden.",
+      "The local horizon list starts at north and continues clockwise with equally spaced elevations.": "Die lokale Horizontliste beginnt bei Nord und verlaeuft mit gleichmaessigem Winkelabstand im Uhrzeigersinn."
     }
   }
 }

@@ -36,7 +36,7 @@ try {
         512,
         JSON_THROW_ON_ERROR
     );
-    openMeteoFilesetSame(40, count($sourceMap['files'] ?? []), 'Fileset source count differs.');
+    openMeteoFilesetSame(42, count($sourceMap['files'] ?? []), 'Fileset source count differs.');
     foreach ($sourceMap['files'] ?? [] as $file) {
         if (!is_array($file)) {
             throw new RuntimeException('Fileset source map entry is invalid.');
@@ -69,6 +69,8 @@ try {
         'libs/DwdNowcast/ResponseParser.php',
         'libs/DwdNowcast/TransportDiagnostics.php',
         'libs/DwdNowcast/NowcastHtmlRenderer.php',
+        'libs/OpenMeteo/LocalHorizonModel.php',
+        'libs/OpenMeteo/LocalHorizonProfile.php',
         'libs/OpenMeteo/Profiles.php',
         'libs/OpenMeteo/SolarForecastProjector.php',
         'libs/OpenMeteo/WeatherForecastProjector.php',

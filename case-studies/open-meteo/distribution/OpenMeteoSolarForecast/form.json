@@ -54,7 +54,12 @@
     {
       "type": "CheckBox",
       "name": "EnableShadingProfile",
-      "caption": "Enable shading profile"
+      "caption": "Enable local horizon profile"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "LocalHorizonProfileJson",
+      "caption": "Local horizon elevations JSON"
     },
     {
       "type": "CheckBox",
@@ -88,6 +93,10 @@
     {
       "type": "Label",
       "caption": "Installation-specific PV data belongs in private configuration and must not be committed."
+    },
+    {
+      "type": "Label",
+      "caption": "The local horizon list starts at north and continues clockwise with equally spaced elevations."
     }
   ]
 }

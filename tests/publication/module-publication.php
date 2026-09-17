@@ -22,9 +22,9 @@ try {
         'deployments/symcon/open-meteo-publication.json'
     );
     $openCandidate = buildModulePublicationCandidate($projectRoot, $openContract);
-    modulePublicationTestSame(44, count($openCandidate['files']), 'Open-Meteo inventory differs.');
+    modulePublicationTestSame(46, count($openCandidate['files']), 'Open-Meteo inventory differs.');
     modulePublicationTestSame(
-        '3b13a3b79c7f78636d7e0a73339bc1799726505bd79f283e795140b436b60d33',
+        'b6bf5604ecd32aa30233d09215e00f9919f654888bf80e17eb48022e9965aa0b',
         $openCandidate['publicationSha256'],
         'Open-Meteo publication compatibility hash differs.'
     );

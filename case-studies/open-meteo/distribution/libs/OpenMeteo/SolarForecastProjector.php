@@ -29,7 +29,8 @@ final class SolarForecastProjector
         PvConfiguration $configuration,
         array $forecastsByOrientation,
         int $now,
-        string $outputMode = 'direct_ac'
+        string $outputMode = 'direct_ac',
+        ?LocalHorizonModel $localHorizonModel = null
     ): array {
         if (
             $now < 0
@@ -42,7 +43,7 @@ final class SolarForecastProjector
         $temperature = null;
         $timezone = null;
         $gtiByOrientation = [];
-        foreach ($configuration->uniqueOrientations() as $orientationKey => $_orientation) {
+        foreach ($configuration->uniqueOrientations() as $orientationKey => $orientation) {
             $forecast = $forecastsByOrientation[$orientationKey] ?? null;
             if (!$forecast instanceof ParsedForecast) {
                 throw new UnexpectedValueException('A required solar response is missing.');
@@ -52,9 +53,18 @@ final class SolarForecastProjector
             }
             $timezone = $forecast->timezone();
             $temperature ??= $forecast->hourly('temperature_2m');
-            $gtiByOrientation[$orientationKey] = $forecast->hourly(
+            $gti = $forecast->hourly(
                 'global_tilted_irradiance'
             );
+            if ($localHorizonModel !== null) {
+                $gti = $localHorizonModel->adjustTiltedIrradiance(
+                    $gti,
+                    $forecast->hourly('direct_normal_irradiance'),
+                    $orientation['tiltDegrees'],
+                    $orientation['azimuthDegrees']
+                );
+            }
+            $gtiByOrientation[$orientationKey] = $gti;
         }
         if (count($forecastsByOrientation) !== count($gtiByOrientation)) {
             throw new UnexpectedValueException('Solar response set differs from configuration.');

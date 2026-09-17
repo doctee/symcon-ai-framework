@@ -10,6 +10,8 @@ foreach (
     'ForecastSeries.php',
     'ParsedForecast.php',
     'IntervalAligner.php',
+    'LocalHorizonProfile.php',
+    'LocalHorizonModel.php',
     'RequestBuilder.php',
     'ResponseParser.php',
     'WeatherForecastProjector.php',
