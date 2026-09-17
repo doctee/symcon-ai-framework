@@ -435,6 +435,7 @@ template or a general SAEF reference implementation.
 | `407-fixed-size-legend-publication-and-live-rollout.md` | Records the canonical SAEF and standalone publication plus the one-shot Symcon update and live HTML SDK contract verification for the fixed-size legend. |
 | `408-fixed-size-legend-physical-ipad-validation-and-closure.md` | Closes the fixed-size legend rollout after successful physical iPad zoom validation without another repository, module or Symcon mutation. |
 | `409-html-sdk-responsive-statistics-and-track-age-refinement.md` | Compacts small-screen navigation, reserves map space for populated statistics, adds delayed-position time and four-step path age, and softens zone labels without changing transport or command authority. |
+| `410-responsive-map-publication-and-live-rollout.md` | Records canonical SAEF and standalone publication plus the one-shot live module update, preserved receive-only transport and immediate and delayed HTML SDK verification. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
