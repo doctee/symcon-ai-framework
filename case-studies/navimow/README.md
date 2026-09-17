@@ -437,6 +437,7 @@ template or a general SAEF reference implementation.
 | `409-html-sdk-responsive-statistics-and-track-age-refinement.md` | Compacts small-screen navigation, reserves map space for populated statistics, adds delayed-position time and four-step path age, and softens zone labels without changing transport or command authority. |
 | `410-responsive-map-publication-and-live-rollout.md` | Records canonical SAEF and standalone publication plus the one-shot live module update, preserved receive-only transport and immediate and delayed HTML SDK verification. |
 | `411-html-sdk-compact-controls-statistics-and-exact-preview.md` | Compacts the map controls at the empirically measured host boundary, bounds zone-statistics text and adds exact synthetic and private-scene browser previews without publication or live mutation. |
+| `412-compact-map-controls-publication-and-live-rollout.md` | Records canonical SAEF and standalone publication, pointer-specific 46/48-pixel boundaries, the one-shot live module update and immediate and delayed verification. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |
