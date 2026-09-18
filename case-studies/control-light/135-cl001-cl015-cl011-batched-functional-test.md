@@ -57,9 +57,11 @@ global shutdown consumer then switched CL-011 off through its facade. All three
 members confirmed off, and the facade, group and member state remained stable
 during the bounded postflight.
 
-One unrelated legacy shutdown branch remained active after the global consumer.
-That observation is outside CL-011 and requires a separate diagnosis; it does
-not alter the successful CL-011 facade hand-off.
+One unrelated supply branch was on again at the delayed postflight. The
+installation owner confirmed that this is its intended contract: shutdown is a
+short off pulse and supply returns automatically so that a physical pushbutton
+remains usable. The delayed on-state is therefore expected and is not a failed
+shutdown or a CL-011 defect.
 
 CL-011 is now fully device-tested for every enabled capability and its global
 shutdown dependency.
@@ -74,9 +76,7 @@ The remaining follow-ups are deliberately separate:
 - repeat both CL-015 physical external-input directions after hardware
   replacement;
 - diagnose why accepted voice color-temperature text commands for CL-001 and
-  CL-015 did not dispatch a downstream smart-home command; and
-- diagnose the unrelated legacy branch that remained active after the global
-  shutdown consumer before proposing any correction.
+  CL-015 did not dispatch a downstream smart-home command.
 
 The current installation baseline is 26 active v2 wrappers, 24 fully
 device-tested wrappers and three retained legacy wrappers.
