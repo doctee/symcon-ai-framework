@@ -1,6 +1,6 @@
 # ControlLight Modernization
 
-**Status:** Twenty-six active v2 instances; twenty fully device-tested; three legacy contracts retained; one obsolete template retired
+**Status:** Twenty-six active v2 instances; twenty-four fully device-tested; three legacy contracts retained; one obsolete template retired
 
 This case study modernizes the installation's shared ControlLight automation
 against current SAEF standards. The successfully tested hallway-light pilot is
@@ -440,6 +440,13 @@ same brightness semantics are safe for every existing consumer.
 - `133-cl022-pilot-identity-consolidation.md` records the command-free
   conversion of the original Munich hallway pilot to its stable keyed CL-022
   identity while preserving runtime, events and exporter identities.
+- `134-cl002-functional-closure.md` records the complete physical on/off input
+  and direct STATE/brightness matrix, authoritative feedback, device brightness
+  normalization and expected reported-brightness settlement while off.
+- `135-cl001-cl015-cl011-batched-functional-test.md` records the ordered
+  capability and consumer checks for two single/group cohorts, the verified
+  global shutdown hand-off, one hardware-blocked external-input retest and the
+  shared voice color-temperature dispatch finding.
 - `../mqtt-discovery-exporter/36-client-subscription-coverage-and-runtime-namespace-report.md`
   records the later CL-030 MQTT namespace correction and complete Home
   Assistant/Apple Home functional closure.
@@ -478,8 +485,8 @@ records exactly one mode before live preflight:
 - `effective`: `DIMMER` becomes zero while `STATE` is false without changing
   retained target brightness.
 
-The sanitized fixture marks the twenty-five currently active v2 instances as
-`reported`. The remaining four legacy instances stay `pending`. The historical
+The sanitized fixture marks all twenty-six currently active v2 instances as
+`reported`. The remaining three legacy instances stay `pending`. The historical
 v0.2 rollout closed at seven v2 and 22 explicit retains; the later state-only
 Homematic migration advances the current installation baseline without
 rewriting that release decision. Each future migration must apply the default
@@ -639,7 +646,9 @@ CL-002 Eingang then activated through two command-free reconciliation runs.
 Both Homematic short-press event identities and their alarm-aware on/off
 mappings remained unchanged. The current inventory is seventeen active
 wrappers—fourteen fully device-tested—and 12 legacy wrappers. Its physical
-wall-control and facade tests remain presence-bound.
+wall-control and facade tests remained presence-bound at activation. They were
+later completed through both physical inputs and the direct STATE/brightness
+facade without an error or confirmation timeout.
 
 CL-015 Kuschelsofa then activated as a member-confirmed three-light group and
 closed both direct-member consumer bypasses, advancing the structural baseline
@@ -683,11 +692,22 @@ capability remains disabled pending the Zigbee2MQTT V6 module contract. No
 device action was performed while presence was unconfirmed. By explicit owner
 decision, both shutdown consumers were subsequently aligned command-free with
 the CL-011 STATE facade; their real shutdown effect remains presence-bound.
-The current structural baseline after the later CL-003 Mired regression is
-therefore 26 v2 wrappers, 21 fully device-tested wrappers and three retained
-legacy wrappers across 29 tracked ControlLight instances. CL-030 passed its direct off-pulse and
-manual-on/immediate-Alexa-off sequences with one physical pulse per effective
-shutdown, restored supply and authoritative power feedback.
+The structural baseline after the later CL-003 Mired regression was therefore
+26 v2 wrappers, 21 fully device-tested wrappers and three retained legacy
+wrappers across 29 tracked ControlLight instances. CL-030 passed its direct
+off-pulse and manual-on/immediate-Alexa-off sequences with one physical pulse
+per effective shutdown, restored supply and authoritative power feedback.
+CL-002 subsequently passed both physical external inputs and its complete
+STATE/brightness facade matrix. Its device-normalized brightness remains
+visible while off under the configured `reported` semantics. CL-001 then
+passed its complete direct capability matrix plus voice power and brightness.
+CL-011 passed its complete three-member matrix and the global shutdown consumer
+through the facade. CL-015 passed its complete direct group matrix and voice
+power/brightness, but its two physical external inputs remain deferred until a
+defective hardware control is replaced. Accepted voice color-temperature text
+commands produced no downstream command for CL-001 and CL-015 and remain a
+separate consumer finding. The current baseline is therefore 26 v2 wrappers,
+24 fully device-tested wrappers and three retained legacy wrappers.
 
 The eight pre-existing Z2M v2 wrappers select the availability-aware post-v0.2
 runtime from one immutable staged fileset. Activation of that fileset for the
