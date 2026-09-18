@@ -59,6 +59,9 @@ class IPSModule
     /** @var array<string, mixed> */
     private array $values = [];
 
+    /** @var list<array{ident: string, value: mixed}> */
+    private array $valueWrites = [];
+
     /** @var array<int, true> */
     private array $references = [];
 
@@ -235,12 +238,14 @@ class IPSModule
         if (!isset($this->variables[$ident])) {
             throw new RuntimeException('Unknown test variable.');
         }
-        $this->values[$ident] = match ($this->variables[$ident]['type']) {
+        $normalized = match ($this->variables[$ident]['type']) {
             'boolean' => (bool) $value,
             'float' => (float) $value,
             'integer' => (int) $value,
             default => (string) $value,
         };
+        $this->values[$ident] = $normalized;
+        $this->valueWrites[] = ['ident' => $ident, 'value' => $normalized];
     }
 
     protected function SetStatus(int $status): void
@@ -334,6 +339,24 @@ class IPSModule
     public function testReadValue(string $ident): mixed
     {
         return $this->values[$ident] ?? null;
+    }
+
+    /** @return list<mixed> */
+    public function testValueWrites(string $ident): array
+    {
+        $values = [];
+        foreach ($this->valueWrites as $write) {
+            if ($write['ident'] === $ident) {
+                $values[] = $write['value'];
+            }
+        }
+
+        return $values;
+    }
+
+    public function testClearValueWrites(): void
+    {
+        $this->valueWrites = [];
     }
 
     public function testVariableHidden(string $ident): bool
@@ -1252,8 +1275,11 @@ function scaffoldConfigureSolar(IPSModule $solar, int $weatherInstanceId): void
     );
 }
 
-function scaffoldSolarResponse(float $irradiance, ?float $directNormalIrradiance = null): string
-{
+function scaffoldSolarResponse(
+    float $irradiance,
+    ?float $directNormalIrradiance = null,
+    int $firstTimestamp = 1735718400
+): string {
     $directNormalIrradiance ??= $irradiance;
     $hourlyUnits = [
         'temperature_2m' => '°C',
@@ -1261,7 +1287,7 @@ function scaffoldSolarResponse(float $irradiance, ?float $directNormalIrradiance
         'direct_normal_irradiance' => 'W/m²',
     ];
     $hourly = [
-        'time' => [1735718400, 1735722000, 1735725600],
+        'time' => [$firstTimestamp, $firstTimestamp + 3600, $firstTimestamp + 7200],
         'temperature_2m' => [25.0, 25.0, 25.0],
         'global_tilted_irradiance' => [$irradiance, $irradiance, $irradiance],
         'direct_normal_irradiance' => [
@@ -1304,6 +1330,10 @@ scaffoldCheck(
     'Solar kernel-start message registration differs.'
 );
 $solarVariables = $solar->testVariables();
+scaffoldCheck(
+    ($solarVariables['TodayEnergyForecast']['profile'] ?? null) === '~Electricity',
+    'Solar today energy profile differs from the counter presentation contract.'
+);
 
 scaffoldConfigureSolar($solar, 1001);
 $solar->ApplyChanges();
@@ -1401,6 +1431,7 @@ $runtimeSolar = new TestOpenMeteoSolarForecast();
 $runtimeSolar->Create();
 scaffoldConfigureSolar($runtimeSolar, 1001);
 $runtimeSolar->ApplyChanges();
+$runtimeSolar->testClearValueWrites();
 $runtimeSolar->testQueueResponse(scaffoldSolarResponse(1000.0));
 $runtimeSolar->testQueueResponse(scaffoldSolarResponse(1000.0));
 $solarSuccess = json_decode($runtimeSolar->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
@@ -1427,6 +1458,15 @@ scaffoldCheck(
 scaffoldCheck(
     (float) $runtimeSolar->testReadValue('TodayEnergyForecast') > 0.0,
     'Solar daily energy was not projected.'
+);
+$firstDayForecast = (float) $runtimeSolar->testReadValue('TodayEnergyForecast');
+scaffoldCheck(
+    $runtimeSolar->testValueWrites('TodayEnergyForecast') === [0.0, $firstDayForecast],
+    'First successful solar publication omitted its counter reset.'
+);
+scaffoldCheck(
+    $runtimeSolar->testReadPublishedTodayForecastLocalDay() === '2025-01-01',
+    'First solar publication did not persist its local day.'
 );
 $powerForecast = json_decode(
     $runtimeSolar->GetPowerForecastJson(1735714800, 1735725601),
@@ -1510,6 +1550,77 @@ $unsupported = json_decode(
 scaffoldCheck(
     ($unsupported['code'] ?? null) === 'breakdown_unsupported',
     'Unsupported solar breakdown was not rejected.'
+);
+
+$counterSolar = new TestOpenMeteoSolarForecast();
+$counterSolar->Create();
+scaffoldConfigureSolar($counterSolar, 1001);
+$counterSolar->ApplyChanges();
+$counterSolar->testClearValueWrites();
+$counterSolar->testQueueResponse(scaffoldSolarResponse(1000.0));
+$counterSolar->testQueueResponse(scaffoldSolarResponse(1000.0));
+$counterFirstSuccess = json_decode($counterSolar->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($counterFirstSuccess['success'] ?? null) === true, 'Counter solar update failed.');
+$counterFirstForecast = (float) $counterSolar->testReadValue('TodayEnergyForecast');
+scaffoldCheck(
+    $counterSolar->testValueWrites('TodayEnergyForecast') === [0.0, $counterFirstForecast],
+    'Counter solar first publication omitted its reset.'
+);
+scaffoldCheck(
+    $counterSolar->testDailyCounterResetPauseCount() === 1,
+    'Counter solar first publication did not separate its archive points.'
+);
+$counterSolar->testClearValueWrites();
+$counterSolar->testQueueResponse(scaffoldSolarResponse(900.0));
+$counterSolar->testQueueResponse(scaffoldSolarResponse(900.0));
+$sameDaySuccess = json_decode($counterSolar->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($sameDaySuccess['success'] ?? null) === true, 'Same-day solar update failed.');
+scaffoldCheck(
+    count($counterSolar->testValueWrites('TodayEnergyForecast')) === 1,
+    'Same-day solar publication repeated its counter reset.'
+);
+scaffoldCheck(
+    $counterSolar->testDailyCounterResetPauseCount() === 1,
+    'Same-day solar publication repeated its reset pause.'
+);
+$counterSolar->testSetNow(1735801200);
+$counterSolar->testClearValueWrites();
+$counterSolar->testQueueResponse(scaffoldSolarResponse(800.0, null, 1735804800));
+$counterSolar->testQueueResponse(scaffoldSolarResponse(800.0, null, 1735804800));
+$nextDaySuccess = json_decode($counterSolar->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(($nextDaySuccess['success'] ?? null) === true, 'Next-day solar update failed.');
+$nextDayForecast = (float) $counterSolar->testReadValue('TodayEnergyForecast');
+scaffoldCheck(
+    $counterSolar->testValueWrites('TodayEnergyForecast') === [0.0, $nextDayForecast],
+    'Next local day did not publish exactly one counter reset.'
+);
+scaffoldCheck(
+    $counterSolar->testDailyCounterResetPauseCount() === 2,
+    'Next local day did not separate its archive points.'
+);
+scaffoldCheck(
+    $counterSolar->testReadPublishedTodayForecastLocalDay() === '2025-01-02',
+    'Next solar publication did not advance its local day.'
+);
+$counterSolar->testSetNow(1735887600);
+$counterSolar->testClearValueWrites();
+$counterSolar->testQueueResponse(false);
+$nextDayFailure = json_decode($counterSolar->UpdateData(), true, 16, JSON_THROW_ON_ERROR);
+scaffoldCheck(
+    ($nextDayFailure['code'] ?? null) === 'transport_error',
+    'Next-day solar failure classification differs.'
+);
+scaffoldCheck(
+    $counterSolar->testValueWrites('TodayEnergyForecast') === [],
+    'Failed solar publication emitted a counter reset.'
+);
+scaffoldCheck(
+    $counterSolar->testDailyCounterResetPauseCount() === 2,
+    'Failed solar publication emitted a reset pause.'
+);
+scaffoldCheck(
+    $counterSolar->testReadPublishedTodayForecastLocalDay() === '2025-01-02',
+    'Failed solar publication advanced its local day.'
 );
 
 $runtimeSolar->testSetNow(1735716660);
