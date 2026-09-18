@@ -737,7 +737,7 @@ final class ControlLightCore
         }
 
         return self::kelvinToMired($actualTargetValue)
-            === self::kelvinToMired($expectedTargetValue);
+            === self::kelvinRequestToMired($expectedTargetValue);
     }
 
     private static function localColorToTarget(int $color, string $format): int|string
@@ -914,6 +914,11 @@ final class ControlLightCore
     private static function kelvinToMired(int $kelvin): int
     {
         return $kelvin > 0 ? (int)round(1000000 / $kelvin) : 0;
+    }
+
+    private static function kelvinRequestToMired(int $kelvin): int
+    {
+        return $kelvin > 0 ? intdiv(1000000, $kelvin) : 0;
     }
 
     private static function miredToKelvin(int $mired): int

@@ -360,6 +360,30 @@ $tests['confirms mired-quantized Kelvin feedback in the runtime path'] = static 
     assertControlLightRuntimeSame(0, GetValue(31), 'Quantized Kelvin caused a false timeout.');
 };
 
+$tests['confirms truncated mired request feedback in the runtime path'] = static function (): void {
+    $fixture = controlLightTemperatureFixture();
+    ControlLightFakeRuntime::$normalizedTemperatureFeedback = 6535;
+
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'colorTemperature',
+        6500,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+
+    assertControlLightRuntimeSame('confirmed', $result['status'], 'Truncated Kelvin result differs.');
+    assertControlLightRuntimeSame(6535, GetValue(12), 'Truncated Kelvin facade value differs.');
+    assertControlLightRuntimeSame(
+        [['variableID' => 23, 'value' => 6500]],
+        ControlLightFakeRuntime::$actions,
+        'Truncated Kelvin action differs.'
+    );
+    assertControlLightRuntimeSame(1, GetValue(30), 'Truncated Kelvin command statistic differs.');
+    assertControlLightRuntimeSame(0, GetValue(31), 'Truncated Kelvin caused a false timeout.');
+};
+
 $tests['dispatches during a stale offline indication and accepts immediate feedback'] = static function (): void {
     $fixture = controlLightRuntimeFixture();
     assertControlLightRuntimeSame(false, GetValue(22), 'Availability precondition differs.');

@@ -1,6 +1,6 @@
 # ControlLight Modernization
 
-**Status:** Twenty-six active v2 instances; twenty-four fully device-tested; three legacy contracts retained; one obsolete template retired
+**Status:** Twenty-six active v2 instances; twenty-five fully device-tested; three legacy contracts retained; one obsolete template retired
 
 This case study modernizes the installation's shared ControlLight automation
 against current SAEF standards. The successfully tested hallway-light pilot is
@@ -447,6 +447,12 @@ same brightness semantics are safe for every existing consumer.
   capability and consumer checks for two single/group cohorts, the verified
   global shutdown hand-off, one hardware-blocked external-input retest and the
   shared voice color-temperature dispatch finding.
+- `136-cl015-install-test-input-closure.md` records the identity-preserving
+  retargeting of both physical inputs to their reliable install-test sources
+  and the passed member-confirmed on/off sequence.
+- `137-z2m-directional-mired-request-matcher.md` records the isolated
+  6500-to-6535 K false-timeout reproduction and the offline-qualified,
+  direction-aware Z2M Mired matcher.
 - `../mqtt-discovery-exporter/36-client-subscription-coverage-and-runtime-namespace-report.md`
   records the later CL-030 MQTT namespace correction and complete Home
   Assistant/Apple Home functional closure.
@@ -703,11 +709,16 @@ visible while off under the configured `reported` semantics. CL-001 then
 passed its complete direct capability matrix plus voice power and brightness.
 CL-011 passed its complete three-member matrix and the global shutdown consumer
 through the facade. CL-015 passed its complete direct group matrix and voice
-power/brightness, but its two physical external inputs remain deferred until a
-defective hardware control is replaced. Accepted voice color-temperature text
-commands produced no downstream command for CL-001 and CL-015 and remain a
-separate consumer finding. The current baseline is therefore 26 v2 wrappers,
-24 fully device-tested wrappers and three retained legacy wrappers.
+power/brightness. Its existing physical inputs were subsequently retargeted to
+the reliable install-test signals and both directions passed with one command
+and authoritative agreement from all three members. Accepted EchoRemote text
+commands still produced no downstream temperature command; real spoken Alexa
+temperature commands for CL-001 did reach the facade. That live path exposed a
+separate 6500-to-6535 K Z2M normalization result which functioned at the device
+but caused a false confirmation timeout. The direction-aware matcher is
+qualified offline; immutable live activation remains separate. The current
+baseline is therefore 26 v2 wrappers, 25 fully device-tested wrappers and three
+retained legacy wrappers.
 
 The eight pre-existing Z2M v2 wrappers select the availability-aware post-v0.2
 runtime from one immutable staged fileset. Activation of that fileset for the

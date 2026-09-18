@@ -19,9 +19,16 @@ This project adheres to Semantic Versioning.
 - Added the sanitized CL-001, CL-015 and CL-011 batched functional report with
   member-confirmed group checks, bounded voice-consumer findings, the deferred
   hardware-input retest and the verified global shutdown facade hand-off.
+- Added the sanitized CL-015 physical-input closure after identity-preserving
+  retargeting to reliable install-test signals.
+- Added the isolated Z2M 6500-to-6535 K reproduction and directional Mired
+  matcher qualification report.
 
 ### Changed
 
+- Corrected Z2M Kelvin confirmation to compare the truncated request Mired with
+  the nearest represented feedback Mired, preventing false upper-bound
+  confirmation timeouts without widening Matter or Kelvin-native matching.
 - Reconciled the project overview and v0.5 scope, inventory, repository and
   readiness records with the protected-main merge, closed MQTT engineering
   issue, published annotated tag, exact-revision CI and successful GitHub

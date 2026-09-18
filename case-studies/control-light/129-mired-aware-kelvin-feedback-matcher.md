@@ -28,9 +28,17 @@ The normalized configuration now contains an explicit
   Mired-derived Kelvin contract.
 
 The matcher first preserves the configured fixed tolerance. If that does not
-match and the target is explicitly Mired-quantized Kelvin, it converts expected
-and actual positive Kelvin values to their nearest integer Mired values and
-accepts only equality in that representation.
+match and the target is explicitly Mired-quantized Kelvin, it applies the two
+directions used by the Z2M action and feedback paths:
+
+- the requested Kelvin value is truncated to the integer Mired command value;
+- the returned Kelvin value is mapped to its nearest represented integer Mired
+  value.
+
+Only equality in that directional representation is accepted. This distinction
+is observable at the upper boundary: a 6500 K request becomes 153 Mired and is
+reported as 6535 K. Treating both directions as nearest-Mired conversion would
+incorrectly reject that valid confirmation.
 
 The quantization mode is rejected when the target variable itself is configured
 as Mired, because comparing such target values as Kelvin would be ambiguous.
@@ -41,8 +49,10 @@ Offline tests cover:
 
 - the observed 3900-to-3906 K confirmation;
 - rejection of a different-Mired 3922 K response;
+- the upper-bound 6500-to-6535 K confirmation and rejection of adjacent
+  154-Mired feedback;
 - every requested integer Kelvin value from 2000 through 6500 and its exact
-  integer-Mired round trip;
+  directional integer-Mired round trip;
 - explicit Z2M opt-out;
 - unchanged Matter behavior for the same 3900/3906 pair;
 - every installed-instance fixture selecting the expected preset contract;
@@ -51,16 +61,12 @@ Offline tests cover:
 - invalid or ambiguous quantization configuration.
 
 The deterministic ControlLight fileset is rebuilt and verified from the same
-candidate source. No live wrapper, fileset, runtime or device was changed.
-
-The current checkout already contains earlier unreleased ControlLight work.
-The generated fileset is deterministic for that complete working tree, but it
-is not yet approved as a matcher-only live deployment package. Before staging,
-the exact intended source set must be isolated on a clean, pinned revision and
-the resulting fileset delta reviewed independently.
+candidate source. The directional correction was isolated on a clean worktree
+from a pinned `origin/main` revision. No live wrapper, fileset, runtime or
+device was changed by this offline implementation.
 
 ## Next Gate
 
-CL-003 and the other live Z2M wrappers still use the previously activated
-runtime. A fresh immutable fileset package, command-free activation and targeted
-3900 K regression remain separate explicitly approved gates.
+The live Z2M wrappers still use their previously activated immutable filesets.
+A fresh immutable fileset package, command-free activation and targeted
+6500-to-6535 K regression remain separate controlled gates.

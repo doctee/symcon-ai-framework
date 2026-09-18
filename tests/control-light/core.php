@@ -234,7 +234,7 @@ $tests['normalizes every installed instance contract'] = static function (): voi
     assertControlLightSame(3, $pendingSemantics, 'Per-instance brightness decisions must remain explicit.');
     assertControlLightSame(26, $reportedSemantics, 'Decided reported-semantics count differs.');
     assertControlLightSame(
-        'active-fully-device-tested-direct-state-brightness-color-temperature-passed-alexa-state-brightness-passed-alexa-temperature-not-dispatched-inverse-alarm-contract-preserved',
+        'active-fully-device-tested-direct-state-brightness-color-temperature-passed-alexa-state-brightness-and-real-spoken-temperature-dispatch-passed-upper-bound-feedback-normalization-pending-inverse-alarm-contract-preserved',
         $cl001['dependencies'] ?? null,
         'CL-001 functional closure differs.'
     );
@@ -331,9 +331,9 @@ $tests['normalizes every installed instance contract'] = static function (): voi
         'CL-015 group contract differs.'
     );
     assertControlLightSame(
-        'active-direct-member-confirmed-state-brightness-color-temperature-passed-alexa-state-brightness-passed-alexa-temperature-not-dispatched-permanent-power-alarm-preserved-external-triggers-pending-hardware-switch-replacement',
+        'active-fully-device-tested-direct-member-confirmed-state-brightness-color-temperature-passed-alexa-state-brightness-passed-install-test-external-on-off-update-triggers-passed-permanent-power-alarm-preserved-real-alexa-temperature-pending-shared-kelvin-fix',
         $cl015['dependencies'] ?? null,
-        'CL-015 partial functional closure differs.'
+        'CL-015 functional closure differs.'
     );
     assertControlLightSame(
         'direct-target-brightness-writer-state-observer-and-color-disabled-until-target-module-repair',
@@ -400,6 +400,7 @@ $tests['uses bounded target comparison tolerances'] = static function (): void {
     $configuration = ControlLightCore::normalizeConfiguration([
         'preset' => 'Z2M',
         'brightnessSemantics' => ControlLightCore::BRIGHTNESS_REPORTED,
+        'colorTemperatureFeedbackQuantization' => ControlLightCore::TEMPERATURE_QUANTIZATION_NONE,
     ]);
     assertControlLightSame(true, ControlLightCore::targetValueMatches('brightness', 50, 51, $configuration), 'Brightness tolerance differs.');
     assertControlLightSame(false, ControlLightCore::targetValueMatches('brightness', 50, 52, $configuration), 'Brightness mismatch was accepted.');
@@ -410,6 +411,7 @@ $tests['uses bounded target comparison tolerances'] = static function (): void {
         'preset' => 'Z2M',
         'brightnessSemantics' => ControlLightCore::BRIGHTNESS_REPORTED,
         'colorTemperatureTolerance' => 10,
+        'colorTemperatureFeedbackQuantization' => ControlLightCore::TEMPERATURE_QUANTIZATION_NONE,
     ]);
     assertControlLightSame(
         true,
@@ -487,10 +489,20 @@ $tests['matches mired-quantized Kelvin feedback only for configured targets'] = 
         ControlLightCore::targetValueMatches('colorTemperature', 3900, 3922, $z2m),
         'Different-mired Kelvin feedback was accepted.'
     );
+    assertControlLightSame(
+        true,
+        ControlLightCore::targetValueMatches('colorTemperature', 6500, 6535, $z2m),
+        'Truncated 6500-to-6535 K request quantization was rejected.'
+    );
+    assertControlLightSame(
+        false,
+        ControlLightCore::targetValueMatches('colorTemperature', 6500, 6494, $z2m),
+        'Adjacent 154-mired feedback was accepted for a 153-mired request.'
+    );
 
     for ($requestedKelvin = 2000; $requestedKelvin <= 6500; $requestedKelvin++) {
-        $deviceMired = (int)round(1000000 / $requestedKelvin);
-        $reportedKelvin = (int)round(1000000 / $deviceMired);
+        $deviceMired = intdiv(1000000, $requestedKelvin);
+        $reportedKelvin = intdiv(1000000, $deviceMired);
         assertControlLightSame(
             true,
             ControlLightCore::targetValueMatches(
@@ -517,6 +529,11 @@ $tests['matches mired-quantized Kelvin feedback only for configured targets'] = 
         ControlLightCore::targetValueMatches('colorTemperature', 3900, 3906, $matter),
         'Matter accepted Z2M-specific mired quantization.'
     );
+    assertControlLightSame(
+        false,
+        ControlLightCore::targetValueMatches('colorTemperature', 6500, 6535, $matter),
+        'Matter accepted Z2M-specific request quantization.'
+    );
 
     $z2mWithoutQuantization = ControlLightCore::normalizeConfiguration([
         'preset' => 'Z2M',
@@ -532,6 +549,16 @@ $tests['matches mired-quantized Kelvin feedback only for configured targets'] = 
             $z2mWithoutQuantization
         ),
         'Explicitly disabled mired quantization was ignored.'
+    );
+    assertControlLightSame(
+        false,
+        ControlLightCore::targetValueMatches(
+            'colorTemperature',
+            6500,
+            6535,
+            $z2mWithoutQuantization
+        ),
+        'Explicitly disabled request quantization was ignored.'
     );
 };
 
