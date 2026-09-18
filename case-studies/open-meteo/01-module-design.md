@@ -619,12 +619,21 @@ that behavior.
 | `CurrentGtiSystem` | float | `OPENMETEO.Irradiance` | user-owned/off | Peak-power-weighted GTI after local horizon |
 | `CurrentGtiBaseline` | float | `OPENMETEO.Irradiance` | user-owned/off | Peak-power-weighted GTI before local horizon |
 | `CurrentHorizonLossPercent` | float | `~Intensity.100` | user-owned/off | Current relative GTI reduction from local horizon |
-| `TodayEnergyForecast` | float | `OPENMETEO.Energy` | user-owned/off | Forecast local-day AC energy kWh |
+| `TodayEnergyForecast` | float | `~Electricity` | user-owned/off | Forecast local-day AC energy kWh; one reset pulse precedes the first successful publication of each local day |
 | `TomorrowEnergyForecast` | float | `OPENMETEO.Energy` | user-owned/off | Next local-day AC energy kWh |
 | `ConfigurationHash` | string | none | no | Diagnostic normalized PV configuration hash |
 
 Per-array and later-day values are returned through bounded methods instead of
 creating an unbounded variable tree.
+
+`TodayEnergyForecast` follows the established daily-counter presentation
+contract used by stacked energy charts. On the first successful publication of
+a configured location day, the module writes `0`, waits long enough to preserve
+a distinct archive timestamp and then writes the actual forecast. It persists
+that local day internally. Later recalculations on the
+same day publish only the updated forecast. Failed updates neither emit a reset
+nor advance the persisted day. Archive activation and aggregation remain
+explicit installation-owned decisions.
 
 The first implementation has no action variable and no `RequestAction()`
 surface because the integration is read-only. A manual `UpdateData()` module

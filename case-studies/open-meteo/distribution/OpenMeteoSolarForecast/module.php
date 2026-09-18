@@ -83,6 +83,7 @@ class OpenMeteoSolarForecast extends IPSModule
 
         $this->RegisterAttributeString('RuntimeState', '');
         $this->RegisterAttributeString('ForecastCache', '');
+        $this->RegisterAttributeString('PublishedTodayForecastLocalDay', '');
         $this->RegisterAttributeInteger('RegisteredWeatherReferenceId', 0);
 
         $this->registerKernelStartMessage();
@@ -345,9 +346,18 @@ class OpenMeteoSolarForecast extends IPSModule
                 'ForecastCache',
                 $this->encodeCache($cache, $context['configurationHash'])
             );
+            $localDay = $this->localDayKey(
+                $attemptedAt,
+                $context['location']['timezone']
+            );
+            if ($this->ReadAttributeString('PublishedTodayForecastLocalDay') !== $localDay) {
+                $this->SetValue('TodayEnergyForecast', 0.0);
+                $this->pauseBetweenDailyCounterResetAndValue();
+            }
             foreach ($cache['publicValues'] as $ident => $value) {
                 $this->SetValue($ident, $value);
             }
+            $this->WriteAttributeString('PublishedTodayForecastLocalDay', $localDay);
             $this->writeRuntimeState($state);
             $this->publishOperationalState($state, $attemptedAt);
             $this->scheduleNormalPolling();
@@ -755,7 +765,7 @@ class OpenMeteoSolarForecast extends IPSModule
         $this->RegisterVariableFloat('CurrentGtiSystem', 'Current GTI System', 'OPENMETEO.Irradiance', 120);
         $this->RegisterVariableFloat('CurrentGtiBaseline', 'Current GTI Baseline', 'OPENMETEO.Irradiance', 130);
         $this->RegisterVariableFloat('CurrentHorizonLossPercent', 'Current Horizon Loss', '~Intensity.100', 140);
-        $this->RegisterVariableFloat('TodayEnergyForecast', 'Today Energy Forecast', 'OPENMETEO.Energy', 150);
+        $this->RegisterVariableFloat('TodayEnergyForecast', 'Today Energy Forecast', '~Electricity', 150);
         $this->RegisterVariableFloat('TomorrowEnergyForecast', 'Tomorrow Energy Forecast', 'OPENMETEO.Energy', 160);
         $this->RegisterVariableString('ConfigurationHash', 'Configuration Hash', '', 170);
     }
@@ -777,5 +787,17 @@ class OpenMeteoSolarForecast extends IPSModule
     protected function currentTimestamp(): int
     {
         return time();
+    }
+
+    protected function pauseBetweenDailyCounterResetAndValue(): void
+    {
+        IPS_Sleep(1100);
+    }
+
+    private function localDayKey(int $timestamp, string $timezone): string
+    {
+        return (new DateTimeImmutable('@' . $timestamp))
+            ->setTimezone(new DateTimeZone($timezone))
+            ->format('Y-m-d');
     }
 }

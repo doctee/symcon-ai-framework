@@ -55,6 +55,16 @@ A missing or invalid orientation response rejects the complete candidate. No
 partial multi-orientation forecast is published. URLs, coordinates, response
 bodies and PV configuration are not logged.
 
+The current-day energy value uses the `~Electricity` profile and supports the
+daily-counter convention required by stacked energy charts. The first complete
+successful forecast of each configured local day publishes `0` followed by the
+actual day forecast with a bounded pause that preserves two distinct archive
+timestamps. The local day is recorded only after all curated values were
+published, so same-day recalculations do not repeat the reset and failed updates
+do not create an artificial archive transition. The module does not
+enable logging or select an archive aggregation type; those remain
+installation-owned settings.
+
 A request-relevant configuration change produces a new deterministic hash,
 hides the incompatible cache and resets the curated forecast values until
 a complete forecast for the new configuration succeeds. The cache schema
@@ -118,8 +128,10 @@ access, last-good
 retention, manual-mode retry suppression, automatic polling and the first retry
 interval. It also verifies that `system` and `baseline` share exact intervals,
 that they remain identical without a horizon and that a blocking horizon only
-reduces `system`. The deterministic fileset includes `SolarForecastProjector`
-and the separate local-horizon classes.
+reduces `system`. The harness additionally verifies the first-publication reset,
+same-day idempotence, the next local-day reset and the failure path that must not
+advance the reset state. The deterministic fileset includes
+`SolarForecastProjector` and the separate local-horizon classes.
 
 Publication, installed-library update, private configuration, one controlled
 manual request, observation and later SolCast consumer migration remain
