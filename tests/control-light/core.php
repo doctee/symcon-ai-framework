@@ -234,7 +234,7 @@ $tests['normalizes every installed instance contract'] = static function (): voi
     assertControlLightSame(3, $pendingSemantics, 'Per-instance brightness decisions must remain explicit.');
     assertControlLightSame(26, $reportedSemantics, 'Decided reported-semantics count differs.');
     assertControlLightSame(
-        'active-fully-device-tested-direct-state-brightness-color-temperature-passed-alexa-state-brightness-and-real-spoken-temperature-dispatch-passed-upper-bound-feedback-normalization-pending-inverse-alarm-contract-preserved',
+        'active-fully-device-tested-direct-state-brightness-color-temperature-passed-alexa-state-brightness-and-real-spoken-temperature-dispatch-passed-upper-bound-mired-feedback-live-passed-inverse-alarm-contract-preserved',
         $cl001['dependencies'] ?? null,
         'CL-001 functional closure differs.'
     );
@@ -331,7 +331,7 @@ $tests['normalizes every installed instance contract'] = static function (): voi
         'CL-015 group contract differs.'
     );
     assertControlLightSame(
-        'active-fully-device-tested-direct-member-confirmed-state-brightness-color-temperature-passed-alexa-state-brightness-passed-install-test-external-on-off-update-triggers-passed-permanent-power-alarm-preserved-real-alexa-temperature-pending-shared-kelvin-fix',
+        'active-fully-device-tested-direct-member-confirmed-state-brightness-color-temperature-and-upper-bound-mired-feedback-live-passed-alexa-state-brightness-passed-install-test-external-on-off-update-triggers-passed-permanent-power-alarm-preserved-real-alexa-temperature-optional',
         $cl015['dependencies'] ?? null,
         'CL-015 functional closure differs.'
     );

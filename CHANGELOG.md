@@ -23,6 +23,8 @@ This project adheres to Semantic Versioning.
   retargeting to reliable install-test signals.
 - Added the isolated Z2M 6500-to-6535 K reproduction and directional Mired
   matcher qualification report.
+- Added the controlled CL-001/CL-015 live activation and successful single and
+  member-confirmed group regressions for directional Mired confirmation.
 
 ### Changed
 

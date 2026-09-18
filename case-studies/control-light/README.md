@@ -453,6 +453,9 @@ same brightness semantics are safe for every existing consumer.
 - `137-z2m-directional-mired-request-matcher.md` records the isolated
   6500-to-6535 K false-timeout reproduction and the offline-qualified,
   direction-aware Z2M Mired matcher.
+- `138-z2m-directional-mired-live-activation.md` records the restricted inactive
+  staging, command-free CL-001/CL-015 selection, successful single/group
+  6500-to-6535 K regressions and exact final restoration without a restart.
 - `../mqtt-discovery-exporter/36-client-subscription-coverage-and-runtime-namespace-report.md`
   records the later CL-030 MQTT namespace correction and complete Home
   Assistant/Apple Home functional closure.
@@ -715,10 +718,13 @@ and authoritative agreement from all three members. Accepted EchoRemote text
 commands still produced no downstream temperature command; real spoken Alexa
 temperature commands for CL-001 did reach the facade. That live path exposed a
 separate 6500-to-6535 K Z2M normalization result which functioned at the device
-but caused a false confirmation timeout. The direction-aware matcher is
-qualified offline; immutable live activation remains separate. The current
+but caused a false confirmation timeout. The direction-aware matcher was then
+staged without global selection and activated only for CL-001 and CL-015. Both
+the single target and all three group members confirmed 6500-to-6535 K without
+a new error or timeout, and their initial values were restored. The current
 baseline is therefore 26 v2 wrappers, 25 fully device-tested wrappers and three
-retained legacy wrappers.
+retained legacy wrappers. Real spoken CL-015 temperature control remains
+optional voice-consumer coverage rather than an open device or matcher defect.
 
 The eight pre-existing Z2M v2 wrappers select the availability-aware post-v0.2
 runtime from one immutable staged fileset. Activation of that fileset for the
