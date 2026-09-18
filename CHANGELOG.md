@@ -13,6 +13,12 @@ This project adheres to Semantic Versioning.
 
 - Added the initial v0.6 engineering inventory with explicit admission gates
   for deferred operational observations, helper activation and retention work.
+- Added the sanitized CL-002 functional closure for both physical on/off inputs
+  and the direct STATE/brightness facade, including authoritative feedback,
+  device normalization and reported-brightness settlement while off.
+- Added the sanitized CL-001, CL-015 and CL-011 batched functional report with
+  member-confirmed group checks, bounded voice-consumer findings, the deferred
+  hardware-input retest and the verified global shutdown facade hand-off.
 
 ### Changed
 

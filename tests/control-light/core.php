@@ -110,7 +110,7 @@ $tests['normalizes every installed instance contract'] = static function (): voi
         'Reported voice-assistant facade contracts differ.'
     );
     assertControlLightSame(
-        ['CL-008', 'CL-009', 'CL-013', 'CL-020', 'CL-025', 'CL-028'],
+        ['CL-001', 'CL-008', 'CL-009', 'CL-013', 'CL-015', 'CL-020', 'CL-025', 'CL-028'],
         $fixture['consumerContracts']['voiceAssistant']['echoRemoteTextCommandTested'] ?? null,
         'Echo Remote text-command test contracts differ.'
     );
@@ -234,14 +234,14 @@ $tests['normalizes every installed instance contract'] = static function (): voi
     assertControlLightSame(3, $pendingSemantics, 'Per-instance brightness decisions must remain explicit.');
     assertControlLightSame(26, $reportedSemantics, 'Decided reported-semantics count differs.');
     assertControlLightSame(
-        'active-away-safe-alarm-preserved-alexa-expert-pending-presence-test',
+        'active-fully-device-tested-direct-state-brightness-color-temperature-passed-alexa-state-brightness-passed-alexa-temperature-not-dispatched-inverse-alarm-contract-preserved',
         $cl001['dependencies'] ?? null,
-        'CL-001 activation gate differs.'
+        'CL-001 functional closure differs.'
     );
     assertControlLightSame(
-        'active-away-safe-external-on-off-triggers-preserved-pending-presence-test',
+        'active-fully-device-tested-external-on-off-triggers-preserved-state-brightness-reported-semantics-passed-inverse-alarm-contract-preserved',
         $cl002['dependencies'] ?? null,
-        'CL-002 activation gate differs.'
+        'CL-002 functional closure differs.'
     );
     assertControlLightSame(
         'active-all-enabled-capabilities-direct-tested-hard-cycle-and-immediate-recovery-passed-color-disabled-native-color-retained-shutdown-consumer-facade-aligned-links-native-observer-preserved-mired-matcher-live-3900-to-3906-kelvin-authoritative-feedback-passed',
@@ -307,9 +307,9 @@ $tests['normalizes every installed instance contract'] = static function (): voi
         'CL-011 group contract differs.'
     );
     assertControlLightSame(
-        'active-command-free-three-member-group-random-lighting-removed-color-disabled-shutdown-consumers-facade-aligned-pending-presence-test',
+        'active-fully-device-tested-three-member-group-random-lighting-removed-color-disabled-shutdown-consumers-facade-aligned-global-shutdown-passed-conditional-shutdown-not-applicable-current-mode',
         $cl011['dependencies'] ?? null,
-        'CL-011 activation gate differs.'
+        'CL-011 functional closure differs.'
     );
     assertControlLightSame(
         'active-fully-device-tested-off-state-target-turns-on-alexa-passed-scene-structural',
@@ -329,6 +329,11 @@ $tests['normalizes every installed instance contract'] = static function (): voi
         ],
         $cl015['groupContract'] ?? null,
         'CL-015 group contract differs.'
+    );
+    assertControlLightSame(
+        'active-direct-member-confirmed-state-brightness-color-temperature-passed-alexa-state-brightness-passed-alexa-temperature-not-dispatched-permanent-power-alarm-preserved-external-triggers-pending-hardware-switch-replacement',
+        $cl015['dependencies'] ?? null,
+        'CL-015 partial functional closure differs.'
     );
     assertControlLightSame(
         'direct-target-brightness-writer-state-observer-and-color-disabled-until-target-module-repair',
