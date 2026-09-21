@@ -66,6 +66,45 @@ function controlLightFixtureConfiguration(array $fixture): array
 
 $tests = [];
 
+$tests['positive dim live coverage excludes state-only and legacy contracts'] = static function (): void {
+    $fixture = json_decode(
+        (string)file_get_contents(__DIR__ . '/fixtures/installed-contracts.json'),
+        true,
+        512,
+        JSON_THROW_ON_ERROR
+    );
+    $contract = $fixture['consumerContracts']['positiveDimCommand'];
+    assertControlLightSame(
+        'power-on-and-requested-brightness',
+        $contract['semantics'],
+        'Positive dim command semantics differ.'
+    );
+    $dimmable = [];
+    $stateOnly = [];
+    $legacy = [];
+    foreach ($fixture['instances'] as $instance) {
+        if ($instance['brightnessSemantics'] === 'pending') {
+            $legacy[] = $instance['key'];
+        } elseif (in_array('brightness', $instance['capabilities'], true)) {
+            $dimmable[] = $instance['key'];
+        } else {
+            $stateOnly[] = $instance['key'];
+        }
+    }
+    assertControlLightSame(24, count($dimmable), 'Dimmable v2 cohort count differs.');
+    assertControlLightSame($dimmable, $contract['liveVerified'], 'Dimmable live coverage differs.');
+    assertControlLightSame(['CL-014', 'CL-030'], $stateOnly, 'State-only cohort differs.');
+    assertControlLightSame($stateOnly, $contract['unchangedStateOnly'], 'State-only exclusions differ.');
+    assertControlLightSame(['CL-018', 'CL-019', 'CL-029'], $legacy, 'Retained legacy cohort differs.');
+    assertControlLightSame($legacy, $contract['legacyRetained'], 'Legacy exclusions differ.');
+    assertControlLightSame(['CL-021'], $contract['spokenAlexaVerified'], 'Spoken acceptance scope differs.');
+    assertControlLightSame(
+        [],
+        array_values(array_diff($contract['spokenAlexaVerified'], $dimmable)),
+        'Spoken acceptance must belong to the dimmable cohort.'
+    );
+};
+
 $tests['normalizes asymmetric state command modes'] = static function (): void {
     $default = ControlLightCore::normalizeConfiguration([
         'preset' => 'Z2M',

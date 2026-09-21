@@ -28,6 +28,12 @@ This project adheres to Semantic Versioning.
 
 ### Changed
 
+- Corrected the ControlLight positive-dim command contract: remotely switchable
+  lights now confirm power-on and requested brightness, including equal retained
+  levels while off, using one lock and shared deadline. Member-confirmed groups,
+  passive reported brightness, alarm guards and manual-on protection remain
+  explicit. All 24 dimmable callers in the inventoried v2 cohort passed the
+  separate live rollout, with representative spoken Alexa acceptance.
 - Corrected Z2M Kelvin confirmation to compare the truncated request Mired with
   the nearest represented feedback Mired, preventing false upper-bound
   confirmation timeouts without widening Matter or Kelvin-native matching.
