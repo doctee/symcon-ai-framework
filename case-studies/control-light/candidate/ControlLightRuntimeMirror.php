@@ -260,7 +260,7 @@ final class ControlLightRuntimeMirror
         $expectedObject = \IPS_GetObject($expectedScriptID);
         if (
             ($expectedObject['ObjectType'] ?? null) !== 3
-            || ($expectedObject['ObjectParentID'] ?? null) !== $config['parentID']
+            || ($expectedObject['ParentID'] ?? null) !== $config['parentID']
             || ($expectedObject['ObjectIdent'] ?? null) !== $config['ident']
             || $existingID !== $expectedScriptID
         ) {

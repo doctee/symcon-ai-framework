@@ -43,6 +43,8 @@ $configuration = [
      * target evidence. Other color formats retain exact RGB semantics.
      */
     'colorHueToleranceDegrees' => 0.5,
+    // Opt in only for a verified HA Matter HS transport using integer 0..254.
+    'colorFeedbackQuantization' => 'none',
     'colorSaturationTolerancePercentagePoints' => 0.5,
 
     /*

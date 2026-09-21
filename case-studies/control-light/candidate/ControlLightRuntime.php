@@ -83,7 +83,9 @@ final class ControlLightRuntime
             if ($sender === 'Variable') {
                 $targetCapability = self::capabilityForTargetVariable($sourceVariableID, $resources);
                 if ($targetCapability !== null) {
-                    self::syncCapability($targetCapability, $resources, $normalized);
+                    if (!self::syncCapability($targetCapability, $resources, $normalized)) {
+                        return ['status' => 'feedback_unavailable', 'capability' => $targetCapability];
+                    }
                     self::recordSuccess($diagnostics);
 
                     return ['status' => 'feedback_synchronized', 'capability' => $targetCapability];
@@ -404,6 +406,7 @@ final class ControlLightRuntime
                 && (bool)$expectedTargetValue === false
                 && $configuration['stateCommandMode'] === ControlLightCore::STATE_COMMAND_OFF_ONLY
             )
+            && !self::isMissingColorFeedback($capability, $currentTargetValue, $configuration)
             && ControlLightCore::targetValueMatches(
                 $capability,
                 $expectedTargetValue,
@@ -437,7 +440,11 @@ final class ControlLightRuntime
         }
         \SAEF_IncrementStatistic($diagnostics['statisticIDs']['COMMANDS']);
 
-        $matches = static fn(mixed $actual): bool => ControlLightCore::targetValueMatches(
+        $matches = static fn(mixed $actual): bool => !self::isMissingColorFeedback(
+            $capability,
+            $actual,
+            $confirmationConfiguration
+        ) && ControlLightCore::targetValueMatches(
             $capability,
             $expectedTargetValue,
             $actual,
@@ -860,24 +867,30 @@ final class ControlLightRuntime
     }
 
     /** @param array<string, mixed> $resources @param array<string, mixed> $configuration */
-    private static function syncCapability(string $capability, array $resources, array $configuration): void
+    private static function syncCapability(string $capability, array $resources, array $configuration): bool
     {
         $localVariableID = $resources['localVariableIDs'][$capability] ?? null;
         $targetVariableID = $resources['targetVariableIDs'][$capability] ?? null;
         if (!is_int($localVariableID) || !is_int($targetVariableID)) {
-            return;
+            return false;
         }
 
         if ($capability === 'state' && $configuration['groupFeedback']['enabled'] === true) {
             $derivedState = self::deriveFreshGroupState($resources, $configuration);
             if ($derivedState === null) {
-                return;
+                return false;
             }
             if (\GetValue($localVariableID) !== $derivedState) {
                 \SetValue($localVariableID, $derivedState);
             }
             $localValue = $derivedState;
         } else {
+            $targetValue = \GetValue($targetVariableID);
+            if (self::isMissingColorFeedback($capability, $targetValue, $configuration)) {
+                // Preserve the last known facade color. Absence is not black,
+                // confirmation, or a reason to block an independent state action.
+                return false;
+            }
             $targetState = null;
             if ($configuration['groupFeedback']['enabled'] === true) {
                 $groupStateVariableID = $resources['localVariableIDs']['state'] ?? null;
@@ -889,7 +902,7 @@ final class ControlLightRuntime
             }
             $localValue = ControlLightCore::targetToLocal(
                 $capability,
-                \GetValue($targetVariableID),
+                $targetValue,
                 $configuration,
                 $targetState
             );
@@ -911,6 +924,21 @@ final class ControlLightRuntime
                 }
             }
         }
+        return true;
+    }
+
+    /**
+     * HA can report no color while off or before asynchronous attributes arrive.
+     * Only explicit absence markers are accepted; malformed nonempty data still
+     * reaches the strict core validator. No new wait, retry or device action.
+     *
+     * @param array<string, mixed> $configuration
+     */
+    private static function isMissingColorFeedback(string $capability, mixed $value, array $configuration): bool
+    {
+        return $capability === 'color'
+            && $configuration['colorTargetFormat'] !== 'INT_HEX'
+            && ($value === null || (is_string($value) && in_array(trim($value), ['', 'null'], true)));
     }
 
     /**

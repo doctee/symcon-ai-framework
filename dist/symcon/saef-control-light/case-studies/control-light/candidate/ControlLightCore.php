@@ -222,6 +222,18 @@ final class ControlLightCore
             'colorTargetFormat',
             ['INT_HEX', 'RGB_ARRAY_STRING', 'RGB_OBJECT_STRING', 'HS_ARRAY_STRING']
         );
+        $normalized['colorFeedbackQuantization'] = self::requireEnum(
+            $merged,
+            'colorFeedbackQuantization',
+            ['none', 'ha-matter-hs-254-truncate']
+        );
+        if (
+            $normalized['colorFeedbackQuantization'] !== 'none'
+            && ($normalized['colorTargetFormat'] !== 'HS_ARRAY_STRING'
+                || !$normalized['capabilities']['color']['enabled'])
+        ) {
+            throw new InvalidArgumentException('HS feedback quantization requires an enabled HS color capability.');
+        }
 
         return $normalized;
     }
@@ -339,6 +351,7 @@ final class ControlLightCore
             'colorTemperatureTolerance' => 5,
             'colorTemperatureFeedbackQuantization' => self::TEMPERATURE_QUANTIZATION_NONE,
             'colorHueToleranceDegrees' => 0.5,
+            'colorFeedbackQuantization' => 'none',
             'colorSaturationTolerancePercentagePoints' => 0.5,
             'colorOffStateTransition' => [
                 'mode' => 'unchanged',
@@ -847,7 +860,18 @@ final class ControlLightCore
 
         [$expectedHue, $expectedSaturation] = self::decodeHueSaturationJson($expectedTargetValue);
         [$actualHue, $actualSaturation] = self::decodeHueSaturationJson($actualTargetValue);
+        $hueTolerance = (float)$configuration['colorHueToleranceDegrees'];
         $saturationTolerance = (float)$configuration['colorSaturationTolerancePercentagePoints'];
+        if ($configuration['colorFeedbackQuantization'] === 'ha-matter-hs-254-truncate') {
+            // HA truncates scaled HS before sending the Matter command. Reconstruct
+            // its expected report; never truncate the already rounded actual value.
+            $expectedHue = (int)($expectedHue / 360 * 254) * 360 / 254;
+            $expectedSaturation = (int)(254 * $expectedSaturation / 100) * 100 / 254;
+            // Three-decimal feedback serialization only, not a device tolerance.
+            // This also supersedes any broader off-state transition tolerances.
+            $hueTolerance = 0.000500001;
+            $saturationTolerance = 0.000500001;
+        }
         if (abs($expectedSaturation - $actualSaturation) > $saturationTolerance) {
             return false;
         }
@@ -859,7 +883,7 @@ final class ControlLightCore
         $linearHueDistance = abs($expectedHue - $actualHue);
         $circularHueDistance = min($linearHueDistance, 360.0 - $linearHueDistance);
 
-        return $circularHueDistance <= (float)$configuration['colorHueToleranceDegrees'];
+        return $circularHueDistance <= $hueTolerance;
     }
 
     /** @return array{0: float, 1: float} */

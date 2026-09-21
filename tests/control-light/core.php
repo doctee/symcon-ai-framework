@@ -825,6 +825,63 @@ $tests['rejects ambiguous or unbounded configuration'] = static function (): voi
     );
 };
 
+$tests['matches explicit HA Matter HS transport bins without widening defaults'] = static function (): void {
+    $base = ['preset' => 'MATTER', 'brightnessSemantics' => 'reported'];
+    $default = ControlLightCore::normalizeConfiguration($base);
+    $quantized = ControlLightCore::normalizeConfiguration($base + [
+        'colorFeedbackQuantization' => 'ha-matter-hs-254-truncate',
+    ]);
+    assertControlLightSame('none', $default['colorFeedbackQuantization'], 'Profile enabled by default.');
+    assertControlLightSame(false, ControlLightCore::targetValueMatches('color', '[120,100]', '[119.055,100]', $default), 'Default changed.');
+    foreach ([['[120,100]', '[119.055,100]'], ['[240,100]', '[239.528,100]'], ['[0,100]', '[0,100]'], ['[220,75]', '[219.685,74.803]'], ['[360,100]', '[0,100]'], ['[0,0]', '[271,0]']] as [$expected, $actual]) {
+        assertControlLightSame(true, ControlLightCore::targetValueMatches('color', $expected, $actual, $quantized), 'Transport point rejected.');
+    }
+    foreach (['[120,100]', '[119.056,100]', '[119.055,99.606]', '[117.638,100]'] as $wrong) {
+        assertControlLightSame(false, ControlLightCore::targetValueMatches('color', '[120,100]', $wrong, $quantized), 'Wrong transport point accepted.');
+    }
+    foreach (['', 'null', 'not-json', '[0]', '[361,0]', '[0,101]', '["0",0]'] as $invalid) {
+        assertControlLightThrows(InvalidArgumentException::class, static fn(): bool => ControlLightCore::targetValueMatches('color', '[120,100]', $invalid, $quantized), 'Invalid report accepted.');
+        assertControlLightThrows(InvalidArgumentException::class, static fn(): bool => ControlLightCore::targetValueMatches('color', $invalid, '[120,100]', $quantized), 'Invalid request accepted.');
+    }
+};
+
+$tests['checks every HA Matter HS bin and rejects adjacent bins'] = static function (): void {
+    $configuration = ControlLightCore::normalizeConfiguration([
+        'preset' => 'MATTER', 'brightnessSemantics' => 'reported',
+        'colorFeedbackQuantization' => 'ha-matter-hs-254-truncate',
+    ]);
+    for ($hue = 0; $hue < 254; $hue++) {
+        for ($saturation = 0; $saturation <= 254; $saturation++) {
+            $expected = json_encode([($hue + 0.5) * 360 / 254, $saturation === 254 ? 100 : ($saturation + 0.5) * 100 / 254], JSON_THROW_ON_ERROR);
+            $actual = json_encode([round($hue * 360 / 254, 3), round($saturation * 100 / 254, 3)], JSON_THROW_ON_ERROR);
+            assertControlLightSame(true, ControlLightCore::targetValueMatches('color', $expected, $actual, $configuration), 'Correct bin rejected.');
+            if ($saturation > 0) {
+                $wrongHue = json_encode([round((($hue + 1) % 254) * 360 / 254, 3), round($saturation * 100 / 254, 3)], JSON_THROW_ON_ERROR);
+                assertControlLightSame(false, ControlLightCore::targetValueMatches('color', $expected, $wrongHue, $configuration), 'Adjacent hue accepted.');
+            }
+            $wrongSaturation = json_encode([round($hue * 360 / 254, 3), round((($saturation + 1) % 255) * 100 / 254, 3)], JSON_THROW_ON_ERROR);
+            assertControlLightSame(false, ControlLightCore::targetValueMatches('color', $expected, $wrongSaturation, $configuration), 'Adjacent saturation accepted.');
+        }
+    }
+};
+
+$tests['rejects invalid HS quantization contracts'] = static function (): void {
+    foreach (
+        [
+        ['colorFeedbackQuantization' => 'unknown'],
+        ['colorFeedbackQuantization' => true],
+        ['colorTargetFormat' => 'INT_HEX'],
+        ['colorTargetFormat' => 'RGB_ARRAY_STRING'],
+        ['identColor' => ''],
+        ] as $override
+    ) {
+        assertControlLightThrows(InvalidArgumentException::class, static fn(): array => ControlLightCore::normalizeConfiguration($override + [
+            'preset' => 'MATTER', 'brightnessSemantics' => 'reported',
+            'colorFeedbackQuantization' => 'ha-matter-hs-254-truncate',
+        ]), 'Invalid quantization contract accepted.');
+    }
+};
+
 $passed = 0;
 foreach ($tests as $name => $test) {
     $test();
