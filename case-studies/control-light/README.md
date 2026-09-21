@@ -456,6 +456,9 @@ same brightness semantics are safe for every existing consumer.
 - `138-z2m-directional-mired-live-activation.md` records the restricted inactive
   staging, command-free CL-001/CL-015 selection, successful single/group
   6500-to-6535 K regressions and exact final restoration without a restart.
+- `139-positive-dim-command-live-closure.md` records positive-dim command
+  acceptance for all 24 dimmable v2 callers and representative spoken Alexa
+  acceptance; two state-only callers and three legacy contracts remain unchanged.
 - `../mqtt-discovery-exporter/36-client-subscription-coverage-and-runtime-namespace-report.md`
   records the later CL-030 MQTT namespace correction and complete Home
   Assistant/Apple Home functional closure.
@@ -502,6 +505,35 @@ rewriting that release decision. Each future migration must apply the default
 or justify an exception after its consumers have been checked. A pending value
 is rejected by the normalized runtime configuration and therefore cannot reach
 live execution accidentally.
+
+## Explicit Dimming Commands Versus Brightness Feedback
+
+The read contract above is independent from command semantics. An explicit
+positive brightness action on a remotely switchable light requests **on at the
+requested brightness**, including when the retained brightness already matches.
+ControlLight confirms power first and then the brightness under one semaphore
+and one shared confirmation deadline. It uses at most one on action and one
+brightness action; already confirmed parts are not sent again. Devices may
+briefly resume their retained level before the subsequent dim action arrives.
+
+Member-confirmed groups require the endpoint and every configured member to be
+on; an any-member-on aggregate is insufficient for this command. Final dim
+confirmation includes power state, so a member turning off during dimming is
+not accepted as successful brightness-only feedback.
+
+Passive feedback and synchronization never invoke this command path. `reported`
+still permits `STATE=false` with a positive `DIMMER`. A zero local dim action
+continues to request off without rewriting retained brightness. Alarm guards
+remain ahead of dispatch; `off-only` lights require manual activation and must
+not be implicitly switched on by dimming. Brightness-only targets without a
+power capability retain their existing brightness-only action contract.
+
+The separate immutable-fileset rollout and functional checks passed for all 24
+dimmable callers in the inventoried v2 cohort, with representative spoken Alexa
+acceptance on CL-021. Two state-only callers and three legacy contracts remain
+unchanged. See [the live closure report](139-positive-dim-command-live-closure.md).
+This does not retroactively change historical reports or imply installation-wide
+migration or spoken acceptance of every caller.
 
 ## Downstream Auto-Off Contract
 

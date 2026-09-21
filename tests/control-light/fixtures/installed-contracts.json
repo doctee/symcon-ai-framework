@@ -3,6 +3,13 @@
   "capturedInstanceCount": 29,
   "privacy": "Sanitized fixture; live ObjectIDs and installation names remain in the private migration manifest.",
   "consumerContracts": {
+    "positiveDimCommand": {
+      "semantics": "power-on-and-requested-brightness",
+      "liveVerified": ["CL-001", "CL-002", "CL-003", "CL-004", "CL-005", "CL-007", "CL-008", "CL-009", "CL-010", "CL-011", "CL-012", "CL-013", "CL-015", "CL-016", "CL-017", "CL-020", "CL-021", "CL-022", "CL-023", "CL-024", "CL-025", "CL-026", "CL-027", "CL-028"],
+      "unchangedStateOnly": ["CL-014", "CL-030"],
+      "legacyRetained": ["CL-018", "CL-019", "CL-029"],
+      "spokenAlexaVerified": ["CL-021"]
+    },
     "voiceAssistant": {
       "reportedFacadePowerAndBrightness": ["CL-001", "CL-007", "CL-008", "CL-009", "CL-013", "CL-016", "CL-020", "CL-024", "CL-025", "CL-028"],
       "echoRemoteTextCommandTested": ["CL-001", "CL-008", "CL-009", "CL-013", "CL-015", "CL-020", "CL-025", "CL-028"],

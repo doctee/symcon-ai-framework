@@ -27,6 +27,9 @@ final class ControlLightFakeRuntime
     public static ?string $normalizedColorFeedback = null;
     public static ?int $normalizedTemperatureFeedback = null;
     public static bool $colorImplicitPowerOn = false;
+    public static ?Closure $actionHook = null;
+    /** @var list<int> */
+    public static array $sleeps = [];
 
     public static function reset(): void
     {
@@ -44,6 +47,8 @@ final class ControlLightFakeRuntime
         self::$normalizedColorFeedback = null;
         self::$normalizedTemperatureFeedback = null;
         self::$colorImplicitPowerOn = false;
+        self::$actionHook = null;
+        self::$sleeps = [];
     }
 
     public static function variable(int $id, int $type, mixed $value, bool $action = false): void
@@ -111,6 +116,9 @@ function RequestAction(int $variableID, mixed $value): bool
     }
     if (ControlLightFakeRuntime::$requestActionReturnsFalse) {
         return false;
+    }
+    if (ControlLightFakeRuntime::$actionHook !== null) {
+        return (ControlLightFakeRuntime::$actionHook)($variableID, $value);
     }
     if ($variableID === 23 && ControlLightFakeRuntime::$normalizedTemperatureFeedback !== null) {
         SetValue($variableID, ControlLightFakeRuntime::$normalizedTemperatureFeedback);
@@ -218,6 +226,7 @@ function controlLightColorTransitionFixture(string $mode = 'target-turns-on'): a
 
 function IPS_Sleep(int $milliseconds): void
 {
+    ControlLightFakeRuntime::$sleeps[] = $milliseconds;
     if (ControlLightFakeRuntime::$feedbackMode === 'delayed') {
         ControlLightFakeRuntime::applyPendingFeedback();
     }
@@ -304,6 +313,218 @@ function controlLightRuntimeFixture(string $semantics = ControlLightCore::BRIGHT
 
 $tests = [];
 
+$tests['positive dim powers on even when retained brightness already matches'] = static function (): void {
+    foreach ([ControlLightCore::BRIGHTNESS_REPORTED, ControlLightCore::BRIGHTNESS_EFFECTIVE] as $semantics) {
+        $fixture = controlLightRuntimeFixture($semantics);
+        SetValue(21, 100);
+        $result = ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'brightness',
+            100,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        assertControlLightRuntimeSame('confirmed', $result['status'], 'Off-state equality was treated as complete.');
+        assertControlLightRuntimeSame([['variableID' => 20, 'value' => true]], ControlLightFakeRuntime::$actions, 'Redundant dim command.');
+        assertControlLightRuntimeSame(true, GetValue(10), 'Authoritative state not synchronized.');
+        assertControlLightRuntimeSame(100, GetValue(11), 'Authoritative brightness differs.');
+        assertControlLightRuntimeSame(['SAEF_CONTROL_LIGHT_1000:100'], ControlLightFakeRuntime::$semaphoreEnters, 'Nested/released command lock.');
+    }
+};
+
+$tests['positive dim remains idempotent only when power and brightness match'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    SetValue(20, true);
+    SetValue(21, 100);
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        100,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame('already_confirmed', $result['status'], 'Idempotent result differs.');
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Already confirmed light received an action.');
+};
+
+$tests['already powered light needs only its changed dim command'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    SetValue(20, true);
+    ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        55,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame([['variableID' => 21, 'value' => 55]], ControlLightFakeRuntime::$actions, 'Redundant power-on.');
+};
+
+$tests['passive positive brightness never becomes an on command'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    SetValue(21, 100);
+    (new ReflectionMethod(ControlLightRuntime::class, 'syncAll'))->invoke(null, $fixture['resources'], $fixture['configuration']);
+    assertControlLightRuntimeSame(false, GetValue(10), 'Feedback inferred power from brightness.');
+    assertControlLightRuntimeSame(100, GetValue(11), 'Reported retained brightness lost.');
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Passive feedback switched a device.');
+};
+
+$tests['zero dim still delegates to off without changing stored brightness'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    SetValue(20, true);
+    SetValue(21, 100);
+    (new ReflectionMethod(ControlLightRuntime::class, 'dispatchLocalAction'))->invoke(
+        null,
+        1000,
+        'brightness',
+        0,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame([['variableID' => 20, 'value' => false]], ControlLightFakeRuntime::$actions, 'Zero dim did not use off.');
+    assertControlLightRuntimeSame(100, GetValue(11), 'Reported retained brightness changed on off.');
+};
+
+$tests['off-only light cannot be powered on indirectly by positive dim'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    $fixture['configuration']['stateCommandMode'] = ControlLightCore::STATE_COMMAND_OFF_ONLY;
+    try {
+        ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'brightness',
+            55,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        throw new RuntimeException('Manual-on protection was bypassed.');
+    } catch (ControlLightCommandException $exception) {
+        assertControlLightRuntimeSame(ControlLightCommandException::FAILURE_MANUAL_ACTIVATION_REQUIRED, $exception->failureClass(), 'Failure class differs.');
+    }
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Manual-on light received a command while off.');
+    SetValue(20, true);
+    ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        55,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame([['variableID' => 21, 'value' => 55]], ControlLightFakeRuntime::$actions, 'Already manually powered light cannot dim.');
+};
+
+$tests['missing power confirmation stops before dimming'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    ControlLightFakeRuntime::$feedbackMode = 'none';
+    try {
+        ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'brightness',
+            55,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        throw new RuntimeException('Unconfirmed power-on accepted.');
+    } catch (ControlLightCommandException $exception) {
+        assertControlLightRuntimeSame(ControlLightCommandException::FAILURE_DEVICE_OFFLINE, $exception->failureClass(), 'Offline diagnosis lost.');
+    }
+    assertControlLightRuntimeSame([['variableID' => 20, 'value' => true]], ControlLightFakeRuntime::$actions, 'Dimming continued after failed on.');
+};
+
+$tests['positive dim confirms state and brightness together after target action'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    ControlLightFakeRuntime::$actionHook = static function (int $id, mixed $value): bool {
+        SetValue($id, $value);
+        if ($id === 21) {
+            SetValue(20, false);
+        }
+        return true;
+    };
+    try {
+        ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'brightness',
+            55,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        throw new RuntimeException('Power drift during dim accepted.');
+    } catch (ControlLightCommandException $exception) {
+        assertControlLightRuntimeSame(1, GetValue(31), 'Joint confirmation timeout missing.');
+    }
+    assertControlLightRuntimeSame(false, GetValue(10), 'Power drift concealed by optimistic state.');
+    assertControlLightRuntimeSame(2, count(ControlLightFakeRuntime::$actions), 'Unexpected retry after competing off.');
+};
+
+$tests['power and dim consume one shared confirmation budget'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    ControlLightFakeRuntime::$actionHook = static function (int $id, mixed $value): bool {
+        if ($id === 20) {
+            usleep(80 * 1000);
+            SetValue($id, $value);
+        }
+        return true;
+    };
+    try {
+        ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'brightness',
+            55,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        throw new RuntimeException('Missing dim feedback accepted.');
+    } catch (ControlLightCommandException $exception) {
+        if (array_sum(ControlLightFakeRuntime::$sleeps) > 25) {
+            throw new RuntimeException('Dimming reset the total confirmation budget.');
+        }
+    }
+};
+
+$tests['zero wait budget permits immediate positive dim confirmation'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    $fixture['configuration']['confirmation']['timeoutMilliseconds'] = 0;
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        55,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame('confirmed', $result['status'], 'Immediate zero-budget action rejected.');
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$sleeps, 'Zero-budget action waited.');
+};
+
+$tests['positive dim retains Matter scaling and power semantics'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    $fixture['configuration'] = ControlLightCore::normalizeConfiguration([
+        'preset' => 'MATTER', 'identTemp' => '', 'identColor' => '', 'brightnessSemantics' => 'reported',
+    ]);
+    $expected = ControlLightCore::localToTarget('brightness', 55, $fixture['configuration']);
+    ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        55,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame(
+        [['variableID' => 20, 'value' => true], ['variableID' => 21, 'value' => $expected]],
+        ControlLightFakeRuntime::$actions,
+        'Matter command conversion differs.'
+    );
+};
+
 $tests['confirms immediate authoritative feedback'] = static function (): void {
     $fixture = controlLightRuntimeFixture();
     $result = ControlLightRuntime::dispatchTargetAction(
@@ -316,8 +537,13 @@ $tests['confirms immediate authoritative feedback'] = static function (): void {
     );
     assertControlLightRuntimeSame('confirmed', $result['status'], 'Immediate result differs.');
     assertControlLightRuntimeSame(55, GetValue(11), 'Local feedback differs.');
-    assertControlLightRuntimeSame([['variableID' => 21, 'value' => 55]], ControlLightFakeRuntime::$actions, 'Action calls differ.');
-    assertControlLightRuntimeSame(1, GetValue(30), 'Command statistic differs.');
+    assertControlLightRuntimeSame(
+        [['variableID' => 20, 'value' => true], ['variableID' => 21, 'value' => 55]],
+        ControlLightFakeRuntime::$actions,
+        'Action calls differ.'
+    );
+    assertControlLightRuntimeSame(true, GetValue(10), 'Positive dim did not power on.');
+    assertControlLightRuntimeSame(2, GetValue(30), 'Command statistic differs.');
     assertControlLightRuntimeSame(['SAEF_CONTROL_LIGHT_1000'], ControlLightFakeRuntime::$semaphoreLeaves, 'Semaphore was not released.');
 };
 

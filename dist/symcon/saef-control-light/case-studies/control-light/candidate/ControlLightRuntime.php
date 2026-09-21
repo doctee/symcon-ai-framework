@@ -308,80 +308,160 @@ final class ControlLightRuntime
         }
 
         try {
-            if (
-                $configuration['groupFeedback']['enabled'] === true
-                && in_array($capability, ['state', 'brightness', 'colorTemperature'], true)
-            ) {
-                return self::dispatchMemberConfirmedActionLocked(
-                    $capability,
-                    $expectedTargetValue,
-                    $targetVariableID,
+            // One lock and one confirmation budget cover the complete command,
+            // including an explicit power-on prerequisite for positive dimming.
+            $deadline = microtime(true) + ($configuration['confirmation']['timeoutMilliseconds'] / 1000);
+            $powerResult = null;
+            $stateTargetVariableID = $resources['targetVariableIDs']['state'] ?? null;
+            $positiveDim = $capability === 'brightness' && (int)$localValue > 0
+                && is_int($stateTargetVariableID);
+            if ($positiveDim) {
+                $powerResult = self::dispatchTargetActionLocked(
+                    'state',
+                    true,
+                    $stateTargetVariableID,
                     $resources,
                     $configuration,
-                    $diagnostics
+                    $diagnostics,
+                    $deadline
                 );
             }
-
-            $currentTargetValue = \GetValue($targetVariableID);
-            $confirmationConfiguration = $configuration;
-            $requiresPowerOnConfirmation = false;
-            $stateTargetVariableID = $resources['targetVariableIDs']['state'] ?? null;
-            if (
-                $capability === 'color'
-                && $configuration['colorOffStateTransition']['mode'] === 'target-turns-on'
-                && is_int($stateTargetVariableID)
-                && (bool)\GetValue($stateTargetVariableID) === false
-            ) {
-                $requiresPowerOnConfirmation = true;
-                $confirmationConfiguration['colorHueToleranceDegrees'] =
-                    $configuration['colorOffStateTransition']['hueToleranceDegrees'];
-                $confirmationConfiguration['colorSaturationTolerancePercentagePoints'] =
-                    $configuration['colorOffStateTransition']['saturationTolerancePercentagePoints'];
-            }
-            if (
-                !$requiresPowerOnConfirmation
-                && !(
-                    $capability === 'state'
-                    && (bool)$expectedTargetValue === false
-                    && $configuration['stateCommandMode'] === ControlLightCore::STATE_COMMAND_OFF_ONLY
-                )
-                &&
-                ControlLightCore::targetValueMatches(
-                    $capability,
-                    $expectedTargetValue,
-                    $currentTargetValue,
-                    $configuration
-                )
-            ) {
-                self::syncAll($resources, $configuration);
-
-                return ['status' => 'already_confirmed', 'capability' => $capability];
-            }
-            if (
-                $capability === 'state'
-                && (bool)$expectedTargetValue === true
-                && $configuration['stateCommandMode'] === ControlLightCore::STATE_COMMAND_OFF_ONLY
-            ) {
-                throw new ControlLightCommandException(
-                    ControlLightCommandException::FAILURE_MANUAL_ACTIVATION_REQUIRED,
-                    $capability,
-                    ['requestedState' => true]
-                );
-            }
-
-            if (!\RequestAction($targetVariableID, $expectedTargetValue)) {
-                throw new RuntimeException('Target action rejected the requested value: ' . $capability);
-            }
-            \SAEF_IncrementStatistic($diagnostics['statisticIDs']['COMMANDS']);
-
-            $timeoutMilliseconds = $configuration['confirmation']['timeoutMilliseconds'];
-            $deadline = microtime(true) + ($timeoutMilliseconds / 1000);
-            $confirmed = ControlLightCore::targetValueMatches(
+            $result = self::dispatchTargetActionLocked(
                 $capability,
                 $expectedTargetValue,
-                \GetValue($targetVariableID),
-                $confirmationConfiguration
+                $targetVariableID,
+                $resources,
+                $configuration,
+                $diagnostics,
+                $deadline,
+                $positiveDim
             );
+            if (($powerResult['status'] ?? null) === 'confirmed') {
+                $result['status'] = 'confirmed';
+            }
+
+            return $result;
+        } finally {
+            if (!\IPS_SemaphoreLeave($semaphoreName)) {
+                \IPS_LogMessage('SAEF ControlLight v2', 'Unable to release ControlLight semaphore.');
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $resources
+     * @param array<string, mixed> $configuration
+     * @param array<string, mixed> $diagnostics
+     * @return array<string, mixed>
+     */
+    private static function dispatchTargetActionLocked(
+        string $capability,
+        mixed $expectedTargetValue,
+        int $targetVariableID,
+        array $resources,
+        array $configuration,
+        array $diagnostics,
+        float $deadline,
+        bool $requirePowerOn = false
+    ): array {
+        if (
+            $configuration['groupFeedback']['enabled'] === true
+            && in_array($capability, ['state', 'brightness', 'colorTemperature'], true)
+        ) {
+            return self::dispatchMemberConfirmedActionLocked(
+                $capability,
+                $expectedTargetValue,
+                $targetVariableID,
+                $resources,
+                $configuration,
+                $diagnostics,
+                $deadline,
+                $requirePowerOn
+            );
+        }
+
+        $currentTargetValue = \GetValue($targetVariableID);
+        $confirmationConfiguration = $configuration;
+        $requiresPowerOnConfirmation = false;
+        $stateTargetVariableID = $resources['targetVariableIDs']['state'] ?? null;
+        if (
+            $capability === 'color'
+            && $configuration['colorOffStateTransition']['mode'] === 'target-turns-on'
+            && is_int($stateTargetVariableID)
+            && (bool)\GetValue($stateTargetVariableID) === false
+        ) {
+            $requiresPowerOnConfirmation = true;
+            $confirmationConfiguration['colorHueToleranceDegrees'] =
+                $configuration['colorOffStateTransition']['hueToleranceDegrees'];
+            $confirmationConfiguration['colorSaturationTolerancePercentagePoints'] =
+                $configuration['colorOffStateTransition']['saturationTolerancePercentagePoints'];
+        }
+        if (
+            !$requiresPowerOnConfirmation
+            && (!$requirePowerOn || self::readTargetState((int)$stateTargetVariableID))
+            && !(
+                $capability === 'state'
+                && (bool)$expectedTargetValue === false
+                && $configuration['stateCommandMode'] === ControlLightCore::STATE_COMMAND_OFF_ONLY
+            )
+            && ControlLightCore::targetValueMatches(
+                $capability,
+                $expectedTargetValue,
+                $currentTargetValue,
+                $configuration
+            )
+        ) {
+            self::syncAll($resources, $configuration);
+
+            return ['status' => 'already_confirmed', 'capability' => $capability];
+        }
+        if (
+            $capability === 'state'
+            && (bool)$expectedTargetValue === true
+            && $configuration['stateCommandMode'] === ControlLightCore::STATE_COMMAND_OFF_ONLY
+        ) {
+            throw new ControlLightCommandException(
+                ControlLightCommandException::FAILURE_MANUAL_ACTIVATION_REQUIRED,
+                $capability,
+                ['requestedState' => true]
+            );
+        }
+
+        if ($configuration['confirmation']['timeoutMilliseconds'] > 0 && self::remainingMilliseconds($deadline) <= 0) {
+            self::syncAll($resources, $configuration);
+            \SAEF_IncrementStatistic($diagnostics['statisticIDs']['CONFIRMATION_TIMEOUTS']);
+            throw new ControlLightCommandException(self::feedbackFailureClass($resources, $configuration), $capability);
+        }
+        if (!\RequestAction($targetVariableID, $expectedTargetValue)) {
+            throw new RuntimeException('Target action rejected the requested value: ' . $capability);
+        }
+        \SAEF_IncrementStatistic($diagnostics['statisticIDs']['COMMANDS']);
+
+        $matches = static fn(mixed $actual): bool => ControlLightCore::targetValueMatches(
+            $capability,
+            $expectedTargetValue,
+            $actual,
+            $confirmationConfiguration
+        ) && (!$requirePowerOn || self::readTargetState((int)$stateTargetVariableID));
+        $confirmed = $matches(\GetValue($targetVariableID));
+        $remainingMilliseconds = self::remainingMilliseconds($deadline);
+        if (!$confirmed && $remainingMilliseconds > 0) {
+            $pollIntervalMilliseconds = min(
+                $configuration['confirmation']['pollIntervalMilliseconds'],
+                $remainingMilliseconds
+            );
+            $confirmed = \SAEF_WaitForVariable(
+                $targetVariableID,
+                $remainingMilliseconds,
+                $pollIntervalMilliseconds,
+                null,
+                \SAEF_WAIT_UPDATED,
+                $pollIntervalMilliseconds,
+                $matches
+            );
+        }
+        if ($confirmed && $requiresPowerOnConfirmation) {
+            $confirmed = self::readTargetState((int)$stateTargetVariableID);
             $remainingMilliseconds = self::remainingMilliseconds($deadline);
             if (!$confirmed && $remainingMilliseconds > 0) {
                 $pollIntervalMilliseconds = min(
@@ -389,56 +469,28 @@ final class ControlLightRuntime
                     $remainingMilliseconds
                 );
                 $confirmed = \SAEF_WaitForVariable(
-                    $targetVariableID,
+                    $stateTargetVariableID,
                     $remainingMilliseconds,
                     $pollIntervalMilliseconds,
-                    null,
+                    true,
                     \SAEF_WAIT_UPDATED,
-                    $pollIntervalMilliseconds,
-                    static fn(mixed $actual): bool => ControlLightCore::targetValueMatches(
-                        $capability,
-                        $expectedTargetValue,
-                        $actual,
-                        $confirmationConfiguration
-                    )
+                    $pollIntervalMilliseconds
                 );
-            }
-            if ($confirmed && $requiresPowerOnConfirmation) {
-                $confirmed = self::readTargetState((int)$stateTargetVariableID);
-                $remainingMilliseconds = self::remainingMilliseconds($deadline);
-                if (!$confirmed && $remainingMilliseconds > 0) {
-                    $pollIntervalMilliseconds = min(
-                        $configuration['confirmation']['pollIntervalMilliseconds'],
-                        $remainingMilliseconds
-                    );
-                    $confirmed = \SAEF_WaitForVariable(
-                        $stateTargetVariableID,
-                        $remainingMilliseconds,
-                        $pollIntervalMilliseconds,
-                        true,
-                        \SAEF_WAIT_UPDATED,
-                        $pollIntervalMilliseconds
-                    );
-                }
-            }
-
-            self::syncAll($resources, $configuration);
-            if (!$confirmed) {
-                \SAEF_IncrementStatistic($diagnostics['statisticIDs']['CONFIRMATION_TIMEOUTS']);
-                throw new ControlLightCommandException(
-                    self::feedbackFailureClass($resources, $configuration),
-                    $capability
-                );
-            }
-
-            \SAEF_SetStatisticTimestamp($diagnostics['statisticIDs']['LAST_FEEDBACK']);
-
-            return ['status' => 'confirmed', 'capability' => $capability];
-        } finally {
-            if (!\IPS_SemaphoreLeave($semaphoreName)) {
-                \IPS_LogMessage('SAEF ControlLight v2', 'Unable to release ControlLight semaphore.');
             }
         }
+
+        self::syncAll($resources, $configuration);
+        if (!$confirmed) {
+            \SAEF_IncrementStatistic($diagnostics['statisticIDs']['CONFIRMATION_TIMEOUTS']);
+            throw new ControlLightCommandException(
+                self::feedbackFailureClass($resources, $configuration),
+                $capability
+            );
+        }
+
+        \SAEF_SetStatisticTimestamp($diagnostics['statisticIDs']['LAST_FEEDBACK']);
+
+        return ['status' => 'confirmed', 'capability' => $capability];
     }
 
     private static function remainingMilliseconds(float $deadline): int
@@ -467,7 +519,9 @@ final class ControlLightRuntime
         int $targetVariableID,
         array $resources,
         array $configuration,
-        array $diagnostics
+        array $diagnostics,
+        float $deadline,
+        bool $requirePowerOn = false
     ): array {
         $preMatches = [];
         foreach ($resources['groupMembers'] as $member) {
@@ -484,7 +538,8 @@ final class ControlLightRuntime
             $targetVariableID,
             $resources,
             $configuration,
-            $preMatches
+            $preMatches,
+            $requirePowerOn
         );
         if ($initial['confirmed'] === true) {
             self::syncAll($resources, $configuration);
@@ -493,6 +548,21 @@ final class ControlLightRuntime
         }
 
         $targetBaseline = \IPS_GetVariable($targetVariableID);
+        if (
+            $capability === 'state' && $expectedTargetValue === true
+            && $configuration['stateCommandMode'] === ControlLightCore::STATE_COMMAND_OFF_ONLY
+        ) {
+            throw new ControlLightCommandException(
+                ControlLightCommandException::FAILURE_MANUAL_ACTIVATION_REQUIRED,
+                $capability,
+                ['requestedState' => true]
+            );
+        }
+        if ($configuration['confirmation']['timeoutMilliseconds'] > 0 && self::remainingMilliseconds($deadline) <= 0) {
+            \SAEF_IncrementStatistic($diagnostics['statisticIDs']['CONFIRMATION_TIMEOUTS']);
+            [$failureClass, $details] = self::groupFailure($initial, $targetVariableID, $targetBaseline);
+            throw new ControlLightCommandException($failureClass, $capability, $details);
+        }
         if (!\RequestAction($targetVariableID, $expectedTargetValue)) {
             throw new RuntimeException('Target action rejected the requested value: ' . $capability);
         }
@@ -504,11 +574,10 @@ final class ControlLightRuntime
             $targetVariableID,
             $resources,
             $configuration,
-            $preMatches
+            $preMatches,
+            $requirePowerOn
         );
-        $timeoutMilliseconds = $configuration['confirmation']['timeoutMilliseconds'];
         $pollIntervalMilliseconds = $configuration['confirmation']['pollIntervalMilliseconds'];
-        $deadline = microtime(true) + ($timeoutMilliseconds / 1000);
         while ($snapshot['confirmed'] !== true && microtime(true) < $deadline) {
             $remainingMilliseconds = max(1, (int)ceil(($deadline - microtime(true)) * 1000));
             \IPS_Sleep(min($pollIntervalMilliseconds, $remainingMilliseconds));
@@ -518,7 +587,8 @@ final class ControlLightRuntime
                 $targetVariableID,
                 $resources,
                 $configuration,
-                $preMatches
+                $preMatches,
+                $requirePowerOn
             );
         }
 
@@ -551,7 +621,8 @@ final class ControlLightRuntime
         int $targetVariableID,
         array $resources,
         array $configuration,
-        array $preMatches
+        array $preMatches,
+        bool $requirePowerOn = false
     ): array {
         $pendingKeys = [];
         $staleKeys = [];
@@ -564,6 +635,10 @@ final class ControlLightRuntime
                 $configuration
             );
             $fresh = self::groupMemberIsFresh($member, $configuration, $capability);
+            if ($requirePowerOn) {
+                $matches = $matches && self::readTargetState($member['stateVariableID']);
+                $fresh = $fresh && self::groupMemberIsFresh($member, $configuration, 'state');
+            }
             $wasAlreadyMatching = $preMatches[$member['key']] ?? false;
             if (!$matches || ($wasAlreadyMatching && !$fresh)) {
                 $pendingKeys[] = $member['key'];
@@ -582,6 +657,10 @@ final class ControlLightRuntime
             \GetValue($targetVariableID),
             $configuration
         );
+        if ($requirePowerOn) {
+            $endpointMatches = $endpointMatches
+                && self::readTargetState($resources['targetVariableIDs']['state']);
+        }
 
         return [
             'confirmed' => $endpointMatches && $pendingKeys === [],

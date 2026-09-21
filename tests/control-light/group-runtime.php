@@ -19,6 +19,7 @@ final class ControlLightGroupRuntimeFake
     public static array $semaphoreLeaves = [];
     public static string $endpointFeedback = 'immediate';
     public static int $sleepCalls = 0;
+    public static ?Closure $actionHook = null;
 
     public static function reset(): void
     {
@@ -29,6 +30,7 @@ final class ControlLightGroupRuntimeFake
         self::$semaphoreLeaves = [];
         self::$endpointFeedback = 'immediate';
         self::$sleepCalls = 0;
+        self::$actionHook = null;
     }
 
     public static function variable(int $id, int $type, mixed $value, bool $action = false): void
@@ -73,6 +75,9 @@ function SetValue(int $variableID, mixed $value): void
 function RequestAction(int $variableID, mixed $value): bool
 {
     ControlLightGroupRuntimeFake::$actions[] = ['variableID' => $variableID, 'value' => $value];
+    if (ControlLightGroupRuntimeFake::$actionHook !== null) {
+        return (ControlLightGroupRuntimeFake::$actionHook)($variableID, $value);
+    }
     if (ControlLightGroupRuntimeFake::$endpointFeedback === 'immediate') {
         SetValue($variableID, $value);
     } elseif (ControlLightGroupRuntimeFake::$endpointFeedback === 'mismatch') {
@@ -223,6 +228,108 @@ function controlLightGroupFailure(callable $operation): ControlLightCommandExcep
 }
 
 $tests = [];
+
+$tests['positive dim powers every member on despite matching retained brightness'] = static function (): void {
+    $fixture = controlLightGroupFixture();
+    SetValue(20, true);
+    SetValue(40, true);
+    // The aggregate is on, but member 2 is off with the requested retained level.
+    ControlLightGroupRuntimeFake::$memberFeedback = [40 => true, 50 => true];
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        10,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightGroupSame('confirmed', $result['status'], 'Partial group was considered complete.');
+    assertControlLightGroupSame([['variableID' => 20, 'value' => true]], ControlLightGroupRuntimeFake::$actions, 'Redundant dim command.');
+    assertControlLightGroupSame(true, GetValue(50), 'Member 2 stayed off.');
+};
+
+$tests['group positive dim uses at most one on and one dim command'] = static function (): void {
+    $fixture = controlLightGroupFixture();
+    ControlLightGroupRuntimeFake::$actionHook = static function (int $id, mixed $value): bool {
+        SetValue($id, $value);
+        foreach ($id === 20 ? [40, 50] : [41, 51] as $memberID) {
+            SetValue($memberID, $value);
+        }
+        return true;
+    };
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        60,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightGroupSame('confirmed', $result['status'], 'Group dim failed.');
+    assertControlLightGroupSame(
+        [['variableID' => 20, 'value' => true], ['variableID' => 21, 'value' => 60]],
+        ControlLightGroupRuntimeFake::$actions,
+        'Group commands were dispatched per member.'
+    );
+    ControlLightGroupRuntimeFake::$actions = [];
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        60,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightGroupSame('already_confirmed', $result['status'], 'Group dim not idempotent.');
+    assertControlLightGroupSame([], ControlLightGroupRuntimeFake::$actions, 'Matching group received commands.');
+};
+
+$tests['positive dim stops after partial group power feedback'] = static function (): void {
+    $fixture = controlLightGroupFixture();
+    ControlLightGroupRuntimeFake::$memberFeedback = [40 => true];
+    $exception = controlLightGroupFailure(static fn(): array => ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        60,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    ));
+    assertControlLightGroupSame(ControlLightCommandException::FAILURE_GROUP_PARTIAL_FEEDBACK, $exception->failureClass(), 'Partial on diagnosis lost.');
+    assertControlLightGroupSame([['variableID' => 20, 'value' => true]], ControlLightGroupRuntimeFake::$actions, 'Dim sent after partial on.');
+};
+
+$tests['group dim confirmation does not hide a member powering off'] = static function (): void {
+    $fixture = controlLightGroupFixture();
+    foreach ([20, 40, 50] as $id) {
+        SetValue($id, true);
+    }
+    ControlLightGroupRuntimeFake::$memberFeedback = [41 => 60, 51 => 60, 50 => false];
+    $exception = controlLightGroupFailure(static fn(): array => ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        60,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    ));
+    assertControlLightGroupSame(ControlLightCommandException::FAILURE_GROUP_PARTIAL_FEEDBACK, $exception->failureClass(), 'Member power loss was accepted.');
+};
+
+$tests['off-only group cannot bypass manual activation via dim'] = static function (): void {
+    $fixture = controlLightGroupFixture();
+    $fixture['configuration']['stateCommandMode'] = ControlLightCore::STATE_COMMAND_OFF_ONLY;
+    $exception = controlLightGroupFailure(static fn(): array => ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        60,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    ));
+    assertControlLightGroupSame(ControlLightCommandException::FAILURE_MANUAL_ACTIVATION_REQUIRED, $exception->failureClass(), 'Manual group protection lost.');
+    assertControlLightGroupSame([], ControlLightGroupRuntimeFake::$actions, 'Off-only group received an on command.');
+};
 
 $tests['uses one group command and confirms both members'] = static function (): void {
     $fixture = controlLightGroupFixture();
@@ -411,6 +518,9 @@ $tests['distinguishes projection mismatch from endpoint timeout'] = static funct
 
 $tests['accepts bounded member brightness tolerance'] = static function (): void {
     $fixture = controlLightGroupFixture();
+    foreach ([20, 40, 50] as $variableID) {
+        SetValue($variableID, true);
+    }
     ControlLightGroupRuntimeFake::$memberFeedback = [41 => 59, 51 => 61];
     $result = ControlLightRuntime::dispatchTargetAction(
         1000,
