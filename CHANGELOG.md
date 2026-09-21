@@ -11,6 +11,9 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added an opt-in HA Matter HS feedback quantization profile with transport-bin
+  regression coverage and unchanged default color comparisons. Its deployment
+  candidate includes the separately reviewed missing structured-color repair.
 - Added the initial v0.6 engineering inventory with explicit admission gates
   for deferred operational observations, helper activation and retention work.
 - Added the sanitized CL-002 functional closure for both physical on/off inputs
@@ -27,6 +30,11 @@ This project adheres to Semantic Versioning.
   member-confirmed group regressions for directional Mired confirmation.
 
 ### Changed
+
+- Preserve confirmed ControlLight state/brightness when optional structured HA
+  color feedback is absent; keep malformed feedback strict and color waits bounded.
+- Correct managed ControlLight mirror ownership validation to use Symcon's
+  actual ParentID metadata field, with matching regression fixtures.
 
 - Corrected the ControlLight positive-dim command contract: remotely switchable
   lights now confirm power-on and requested brightness, including equal retained

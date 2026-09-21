@@ -36,7 +36,7 @@ final class ControlLightRuntimeMirrorFake
     ): array {
         return [
             'ObjectType' => $type,
-            'ObjectParentID' => $parentID,
+            'ParentID' => $parentID,
             'ObjectIdent' => $ident,
             'ObjectName' => $name,
             'ObjectPosition' => $position,
@@ -69,7 +69,7 @@ function IPS_ObjectExists(int $id): bool
 function IPS_GetObjectIDByIdent(string $ident, int $parentID): int|false
 {
     foreach (ControlLightRuntimeMirrorFake::$objects as $id => $object) {
-        if ($object['ObjectParentID'] === $parentID && $object['ObjectIdent'] === $ident) {
+        if ($object['ParentID'] === $parentID && $object['ObjectIdent'] === $ident) {
             return $id;
         }
     }
@@ -100,7 +100,7 @@ function IPS_CreateScript(int $type): int
 
 function IPS_SetParent(int $id, int $parentID): void
 {
-    ControlLightRuntimeMirrorFake::$objects[$id]['ObjectParentID'] = $parentID;
+    ControlLightRuntimeMirrorFake::$objects[$id]['ParentID'] = $parentID;
 }
 
 function IPS_SetIdent(int $id, string $ident): void
@@ -343,7 +343,7 @@ try {
 
     ControlLightRuntimeMirrorFake::reset();
     $movedID = ControlLightRuntimeMirrorFake::createExistingScript('previous');
-    ControlLightRuntimeMirrorFake::$objects[$movedID]['ObjectParentID'] = 0;
+    ControlLightRuntimeMirrorFake::$objects[$movedID]['ParentID'] = 0;
     $config['expectedScriptID'] = $movedID;
     $ownershipDriftRejected = false;
     try {

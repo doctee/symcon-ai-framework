@@ -100,6 +100,11 @@ composer test:control-light-runtime-mirror
 
 ## Promotion Reminder
 
+The later mixed-version reconciliation described in report 141 corrects the
+ownership check and fake-object fixture to use Symcon's actual `ParentID`
+field. Separate runtime cohorts retain separate mirrors; projecting a new
+payload must never imply that older callers were migrated.
+
 Do not promote `ControlLightRuntimeMirror` to `helpers/` after this first use.
 When a second independent file-backed runtime needs the same facility, compare
 both implementations against EK-007 and explicitly decide whether a general

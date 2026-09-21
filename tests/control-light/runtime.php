@@ -1103,6 +1103,203 @@ $tests['converts classified command failures at the Symcon action boundary'] = s
     );
 };
 
+foreach (['', '   ', 'null', null] as $missingIndex => $missingColor) {
+    $tests['missing HA color does not block state or dim ' . $missingIndex] = static function () use ($missingColor): void {
+        $fixture = controlLightColorTransitionFixture();
+        SetValue(23, $missingColor);
+        foreach ([['state', true], ['brightness', 40], ['state', false]] as [$capability, $value]) {
+            $result = ControlLightRuntime::dispatchTargetAction(
+                1000,
+                $capability,
+                $value,
+                $fixture['resources'],
+                $fixture['configuration'],
+                $fixture['diagnostics']
+            );
+            assertControlLightRuntimeSame('confirmed', $result['status'], 'Independent command failed.');
+        }
+        assertControlLightRuntimeSame(16749095, GetValue(12), 'Missing color overwrote retained facade.');
+        assertControlLightRuntimeSame(false, GetValue(10), 'Off feedback not synchronized.');
+        assertControlLightRuntimeSame([], ControlLightFakeRuntime::$sleeps, 'Missing side attribute added latency.');
+        assertControlLightRuntimeSame(0, GetValue(31), 'Independent commands timed out.');
+    };
+}
+
+$tests['missing color feedback is pending then recovers without commands'] = static function (): void {
+    $fixture = controlLightColorTransitionFixture();
+    SetValue(23, '');
+    $sync = new ReflectionMethod(ControlLightRuntime::class, 'syncCapability');
+    assertControlLightRuntimeSame(false, $sync->invoke(null, 'color', $fixture['resources'], $fixture['configuration']), 'Absent feedback accepted.');
+    SetValue(23, '[120,100]');
+    assertControlLightRuntimeSame(true, $sync->invoke(null, 'color', $fixture['resources'], $fixture['configuration']), 'Valid feedback not synchronized.');
+    assertControlLightRuntimeSame(0x00FF00, GetValue(12), 'Recovered color differs.');
+    assertControlLightRuntimeSame(false, GetValue(10), 'Passive color powered on facade.');
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Passive color dispatched a command.');
+};
+
+$tests['color request waits through absent feedback and confirms once'] = static function (): void {
+    $fixture = controlLightColorTransitionFixture();
+    SetValue(23, '');
+    ControlLightFakeRuntime::$feedbackMode = 'delayed';
+    ControlLightFakeRuntime::$actionHook = static function (int $id, mixed $value): bool {
+        SetValue(20, true);
+        ControlLightFakeRuntime::$pendingFeedback = ['variableID' => $id, 'value' => $value];
+        return true;
+    };
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'color',
+        0x00FF00,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame('confirmed', $result['status'], 'Delayed color failed.');
+    assertControlLightRuntimeSame(1, count(ControlLightFakeRuntime::$actions), 'Color was retried.');
+    assertControlLightRuntimeSame(0x00FF00, GetValue(12), 'Color not confirmed.');
+    assertControlLightRuntimeSame(100, GetValue(11), 'Color changed brightness.');
+    $again = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'color',
+        0x00FF00,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame('already_confirmed', $again['status'], 'Repeated color not idempotent.');
+    assertControlLightRuntimeSame(1, count(ControlLightFakeRuntime::$actions), 'Repeated color dispatched again.');
+};
+
+$tests['permanently missing color remains a bounded classified timeout'] = static function (): void {
+    $fixture = controlLightColorTransitionFixture();
+    SetValue(23, '');
+    ControlLightFakeRuntime::$feedbackMode = 'none';
+    try {
+        ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'color',
+            0x00FF00,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        throw new RuntimeException('Missing color falsely confirmed.');
+    } catch (ControlLightCommandException $error) {
+        assertControlLightRuntimeSame(ControlLightCommandException::FAILURE_FEEDBACK_TIMEOUT, $error->failureClass(), 'Missing color classification differs.');
+    }
+    assertControlLightRuntimeSame(1, GetValue(31), 'Timeout missing from diagnostics.');
+    assertControlLightRuntimeSame(16749095, GetValue(12), 'Missing feedback overwrote retained color.');
+    assertControlLightRuntimeSame(1, count(ControlLightFakeRuntime::$actions), 'Timeout caused retries.');
+    if (array_sum(ControlLightFakeRuntime::$sleeps) > 100) {
+        throw new RuntimeException('Missing feedback exceeded shared timeout.');
+    }
+    assertControlLightRuntimeSame(['SAEF_CONTROL_LIGHT_1000'], ControlLightFakeRuntime::$semaphoreLeaves, 'Semaphore leaked.');
+};
+
+foreach (['broken', '[]', '[400,10]', '{"h":20}'] as $invalidIndex => $invalidColor) {
+    $tests['malformed nonempty color remains visible ' . $invalidIndex] = static function () use ($invalidColor): void {
+        $fixture = controlLightColorTransitionFixture();
+        SetValue(23, $invalidColor);
+        try {
+            (new ReflectionMethod(ControlLightRuntime::class, 'syncAll'))->invoke(null, $fixture['resources'], $fixture['configuration']);
+            throw new RuntimeException('Malformed feedback was hidden.');
+        } catch (InvalidArgumentException) {
+            assertControlLightRuntimeSame(16749095, GetValue(12), 'Malformed feedback overwrote color.');
+        }
+    };
+}
+
+$tests['integer black remains valid feedback'] = static function (): void {
+    $fixture = controlLightColorTransitionFixture('unchanged');
+    $fixture['configuration']['colorTargetFormat'] = 'INT_HEX';
+    SetValue(23, 0);
+    (new ReflectionMethod(ControlLightRuntime::class, 'syncAll'))->invoke(null, $fixture['resources'], $fixture['configuration']);
+    assertControlLightRuntimeSame(0, GetValue(12), 'Black mistaken for unavailable.');
+};
+
+foreach (['HS_ARRAY_STRING', 'RGB_ARRAY_STRING', 'RGB_OBJECT_STRING'] as $colorFormat) {
+    $tests['missing color while on does not stop dispatch ' . $colorFormat] = static function () use ($colorFormat): void {
+        $fixture = controlLightColorTransitionFixture('unchanged');
+        $fixture['configuration']['colorTargetFormat'] = $colorFormat;
+        SetValue(20, true);
+        SetValue(23, '');
+        $result = ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'color',
+            0x00FF00,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        assertControlLightRuntimeSame('confirmed', $result['status'], 'Color with absent baseline failed.');
+        assertControlLightRuntimeSame(0x00FF00, GetValue(12), 'Confirmed color differs.');
+        assertControlLightRuntimeSame(1, count(ControlLightFakeRuntime::$actions), 'Unexpected commands.');
+    };
+}
+
+$tests['already confirmed state remains idempotent with absent color'] = static function (): void {
+    $fixture = controlLightColorTransitionFixture();
+    SetValue(23, '');
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'state',
+        false,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame('already_confirmed', $result['status'], 'OFF no longer idempotent.');
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Redundant OFF command.');
+};
+
+foreach ([false, true] as $initialOn) {
+    foreach ([0xFF0000 => '[0,100]', 0x00FF00 => '[119.055,100]', 0x0000FF => '[239.528,100]'] as $rgb => $feedback) {
+        $tests['quantized RGB confirms and repeats without a command ' . (int)$initialOn . '/' . $rgb] = static function () use ($initialOn, $rgb, $feedback): void {
+            $fixture = controlLightColorTransitionFixture();
+            $fixture['configuration']['colorFeedbackQuantization'] = 'ha-matter-hs-254-truncate';
+            ControlLightFakeRuntime::$values[20] = $initialOn;
+            ControlLightFakeRuntime::$normalizedColorFeedback = $feedback;
+            ControlLightFakeRuntime::$colorImplicitPowerOn = true;
+            $dispatch = static fn(): array => ControlLightRuntime::dispatchTargetAction(1000, 'color', $rgb, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']);
+            assertControlLightRuntimeSame('confirmed', $dispatch()['status'], 'Quantized color failed.');
+            assertControlLightRuntimeSame('already_confirmed', $dispatch()['status'], 'Repeat not idempotent.');
+            assertControlLightRuntimeSame(1, count(ControlLightFakeRuntime::$actions), 'Unexpected command count.');
+            assertControlLightRuntimeSame(true, GetValue(10), 'Missing on confirmation.');
+            assertControlLightRuntimeSame(100, GetValue(11), 'Color changed brightness.');
+            assertControlLightRuntimeSame(0, GetValue(31), 'False timeout.');
+            assertControlLightRuntimeSame([], ControlLightFakeRuntime::$sleeps, 'Immediate feedback waited.');
+        };
+    }
+    $tests['quantization rejects wrong bin with on-state ' . (int)$initialOn] = static function () use ($initialOn): void {
+        $fixture = controlLightColorTransitionFixture();
+        $fixture['configuration']['colorFeedbackQuantization'] = 'ha-matter-hs-254-truncate';
+        ControlLightFakeRuntime::$values[20] = $initialOn;
+        ControlLightFakeRuntime::$normalizedColorFeedback = '[120.472,100]';
+        ControlLightFakeRuntime::$colorImplicitPowerOn = true;
+        try {
+            ControlLightRuntime::dispatchTargetAction(1000, 'color', 0x00FF00, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']);
+            throw new RuntimeException('Wrong hue bin accepted by broad transition tolerance.');
+        } catch (ControlLightCommandException) {
+            assertControlLightRuntimeSame(1, GetValue(31), 'Timeout not counted.');
+            assertControlLightRuntimeSame(1, count(ControlLightFakeRuntime::$actions), 'Unexpected retry.');
+            assertControlLightRuntimeSame(['SAEF_CONTROL_LIGHT_1000'], ControlLightFakeRuntime::$semaphoreLeaves, 'Lock leaked.');
+        }
+    };
+}
+
+$tests['quantization waits through missing feedback and uses reported facade color'] = static function (): void {
+    $fixture = controlLightColorTransitionFixture();
+    $fixture['configuration']['colorFeedbackQuantization'] = 'ha-matter-hs-254-truncate';
+    ControlLightFakeRuntime::$values[23] = '';
+    ControlLightFakeRuntime::$normalizedColorFeedback = '[119.055,100]';
+    ControlLightFakeRuntime::$colorImplicitPowerOn = true;
+    ControlLightFakeRuntime::$feedbackMode = 'delayed';
+    $result = ControlLightRuntime::dispatchTargetAction(1000, 'color', 0x00FF00, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']);
+    assertControlLightRuntimeSame('confirmed', $result['status'], 'Missing feedback did not recover.');
+    assertControlLightRuntimeSame(ControlLightCore::targetToLocal('color', '[119.055,100]', $fixture['configuration']), GetValue(12), 'Facade does not show actual chromaticity.');
+    assertControlLightRuntimeSame(1, count(ControlLightFakeRuntime::$actions), 'Delayed feedback retried.');
+};
+
 $passed = 0;
 foreach ($tests as $name => $test) {
     $test();
