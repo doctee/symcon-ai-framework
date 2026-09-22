@@ -66,6 +66,27 @@ function controlLightFixtureConfiguration(array $fixture): array
 
 $tests = [];
 
+$tests['explicit color power-on requires enabled state and color'] = static function (): void {
+    $configuration = [
+        'preset' => 'Z2M',
+        'brightnessSemantics' => ControlLightCore::BRIGHTNESS_REPORTED,
+        'colorOffStateTransition' => [
+            'mode' => 'power-on-first',
+            'hueToleranceDegrees' => 0.0,
+            'saturationTolerancePercentagePoints' => 0.0,
+        ],
+    ];
+    $normalized = ControlLightCore::normalizeConfiguration($configuration);
+    assertControlLightSame('power-on-first', $normalized['colorOffStateTransition']['mode'], 'Explicit color mode lost.');
+    foreach (['identState', 'identColor'] as $ident) {
+        assertControlLightThrows(
+            InvalidArgumentException::class,
+            static fn(): array => ControlLightCore::normalizeConfiguration(array_replace($configuration, [$ident => ''])),
+            'Explicit color mode accepted a disabled required capability.'
+        );
+    }
+};
+
 $tests['positive dim live coverage excludes state-only and legacy contracts'] = static function (): void {
     $fixture = json_decode(
         (string)file_get_contents(__DIR__ . '/fixtures/installed-contracts.json'),
@@ -91,11 +112,11 @@ $tests['positive dim live coverage excludes state-only and legacy contracts'] = 
             $stateOnly[] = $instance['key'];
         }
     }
-    assertControlLightSame(24, count($dimmable), 'Dimmable v2 cohort count differs.');
+    assertControlLightSame(26, count($dimmable), 'Dimmable v2 cohort count differs.');
     assertControlLightSame($dimmable, $contract['liveVerified'], 'Dimmable live coverage differs.');
     assertControlLightSame(['CL-014', 'CL-030'], $stateOnly, 'State-only cohort differs.');
     assertControlLightSame($stateOnly, $contract['unchangedStateOnly'], 'State-only exclusions differ.');
-    assertControlLightSame(['CL-018', 'CL-019', 'CL-029'], $legacy, 'Retained legacy cohort differs.');
+    assertControlLightSame(['CL-019'], $legacy, 'Retained legacy cohort differs.');
     assertControlLightSame($legacy, $contract['legacyRetained'], 'Legacy exclusions differ.');
     assertControlLightSame(['CL-021'], $contract['spokenAlexaVerified'], 'Spoken acceptance scope differs.');
     assertControlLightSame(
@@ -270,8 +291,8 @@ $tests['normalizes every installed instance contract'] = static function (): voi
     assertControlLightSame(['Z2M' => 26, 'MATTER' => 2, 'HOMEMATIC' => 1], $presetCounts, 'Preset counts differ.');
     assertControlLightSame(16, count($variants), 'Configuration variant count differs.');
     assertControlLightSame(4, $externalTriggerCount, 'External trigger count differs.');
-    assertControlLightSame(3, $pendingSemantics, 'Per-instance brightness decisions must remain explicit.');
-    assertControlLightSame(26, $reportedSemantics, 'Decided reported-semantics count differs.');
+    assertControlLightSame(1, $pendingSemantics, 'Per-instance brightness decisions must remain explicit.');
+    assertControlLightSame(28, $reportedSemantics, 'Decided reported-semantics count differs.');
     assertControlLightSame(
         'active-fully-device-tested-direct-state-brightness-color-temperature-passed-alexa-state-brightness-and-real-spoken-temperature-dispatch-passed-upper-bound-mired-feedback-live-passed-inverse-alarm-contract-preserved',
         $cl001['dependencies'] ?? null,
@@ -283,7 +304,7 @@ $tests['normalizes every installed instance contract'] = static function (): voi
         'CL-002 functional closure differs.'
     );
     assertControlLightSame(
-        'active-all-enabled-capabilities-direct-tested-hard-cycle-and-immediate-recovery-passed-color-disabled-native-color-retained-shutdown-consumer-facade-aligned-links-native-observer-preserved-mired-matcher-live-3900-to-3906-kelvin-authoritative-feedback-passed',
+        'active-all-enabled-capabilities-direct-tested-hard-cycle-and-immediate-recovery-passed-color-enabled-rgb-optical-and-power-on-first-technical-passed-alexa-spoken-color-from-off-and-off-passed-native-color-retained-shutdown-consumer-facade-aligned-links-native-observer-preserved-mired-matcher-live-3900-to-3906-kelvin-authoritative-feedback-passed',
         $cl003['dependencies'] ?? null,
         'CL-003 activation and remaining gates differ.'
     );
@@ -317,7 +338,7 @@ $tests['normalizes every installed instance contract'] = static function (): voi
     );
     assertControlLightSame(255, $cl009['dimmerTargetMax'] ?? null, 'CL-009 target brightness scale differs.');
     assertControlLightSame(
-        'active-fully-device-tested-state-brightness-temperature-color-disabled-alexa-color-binding-removed-native-color-and-diagnostics-retained',
+        'active-state-brightness-temperature-tested-color-enabled-rgb-optical-and-power-on-first-technical-passed-alexa-spoken-color-from-off-and-off-passed',
         $cl016['dependencies'] ?? null,
         'CL-016 migration and remaining functional gate differ.'
     );
@@ -339,6 +360,7 @@ $tests['normalizes every installed instance contract'] = static function (): voi
             'commandState' => 'all-configured-members-match',
             'brightness' => 'reported-group-level-not-member-average',
             'colorTemperature' => 'all-configured-members-match',
+            'color' => 'all-configured-members-match',
             'confirmation' => 'shared-deadline-parallel',
             'partialFailure' => 'fail-closed',
         ],
@@ -346,7 +368,7 @@ $tests['normalizes every installed instance contract'] = static function (): voi
         'CL-011 group contract differs.'
     );
     assertControlLightSame(
-        'active-fully-device-tested-three-member-group-random-lighting-removed-color-disabled-shutdown-consumers-facade-aligned-global-shutdown-passed-conditional-shutdown-not-applicable-current-mode',
+        'active-three-member-group-random-lighting-removed-rgb-optical-and-member-confirmed-power-on-first-technical-passed-alexa-spoken-green-from-off-and-off-passed-shutdown-consumers-facade-aligned-global-shutdown-passed-conditional-shutdown-not-applicable-current-mode',
         $cl011['dependencies'] ?? null,
         'CL-011 functional closure differs.'
     );
@@ -375,9 +397,9 @@ $tests['normalizes every installed instance contract'] = static function (): voi
         'CL-015 functional closure differs.'
     );
     assertControlLightSame(
-        'direct-target-brightness-writer-state-observer-and-color-disabled-until-target-module-repair',
+        'active-rgb-power-on-first-technical-optical-and-spoken-alexa-color-from-off-and-off-passed',
         $cl021['dependencies'] ?? null,
-        'CL-021 disabled color contract differs.'
+        'CL-021 enabled color contract differs.'
     );
     assertControlLightSame(
         'active-fully-device-tested-alexa-alarm-block-passed-and-links',

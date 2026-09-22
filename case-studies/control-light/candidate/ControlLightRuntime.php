@@ -311,13 +311,19 @@ final class ControlLightRuntime
 
         try {
             // One lock and one confirmation budget cover the complete command,
-            // including an explicit power-on prerequisite for positive dimming.
+            // including explicit power-on prerequisites for dimming or color.
             $deadline = microtime(true) + ($configuration['confirmation']['timeoutMilliseconds'] / 1000);
             $powerResult = null;
             $stateTargetVariableID = $resources['targetVariableIDs']['state'] ?? null;
             $positiveDim = $capability === 'brightness' && (int)$localValue > 0
                 && is_int($stateTargetVariableID);
-            if ($positiveDim) {
+            $explicitColorPowerOn = $capability === 'color'
+                && $configuration['colorOffStateTransition']['mode'] === 'power-on-first';
+            if ($explicitColorPowerOn && !is_int($stateTargetVariableID)) {
+                throw new RuntimeException('Color power-on requires a STATE target.');
+            }
+            $requirePowerOn = $positiveDim || $explicitColorPowerOn;
+            if ($requirePowerOn) {
                 $powerResult = self::dispatchTargetActionLocked(
                     'state',
                     true,
@@ -336,7 +342,7 @@ final class ControlLightRuntime
                 $configuration,
                 $diagnostics,
                 $deadline,
-                $positiveDim
+                $requirePowerOn
             );
             if (($powerResult['status'] ?? null) === 'confirmed') {
                 $result['status'] = 'confirmed';
@@ -368,7 +374,7 @@ final class ControlLightRuntime
     ): array {
         if (
             $configuration['groupFeedback']['enabled'] === true
-            && in_array($capability, ['state', 'brightness', 'colorTemperature'], true)
+            && in_array($capability, ['state', 'brightness', 'colorTemperature', 'color'], true)
         ) {
             return self::dispatchMemberConfirmedActionLocked(
                 $capability,
@@ -693,6 +699,7 @@ final class ControlLightRuntime
             'state' => $member['stateVariableID'],
             'brightness' => $member['brightnessVariableID'],
             'colorTemperature' => $member['colorTemperatureVariableID'],
+            'color' => $member['colorVariableID'],
             default => throw new RuntimeException(
                 'Unsupported member-confirmed group capability: ' . $capability
             ),
@@ -728,6 +735,7 @@ final class ControlLightRuntime
             'state' => $member['stateVariableID'],
             'brightness' => $member['brightnessVariableID'],
             'colorTemperature' => $member['colorTemperatureVariableID'],
+            'color' => $member['colorVariableID'],
             default => throw new RuntimeException(
                 'Unsupported group freshness capability: ' . $capability
             ),
@@ -978,6 +986,14 @@ final class ControlLightRuntime
                 );
                 $resources['groupMembers'][] = $member;
 
+                if (isset($member['colorVariableID'])) {
+                    self::assertFeedbackVariable(
+                        $member['colorVariableID'],
+                        $configuration['capabilities']['color']['targetType'],
+                        $member['key'] . ' color'
+                    );
+                }
+
                 $memberCapabilities = [
                     'state' => $member['stateVariableID'],
                     'brightness' => $member['brightnessVariableID'],
@@ -985,6 +1001,9 @@ final class ControlLightRuntime
                 if (isset($member['colorTemperatureVariableID'])) {
                     $memberCapabilities['colorTemperature'] =
                         $member['colorTemperatureVariableID'];
+                }
+                if (isset($member['colorVariableID'])) {
+                    $memberCapabilities['color'] = $member['colorVariableID'];
                 }
                 foreach ($memberCapabilities as $capability => $variableID) {
                     $eventIdent = self::memberEventIdent($index, $capability);
@@ -1037,6 +1056,7 @@ final class ControlLightRuntime
                 'state' => 'STATE',
                 'brightness' => 'DIM',
                 'colorTemperature' => 'TEMP',
+                'color' => 'COLOR',
                 default => throw new InvalidArgumentException(
                     'Unsupported member event capability: ' . $capability
                 ),
@@ -1193,6 +1213,9 @@ final class ControlLightRuntime
                 && $member['colorTemperatureVariableID'] === $variableID
             ) {
                 return 'colorTemperature';
+            }
+            if (isset($member['colorVariableID']) && $member['colorVariableID'] === $variableID) {
+                return 'color';
             }
         }
 

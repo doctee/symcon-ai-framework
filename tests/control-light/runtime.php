@@ -313,6 +313,135 @@ function controlLightRuntimeFixture(string $semantics = ControlLightCore::BRIGHT
 
 $tests = [];
 
+/** @return array<string, mixed> */
+function controlLightExplicitColorFixture(): array
+{
+    $fixture = controlLightColorTransitionFixture('unchanged');
+    ControlLightFakeRuntime::variable(23, 1, 0x3366FF, true);
+    SetValue(21, 40);
+    $fixture['configuration'] = ControlLightCore::normalizeConfiguration([
+        'preset' => 'Z2M',
+        'identTemp' => '',
+        'brightnessSemantics' => ControlLightCore::BRIGHTNESS_REPORTED,
+        'colorOffStateTransition' => [
+            'mode' => 'power-on-first',
+            'hueToleranceDegrees' => 0.0,
+            'saturationTolerancePercentagePoints' => 0.0,
+        ],
+        'confirmation' => ['timeoutMilliseconds' => 100, 'pollIntervalMilliseconds' => 50],
+        'semaphore' => ['timeoutMilliseconds' => 100],
+    ]);
+    return $fixture;
+}
+
+$tests['explicit RGB powers on first and preserves brightness under one lock'] = static function (): void {
+    foreach ([0x3366FF, 0xFF6633, 0x33FF66] as $rgb) {
+        $fixture = controlLightExplicitColorFixture();
+        $result = ControlLightRuntime::dispatchTargetAction(1000, 'color', $rgb, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']);
+        $expected = [['variableID' => 20, 'value' => true]];
+        if ($rgb !== 0x3366FF) {
+            $expected[] = ['variableID' => 23, 'value' => $rgb];
+        }
+        assertControlLightRuntimeSame($expected, ControlLightFakeRuntime::$actions, 'Power/color order differs.');
+        assertControlLightRuntimeSame('confirmed', $result['status'], 'Power transition lost.');
+        assertControlLightRuntimeSame(true, GetValue(10), 'Authoritative power missing.');
+        assertControlLightRuntimeSame($rgb, GetValue(12), 'Authoritative color missing.');
+        assertControlLightRuntimeSame(40, GetValue(21), 'Native brightness changed.');
+        assertControlLightRuntimeSame(['SAEF_CONTROL_LIGHT_1000:100'], ControlLightFakeRuntime::$semaphoreEnters, 'Expected one shared lock.');
+        assertControlLightRuntimeSame(['SAEF_CONTROL_LIGHT_1000'], ControlLightFakeRuntime::$semaphoreLeaves, 'Lock not released.');
+        ControlLightFakeRuntime::$actions = [];
+        $repeat = ControlLightRuntime::dispatchTargetAction(1000, 'color', $rgb, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']);
+        assertControlLightRuntimeSame('already_confirmed', $repeat['status'], 'Repeat not idempotent.');
+        assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Repeat sent device commands.');
+    }
+};
+
+$tests['explicit RGB on a powered light sends color only'] = static function (): void {
+    $fixture = controlLightExplicitColorFixture();
+    SetValue(20, true);
+    ControlLightRuntime::dispatchTargetAction(1000, 'color', 0xFF6633, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']);
+    assertControlLightRuntimeSame([['variableID' => 23, 'value' => 0xFF6633]], ControlLightFakeRuntime::$actions, 'Redundant power or dim command.');
+};
+
+$tests['explicit RGB stops before color when power is unconfirmed'] = static function (): void {
+    $fixture = controlLightExplicitColorFixture();
+    ControlLightFakeRuntime::$feedbackMode = 'none';
+    try {
+        ControlLightRuntime::dispatchTargetAction(1000, 'color', 0xFF6633, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']);
+        throw new RuntimeException('Unconfirmed power accepted.');
+    } catch (ControlLightCommandException $exception) {
+        assertControlLightRuntimeSame(1, GetValue(31), 'Timeout was not counted once.');
+    }
+    assertControlLightRuntimeSame([['variableID' => 20, 'value' => true]], ControlLightFakeRuntime::$actions, 'Color sent after failed power confirmation.');
+    assertControlLightRuntimeSame(['SAEF_CONTROL_LIGHT_1000'], ControlLightFakeRuntime::$semaphoreLeaves, 'Failure leaked lock.');
+};
+
+$tests['explicit RGB uses the remaining shared deadline'] = static function (): void {
+    $fixture = controlLightExplicitColorFixture();
+    ControlLightFakeRuntime::$actionHook = static function (int $id, mixed $value): bool {
+        SetValue($id, $value);
+        usleep(120000);
+        return true;
+    };
+    try {
+        ControlLightRuntime::dispatchTargetAction(1000, 'color', 0xFF6633, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']);
+        throw new RuntimeException('Color received a fresh timeout budget.');
+    } catch (ControlLightCommandException $exception) {
+        assertControlLightRuntimeSame(1, GetValue(31), 'Deadline failure missing.');
+    }
+    assertControlLightRuntimeSame([['variableID' => 20, 'value' => true]], ControlLightFakeRuntime::$actions, 'Color ran after exhausted shared deadline.');
+};
+
+$tests['explicit RGB never bypasses manual-on protection'] = static function (): void {
+    $fixture = controlLightExplicitColorFixture();
+    $fixture['configuration']['stateCommandMode'] = ControlLightCore::STATE_COMMAND_OFF_ONLY;
+    try {
+        ControlLightRuntime::dispatchTargetAction(1000, 'color', 0xFF6633, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']);
+        throw new RuntimeException('Manual-on protection bypassed.');
+    } catch (ControlLightCommandException $exception) {
+        assertControlLightRuntimeSame(ControlLightCommandException::FAILURE_MANUAL_ACTIVATION_REQUIRED, $exception->failureClass(), 'Wrong failure class.');
+    }
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Manual-only device switched.');
+};
+
+$tests['explicit RGB passive feedback never powers on'] = static function (): void {
+    $fixture = controlLightExplicitColorFixture();
+    SetValue(23, 0x33FF66);
+    (new ReflectionMethod(ControlLightRuntime::class, 'syncAll'))->invoke(null, $fixture['resources'], $fixture['configuration']);
+    assertControlLightRuntimeSame(false, GetValue(10), 'Feedback inferred power.');
+    assertControlLightRuntimeSame(0x33FF66, GetValue(12), 'Feedback not synchronized.');
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Passive color sent commands.');
+};
+
+$tests['explicit RGB cannot confirm color after power is lost'] = static function (): void {
+    $fixture = controlLightExplicitColorFixture();
+    ControlLightFakeRuntime::$actionHook = static function (int $id, mixed $value): bool {
+        SetValue($id, $value);
+        if ($id === 23) {
+            SetValue(20, false);
+        }
+        return true;
+    };
+    try {
+        ControlLightRuntime::dispatchTargetAction(1000, 'color', 0xFF6633, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']);
+        throw new RuntimeException('Color without power accepted.');
+    } catch (ControlLightCommandException $exception) {
+        assertControlLightRuntimeSame(1, GetValue(31), 'Missing power not diagnosed.');
+    }
+};
+
+$tests['explicit RGB fails closed without a state target'] = static function (): void {
+    $fixture = controlLightExplicitColorFixture();
+    unset($fixture['resources']['targetVariableIDs']['state']);
+    try {
+        ControlLightRuntime::dispatchTargetAction(1000, 'color', 0xFF6633, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']);
+        throw new RuntimeException('Missing target accepted.');
+    } catch (RuntimeException $exception) {
+        assertControlLightRuntimeSame('Color power-on requires a STATE target.', $exception->getMessage(), 'Unexpected failure.');
+    }
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Invalid resources sent commands.');
+};
+
 $tests['positive dim powers on even when retained brightness already matches'] = static function (): void {
     foreach ([ControlLightCore::BRIGHTNESS_REPORTED, ControlLightCore::BRIGHTNESS_EFFECTIVE] as $semantics) {
         $fixture = controlLightRuntimeFixture($semantics);
