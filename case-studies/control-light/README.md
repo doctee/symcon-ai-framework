@@ -464,6 +464,9 @@ same brightness semantics are safe for every existing consumer.
   acceptance, including user sight confirmation and exact baseline restoration.
 - `140-missing-ha-color-feedback.md` records independent state/brightness
   confirmation while optional structured color feedback is unavailable.
+- `142-uniform-color-command-contract.md` records explicit color power-on with
+  retained brightness, member-confirmed RGB groups and the separate technical,
+  optical and spoken-assistant acceptance gates.
 - `../mqtt-discovery-exporter/36-client-subscription-coverage-and-runtime-namespace-report.md`
   records the later CL-030 MQTT namespace correction and complete Home
   Assistant/Apple Home functional closure.

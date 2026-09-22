@@ -169,7 +169,7 @@ final class ControlLightCore
             'mode' => self::requireEnum(
                 $colorOffStateTransition,
                 'mode',
-                ['unchanged', 'target-turns-on'],
+                ['unchanged', 'target-turns-on', 'power-on-first'],
                 'configuration.colorOffStateTransition'
             ),
             'hueToleranceDegrees' => self::requireFloatRange(
@@ -198,6 +198,22 @@ final class ControlLightCore
             throw new InvalidArgumentException(
                 'target-turns-on color transition requires STATE, COLOR and HS_ARRAY_STRING.'
             );
+        }
+        if (
+            $normalized['colorOffStateTransition']['mode'] === 'power-on-first'
+            && (
+                ($normalized['capabilities']['state']['enabled'] ?? false) !== true
+                || ($normalized['capabilities']['color']['enabled'] ?? false) !== true
+            )
+        ) {
+            throw new InvalidArgumentException('power-on-first color transition requires STATE and COLOR.');
+        }
+        if (
+            $normalized['groupFeedback']['enabled'] === true
+            && ($normalized['capabilities']['color']['enabled'] ?? false) === true
+            && $merged['colorTargetFormat'] !== 'INT_HEX'
+        ) {
+            throw new InvalidArgumentException('Member-confirmed color requires an INT_HEX target contract.');
         }
         $normalized['tempInputIsKelvin'] = self::requireBoolean($merged, 'tempInputIsKelvin');
         $normalized['tempTargetIsMired'] = self::requireBoolean($merged, 'tempTargetIsMired');
@@ -654,6 +670,9 @@ final class ControlLightCore
             ];
             if (($capabilities['colorTemperature']['enabled'] ?? false) === true) {
                 $variableKeys[] = 'colorTemperatureVariableID';
+            }
+            if (($capabilities['color']['enabled'] ?? false) === true) {
+                $variableKeys[] = 'colorVariableID';
             }
             foreach ($variableKeys as $variableKey) {
                 $variableID = self::requireIntegerRange(

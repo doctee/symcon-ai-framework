@@ -126,7 +126,7 @@ function assertControlLightGroupSame(mixed $expected, mixed $actual, string $mes
 }
 
 /** @return array<string, mixed> */
-function controlLightGroupFixture(bool $withColorTemperature = false): array
+function controlLightGroupFixture(bool $withColorTemperature = false, bool $withColor = false): array
 {
     ControlLightGroupRuntimeFake::reset();
     ControlLightGroupRuntimeFake::variable(10, 0, false);
@@ -190,10 +190,37 @@ function controlLightGroupFixture(bool $withColorTemperature = false): array
     if (!$withColorTemperature) {
         $rawConfiguration['identTemp'] = '';
     }
+    if ($withColor) {
+        $rawConfiguration['identColor'] = 'color';
+        $rawConfiguration['colorOffStateTransition'] = [
+            'mode' => 'power-on-first',
+            'hueToleranceDegrees' => 0.0,
+            'saturationTolerancePercentagePoints' => 0.0,
+        ];
+        ControlLightGroupRuntimeFake::variable(13, 1, 0x0000FF);
+        ControlLightGroupRuntimeFake::variable(23, 1, 0x0000FF, true);
+        ControlLightGroupRuntimeFake::variable(45, 1, 0x0000FF);
+        ControlLightGroupRuntimeFake::variable(55, 1, 0x0000FF);
+        $rawConfiguration['groupFeedback']['members'][0]['colorVariableID'] = 45;
+        $rawConfiguration['groupFeedback']['members'][1]['colorVariableID'] = 55;
+        ControlLightGroupRuntimeFake::variable(60, 0, false);
+        ControlLightGroupRuntimeFake::variable(61, 1, 10);
+        ControlLightGroupRuntimeFake::variable(62, 0, true);
+        ControlLightGroupRuntimeFake::variable(63, 1, time());
+        ControlLightGroupRuntimeFake::variable(65, 1, 0x0000FF);
+        $rawConfiguration['groupFeedback']['members'][] = [
+            'key' => 'member-3', 'stateVariableID' => 60, 'brightnessVariableID' => 61,
+            'availabilityVariableID' => 62, 'lastSeenVariableID' => 63, 'colorVariableID' => 65,
+        ];
+    }
     $configuration = ControlLightCore::normalizeConfiguration($rawConfiguration);
 
     $localVariableIDs = ['state' => 10, 'brightness' => 11];
     $targetVariableIDs = ['state' => 20, 'brightness' => 21];
+    if ($withColor) {
+        $localVariableIDs['color'] = 13;
+        $targetVariableIDs['color'] = 23;
+    }
     if ($withColorTemperature) {
         $localVariableIDs['colorTemperature'] = 12;
         $targetVariableIDs['colorTemperature'] = 22;
@@ -228,6 +255,90 @@ function controlLightGroupFailure(callable $operation): ControlLightCommandExcep
 }
 
 $tests = [];
+
+$tests['three-member RGB powers on and confirms every member with stable brightness'] = static function (): void {
+    $fixture = controlLightGroupFixture(false, true);
+    ControlLightGroupRuntimeFake::$actionHook = static function (int $id, mixed $value): bool {
+        SetValue($id, $value);
+        foreach ($id === 20 ? [40, 50, 60] : [45, 55, 65] as $member) {
+            SetValue($member, $value);
+        }
+        return true;
+    };
+    foreach ([0xFF0000, 0x00FF00, 0x0000FF] as $rgb) {
+        $result = ControlLightRuntime::dispatchTargetAction(1000, 'color', $rgb, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']);
+        assertControlLightGroupSame('confirmed', $result['status'], 'Group RGB not confirmed.');
+        foreach ([45, 55, 65] as $id) {
+            assertControlLightGroupSame($rgb, GetValue($id), 'Member color differs.');
+        }
+        $count = count(ControlLightGroupRuntimeFake::$actions);
+        ControlLightRuntime::dispatchTargetAction(1000, 'color', $rgb, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']);
+        assertControlLightGroupSame($count, count(ControlLightGroupRuntimeFake::$actions), 'Confirmed group repeat sent command.');
+        foreach ([21, 41, 51, 61] as $id) {
+            assertControlLightGroupSame(10, GetValue($id), 'Group/member brightness changed.');
+        }
+    }
+};
+
+$tests['aggregate RGB cannot conceal an incorrect third member'] = static function (): void {
+    $fixture = controlLightGroupFixture(false, true);
+    foreach ([20, 40, 50, 60] as $id) {
+        SetValue($id, true);
+    }
+    ControlLightGroupRuntimeFake::$memberFeedback = [45 => 0xFF0000, 55 => 0xFF0000];
+    $failure = controlLightGroupFailure(static fn(): array => ControlLightRuntime::dispatchTargetAction(1000, 'color', 0xFF0000, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']));
+    assertControlLightGroupSame(['member-3'], $failure->details()['memberKeys'], 'Wrong member diagnostic.');
+    assertControlLightGroupSame(1, GetValue(31), 'Group timeout missing.');
+};
+
+$tests['group RGB waits for all power before sending color'] = static function (): void {
+    $fixture = controlLightGroupFixture(false, true);
+    ControlLightGroupRuntimeFake::$memberFeedback = [40 => true, 50 => true];
+    controlLightGroupFailure(static fn(): array => ControlLightRuntime::dispatchTargetAction(1000, 'color', 0xFF0000, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']));
+    assertControlLightGroupSame([['variableID' => 20, 'value' => true]], ControlLightGroupRuntimeFake::$actions, 'Color sent before third member power.');
+};
+
+$tests['group member color events are recognized without dispatching commands'] = static function (): void {
+    $fixture = controlLightGroupFixture(false, true);
+    $method = new ReflectionMethod(ControlLightRuntime::class, 'capabilityForMemberVariable');
+    foreach ([45, 55, 65] as $id) {
+        assertControlLightGroupSame('color', $method->invoke(null, $id, $fixture['resources']), 'Color event mapping missing.');
+    }
+    assertControlLightGroupSame([], ControlLightGroupRuntimeFake::$actions, 'Member lookup switched device.');
+};
+
+$tests['stale matching RGB member is not accepted as fresh group confirmation'] = static function (): void {
+    $fixture = controlLightGroupFixture(false, true);
+    foreach ([20, 40, 50, 60] as $id) {
+        SetValue($id, true);
+    }
+    SetValue(63, time() - 1000);
+    ControlLightGroupRuntimeFake::$variables[65]['VariableUpdated'] = time() - 1000;
+    $failure = controlLightGroupFailure(static fn(): array => ControlLightRuntime::dispatchTargetAction(1000, 'color', 0x0000FF, $fixture['resources'], $fixture['configuration'], $fixture['diagnostics']));
+    assertControlLightGroupSame(ControlLightCommandException::FAILURE_GROUP_MEMBER_STALE, $failure->failureClass(), 'Stale color was accepted.');
+};
+
+$tests['group color configuration requires every member color identity'] = static function (): void {
+    $fixture = controlLightGroupFixture(false, true);
+    $configuration = [
+        'preset' => 'Z2M',
+        'identTemp' => '',
+        'brightnessSemantics' => ControlLightCore::BRIGHTNESS_REPORTED,
+        'groupFeedback' => [
+            'mode' => ControlLightCore::FEEDBACK_MEMBER_CONFIRMED,
+            'freshnessSeconds' => 900,
+            'brightnessTolerance' => 1,
+            'members' => $fixture['configuration']['groupFeedback']['members'],
+        ],
+    ];
+    unset($configuration['groupFeedback']['members'][2]['colorVariableID']);
+    try {
+        ControlLightCore::normalizeConfiguration($configuration);
+        throw new RuntimeException('Missing member color ID accepted.');
+    } catch (InvalidArgumentException $exception) {
+        assertControlLightGroupSame(true, str_contains($exception->getMessage(), 'colorVariableID'), 'Wrong configuration failure.');
+    }
+};
 
 $tests['positive dim powers every member on despite matching retained brightness'] = static function (): void {
     $fixture = controlLightGroupFixture();
