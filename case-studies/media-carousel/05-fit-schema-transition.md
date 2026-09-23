@@ -81,3 +81,40 @@ qualification, current target-binding inventory, protected backup, private
 before/after plan, fresh read-only preflight and independent postflight. Any
 target allowlist/profile installation is its own administrative gate; no service
 restart or broad access change follows from this implementation.
+
+## Isolated real-kernel schema qualification
+
+`Test-SaefMediaCarouselSchema.ps1` is a separately authorized operator test, not
+an adapter activation or a gateway verb. Its private hash-bound plan names the
+installed channel/policy, reviewed candidate identity and an existing private
+category. It imports the existing adapter's RPC, snapshot, package identity and
+exact-byte transition validators; it never executes the adapter entry point.
+Existing channel validators check all target bindings, including unrelated ones.
+
+An inert, separately identified test library reproduces only property
+registrations. It has no camera access, timers, visualization or runtime actions.
+The test creates one instance, reproduces a legacy configuration, reloads only
+the test library with the added default, and records actual kernel serialization
+for every production configuration. PHP tests bind both fixture registrations
+to current module source. Synthetic Windows tests qualify the operator entry
+point; they do not stand in for real kernel results.
+
+The existing PHP EnsureInstance helper was considered. This administrative path
+uses fixed native RPC calls rather than arbitrary PHP execution, so its bounded,
+test-specific creation rejects preexisting resources instead of adopting them.
+Every object mutator rechecks a positive test ID, object type, module ownership
+and absence of children. This is not a new public Ensure API. Test deletion is
+authorized with test creation; retained production packages are never deleted.
+
+The MediaCarousel adapter mutex excludes concurrent adapter transactions. Before
+and after the test, all production configurations/presentation/status fields,
+the active package and protected policies must match. Only after verified test
+instance/library removal and production preservation is the exact transition
+marked accepted. Partial creation, unknown children, altered test files or failed
+cleanup remain explicit failures with a private recovery journal. Never rerun
+blindly against leftover test resources. Interrupted runs require read-only
+inspection of the journal and exact remaining identities before recovery.
+
+The transition is evidence, not an installed policy or activation authorization.
+Protected policy binding, inactive package staging/preflight, production reload,
+instance option changes and retained-artifact cleanup remain distinct gates.

@@ -1,0 +1,11 @@
+{
+  "id": "{7CB1E964-8C34-4B61-B255-68D86AEC99F2}",
+  "name": "SAEFMediaCarouselSchemaProbe",
+  "type": 3,
+  "vendor": "SAEF",
+  "aliases": [],
+  "parentRequirements": [],
+  "childRequirements": [],
+  "implemented": [],
+  "prefix": "SAEFMCSP"
+}

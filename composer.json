@@ -197,6 +197,7 @@
             "@php case-studies/media-carousel/tools/validate-distribution.php",
             "@php case-studies/media-carousel/tests/module-fileset.php",
             "@php tests/deployments/media-carousel-module-adapter.php",
+            "@php tests/deployments/media-carousel-schema-probe.php",
             "@php tests/deployments/media-carousel-module-ownership-migration.php"
         ],
         "test:module-publication": [
