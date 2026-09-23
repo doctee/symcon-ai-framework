@@ -96,6 +96,7 @@ class IPSModuleStrict
     private int $visualizationType = 0;
     private int $parentCreateCalls = 0;
     private int $parentApplyCalls = 0;
+    public bool $testFailReceipt = false;
 
     public function Create(): void
     {
@@ -197,7 +198,16 @@ class IPSModuleStrict
 
     protected function UpdateVisualizationValue(string $value): void
     {
+        if ($this->testFailReceipt && str_contains($value, '"action":"mediaStarted"')) {
+            throw new RuntimeException('Synthetic optional receipt failure');
+        }
         $this->visualizationUpdates[] = $value;
+    }
+
+    /** @return list<string> */
+    public function testVisualizationUpdates(): array
+    {
+        return $this->visualizationUpdates;
     }
 
     protected function SetStatus(int $status): void
@@ -732,5 +742,52 @@ check(
     ) === 3,
     'Frontend does not have exactly three render image slots.'
 );
+
+$receiptModule = new MediaCarousel();
+$receiptModule->Create();
+$receiptModule->testSetProperty('MediaItems', encodeItems($validItems));
+$receiptModule->ApplyChanges();
+$receiptRevision = $receiptModule->testLastVisualizationUpdate()['configurationRevision'];
+foreach ([false, true, 'true'] as $receiptOption) {
+    $beforeCount = count($receiptModule->testVisualizationUpdates());
+    $beforeReads = count($mediaContentReads);
+    $receiptModule->RequestAction('LoadMedia', json_encode([
+        'index' => 0,
+        'requestID' => 'receipt_test',
+        'configurationRevision' => $receiptRevision,
+        'diagnosticReceipt' => $receiptOption,
+    ], JSON_THROW_ON_ERROR));
+    $updates = array_slice($receiptModule->testVisualizationUpdates(), $beforeCount);
+    check(count($updates) === ($receiptOption === true ? 2 : 1), 'Receipt must be strictly opt-in.');
+    check(count($mediaContentReads) === $beforeReads + 1, 'Receipt caused another image read.');
+    $final = $receiptModule->testLastVisualizationUpdate();
+    check($final['action'] === 'media', 'Receipt prevented image response.');
+    if ($receiptOption === true) {
+        $receipt = json_decode($updates[0], true, 32, JSON_THROW_ON_ERROR);
+        check($receipt['action'] === 'mediaStarted', 'Receipt must precede image response.');
+        check($receipt['requestID'] === 'receipt_test', 'Receipt correlation differs.');
+        check(!isset($receipt['source']), 'Receipt contains image content.');
+        check(strlen($updates[0]) < 256, 'Receipt is not small and bounded.');
+        check($final['receiptDispatchCompleted'] === true, 'Receipt dispatch not measured.');
+        check(
+            is_int($final['receiptDispatchMilliseconds'])
+                && $final['receiptDispatchMilliseconds'] >= 0
+                && $final['receiptDispatchMilliseconds'] <= 3600000,
+            'Receipt dispatch timing is not bounded.'
+        );
+    } else {
+        check(!isset($final['receiptDispatchCompleted']), 'Non-probe response gained receipt fields.');
+    }
+}
+$receiptModule->testFailReceipt = true;
+$receiptModule->RequestAction('LoadMedia', json_encode([
+    'index' => 0,
+    'requestID' => 'receipt_failure',
+    'configurationRevision' => $receiptRevision,
+    'diagnosticReceipt' => true,
+], JSON_THROW_ON_ERROR));
+$final = $receiptModule->testLastVisualizationUpdate();
+check($final['action'] === 'media', 'Optional receipt failure must not block image.');
+check($final['receiptDispatchCompleted'] === false, 'Receipt failure not exposed.');
 
 echo "media-carousel-module: ok\n";

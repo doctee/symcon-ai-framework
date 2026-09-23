@@ -14,6 +14,8 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added a six-request-per-view MediaCarousel delivery-stage probe with small
+  correlated receipts, paired timing and unchanged image timeout/retry behavior.
 - Added bounded, view-local MediaCarousel loading diagnostics and server image
   preparation timing without configuration, persistence or request-policy changes.
 - Added MediaCarousel adapter recovery candidates for independent postflight,

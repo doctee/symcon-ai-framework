@@ -40,7 +40,7 @@ function fixture() {
     context.window = context;
     const script = fs.readFileSync(path.join(__dirname, '../distribution/MediaCarousel/carousel.js'), 'utf8');
     vm.runInNewContext(script.replace('}());',
-        'window.testAPI = {state, applyBootstrap, applySettings, toggleFit, receiveMedia, receiveMediaError, requestMedia, invalidateMedia, move, pumpPrefetch, renderSlots, pointerDown}; }());'), context);
+        'window.testAPI = {state, applyBootstrap, applySettings, toggleFit, receiveMedia, receiveReceipt, receiveMediaError, requestMedia, invalidateMedia, move, pumpPrefetch, renderSlots, pointerDown}; }());'), context);
     const api = context.testAPI;
     api.applyBootstrap({instanceID: 1, configurationRevision: 'one',
         items: [0, 1, 2, 3].map(index => ({mediaID: index + 1, title: String(index)})),
@@ -225,4 +225,78 @@ test('view diagnostics distinguish rejected, timed out and failed requests', asy
     assert.equal(d.timeouts, 1);
     assert.equal(d.mediaErrors, 1);
     assert.equal(d.accepted, 0);
+});
+
+test('receipt pairs use one request and do not change timeout or pending slots', async () => {
+    const f = fixture();
+    await flush();
+    const request = f.requests[0];
+    assert.equal(request.diagnosticReceipt, true);
+    const timer = f.api.state.pending.get(request.index).timer;
+    f.advance(100);
+    f.api.receiveReceipt(request);
+    assert.equal(f.api.state.pending.get(request.index).timer, timer);
+    assert.equal(f.api.state.pending.size, 2);
+    assert.equal(f.requests.length, 2);
+    f.advance(600);
+    f.api.receiveMedia({...request, source: 'data:image/jpeg;base64,YQ==',
+        contentRevision: 'one', preview: false, preparationMilliseconds: 200,
+        receiptDispatchMilliseconds: 2, receiptDispatchCompleted: true});
+    const d = JSON.parse(f.element('carousel').dataset.loadDiagnostics);
+    assert.equal(d.receipts, 1);
+    assert.equal(d.pairedResponses, 1);
+    assert.equal(d.lastPairedReceiptMs, 100);
+    assert.equal(d.lastPairedAfterReceiptMs, 600);
+    assert.equal(d.lastPairedRoundTripMs, 700);
+    assert.equal(d.lastPairedPreparationMs, 200);
+    assert.equal(d.lastPairedReceiptDispatchMs, 2);
+});
+
+test('foreign duplicate obsolete and late receipts are inert', async () => {
+    const f = fixture();
+    await flush();
+    const request = f.requests[0];
+    f.api.receiveReceipt({...request, requestID: 'foreign'});
+    f.api.receiveReceipt({...request, configurationRevision: 'old'});
+    f.advance(10);
+    f.api.receiveReceipt(request);
+    f.advance(20);
+    f.api.receiveReceipt(request);
+    assert.equal(f.api.state.pending.get(request.index).receiptAt, 10);
+    f.timers.get(f.api.state.pending.get(request.index).timer).fn();
+    f.api.receiveReceipt(request);
+    const d = JSON.parse(f.element('carousel').dataset.loadDiagnostics);
+    assert.equal(d.receipts, 1);
+    assert.equal(d.receiptRejected, 4);
+    assert.equal(d.timeouts, 1);
+});
+
+test('receipt probes stop after six normal requests even across bootstrap changes', async () => {
+    const f = fixture();
+    await flush();
+    for (let n = 0; n < 12; n += 1) {
+        const request = f.requests.find(r => f.api.state.pending.get(r.index)?.requestID === r.requestID);
+        f.respond(request);
+        await flush();
+        f.api.invalidateMedia({index: request.index, configurationRevision: 'one'});
+    }
+    const budget = f.requests.filter(r => r.diagnosticReceipt === true).length;
+    assert.equal(budget, 6);
+    assert.ok(f.requests.length > 6);
+    f.api.applyBootstrap({instanceID: 1, configurationRevision: 'two',
+        items: [{mediaID: 1, title: 'one'}], settings: {...f.api.state.settings}});
+    await flush();
+    assert.equal(f.requests.filter(r => r.diagnosticReceipt === true).length, 6);
+});
+
+test('missing receipt does not block media or fabricate a paired timing', async () => {
+    const f = fixture();
+    await flush();
+    f.api.receiveMedia({...f.requests[0], source: 'data:image/jpeg;base64,YQ==',
+        contentRevision: 'one', preview: false, preparationMilliseconds: 20,
+        receiptDispatchMilliseconds: 1, receiptDispatchCompleted: false});
+    const d = JSON.parse(f.element('carousel').dataset.loadDiagnostics);
+    assert.equal(d.accepted, 1);
+    assert.equal(d.pairedResponses, 0);
+    assert.equal(d.receiptDispatchFailures, 1);
 });

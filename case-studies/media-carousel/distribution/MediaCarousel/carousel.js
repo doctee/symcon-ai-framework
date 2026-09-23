@@ -2,6 +2,7 @@
     'use strict';
 
     const MAX_PENDING_REQUESTS = 2;
+    const MAX_RECEIPT_PROBES = 6;
 
     const carousel = document.getElementById('carousel');
     const track = document.getElementById('track');
@@ -47,12 +48,18 @@
     // Bounded, view-local evidence only: no IDs, titles, image bytes, history,
     // storage writes or extra requests. Readable through the tile DOM in QA.
     const diagnostics = {
-        version: 1, bootstraps: 0, requested: 0, accepted: 0, timeouts: 0,
+        version: 2, bootstraps: 0, requested: 0, accepted: 0, timeouts: 0,
         mediaErrors: 0, revisionRejected: 0, requestRejected: 0,
         invalidations: 0, superseded: 0, imageReady: 0, imageFailed: 0,
         lastRoundTripMs: 0, maxRoundTripMs: 0, lastPreparationMs: 0,
         maxPreparationMs: 0, lastImageReadyMs: 0, maxImageReadyMs: 0,
-        lastSourceCharacters: 0
+        lastSourceCharacters: 0,
+        receiptRequested: 0, receipts: 0, receiptRejected: 0,
+        pairedResponses: 0, receiptDispatchFailures: 0,
+        lastReceiptRoundTripMs: 0, maxReceiptRoundTripMs: 0,
+        lastPairedReceiptMs: 0, lastPairedAfterReceiptMs: 0,
+        lastPairedRoundTripMs: 0, lastPairedPreparationMs: 0,
+        lastPairedReceiptDispatchMs: 0
     };
 
     function publishDiagnostics() {
@@ -289,6 +296,20 @@
         message.hidden = false;
     }
 
+    function receiveReceipt(payload) {
+        const pending = state.pending.get(payload.index);
+        if (payload.configurationRevision !== state.configurationRevision
+            || !pending || pending.requestID !== payload.requestID
+            || !pending.diagnosticReceipt || pending.receiptAt !== null) {
+            countDiagnostic('receiptRejected');
+            return;
+        }
+        pending.receiptAt = performance.now();
+        timeDiagnostic('ReceiptRoundTrip', pending.receiptAt - pending.startedAt);
+        // Do not clear/extend the timeout, free a slot or change visible state.
+        countDiagnostic('receipts');
+    }
+
     function receiveMedia(payload, shouldRender) {
         if (payload.configurationRevision !== state.configurationRevision) {
             countDiagnostic('revisionRejected');
@@ -319,6 +340,23 @@
             state.pending.delete(payload.index);
             timeDiagnostic('RoundTrip', performance.now() - pending.startedAt);
             timeDiagnostic('Preparation', payload.preparationMilliseconds);
+            if (pending.diagnosticReceipt && payload.receiptDispatchCompleted === false) {
+                countDiagnostic('receiptDispatchFailures');
+            }
+            if (pending.receiptAt !== null
+                && Number.isFinite(payload.preparationMilliseconds)
+                && payload.preparationMilliseconds >= 0
+                && Number.isFinite(payload.receiptDispatchMilliseconds)
+                && payload.receiptDispatchMilliseconds >= 0) {
+                const bounded = value => Math.min(3600000, Math.round(value));
+                const now = performance.now();
+                diagnostics.lastPairedReceiptMs = bounded(pending.receiptAt - pending.startedAt);
+                diagnostics.lastPairedAfterReceiptMs = bounded(now - pending.receiptAt);
+                diagnostics.lastPairedRoundTripMs = bounded(now - pending.startedAt);
+                diagnostics.lastPairedPreparationMs = bounded(payload.preparationMilliseconds);
+                diagnostics.lastPairedReceiptDispatchMs = bounded(payload.receiptDispatchMilliseconds);
+                countDiagnostic('pairedResponses');
+            }
             if (pending.generation !== (state.mediaGenerations.get(payload.index) || 0)) {
                 countDiagnostic('superseded');
                 pumpPrefetch();
@@ -422,17 +460,22 @@
             handleRequestFailure(index);
         }, state.settings.loadTimeoutSeconds * 1000);
 
+        const diagnosticReceipt = diagnostics.receiptRequested < MAX_RECEIPT_PROBES;
         state.pending.set(index, {
             requestID: id, timer: timeout,
             startedAt: performance.now(),
+            diagnosticReceipt: diagnosticReceipt, receiptAt: null,
             generation: state.mediaGenerations.get(index) || 0
         });
+        if (diagnosticReceipt) countDiagnostic('receiptRequested');
         countDiagnostic('requested');
-        requestAction('LoadMedia', JSON.stringify({
+        const request = {
             index: index,
             requestID: id,
             configurationRevision: state.configurationRevision
-        }));
+        };
+        if (diagnosticReceipt) request.diagnosticReceipt = true;
+        requestAction('LoadMedia', JSON.stringify(request));
     }
 
     function handleRequestFailure(index) {
@@ -864,6 +907,9 @@
                 break;
             case 'media':
                 receiveMedia(payload);
+                break;
+            case 'mediaStarted':
+                receiveReceipt(payload);
                 break;
             case 'invalidate':
                 invalidateMedia(payload);
