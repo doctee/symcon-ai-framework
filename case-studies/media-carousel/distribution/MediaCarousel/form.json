@@ -132,6 +132,11 @@
     },
     {
       "type": "CheckBox",
+      "name": "ShowFitToggle",
+      "caption": "Show image fit toggle"
+    },
+    {
+      "type": "CheckBox",
       "name": "ShowTitles",
       "caption": "Show image title"
     },

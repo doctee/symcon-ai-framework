@@ -40,7 +40,9 @@ IP-Symcon HTML-SDK.
 - The browser prefetches bounded compressed sequence sources progressively.
 - Only the previous, current and next images are attached as render slots.
 - A target becomes current only after a successful browser load event.
-- Media updates invalidate one client cache entry through `MM_UPDATE`.
+- Media updates mark one client cache entry stale through `MM_UPDATE`; the last
+  usable frame remains available while its replacement loads. When titles are
+  enabled, the visible frame is labelled as updating until refresh succeeds.
 - Every media request carries the active sequence revision. Sequence drift
   returns a new bootstrap and preview instead of applying a stale index.
 - The native content switcher remains unchanged until a live pilot is approved.
@@ -83,8 +85,9 @@ also tolerated when at least one valid image remains.
 - GD image support is used for the bounded JPEG preview and display payload; a
   failed transformation falls back to the original current image.
 - Large media messages require an explicit per-image size limit.
-- HTML-SDK update messages may be observed by multiple connected clients; the
-  content is installation-local media data and each client may reuse it.
+- HTML-SDK update messages may be observed by multiple connected clients. Only
+  the current matching request response replaces a client's frame. A response
+  superseded by a later media invalidation is discarded and refreshed again.
 - Browser engines may retain decoded resources beyond the three visible image
   elements. Live memory measurement is therefore still required.
 - Preview generation adds one bounded media read and resize to each new tile;

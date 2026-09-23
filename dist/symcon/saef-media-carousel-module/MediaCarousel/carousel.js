@@ -15,6 +15,7 @@
     const loading = document.getElementById('loading');
     const message = document.getElementById('message');
     const toast = document.getElementById('toast');
+    const fitButton = document.getElementById('fitToggle');
 
     const state = {
         instanceID: 0,
@@ -26,6 +27,10 @@
         readyRevisions: new Map(),
         pending: new Map(),
         failures: new Map(),
+        stale: new Set(),
+        mediaGenerations: new Map(),
+        navigation: null,
+        fitMode: null,
         prefetchOrder: [],
         autoTimer: null,
         toastTimer: null,
@@ -109,6 +114,7 @@
                     contentRevision: stored.source.contentRevision,
                     preview: stored.source.preview === true
                 });
+                state.stale.add(state.currentIndex);
             }
         } catch (error) {
             // Session persistence is an optimisation and never authoritative.
@@ -155,6 +161,11 @@
         state.sources.clear();
         state.readyRevisions.clear();
         state.failures.clear();
+        state.stale.clear();
+        state.mediaGenerations.clear();
+        state.navigation = null;
+        state.fitMode = null;
+        state.busy = false;
         state.prefetchOrder = [];
         state.currentIndex = 0;
         state.renderGeneration += 1;
@@ -162,7 +173,10 @@
 
     function applySettings() {
         const settings = state.settings;
-        document.documentElement.style.setProperty('--fit-mode', settings.fitMode);
+        if (!settings.showFitToggle || state.fitMode === null) {
+            state.fitMode = settings.fitMode;
+        }
+        updateFitPresentation();
         document.documentElement.style.setProperty(
             '--transition-ms',
             settings.transitionMilliseconds + 'ms'
@@ -171,6 +185,26 @@
         position.hidden = !settings.showDots;
         previousButton.hidden = !settings.showArrows || state.items.length < 2;
         nextButton.hidden = !settings.showArrows || state.items.length < 2;
+    }
+
+    function updateFitPresentation() {
+        document.documentElement.style.setProperty('--fit-mode', state.fitMode);
+        fitButton.hidden = !state.settings.showFitToggle;
+        const fit = state.fitMode === 'contain';
+        const label = localize(fit ? 'Fill image area' : 'Show entire image');
+        fitButton.setAttribute('aria-label', label);
+        fitButton.setAttribute('title', label);
+        fitButton.dataset.fit = fit ? 'contain' : 'cover';
+    }
+
+    function toggleFit() {
+        if (!state.settings || !state.settings.showFitToggle || state.items.length === 0) {
+            return;
+        }
+        state.fitMode = state.fitMode === 'contain' ? 'cover' : 'contain';
+        updateFitPresentation();
+        pauseAutomaticAdvance();
+        scheduleAutoAdvance();
     }
 
     function applyBootstrap(payload) {
@@ -218,6 +252,7 @@
         position.hidden = true;
         previousButton.hidden = true;
         nextButton.hidden = true;
+        fitButton.hidden = true;
         message.textContent = text;
         message.hidden = false;
     }
@@ -240,9 +275,18 @@
         }
 
         const pending = state.pending.get(payload.index);
+        // Responses are broadcast to every tile. Only our current request may
+        // replace an image; a late response must not overwrite newer content.
+        if (!isPreview && (!pending || pending.requestID !== payload.requestID)) {
+            return;
+        }
         if (pending && !isPreview) {
             clearTimeout(pending.timer);
             state.pending.delete(payload.index);
+            if (pending.generation !== (state.mediaGenerations.get(payload.index) || 0)) {
+                pumpPrefetch();
+                return;
+            }
         }
 
         state.sources.set(payload.index, {
@@ -252,11 +296,14 @@
         });
         state.readyRevisions.delete(payload.index);
         state.failures.delete(payload.index);
+        if (!isPreview) {
+            state.stale.delete(payload.index);
+        }
 
         buildPrefetchOrder();
         if (shouldRender !== false) {
-            if (isNeighbour(payload.index)) {
-                renderSlots();
+            if (isNeighbour(payload.index) && !state.busy) {
+                renderSlots().then(resumeNavigation);
             }
             pumpPrefetch();
         }
@@ -270,10 +317,13 @@
             return;
         }
 
-        state.sources.delete(payload.index);
-        state.readyRevisions.delete(payload.index);
+        // Keep the last usable frame while refreshing it in the background.
+        state.stale.add(payload.index);
+        state.mediaGenerations.set(payload.index, (state.mediaGenerations.get(payload.index) || 0) + 1);
         state.failures.delete(payload.index);
-        requestMedia(payload.index);
+        buildPrefetchOrder();
+        pumpPrefetch();
+        updatePresentationMetadata();
     }
 
     function receiveMediaError(payload) {
@@ -303,9 +353,10 @@
         const existing = state.sources.get(index);
         if (
             !state.settings
-            || (existing && existing.preview === false)
+            || (existing && existing.preview === false && !state.stale.has(index))
             || state.pending.has(index)
             || state.pending.size >= MAX_PENDING_REQUESTS
+            || (state.failures.get(index) || 0) > state.settings.retryCount
             || index < 0
             || index >= state.items.length
         ) {
@@ -327,7 +378,10 @@
             handleRequestFailure(index);
         }, state.settings.loadTimeoutSeconds * 1000);
 
-        state.pending.set(index, {requestID: id, timer: timeout});
+        state.pending.set(index, {
+            requestID: id, timer: timeout,
+            generation: state.mediaGenerations.get(index) || 0
+        });
         requestAction('LoadMedia', JSON.stringify({
             index: index,
             requestID: id,
@@ -340,10 +394,18 @@
         state.failures.set(index, failures);
 
         if (failures <= state.settings.retryCount) {
+            const revision = state.configurationRevision;
             window.setTimeout(function () {
-                requestMedia(index);
+                if (revision === state.configurationRevision) {
+                    requestMedia(index);
+                    pumpPrefetch();
+                }
             }, 300 * failures);
         } else {
+            if (state.navigation && state.navigation.index === index) {
+                state.navigation = null;
+                scheduleAutoAdvance();
+            }
             if (index === state.currentIndex || isNeighbour(index)) {
                 showToast(localize('Image unavailable'));
             }
@@ -360,6 +422,9 @@
             }
         };
 
+        if (state.navigation) {
+            add(state.navigation.index);
+        }
         add(state.currentIndex);
         if (state.items.length > 1) {
             add(state.currentIndex + 1);
@@ -377,18 +442,22 @@
             return;
         }
 
-        const nextIndex = state.prefetchOrder.find(function (index) {
-            const failures = state.failures.get(index) || 0;
-            const source = state.sources.get(index);
-            return (!source || source.preview === true)
-                && !state.pending.has(index)
-                && failures <= state.settings.retryCount;
-        });
+        while (state.pending.size < MAX_PENDING_REQUESTS) {
+            const nextIndex = state.prefetchOrder.find(function (index) {
+                const failures = state.failures.get(index) || 0;
+                const source = state.sources.get(index);
+                return (!source || source.preview === true || state.stale.has(index))
+                    && !state.pending.has(index)
+                    && failures <= state.settings.retryCount;
+            });
 
-        if (nextIndex !== undefined) {
+            if (nextIndex === undefined) {
+                break;
+            }
+            const previousCount = state.pending.size;
             requestMedia(nextIndex);
-            if (state.pending.size < MAX_PENDING_REQUESTS) {
-                window.setTimeout(pumpPrefetch, 120);
+            if (state.pending.size <= previousCount) {
+                break;
             }
         }
     }
@@ -460,8 +529,8 @@
         const generation = ++state.renderGeneration;
         const slotDefinitions = [
             {element: currentImage, index: state.currentIndex},
-            {element: previousImage, index: wrapIndex(state.currentIndex - 1)},
-            {element: nextImage, index: wrapIndex(state.currentIndex + 1)}
+            {element: nextImage, index: wrapIndex(state.currentIndex + 1)},
+            {element: previousImage, index: wrapIndex(state.currentIndex - 1)}
         ];
 
         for (const slot of slotDefinitions) {
@@ -506,6 +575,9 @@
     function updatePresentationMetadata() {
         const current = state.items[state.currentIndex];
         title.textContent = current ? current.title : '';
+        if (state.stale.has(state.currentIndex)) {
+            title.textContent += ' · ' + localize('Updating image');
+        }
         title.hidden = !state.settings.showTitles || !title.textContent;
 
         position.replaceChildren();
@@ -560,13 +632,31 @@
         }
 
         state.busy = true;
+        const revision = state.configurationRevision;
         const targetIndex = wrapIndex(state.currentIndex + direction);
         const ready = await waitForLoadedImage(targetIndex);
+        if (revision !== state.configurationRevision) {
+            return;
+        }
         if (!ready) {
             state.busy = false;
             centerTrack(true);
-            requestMedia(targetIndex);
+            if (state.sources.has(targetIndex)) {
+                // A received but undecodable source will not emit another media
+                // response. Do not leave a navigation intent waiting forever.
+                state.navigation = null;
+                showToast(localize('Image unavailable'));
+                if (manual) {
+                    pauseAutomaticAdvance();
+                }
+                scheduleAutoAdvance();
+                return;
+            }
             if (manual) {
+                state.navigation = {index: targetIndex, direction: direction};
+                state.failures.delete(targetIndex);
+                buildPrefetchOrder();
+                pumpPrefetch();
                 showToast(localize('Loading image'));
                 pauseAutomaticAdvance();
             } else {
@@ -575,6 +665,8 @@
             return;
         }
 
+        state.navigation = null;
+        toast.hidden = true;
         clearTimeout(state.autoTimer);
         if (!fromDrag) {
             centerTrack(false);
@@ -584,6 +676,9 @@
             setTrackPosition(direction > 0 ? -trackWidth() : trackWidth(), true);
         });
         await waitForTransition();
+        if (revision !== state.configurationRevision) {
+            return;
+        }
 
         state.currentIndex = targetIndex;
         state.pointerDeltaX = 0;
@@ -595,7 +690,17 @@
         await renderSlots();
         centerTrack(false);
         state.busy = false;
+        buildPrefetchOrder();
+        pumpPrefetch();
         scheduleAutoAdvance();
+    }
+
+    function resumeNavigation() {
+        if (state.navigation && !state.busy && state.sources.has(state.navigation.index)) {
+            const direction = state.navigation.direction;
+            state.navigation = null;
+            move(direction, true, false);
+        }
     }
 
     function pauseAutomaticAdvance() {
@@ -611,6 +716,7 @@
             || state.items.length < 2
             || document.hidden
             || state.busy
+            || state.navigation
         ) {
             return;
         }
@@ -633,6 +739,9 @@
     }
 
     function pointerDown(event) {
+        if (event.target.closest && event.target.closest('button')) {
+            return;
+        }
         if (state.busy || state.items.length < 2 || (event.button !== undefined && event.button !== 0)) {
             return;
         }
@@ -728,6 +837,7 @@
     nextButton.addEventListener('click', function () {
         move(1, true, false);
     });
+    fitButton.addEventListener('click', toggleFit);
     carousel.addEventListener('keydown', function (event) {
         if (event.key === 'ArrowLeft') {
             event.preventDefault();

@@ -414,6 +414,7 @@ check(
     'Empty title did not fall back to the media name.'
 );
 check(!isset($applyUpdate['initialMedia']), 'ApplyChanges unexpectedly transported image content.');
+check(($applyUpdate['settings']['showFitToggle'] ?? null) === false, 'Fit toggle must default to disabled.');
 check($mediaContentReads === [], 'ApplyChanges unexpectedly read media content.');
 
 $tile = $module->GetVisualizationTile();
@@ -523,6 +524,17 @@ check(($invalidation['index'] ?? null) === 1, 'Invalidated media index differs.'
 $module->ApplyChanges();
 check($module->testReferences() === [101, 102, 103], 'Repeated ApplyChanges changed references.');
 check($module->testMessageCount() === 15, 'Repeated ApplyChanges duplicated messages.');
+
+$beforeFitToggle = $module->testLastVisualizationUpdate();
+$module->testSetProperty('ShowFitToggle', true);
+$module->ApplyChanges();
+$withFitToggle = $module->testLastVisualizationUpdate();
+check(($withFitToggle['settings']['showFitToggle'] ?? null) === true, 'Fit toggle opt-in is missing.');
+check(
+    $withFitToggle['configurationRevision'] !== $beforeFitToggle['configurationRevision'],
+    'Fit toggle change did not invalidate configuration revision.'
+);
+check($module->testReferences() === [101, 102, 103], 'Fit toggle changed media references.');
 
 $module->testSetProperty('MediaItems', encodeItems([
     ['MediaID' => 101, 'Title' => '', 'Enabled' => true],

@@ -15,6 +15,12 @@ jobs:
         with:
           php-version: '8.2'
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - run: node --test case-studies/media-carousel/tests/client-state.test.cjs
+
       - run: composer install
 
       - run: composer check

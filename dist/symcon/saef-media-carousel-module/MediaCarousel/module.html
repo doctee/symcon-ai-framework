@@ -85,14 +85,15 @@
             position: absolute;
             top: 50%;
             z-index: 6;
-            width: 54px;
-            height: 96px;
-            margin-top: -48px;
+            width: clamp(36px, 8vw, 48px);
+            height: clamp(44px, 20vh, 72px);
+            transform: translateY(-50%);
+            padding: 0;
             border: 0;
             border-radius: 0 12px 12px 0;
             color: #fff;
             background: rgba(0, 0, 0, 0.24);
-            font-size: 48px;
+            font-size: clamp(28px, 7vw, 40px);
             line-height: 1;
             cursor: pointer;
             opacity: 0.72;
@@ -129,6 +130,43 @@
             background: rgba(0, 0, 0, 0.42);
             transform: translateX(-50%);
             pointer-events: none;
+        }
+
+        #fitToggle {
+            position: absolute;
+            right: 4px;
+            bottom: 4px;
+            z-index: 8;
+            display: grid;
+            place-items: center;
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            border: 0;
+            color: #fff;
+            background: transparent;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #fitToggle svg {
+            width: 28px;
+            height: 28px;
+            padding: 5px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.42);
+            pointer-events: none;
+        }
+
+        #fitToggle:focus-visible {
+            outline: 2px solid var(--accent-color, #20cdbb);
+            outline-offset: -3px;
+        }
+
+        #fitToggle[hidden],
+        #fitToggle[data-fit="cover"] .fill-icon,
+        #fitToggle[data-fit="contain"] .fit-icon {
+            display: none;
         }
 
         .dot {
@@ -217,6 +255,12 @@
         <button id="previous" class="arrow" type="button" aria-label="Previous image">&#8249;</button>
         <button id="next" class="arrow" type="button" aria-label="Next image">&#8250;</button>
         <div id="position" aria-hidden="true" hidden></div>
+        <button id="fitToggle" type="button" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path class="fit-icon" d="M3 9h6V3M9 9 3 3M21 9h-6V3M15 9l6-6M3 15h6v6M9 15l-6 6M21 15h-6v6M15 15l6 6"/>
+                <path class="fill-icon" d="M3 9V3h6M3 3l6 6M21 9V3h-6M21 3l-6 6M3 15v6h6M3 21l6-6M21 15v6h-6M21 21l-6-6"/>
+            </svg>
+        </button>
         <div id="loading" aria-label="Loading image"></div>
         <div id="message" hidden></div>
         <div id="toast" role="status" hidden></div>

@@ -18,6 +18,9 @@
       "Pause after manual interaction in seconds": "Pause nach manueller Bedienung in Sekunden",
       "Slide duration in milliseconds": "Dauer des Wischübergangs in Millisekunden",
       "Image fit": "Bildanpassung",
+      "Show image fit toggle": "Symbol zum Umschalten der Bildanpassung anzeigen",
+      "Show entire image": "Ganzes Bild anzeigen",
+      "Fill image area": "Bildfläche ausfüllen",
       "Fill tile (cover)": "Kachel ausfüllen (cover)",
       "Fit entire image (contain)": "Ganzes Bild einpassen (contain)",
       "Show image title": "Bildtitel anzeigen",
@@ -28,6 +31,7 @@
       "Previous image": "Vorheriges Bild",
       "Next image": "Nächstes Bild",
       "Loading image": "Bild wird geladen",
+      "Updating image": "Bild wird aktualisiert",
       "Image unavailable": "Bild nicht verfügbar",
       "No valid images configured": "Keine gültigen Bilder konfiguriert"
     }
