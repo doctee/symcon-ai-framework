@@ -3,6 +3,7 @@
   "name": "SAEFMediaCarouselSchemaProbe",
   "type": 3,
   "vendor": "SAEF",
+  "url": "https://github.com/doctee/symcon-ai-framework",
   "aliases": [],
   "parentRequirements": [],
   "childRequirements": [],
