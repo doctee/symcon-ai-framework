@@ -18,6 +18,10 @@ $initializer = Join-Path $windows 'Initialize-SaefScopeBoundApprovalProfile.ps1'
 $missingUser = 'saef-ci-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
 $failureStatus = Join-Path $PSScriptRoot ($TargetId + '-expected-profile-failure.local.json')
 foreach ($attempt in @(1, 2)) {
+if ($attempt -eq 2) {
+    # A stale first report must not make a failed replacement appear successful.
+    [IO.File]::WriteAllText($failureStatus, '{"sentinel":true}', [Text.UTF8Encoding]::new($false))
+}
 $failure = Invoke-SaefPowerShellChildProcess -ScriptPath $initializer -ExpectedScriptSha256 (Get-TestHash $initializer) `
     -Arguments @('-DeploymentUser', $missingUser, '-TargetId', $TargetId, '-QualificationProfile', 'saef-test-v1',
         '-PostflightProfile', 'saef-test-v1', '-ChannelHostBindingSha256', ('a' * 64),
