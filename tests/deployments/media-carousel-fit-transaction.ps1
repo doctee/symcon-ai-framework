@@ -961,6 +961,7 @@ try {
     $currentPhase = 'completed'
 } catch {
     $failureDetail = $_.Exception.GetType().FullName + ': ' + $_.Exception.Message
+    if ($ApprovalPipeline) { Write-Output $_.ScriptStackTrace }
     $currentPhase = 'failed-' + $failureCode
 } finally {
     if ($null -ne $requestLogPath -and

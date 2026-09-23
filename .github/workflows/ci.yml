@@ -46,7 +46,11 @@ jobs:
       - uses: actions/checkout@v6
       - name: Qualify complete installed MediaCarousel approval pipeline with loopback RPC
         shell: powershell
-        run: ./tests/deployments/media-carousel-fit-transaction.ps1 -ApprovalPipeline
+        run: |
+          & ./tests/deployments/media-carousel-fit-transaction.ps1 -ApprovalPipeline
+          $qualificationExit = $LASTEXITCODE
+          Get-Content ./tests/deployments/media-carousel-windows-qualification-status.local.json
+          exit $qualificationExit
       - name: Qualify MediaCarousel schema transition on Windows PowerShell 5.1
         shell: powershell
         run: ./tests/deployments/media-carousel-fit-schema.ps1
