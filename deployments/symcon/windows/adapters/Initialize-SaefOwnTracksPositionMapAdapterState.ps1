@@ -1,5 +1,10 @@
 [CmdletBinding()]
 param(
+    # Historical entry point remains compatible; no implicit profile inference.
+    [Parameter()]
+    [ValidateSet('saef-owntracks-position-map-v1', 'saef-media-carousel-v1')]
+    [string] $AdapterProfile = 'saef-owntracks-position-map-v1',
+
     [Parameter(Mandatory = $true)]
     [ValidateSet('preflight', 'install')]
     [string] $Operation,
@@ -31,6 +36,9 @@ $ExitInstallFailed = 20
 $ExitRolledBack = 30
 $ExitManualRecovery = 40
 $ExpectedConfirmation = 'provision-saef-owntracks-position-map-adapter-state'
+if ($AdapterProfile -ceq 'saef-media-carousel-v1') {
+    $ExpectedConfirmation = 'provision-saef-media-carousel-adapter-state'
+}
 $script:policy = $null
 $script:stateRoot = ''
 $script:activeModulePath = ''
@@ -92,7 +100,10 @@ function Write-StateRootStatus {
     Write-AtomicJson -Path $StatusPath -Value ([ordered]@{
         formatVersion = 1
         timestampUtc = [DateTime]::UtcNow.ToString('o')
-        phase = 'owntracks_adapter_state_root'
+        phase = $(if ($AdapterProfile -ceq 'saef-media-carousel-v1') {
+            'media_carousel_adapter_state_root'
+        } else { 'owntracks_adapter_state_root' })
+        adapterProfile = $AdapterProfile
         operation = $Operation
         outcome = $script:finalOutcome
         exitCode = $script:finalExitCode
@@ -275,15 +286,23 @@ try {
     } finally {
         [Array]::Clear($policyBytes, 0, $policyBytes.Length)
     }
-    if ($script:policy.formatVersion -ne 1 -or
+    $profileInvalid = if ($AdapterProfile -ceq 'saef-owntracks-position-map-v1') {
         [string] $script:policy.adapterProfile -cne 'saef-owntracks-position-map-v1' -or
-        [string] $script:policy.targetId -cne 'saef-owntracks-position-map' -or
+        [string] $script:policy.targetId -cne 'saef-owntracks-position-map'
+    } else {
+        [string] $script:policy.adapterProfile -cne 'saef-media-carousel-v1' -or
+        [string] $script:policy.targetId -cne 'saef-media-carousel' -or
+        [string] $script:policy.libraryGuid -cne '{8D263598-06EF-4440-982C-9E86E3F8D130}' -or
+        [string] $script:policy.moduleGuid -cne '{41D0C5ED-8331-4B26-A44E-6FDCEC1BC41F}' -or
+        [string] $script:policy.mutexName -cne 'Global\SAEF.MediaCarousel.ModuleAdapter'
+    }
+    if ($script:policy.formatVersion -ne 1 -or $profileInvalid -or
         [string]::IsNullOrWhiteSpace([string] $script:policy.activeModulePath) -or
         [string]::IsNullOrWhiteSpace([string] $script:policy.adapterStateRoot) -or
         [string]::IsNullOrWhiteSpace([string] $script:policy.mutexName) -or
         [int] $script:policy.quiescenceTimeoutSeconds -lt 1 -or
         [int] $script:policy.quiescenceTimeoutSeconds -gt 300) {
-        throw [InvalidOperationException]::new('OwnTracks adapter policy contract is invalid.')
+        throw [InvalidOperationException]::new('Selected adapter policy contract is invalid.')
     }
     $script:activeModulePath = [IO.Path]::GetFullPath([string] $script:policy.activeModulePath)
     $script:stateRoot = [IO.Path]::GetFullPath([string] $script:policy.adapterStateRoot)
@@ -332,7 +351,7 @@ try {
         $script:mutexAcquired = $true
     }
     if (-not $script:mutexAcquired) {
-        throw [TimeoutException]::new('OwnTracks adapter mutex remained busy.')
+        throw [TimeoutException]::new('Selected adapter mutex remained busy.')
     }
 
     $script:failureCode = 'state_root'
@@ -397,7 +416,11 @@ try {
         $script:finalOutcome = 'failed'
         $script:finalExitCode = $ExitInstallFailed
     }
-    Write-StateRootStatus
+    try { Write-StateRootStatus } catch {
+        # Preserve the classified rollback/manual-recovery exit even when the
+        # original failure was an unwritable status destination.
+        Write-Warning 'State-root status could not be persisted; inspect the process exit and filesystem.'
+    }
 } finally {
     if ($script:mutexAcquired -and $null -ne $script:mutex) {
         try { $script:mutex.ReleaseMutex() } catch { }
