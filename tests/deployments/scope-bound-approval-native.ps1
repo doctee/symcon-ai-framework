@@ -30,13 +30,15 @@ if ($failure.exitCode -ne 10 -or $failed.outcome -cne 'failed' -or $failed.faile
     $failed.mutationAttempted -or $failed.activeMutationAttempted -or $failed.serviceRestartAttempted) {
     throw 'Profile initializer did not report preflight failure without mutation.'
 }
-& $qualification -ExpectedRunnerSha256 (Get-TestHash $runner) -ExpectedAdapterSha256 (Get-TestHash $adapter) `
-    -ExpectedResealSha256 (Get-TestHash $reseal) -ExpectedChildProcessContractSha256 (Get-TestHash $childContract) `
-    -RunnerPath $runner -AdapterPath $adapter -ResealPath $reseal -ChildProcessContractPath $childContract `
-    -SyntheticAdapterPath (Join-Path $fixtures 'Invoke-SaefApprovalSyntheticAdapter.ps1') `
-    -SyntheticResealPath (Join-Path $fixtures 'Invoke-SaefApprovalSyntheticReseal.ps1') `
-    -QualificationTargetId $TargetId -QualificationDeploymentUser $deploymentUser -StatusPath $status
-$qualificationExit = $LASTEXITCODE
+$qualificationResult = Invoke-SaefPowerShellChildProcess -ScriptPath $qualification `
+    -ExpectedScriptSha256 (Get-TestHash $qualification) -TimeoutSeconds 600 -MaximumOutputBytes 65536 `
+    -Arguments @('-ExpectedRunnerSha256', (Get-TestHash $runner), '-ExpectedAdapterSha256', (Get-TestHash $adapter),
+        '-ExpectedResealSha256', (Get-TestHash $reseal), '-ExpectedChildProcessContractSha256', (Get-TestHash $childContract),
+        '-RunnerPath', $runner, '-AdapterPath', $adapter, '-ResealPath', $reseal, '-ChildProcessContractPath', $childContract,
+        '-SyntheticAdapterPath', (Join-Path $fixtures 'Invoke-SaefApprovalSyntheticAdapter.ps1'),
+        '-SyntheticResealPath', (Join-Path $fixtures 'Invoke-SaefApprovalSyntheticReseal.ps1'),
+        '-QualificationTargetId', $TargetId, '-QualificationDeploymentUser', $deploymentUser, '-StatusPath', $status)
+$qualificationExit = $qualificationResult.exitCode
 Get-Content -LiteralPath $status
 if ($qualificationExit -ne 0) { exit $qualificationExit }
 $result = Get-Content -LiteralPath $status -Raw | ConvertFrom-Json
