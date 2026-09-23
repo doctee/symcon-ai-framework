@@ -1,7 +1,8 @@
 # MediaCarousel repeatable deployment
 
-Status: recovery, code-only reseal and baseline-reconciliation candidates;
-full profile/bootstrap integration is pending. Not live-ready.
+Status: recovery, code-only reseal, baseline reconciliation and atomic
+profile/bootstrap composition implemented. Exact-revision qualification,
+reviewed private packaging and independent installed postflight remain gates.
 
 ## Current implementation slice
 
@@ -23,7 +24,9 @@ approval matrix for both target labels, using synthetic adapters/resealers and a
 explicit existing test account. It checks the actual MediaCarousel resealer in
 eight separate filesystem/ACL cases, including consecutive package advances and
 preserved unrelated bindings. These are isolated qualification results, not live
-installation evidence or a finished single-launch bootstrap package.
+installation evidence. The additional bootstrap suite invokes the actual profile
+initializer against an unpublished shadow channel, including rejected evidence
+and post-publication rollback in all three cultures.
 
 The shared runner now binds reseal arguments to exact target/profile pairs.
 The existing OwnTracks reseal entrypoint keeps its filename and default contract;
@@ -44,11 +47,11 @@ Evidence preparation is a review responsibility: the updater must never generate
 an approved baseline by merely observing current drift. This new mode is not an
 implicit repair option of an ordinary deployment.
 
-## Scope and current gap
+## Installed baseline and addressed gap
 
 Channel v8 already transports and activates MediaCarousel packages. This is
 not proof that the MediaCarousel target implements the scope-bound approval
-profile described in ADR-0010. Its adapter currently accepts only `preflight`
+profile described in ADR-0010. The pre-bootstrap installed adapter accepts only `preflight`
 and `activate`; its installed policy pins a package and instance configuration
 baseline. A successful activation records the new active package but does not
 reseal that protected baseline. Later intentional settings changes must not be
@@ -128,7 +131,12 @@ The diagnostic candidate must not change instance schema or camera settings.
 The restricted channel cannot install its own new protected binding or approval
 profile. Administrative bootstrap is a capability boundary, not another user
 approval request. If no separately authorized administrative execution channel
-exists, one operator-assisted Windows start is necessary. Its eventual package
-must self-extract, verify exact hashes and baseline, preserve unrelated fields,
-avoid service restart, and print bounded console JSON. No package is ready or
-installed merely because this architecture document exists.
+exists, one operator-assisted Windows start is necessary. The fixed `repeatable`
+package profile self-extracts and invokes the existing binding coordinator.
+Its optional approval bootstrap stages a complete profile in the new generation,
+qualifies the shadow configuration and publishes one atomic channel pointer.
+See `case-studies/media-carousel/06-protected-binding-generation.md` for the
+preservation and rollback contract. It does not reinstall the channel, restart
+services or activate module code. Source qualification, a reviewed private plan
+and fresh installed evidence are required; this document is not proof of live
+installation.
