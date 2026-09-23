@@ -4,6 +4,7 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 $windows = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../deployments/symcon/windows'))
 foreach ($path in @((Join-Path $windows 'Initialize-SaefDeploymentChannel.ps1'),
+    (Join-Path $windows 'adapters/Start-SaefMediaCarouselSchemaPackage.ps1'),
     (Join-Path $windows 'adapters/Update-SaefMediaCarouselBinding.ps1'))) {
     $tokens = $null; $errors = $null
     $ast = [Management.Automation.Language.Parser]::ParseFile($path, [ref] $tokens, [ref] $errors)
@@ -13,6 +14,7 @@ foreach ($path in @((Join-Path $windows 'Initialize-SaefDeploymentChannel.ps1'),
     }, $false))) { . ([scriptblock]::Create($fn.Extent.Text)) }
 }
 Assert-Elevated | Out-Null
+. (Join-Path $windows 'SaefChildProcess.ps1')
 function Assert-Test { param([bool] $Ok, [string] $Message) if (-not $Ok) { throw $Message } }
 function Assert-UpdateRuntime {
     $script:runtimeCalls++
@@ -85,7 +87,47 @@ try {
             $passed++
         }
     }
-    Write-Output ('PASS: MediaCarousel binding update: ' + $passed + ' Windows transaction cases / 3 cultures.')
+    Add-Type -AssemblyName System.IO.Compression
+    $zipPath = Join-Path $scratch 'binding.zip'
+    $stream = [IO.File]::Create($zipPath)
+    $zip = [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Create, $true)
+    try {
+        foreach ($name in @('binding-plan.local.json', 'candidate-policy.local.json', 'candidate-channel.local.json',
+            'windows/Initialize-SaefDeploymentChannel.ps1', 'windows/SaefChildProcess.ps1',
+            'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1', 'windows/adapters/Update-SaefMediaCarouselBinding.ps1')) {
+            $bytes = $utf8.GetBytes('{}')
+            if ($name -ceq 'windows/adapters/Update-SaefMediaCarouselBinding.ps1') {
+                $bytes = $utf8.GetBytes(@'
+param($PlanPath, $ExpectedPlanSha256, $Operation, $Confirmation)
+if ($Operation -cne 'install' -or $Confirmation -cne 'update-saef-media-carousel-binding') { exit 10 }
+@{formatVersion=1;exitCode=0;outcome='synthetic-binding-launch'} | ConvertTo-Json
+exit 0
+'@)
+            } elseif ($name.StartsWith('windows/')) { $bytes = [IO.File]::ReadAllBytes((Join-Path $windows $name.Substring(8))) }
+            $entry = $zip.CreateEntry($name).Open()
+            try { $entry.Write($bytes, 0, $bytes.Length) } finally { $entry.Dispose() }
+        }
+    } finally { $zip.Dispose(); $stream.Dispose() }
+    $hash = Get-BytesSha256 ([IO.File]::ReadAllBytes($zipPath))
+    $expanded = Expand-SchemaPackage $zipPath $hash binding
+    Assert-Test (Test-Path (Join-Path $expanded.root 'binding-plan.local.json')) 'Binding extraction missing.'
+    foreach ($bad in @('profile', 'hash')) {
+        $rejected = $false
+        try {
+            if ($bad -ceq 'profile') { $null = Expand-SchemaPackage $zipPath $hash schema }
+            else { $null = Expand-SchemaPackage $zipPath ('a' * 64) binding }
+        } catch { $rejected = $true }
+        Assert-Test $rejected 'Wrong binding profile/hash accepted.'
+    }
+    $launcher = Join-Path $windows 'adapters/Start-SaefMediaCarouselSchemaPackage.ps1'
+    $child = Invoke-SaefPowerShellChildProcess -ScriptPath $launcher `
+        -ExpectedScriptSha256 (Get-BytesSha256 ([IO.File]::ReadAllBytes($launcher))) `
+        -Arguments @('-ZipPath', $zipPath, '-ExpectedZipSha256', $hash, '-PackageKind', 'binding') `
+        -TimeoutSeconds 90 -MaximumOutputBytes 65536
+    $output = $utf8.GetString($child.standardOutput)
+    Assert-Test ($child.terminationReason -ceq 'exited' -and $child.exitCode -eq 0 -and
+        ($output | ConvertFrom-Json).outcome -ceq 'synthetic-binding-launch') ('Binding launcher failed: ' + $output)
+    Write-Output ('PASS: MediaCarousel binding update: ' + $passed + ' Windows transaction cases / 3 cultures; binding extraction and launcher passed.')
 } finally {
     [Threading.Thread]::CurrentThread.CurrentCulture = $saved
     if ((Split-Path -Leaf $scratch) -cmatch '^saef-binding-test-[a-f0-9]{32}$') { Remove-Item -LiteralPath $scratch -Recurse -Force }
