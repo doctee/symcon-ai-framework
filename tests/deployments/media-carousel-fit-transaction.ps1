@@ -540,8 +540,28 @@ try {
             $adapterSource,
             [regex]::Escape("-Method 'MC_ReloadModule'")
         ).Count -ne 1 -or
-        $adapterSource -match 'Restart-Service|Stop-Service|Start-Service|MC_UpdateModule|Invoke-WebRequest') {
+        $adapterSource -match 'Restart-Service|Stop-Service|Start-Service|MC_UpdateModule|Invoke-RestMethod') {
         throw [InvalidOperationException]::new('Adapter action boundary differs from the reviewed contract.')
+    }
+    $boundaryTokens = $null; $boundaryErrors = $null
+    $boundaryAst = [Management.Automation.Language.Parser]::ParseFile(
+        $adapterPath, [ref] $boundaryTokens, [ref] $boundaryErrors)
+    $webCalls = @($boundaryAst.FindAll({ param($node)
+        $node -is [Management.Automation.Language.CommandAst] -and
+        $node.GetCommandName() -ieq 'Invoke-WebRequest'
+    }, $true))
+    if (@($boundaryErrors).Count -ne 0 -or $webCalls.Count -ne 1) {
+        throw [InvalidOperationException]::new('Expected exactly one reviewed RPC HTTP transport.')
+    }
+    $owner = $webCalls[0].Parent
+    while ($null -ne $owner -and $owner -isnot [Management.Automation.Language.FunctionDefinitionAst]) {
+        $owner = $owner.Parent
+    }
+    if ($null -eq $owner -or $owner.Name -cne 'Invoke-SymconRpc' -or
+        -not $webCalls[0].Extent.Text.StartsWith(
+            "Invoke-WebRequest -UseBasicParsing -Uri `$RpcUri -Method Post -ContentType 'application/json; charset=utf-8'",
+            [StringComparison]::Ordinal)) {
+        throw [InvalidOperationException]::new('HTTP transport escaped the reviewed UTF8 RPC boundary.')
     }
     $passedScenarios += 'static-targeted-reload-only-boundary'
     $positiveCaseCount++
