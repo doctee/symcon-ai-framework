@@ -11,13 +11,31 @@ $reseal = Join-Path $windows 'adapters/Invoke-SaefOwnTracksPositionMapActiveIden
 $childContract = Join-Path $windows 'SaefChildProcess.ps1'
 $qualification = Join-Path $windows 'Invoke-SaefScopeBoundApprovalWindowsQualification.ps1'
 $status = Join-Path $PSScriptRoot ($TargetId + '-approval-qualification.local.json')
+$deploymentUser = (Get-LocalUser -SID ([Security.Principal.WindowsIdentity]::GetCurrent().User)).Name
 function Get-TestHash { param([string] $Path) return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
+. $childContract
+$initializer = Join-Path $windows 'Initialize-SaefScopeBoundApprovalProfile.ps1'
+$missingUser = 'saef-ci-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
+$failureStatus = Join-Path $PSScriptRoot ($TargetId + '-expected-profile-failure.local.json')
+$failure = Invoke-SaefPowerShellChildProcess -ScriptPath $initializer -ExpectedScriptSha256 (Get-TestHash $initializer) `
+    -Arguments @('-DeploymentUser', $missingUser, '-TargetId', $TargetId, '-QualificationProfile', 'saef-test-v1',
+        '-PostflightProfile', 'saef-test-v1', '-ChannelHostBindingSha256', ('a' * 64),
+        '-ApproverIdentitySha256', ('b' * 64), '-ExecutionHostIdentitySha256', ('c' * 64),
+        '-ApprovalSecretRecordPath', $failureStatus, '-QualificationEvidencePath', $failureStatus,
+        '-ExpectedQualificationEvidenceSha256', ('d' * 64), '-ExpectedRunnerSha256', (Get-TestHash $runner),
+        '-RunnerSourcePath', $runner, '-PreflightOnly', '-StatusPath', $failureStatus) `
+    -TimeoutSeconds 60 -MaximumOutputBytes 8192
+$failed = Get-Content -LiteralPath $failureStatus -Raw | ConvertFrom-Json
+if ($failure.exitCode -ne 10 -or $failed.outcome -cne 'failed' -or $failed.failedStep -cne 'deployment_account' -or
+    $failed.mutationAttempted -or $failed.activeMutationAttempted -or $failed.serviceRestartAttempted) {
+    throw 'Profile initializer did not report preflight failure without mutation.'
+}
 & $qualification -ExpectedRunnerSha256 (Get-TestHash $runner) -ExpectedAdapterSha256 (Get-TestHash $adapter) `
     -ExpectedResealSha256 (Get-TestHash $reseal) -ExpectedChildProcessContractSha256 (Get-TestHash $childContract) `
     -RunnerPath $runner -AdapterPath $adapter -ResealPath $reseal -ChildProcessContractPath $childContract `
     -SyntheticAdapterPath (Join-Path $fixtures 'Invoke-SaefApprovalSyntheticAdapter.ps1') `
     -SyntheticResealPath (Join-Path $fixtures 'Invoke-SaefApprovalSyntheticReseal.ps1') `
-    -QualificationTargetId $TargetId -StatusPath $status
+    -QualificationTargetId $TargetId -QualificationDeploymentUser $deploymentUser -StatusPath $status
 $qualificationExit = $LASTEXITCODE
 Get-Content -LiteralPath $status
 if ($qualificationExit -ne 0) { exit $qualificationExit }

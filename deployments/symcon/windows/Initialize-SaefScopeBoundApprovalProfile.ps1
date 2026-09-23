@@ -663,8 +663,8 @@ try {
         }
     }
     try {
-        Write-Status -Phase (if ([bool] $PreflightOnly) { 'preflight' } else { 'install' }) `
-            -Outcome 'failed' -ExitCode (if ([bool] $PreflightOnly) { $ExitPreflightFailed } else { $ExitInstallFailed }) `
+        Write-Status -Phase $(if ([bool] $PreflightOnly) { 'preflight' } else { 'install' }) `
+            -Outcome 'failed' -ExitCode $(if ([bool] $PreflightOnly) { $ExitPreflightFailed } else { $ExitInstallFailed }) `
             -Details @{
                 failedStep = $script:failedStep
                 activeMutationAttempted = [bool] $script:mutationAttempted
