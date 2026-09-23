@@ -55,6 +55,7 @@ function Publish-UpdateGeneration {
     $beforeHash = Get-BytesSha256 $Before; $afterHash = Get-BytesSha256 $After
     $null = Read-AdditionBoundBytes $ChannelPath $beforeHash
     $acl = Get-Acl -LiteralPath $ChannelPath
+    if (-not $acl.AreAccessRulesProtected) { throw 'Channel policy requires an explicit protected ACL before replacement.' }
     $null = [IO.Directory]::CreateDirectory($Generation)
     Set-RestrictedAcl $Generation '*S-1-5-32-544' '(OI)(CI)F'
     $script:evidence = $Generation
@@ -197,6 +198,7 @@ try {
     $null = Get-CandidateSnapshot $snapshot
     Assert-UpdateRuntime
     $result.stage = 'preflight'
+    if (-not (Get-Acl -LiteralPath $channelPath).AreAccessRulesProtected) { throw 'Inherited channel ACL requires separate review.' }
     Assert-AdditionProtectedPath (Split-Path -Parent $generation)
     if (Test-Path -LiteralPath $generation) { throw 'Existing generation requires recovery review.' }
     if ($Operation -ceq 'install') {

@@ -33,7 +33,7 @@ $passed = 0
 try {
     foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
         [Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo($culture)
-        foreach ($scenario in @('success', 'postflight-failure', 'prepublish-failure', 'external-drift', 'existing-generation', 'unrelated-change')) {
+        foreach ($scenario in @('success', 'postflight-failure', 'prepublish-failure', 'external-drift', 'existing-generation', 'unrelated-change', 'inherited-channel')) {
             $root = Join-Path $scratch ($culture + '-' + $scenario)
             $null = [IO.Directory]::CreateDirectory($root)
             $channelPath = Join-Path $root 'channel.local.json'
@@ -52,7 +52,8 @@ try {
                         libraryGuid = '{22222222-2222-2222-2222-222222222222}'
                         adapterPath = $oldAdapter; expectedAdapterSha256 = $a; adapterPolicyPath = $oldPolicy; expectedAdapterPolicySha256 = $p }) }
             $before = $utf8.GetBytes(($old | ConvertTo-Json -Depth 20))
-            [IO.File]::WriteAllBytes($channelPath, $before); Set-RestrictedFileAcl $channelPath
+            [IO.File]::WriteAllBytes($channelPath, $before)
+            if ($scenario -cne 'inherited-channel') { Set-RestrictedFileAcl $channelPath }
             $acl = (Get-Acl -LiteralPath $channelPath).Sddl
             $candidateAdapter = $utf8.GetBytes('# new'); $candidatePolicy = $utf8.GetBytes('{"new":true}')
             $new = ConvertFrom-AdditionJson $before

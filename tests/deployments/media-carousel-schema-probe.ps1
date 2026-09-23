@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 if ($PSVersionTable.PSEdition -cne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5) { throw 'Windows PowerShell 5.1 required.' }
 $windowsRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../deployments/symcon/windows'))
 $imports = @(
-    @{ path = (Join-Path $windowsRoot 'Initialize-SaefDeploymentChannel.ps1'); names = @('Set-RestrictedAcl', 'Assert-Elevated') },
+    @{ path = (Join-Path $windowsRoot 'Initialize-SaefDeploymentChannel.ps1'); names = @('Set-RestrictedAcl', 'Set-RestrictedFileAcl', 'Assert-Elevated') },
     @{ path = (Join-Path $PSScriptRoot 'channel-target-addition.ps1'); names = @('Write-Json', 'Hash-File', 'Assert-Test') },
     @{ path = (Join-Path $windowsRoot 'adapters/Start-SaefMediaCarouselSchemaPackage.ps1'); names = @('Expand-SchemaPackage') },
     @{ path = (Join-Path $windowsRoot 'adapters/Invoke-SaefMediaCarouselModuleOwnershipMigration.ps1'); names = @(
@@ -188,6 +188,7 @@ try {
     $channelRecord.standaloneModuleTargets[0] | Add-Member -NotePropertyName adapterProfile -NotePropertyValue 'saef-media-carousel-v1'
     $channelRecord.standaloneModuleTargets[0].expectedAdapterPolicySha256 = Hash-File $policyPath
     Write-Json $channel $channelRecord
+    Set-RestrictedFileAcl $channel
     $bindingBefore = [IO.File]::ReadAllBytes($channel)
     $targetRoot = Join-Path $fixture 'standalone-modules/saef-media-carousel'
     $null = [IO.Directory]::CreateDirectory($targetRoot)
