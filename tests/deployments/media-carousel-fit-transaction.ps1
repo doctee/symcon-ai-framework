@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [Parameter()]
-    [string] $SymconTempRoot = ([IO.Path]::GetTempPath())
+    [string] $SymconTempRoot = ([IO.Path]::GetTempPath()),
+    [Parameter()][switch] $ApprovalPipeline
 )
 
 Set-StrictMode -Version 2.0
@@ -709,6 +710,13 @@ try {
         $script:credential = $null
     }
 
+    if ($ApprovalPipeline) {
+        $failureCode = 'installed_approval_pipeline'
+        . (Join-Path $PSScriptRoot 'media-carousel-approval-pipeline.ps1')
+        Invoke-MediaCarouselApprovalPipeline
+        $passedScenarios += 'publisher-initializer-real-runner-real-adapter-real-reseal-two-updates'
+        $positiveCaseCount++
+    } else {
     $activeInitialIdentity = Get-PackageIdentity -Path $activePath
     $failureCode = 'synthetic_preflight'
     Write-GateProgress -Phase 'synthetic-preflight'
@@ -943,6 +951,7 @@ try {
     $passedScenarios += 'package-drift-fails-before-rpc'
     $negativeCaseCount++
 
+    }
     $failureCode = 'negative_boundary'
     Write-GateProgress -Phase 'negative-production-boundary'
     $passedScenarios += 'negative-live-service-provider-publication-retention-boundary'
@@ -952,6 +961,7 @@ try {
     $currentPhase = 'completed'
 } catch {
     $failureDetail = $_.Exception.GetType().FullName + ': ' + $_.Exception.Message
+    if ($ApprovalPipeline) { Write-Output $_.ScriptStackTrace }
     $currentPhase = 'failed-' + $failureCode
 } finally {
     if ($null -ne $requestLogPath -and

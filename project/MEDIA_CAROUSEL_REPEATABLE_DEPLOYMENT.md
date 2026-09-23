@@ -22,11 +22,21 @@ Later changes require their own qualification.
 Native CI additionally executes the complete existing six-positive/eight-negative
 approval matrix for both target labels, using synthetic adapters/resealers and an
 explicit existing test account. It checks the actual MediaCarousel resealer in
-eight separate filesystem/ACL cases, including consecutive package advances and
+ten separate filesystem/ACL cases, including consecutive package advances and
 preserved unrelated bindings. These are isolated qualification results, not live
 installation evidence. The additional bootstrap suite invokes the actual profile
 initializer against an unpublished shadow channel, including rejected evidence
 and post-publication rollback in all three cultures.
+
+The resealer filesystem test now consumes a generation created by the actual
+binding publisher rather than a manually ACL-corrected policy directory. The
+publisher gives the verified deployment SID explicit inheritable read/execute
+on that directory, with full control reserved for SYSTEM and Administrators;
+protected policy and backup files remain administrator/SYSTEM-only. A negative
+control removes that SID rule and requires the complete resealer to reject it
+before any policy mutation. This closes the installer/resealer ACL test gap;
+it does not substitute for the complete installed-profile/runner/adapter/RPC
+integration gate before another live activation.
 
 The shared runner now binds reseal arguments to exact target/profile pairs.
 The existing OwnTracks reseal entrypoint keeps its filename and default contract;
