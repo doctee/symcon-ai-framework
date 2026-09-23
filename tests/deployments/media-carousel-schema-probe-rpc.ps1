@@ -1,5 +1,5 @@
 # Synthetic RPC surface, used only by the Windows qualification child.
-param($PlanPath, $ExpectedPlanSha256, $FixturePath, $EntryPath, $Culture)
+param($PlanPath, $ExpectedPlanSha256, $FixturePath, $EntryPath, $Culture, $BindingOperation = '')
 [Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo($Culture)
 $global:probeMock = Get-Content -LiteralPath $FixturePath -Raw | ConvertFrom-Json
 $global:probeState = @{ registered = $false; exists = $false; candidate = $false; configuration = ''
@@ -136,5 +136,10 @@ function Invoke-RestMethod {
     # Match Invoke-RestMethod's JSON object/array types, not PowerShell hashtables.
     return (ConvertTo-Json -InputObject @{ result = $v } -Depth 20 -Compress | ConvertFrom-Json)
 }
-& $EntryPath -PlanPath $PlanPath -ExpectedPlanSha256 $ExpectedPlanSha256 -Confirmation qualify-media-carousel-schema
+if ($BindingOperation) {
+    & $EntryPath -PlanPath $PlanPath -ExpectedPlanSha256 $ExpectedPlanSha256 `
+        -Operation $BindingOperation -Confirmation update-saef-media-carousel-binding
+} else {
+    & $EntryPath -PlanPath $PlanPath -ExpectedPlanSha256 $ExpectedPlanSha256 -Confirmation qualify-media-carousel-schema
+}
 exit $LASTEXITCODE

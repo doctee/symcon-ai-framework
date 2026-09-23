@@ -19,6 +19,9 @@ jobs:
       - name: Qualify complete MediaCarousel target installation without live RPC
         shell: powershell
         run: ./tests/deployments/media-carousel-target-installation.ps1
+      - name: Qualify atomic MediaCarousel binding generation without live RPC
+        shell: powershell
+        run: ./tests/deployments/media-carousel-binding-update.ps1
 
   media-carousel-schema-windows:
     runs-on: windows-latest

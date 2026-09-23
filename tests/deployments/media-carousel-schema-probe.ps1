@@ -180,6 +180,66 @@ try {
             $passed++
         }
     }
+    # Reuse the same complete RPC/DPAPI fixture for the new binding CLI. The
+    # final schema scenario stopped before mutation, so this baseline is inert.
+    $script:policy.mutexName = 'Global\SAEF.MediaCarousel.ModuleAdapter'
+    Write-Json $policyPath $script:policy
+    $channelRecord = Get-Content $channel -Raw | ConvertFrom-Json
+    $channelRecord.standaloneModuleTargets[0] | Add-Member -NotePropertyName adapterProfile -NotePropertyValue 'saef-media-carousel-v1'
+    $channelRecord.standaloneModuleTargets[0].expectedAdapterPolicySha256 = Hash-File $policyPath
+    Write-Json $channel $channelRecord
+    $bindingBefore = [IO.File]::ReadAllBytes($channel)
+    $targetRoot = Join-Path $fixture 'standalone-modules/saef-media-carousel'
+    $null = [IO.Directory]::CreateDirectory($targetRoot)
+    Write-Json $mockPath @{ policy = $script:policy; configurations = $configs; scenario = 'success'; logPath = $logPath }
+    foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
+        [IO.File]::WriteAllBytes($channel, $bindingBefore)
+        $updateId = 'synthetic-' + $culture.ToLowerInvariant()
+        $generation = Join-Path $targetRoot $updateId
+        $newPolicy = $script:policy | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+        $transition = @{ kind = 'show-fit-toggle-default-false-v1'; deploymentId = 'synthetic-update'
+            sourcePackageIdentitySha256 = $script:policy.expectedActivePackageIdentitySha256
+            candidatePackageIdentitySha256 = ('b' * 64); instances = @() }
+        foreach ($id in @(11111, 22222)) {
+            $text = $configs[[string] $id].TrimEnd('}') + ',"ShowFitToggle":false}'
+            $transition.instances += @{ instanceId = $id; configurationBase64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($text))
+                configurationSha256 = Get-TextSha256 $text }
+        }
+        $newPolicy | Add-Member -NotePropertyName configurationTransition -NotePropertyValue $transition
+        $candidatePolicyPath = Join-Path $fixture 'candidate-policy.local.json'
+        Write-Json $candidatePolicyPath $newPolicy
+        $candidateChannelPath = Join-Path $fixture 'candidate-channel.local.json'
+        $newChannel = [Text.Encoding]::UTF8.GetString($bindingBefore) | ConvertFrom-Json
+        $newChannel.standaloneModuleTargets[0].adapterPath = Join-Path $generation 'adapter.ps1'
+        $newChannel.standaloneModuleTargets[0].expectedAdapterSha256 = Hash-File $adapter
+        $newChannel.standaloneModuleTargets[0].adapterPolicyPath = Join-Path $generation 'adapter-policy.local.json'
+        $newChannel.standaloneModuleTargets[0].expectedAdapterPolicySha256 = Hash-File $candidatePolicyPath
+        Write-Json $candidateChannelPath $newChannel
+        $bindingPlan = @{ formatVersion = 1; targetId = 'saef-media-carousel'; updateId = $updateId
+            deploymentUser = $user; expectedDeploymentSid = $sid; installRoot = $fixture
+            channelSha256 = Hash-File $channel; installedAdapterSha256 = Hash-File $installedAdapter
+            installedPolicySha256 = Hash-File $policyPath; candidatePolicySha256 = Hash-File $candidatePolicyPath
+            candidateChannelSha256 = Hash-File $candidateChannelPath; deploymentId = 'synthetic-update'
+            candidatePackageIdentitySha256 = ('b' * 64); sourceHashes = $plan.sourceHashes }
+        $bindingPlanPath = Join-Path $fixture 'binding-plan.local.json'
+        Write-Json $bindingPlanPath $bindingPlan
+        foreach ($operation in @('preflight', 'install', 'preflight')) {
+            $alreadyInstalled = (Hash-File $channel) -cne $bindingPlan.channelSha256
+            $child = Invoke-SaefPowerShellChildProcess -ScriptPath $wrapper -ExpectedScriptSha256 (Hash-File $wrapper) `
+                -Arguments @('-PlanPath', $bindingPlanPath, '-ExpectedPlanSha256', (Hash-File $bindingPlanPath),
+                    '-FixturePath', $mockPath, '-EntryPath', (Join-Path $bundle 'adapters/Update-SaefMediaCarouselBinding.ps1'),
+                    '-Culture', $culture, '-BindingOperation', $operation) -TimeoutSeconds 120 -MaximumOutputBytes 65536
+            $text = [Text.Encoding]::UTF8.GetString($child.standardOutput)
+            $record = $text | ConvertFrom-Json
+            $expectedExit = if ($alreadyInstalled) { 10 } else { 0 }
+            Assert-Test ($child.terminationReason -ceq 'exited' -and $child.exitCode -eq $expectedExit) ('Binding CLI: ' + $text)
+            Assert-Test (-not $record.productionMutationAttempted -and -not $record.serviceRestartAttempted) 'Unexpected binding side effect.'
+            $passed++
+        }
+        Assert-Test ((Hash-File $channel) -ceq $bindingPlan.candidateChannelSha256) 'Binding channel identity differs.'
+        $log = Get-Content $logPath -Raw | ConvertFrom-Json
+        Assert-Test ($log.productionWrites -eq 0 -and $log.reloads -eq 0 -and $log.creates -eq 0) 'Binding performed runtime mutation.'
+    }
     Add-Type -AssemblyName System.IO.Compression
     # Exercise exact self-extraction with the same private-plan shape and source files.
     $packageEntries = @('schema-plan.local.json', 'windows/Initialize-SaefDeploymentChannel.ps1',

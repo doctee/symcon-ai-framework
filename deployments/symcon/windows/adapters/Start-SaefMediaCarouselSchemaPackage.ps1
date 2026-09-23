@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [Parameter()][string] $ZipPath = '',
-    [Parameter(Mandatory = $true)][ValidatePattern('^[a-f0-9]{64}$')][string] $ExpectedZipSha256
+    [Parameter(Mandatory = $true)][ValidatePattern('^[a-f0-9]{64}$')][string] $ExpectedZipSha256,
+    [Parameter()][ValidateSet('schema', 'binding')][string] $PackageKind = 'schema'
 )
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
@@ -9,13 +10,19 @@ $DefaultZipName = 'MediaCarousel-SchemaQualification.zip'
 
 # Package-local bootstrap, not a new general archive extraction API. The entire
 # archive is hash-bound before parsing; only these fixed regular files may exist.
-function Expand-SchemaPackage { param([string] $Path, [string] $Hash)
+function Expand-SchemaPackage { param([string] $Path, [string] $Hash,
+    [ValidateSet('schema', 'binding')][string] $Kind = 'schema')
     $allowed = @('schema-plan.local.json', 'windows/Initialize-SaefDeploymentChannel.ps1',
         'windows/SaefChildProcess.ps1', 'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1',
         'windows/adapters/Invoke-SaefMediaCarouselModuleOwnershipMigration.ps1',
         'windows/adapters/Test-SaefMediaCarouselSchema.ps1',
         'windows/adapters/schema-probe/library.json', 'windows/adapters/schema-probe/SchemaProbe/module.json',
         'windows/adapters/schema-probe/legacy.php', 'windows/adapters/schema-probe/candidate.php')
+    if ($Kind -ceq 'binding') {
+        $allowed = @('binding-plan.local.json', 'candidate-policy.local.json', 'candidate-channel.local.json',
+            'windows/Initialize-SaefDeploymentChannel.ps1', 'windows/SaefChildProcess.ps1',
+            'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1', 'windows/adapters/Update-SaefMediaCarouselBinding.ps1')
+    }
     if (-not [IO.Path]::IsPathRooted($Path) -or -not (Test-Path -LiteralPath $Path -PathType Leaf) -or
         (Get-Item -LiteralPath $Path).Length -gt 4194304) { throw 'Missing or oversized schema archive.' }
     $bytes = [IO.File]::ReadAllBytes($Path)
@@ -87,17 +94,27 @@ try {
         throw 'Elevated Windows PowerShell 5.1 required.'
     }
     if ([string]::IsNullOrWhiteSpace($ZipPath)) { $ZipPath = Join-Path $PSScriptRoot $DefaultZipName }
-    $package = Expand-SchemaPackage ([IO.Path]::GetFullPath($ZipPath)) $ExpectedZipSha256
+    $package = Expand-SchemaPackage ([IO.Path]::GetFullPath($ZipPath)) $ExpectedZipSha256 $PackageKind
     $launcher = Join-Path $package.root 'windows/SaefChildProcess.ps1'
     if ((Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash.ToLowerInvariant() -cne
         $package.hashes['windows/SaefChildProcess.ps1']) { throw 'Extracted child-process helper changed.' }
     # Exact source, single script-scope import; uses the existing bounded Job Object runner.
     . $launcher
+    $entry = 'windows/adapters/Test-SaefMediaCarouselSchema.ps1'
+    $planName = 'schema-plan.local.json'
+    $confirmation = 'qualify-media-carousel-schema'
+    $extra = @()
+    if ($PackageKind -ceq 'binding') {
+        $entry = 'windows/adapters/Update-SaefMediaCarouselBinding.ps1'
+        $planName = 'binding-plan.local.json'
+        $confirmation = 'update-saef-media-carousel-binding'
+        $extra = @('-Operation', 'install')
+    }
     $child = Invoke-SaefPowerShellChildProcess `
-        -ScriptPath (Join-Path $package.root 'windows/adapters/Test-SaefMediaCarouselSchema.ps1') `
-        -ExpectedScriptSha256 $package.hashes['windows/adapters/Test-SaefMediaCarouselSchema.ps1'] `
-        -Arguments @('-PlanPath', (Join-Path $package.root 'schema-plan.local.json'),
-            '-ExpectedPlanSha256', $package.hashes['schema-plan.local.json'], '-Confirmation', 'qualify-media-carousel-schema') `
+        -ScriptPath (Join-Path $package.root $entry) `
+        -ExpectedScriptSha256 $package.hashes[$entry] `
+        -Arguments (@('-PlanPath', (Join-Path $package.root $planName),
+            '-ExpectedPlanSha256', $package.hashes[$planName], '-Confirmation', $confirmation) + $extra) `
         -TimeoutSeconds 900 -MaximumOutputBytes 65536
     if ($child.terminationReason -cne 'exited') {
         throw ('Schema child did not finish. Retain and inspect evidence below: ' + $package.root)
