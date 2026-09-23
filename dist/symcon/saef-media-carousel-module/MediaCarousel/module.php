@@ -135,8 +135,10 @@ class MediaCarousel extends IPSModuleStrict
                 throw new InvalidArgumentException('Invalid media batch envelope.');
             }
             $requests = json_decode($value, true, 16, JSON_THROW_ON_ERROR);
-            if (!is_array($requests) || !array_is_list($requests)
-                || count($requests) < 1 || count($requests) > 2) {
+            if (
+                !is_array($requests) || !array_is_list($requests)
+                || count($requests) < 1 || count($requests) > 2
+            ) {
                 throw new InvalidArgumentException('Media batches require one or two requests.');
             }
             $ids = [];
