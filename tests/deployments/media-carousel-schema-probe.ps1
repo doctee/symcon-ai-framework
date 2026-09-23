@@ -37,7 +37,8 @@ try {
     foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
         foreach ($scenario in @('success', 'schema-drift', 'zero-id', 'creation-response-lost',
             'cleanup-fails', 'foreign-child', 'production-drift', 'changed-plan',
-            'shared-parent', 'parent-delete-child', 'parent-takeover')) {
+            'shared-parent', 'parent-delete-child', 'parent-takeover',
+            'rpc-error', 'rpc-error-cleanup', 'rpc-malformed', 'rpc-transport')) {
             $fixture = Join-Path $scratch ($culture + '-' + $scenario)
             $null = [IO.Directory]::CreateDirectory($fixture)
             Copy-Item $windowsRoot (Join-Path $fixture 'windows') -Recurse
@@ -110,6 +111,7 @@ try {
             $stdout = [Text.Encoding]::UTF8.GetString($child.standardOutput)
             Assert-Test ($child.terminationReason -ceq 'exited') ('Child terminated: ' + $stdout)
             $result = $stdout | ConvertFrom-Json
+            Assert-Test (-not $stdout.Contains('PRIVATE_SENTINEL')) 'Private RPC details leaked.'
             Assert-Test (-not $result.productionMutationAttempted -and -not $result.serviceRestartAttempted) 'Unexpected production action.'
             if ($scenario -in @('success', 'shared-parent')) {
                 Assert-Test ($child.exitCode -eq 0 -and $result.outcome -ceq 'qualified' -and
@@ -119,15 +121,32 @@ try {
                 Assert-Test ($child.exitCode -ne 0 -and $result.outcome -cne 'qualified') ('Unsafe acceptance: ' + $scenario)
                 if ($scenario -notin @('changed-plan', 'parent-delete-child', 'parent-takeover')) {
                     Assert-Test (-not (Test-Path (Join-Path $result.evidenceRoot 'configuration-transition.local.json'))) 'Failed test accepted evidence.'
-                    if ($scenario -in @('schema-drift', 'zero-id', 'creation-response-lost', 'production-drift')) {
+                    if ($scenario -in @('schema-drift', 'zero-id', 'creation-response-lost', 'production-drift',
+                        'rpc-error', 'rpc-malformed', 'rpc-transport')) {
                         Assert-Test $result.cleanupVerified ('Cleanup failed: ' + $stdout)
                     }
-                    if ($scenario -in @('cleanup-fails', 'foreign-child')) {
+                    if ($scenario -in @('cleanup-fails', 'foreign-child', 'rpc-error-cleanup')) {
                         Assert-Test ($result.outcome -ceq 'manual_recovery_required' -and -not $result.cleanupVerified) 'Ambiguous cleanup not retained.'
                     }
                 }
                 if ($scenario -in @('parent-delete-child', 'parent-takeover')) {
                     Assert-Test (-not $result.testMutationAttempted -and $result.stage -ceq 'shared_parent_preflight') 'Unsafe parent reached mutation.'
+                }
+            }
+            if ($scenario -in @('rpc-error', 'rpc-error-cleanup', 'rpc-malformed', 'rpc-transport')) {
+                Assert-Test ($result.stage -ceq 'test_legacy_configuration' -and
+                    $result.failure.stage -ceq 'test_legacy_configuration' -and
+                    $result.failure.rpc.method -ceq 'IPS_SetConfiguration' -and
+                    $result.failure.rpc.parameterCount -eq 2 -and
+                    ($result.failure.rpc.parameterTypes -join ',') -ceq 'integer,string' -and
+                    $result.productionPreserved) ('Original RPC failure lost: ' + $stdout)
+                $journalText = Get-Content (Join-Path $result.evidenceRoot 'journal.local.json') -Raw
+                $journal = $journalText | ConvertFrom-Json
+                Assert-Test ($journal.failure.rpc.method -ceq 'IPS_SetConfiguration' -and
+                    -not $journalText.Contains('PRIVATE_SENTINEL')) 'Journal failure lost or private details leaked.'
+                if ($scenario -eq 'rpc-error-cleanup') {
+                    Assert-Test ($result.cleanupFailure.stage -ceq 'test_cleanup' -and
+                        $result.cleanupFailure.rpc.method -ceq 'IPS_DeleteInstance') 'Cleanup masked original RPC failure.'
                 }
             }
             if (Test-Path $logPath) {

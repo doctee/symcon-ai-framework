@@ -17,7 +17,19 @@ function Invoke-RestMethod {
     if ($m -in @('IPS_SetParent', 'IPS_SetIdent', 'IPS_SetName', 'IPS_SetHidden',
         'IPS_SetConfiguration', 'IPS_ApplyChanges', 'IPS_DeleteInstance')) {
         if ($a[0] -ne 54321) { $s.productionWrites++; throw 'Production mutation in synthetic test.' }
+        $expectedCount = if ($m -in @('IPS_ApplyChanges', 'IPS_DeleteInstance')) { 1 } else { 2 }
+        if ($a.Count -ne $expectedCount -or $a[0] -isnot [int]) { throw 'Native parameter count or ID type differs.' }
+        if ($m -eq 'IPS_SetParent' -and $a[1] -isnot [int]) { throw 'Native parent type differs.' }
+        if ($m -eq 'IPS_SetHidden' -and $a[1] -isnot [bool]) { throw 'Native hidden type differs.' }
+        if ($m -in @('IPS_SetIdent', 'IPS_SetName', 'IPS_SetConfiguration') -and $a[1] -isnot [string]) {
+            throw 'Native string type differs.'
+        }
         $s.mutations++
+    }
+    if ($m -eq 'IPS_SetConfiguration' -and $f.scenario -in @('rpc-error', 'rpc-error-cleanup', 'rpc-malformed', 'rpc-transport')) {
+        if ($f.scenario -eq 'rpc-transport') { throw 'PRIVATE_SENTINEL credential and configuration must not leak.' }
+        if ($f.scenario -eq 'rpc-malformed') { return ([pscustomobject]@{ jsonrpc = '2.0'; id = 1 }) }
+        return ([pscustomobject]@{ error = [pscustomobject]@{ code = -32602; message = 'PRIVATE_SENTINEL'; data = 'PRIVATE_SENTINEL' } })
     }
     switch ($m) {
         'IPS_GetKernelRunlevel' { $v = 10103 }
@@ -88,7 +100,7 @@ function Invoke-RestMethod {
         'IPS_SetHidden' { $v = $true }
         'IPS_ApplyChanges' { $v = $true }
         'IPS_DeleteInstance' {
-            if ($f.scenario -eq 'cleanup-fails') { throw 'Synthetic cleanup failure.' }
+            if ($f.scenario -in @('cleanup-fails', 'rpc-error-cleanup')) { throw 'PRIVATE_SENTINEL cleanup failure.' }
             $s.exists = $false; $v = $true
         }
         'MC_DeleteModule' {

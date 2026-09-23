@@ -19,10 +19,21 @@ $parentSddl = $null
 $stagingPath = $null
 $lock = $null
 $locked = $false
+$script:probeRpcFailure = $null
 $testLibrary = '{85DE8006-9775-49E6-BB7E-1924BAA5459A}'
 $testModule = '{7CB1E964-8C34-4B61-B255-68D86AEC99F2}'
 $testFolder = 'saef-media-carousel-schema-probe'
 $testIdent = 'SAEFMediaCarouselSchemaProbe'
+
+function Get-ProbeFailure { param([Management.Automation.ErrorRecord] $Record)
+    # Follow the ownership coordinator's null-safe metadata capture. Never copy
+    # exception messages, source lines, argument values or credentials to status.
+    $type = $Record.Exception.GetType().FullName
+    if ($type.Length -gt 160 -or $type -cnotmatch '^[A-Za-z0-9_.+`]+$') { $type = 'UnknownException' }
+    $line = $null
+    if ($null -ne $Record.InvocationInfo) { $line = [int] $Record.InvocationInfo.ScriptLineNumber }
+    return [ordered]@{ stage = $result.stage; errorType = $type; line = $line; rpc = $script:probeRpcFailure }
+}
 
 function Read-ProbeBoundSource { param([string] $Path, [string] $Hash)
     if ($Hash -cnotmatch '^[a-f0-9]{64}$' -or -not [IO.Path]::IsPathRooted($Path) -or
@@ -57,6 +68,7 @@ function Save-ProbeJournal {
     Write-AtomicJson (Join-Path $evidence 'journal.local.json') ([ordered]@{
         stage = $result.stage; testPath = $testPath; stagingPath = $stagingPath; testInstanceId = $testID
         createAttempted = $createAttempted; ownedDirectory = $owned
+        failure = if ($result.Contains('failure')) { $result.failure } else { $null }
         productionMutationAttempted = $false; timestampUtc = [DateTime]::UtcNow.ToString('o')
     })
 }
@@ -149,6 +161,29 @@ try {
             }, $false))
             if ($matches.Count -ne 1) { throw 'Required bound function missing or ambiguous.' }
             . ([scriptblock]::Create($matches[0].Extent.Text))
+        }
+    }
+    # Preserve the hash-verified adapter implementation verbatim. This local
+    # wrapper adds call metadata only; transport, credentials and RPC behavior
+    # remain owned by the imported function. No installed adapter is modified.
+    $script:probeRpcImplementation = ${function:Invoke-SymconRpc}
+    function Invoke-SymconRpc {
+        param([Parameter(Mandatory = $true)][string] $Method, [object[]] $Parameters = @())
+        $script:probeRpcFailure = $null
+        try { & $script:probeRpcImplementation -Method $Method -Parameters $Parameters }
+        catch {
+            $safeMethod = if ($Method -cmatch '^[A-Za-z][A-Za-z0-9_]{0,79}$') { $Method } else { 'unknown' }
+            $types = @($Parameters | ForEach-Object {
+                if ($null -eq $_) { 'null' }
+                elseif ($_ -is [bool]) { 'boolean' }
+                elseif ($_ -is [int] -or $_ -is [long]) { 'integer' }
+                elseif ($_ -is [string]) { 'string' }
+                elseif ($_ -is [array]) { 'array' }
+                else { 'other' }
+            })
+            $script:probeRpcFailure = [ordered]@{ method = $safeMethod; parameterCount = $Parameters.Count
+                parameterTypes = @($types | Select-Object -First 16) }
+            throw
         }
     }
     $plan = ConvertFrom-AdditionJson ([Text.Encoding]::UTF8.GetBytes($planText))
@@ -245,12 +280,15 @@ try {
     $newID = Invoke-SymconRpc 'IPS_CreateInstance' @($testModule)
     if ($null -eq $newID -or [string] $newID -cnotmatch '^[1-9][0-9]*$') { throw 'No positive test instance ID returned.' }
     $testID = [int] $newID
+    $result.stage = 'test_instance_configuration'
     Save-ProbeJournal
     Invoke-ProbeMutation 'IPS_SetParent' @([int] $plan.parentId)
     Invoke-ProbeMutation 'IPS_SetIdent' @($testIdent)
     Invoke-ProbeMutation 'IPS_SetName' @('SAEF MediaCarousel isolated schema test')
     Invoke-ProbeMutation 'IPS_SetHidden' @($true)
     $first = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($snapshot.instances[0].configurationBase64))
+    $result.stage = 'test_legacy_configuration'
+    Save-ProbeJournal
     Invoke-ProbeMutation 'IPS_SetConfiguration' @($first)
     Invoke-ProbeMutation 'IPS_ApplyChanges' @()
     if ((Invoke-SymconRpc 'IPS_GetConfiguration' @($testID)) -cne $first) { throw 'Legacy test registration does not reproduce baseline.' }
@@ -266,6 +304,8 @@ try {
     $transition = [ordered]@{ kind = 'show-fit-toggle-default-false-v1'; deploymentId = $plan.deploymentId
         sourcePackageIdentitySha256 = $script:policy.expectedActivePackageIdentitySha256
         candidatePackageIdentitySha256 = $plan.candidatePackageIdentitySha256; instances = @() }
+    $result.stage = 'test_configuration_sequence'
+    Save-ProbeJournal
     foreach ($record in $snapshot.instances) {
         $before = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($record.configurationBase64))
         Invoke-ProbeMutation 'IPS_SetConfiguration' @($before)
@@ -279,11 +319,12 @@ try {
     Write-AtomicJson (Join-Path $evidence 'transition.unaccepted.local.json') $transition
     $result.qualifiedInstanceCount = $transition.instances.Count
     $result.outcome = 'schema_observed'
-} catch { $result.error = $_.Exception.Message }
+} catch { $result.failure = Get-ProbeFailure $_; $result.error = 'Schema qualification failed; see failure metadata.' }
 finally {
     if ($owned) {
         try {
             $result.stage = 'test_cleanup'
+            $script:probeRpcFailure = $null
             Save-ProbeJournal
             Assert-ProbeTree
             $ids = @(Invoke-SymconRpc 'IPS_GetInstanceListByModuleID' @($testModule))
@@ -300,11 +341,14 @@ finally {
                 (Test-Path -LiteralPath $testPath) -or (Invoke-SymconRpc 'IPS_ModuleExists' @($testModule)) -or
                 (Invoke-SymconRpc 'IPS_LibraryExists' @($testLibrary))) { throw 'Test library removal incomplete.' }
             $result.cleanupVerified = $true
-        } catch { $result.cleanupError = $_.Exception.Message; $result.outcome = 'manual_recovery_required' }
+        } catch { $result.cleanupFailure = Get-ProbeFailure $_; $result.outcome = 'manual_recovery_required' }
     }
     if ($null -ne $snapshot) {
-        try { Assert-ProbeProduction; $result.productionPreserved = $true }
-        catch { $result.postflightError = $_.Exception.Message; $result.outcome = 'manual_recovery_required' }
+        try {
+            $result.stage = 'production_postflight'; $script:probeRpcFailure = $null
+            Assert-ProbeProduction; $result.productionPreserved = $true
+        }
+        catch { $result.postflightFailure = Get-ProbeFailure $_; $result.outcome = 'manual_recovery_required' }
     }
     try {
         if ($result.outcome -ceq 'schema_observed' -and $result.cleanupVerified -and $result.productionPreserved) {
@@ -313,10 +357,11 @@ finally {
             $result.transitionSha256 = Get-Sha256 $accepted
             $result.outcome = 'qualified'; $result.exitCode = 0; $result.stage = 'complete'
         } elseif ($result.testMutationAttempted) { $result.exitCode = 40 }
-    } catch { $result.outcome = 'evidence_write_failed'; $result.exitCode = 40; $result.error = $_.Exception.Message }
+    } catch { $result.outcome = 'evidence_write_failed'; $result.exitCode = 40; $result.evidenceFailure = Get-ProbeFailure $_ }
     if ($locked) { $lock.ReleaseMutex() }
     if ($null -ne $lock) { $lock.Dispose() }
     $script:credential = $null
+    if ($result.Contains('failure')) { $result.stage = $result.failure.stage }
     $result.timestampUtc = [DateTime]::UtcNow.ToString('o')
     if ($null -ne $evidence) {
         try { Write-AtomicJson (Join-Path $evidence 'result.local.json') $result }
