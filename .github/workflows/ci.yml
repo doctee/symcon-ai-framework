@@ -5,6 +5,15 @@ on:
   pull_request:
 
 jobs:
+  channel-target-addition-windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Qualify additive channel maintenance on Windows PowerShell 5.1
+        shell: powershell
+        run: ./tests/deployments/channel-target-addition.ps1
+
   media-carousel-schema-windows:
     runs-on: windows-latest
     timeout-minutes: 10
