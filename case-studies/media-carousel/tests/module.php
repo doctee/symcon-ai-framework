@@ -466,6 +466,12 @@ check(
     'LoadMedia did not read exactly the requested media content.'
 );
 check(($mediaUpdate['action'] ?? null) === 'media', 'LoadMedia did not publish media.');
+check(
+    is_int($mediaUpdate['preparationMilliseconds'] ?? null)
+        && $mediaUpdate['preparationMilliseconds'] >= 0
+        && $mediaUpdate['preparationMilliseconds'] <= 3600000,
+    'Media preparation timing must be bounded integer metadata.'
+);
 check(($mediaUpdate['index'] ?? null) === 1, 'Loaded media index differs.');
 check(
     str_starts_with((string) ($mediaUpdate['source'] ?? ''), 'data:image/png;base64,'),

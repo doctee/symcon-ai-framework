@@ -11,6 +11,8 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added bounded, view-local MediaCarousel loading diagnostics and server image
+  preparation timing without configuration, persistence or request-policy changes.
 - Added MediaCarousel adapter recovery candidates for independent postflight,
   conservative inspection and post-success rollback with durable predecessor
   evidence. Repeatable approval-profile/reseal installation remains a separate
