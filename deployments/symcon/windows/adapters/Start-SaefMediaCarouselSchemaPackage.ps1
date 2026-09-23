@@ -2,7 +2,7 @@
 param(
     [Parameter()][string] $ZipPath = '',
     [Parameter(Mandatory = $true)][ValidatePattern('^[a-f0-9]{64}$')][string] $ExpectedZipSha256,
-    [Parameter()][ValidateSet('schema', 'binding', 'settings')][string] $PackageKind = 'schema'
+    [Parameter()][ValidateSet('schema', 'binding', 'settings', 'repeatable')][string] $PackageKind = 'schema'
 )
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
@@ -11,17 +11,23 @@ $DefaultZipName = 'MediaCarousel-SchemaQualification.zip'
 # Package-local bootstrap, not a new general archive extraction API. The entire
 # archive is hash-bound before parsing; only these fixed regular files may exist.
 function Expand-SchemaPackage { param([string] $Path, [string] $Hash,
-    [ValidateSet('schema', 'binding', 'settings')][string] $Kind = 'schema')
+    [ValidateSet('schema', 'binding', 'settings', 'repeatable')][string] $Kind = 'schema')
     $allowed = @('schema-plan.local.json', 'windows/Initialize-SaefDeploymentChannel.ps1',
         'windows/SaefChildProcess.ps1', 'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1',
         'windows/adapters/Invoke-SaefMediaCarouselModuleOwnershipMigration.ps1',
         'windows/adapters/Test-SaefMediaCarouselSchema.ps1',
         'windows/adapters/schema-probe/library.json', 'windows/adapters/schema-probe/SchemaProbe/module.json',
         'windows/adapters/schema-probe/legacy.php', 'windows/adapters/schema-probe/candidate.php')
-    if ($Kind -ceq 'binding') {
+    if ($Kind -cin @('binding', 'repeatable')) {
         $allowed = @('binding-plan.local.json', 'candidate-policy.local.json', 'candidate-channel.local.json',
             'windows/Initialize-SaefDeploymentChannel.ps1', 'windows/SaefChildProcess.ps1',
             'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1', 'windows/adapters/Update-SaefMediaCarouselBinding.ps1')
+    }
+    if ($Kind -ceq 'repeatable') {
+        $allowed += @('reviewed-baseline.local.json', 'qualification.local.json',
+            'windows/Initialize-SaefScopeBoundApprovalProfile.ps1',
+            'windows/Invoke-SaefScopeBoundApprovalRunner.ps1',
+            'windows/adapters/Invoke-SaefOwnTracksPositionMapActiveIdentityReseal.ps1')
     }
     if ($Kind -ceq 'settings') {
         $allowed = @('settings-plan.local.json', 'windows/Initialize-SaefDeploymentChannel.ps1',
@@ -109,7 +115,7 @@ try {
     $planName = 'schema-plan.local.json'
     $confirmation = 'qualify-media-carousel-schema'
     $extra = @()
-    if ($PackageKind -ceq 'binding') {
+    if ($PackageKind -cin @('binding', 'repeatable')) {
         $entry = 'windows/adapters/Update-SaefMediaCarouselBinding.ps1'
         $planName = 'binding-plan.local.json'
         $confirmation = 'update-saef-media-carousel-binding'

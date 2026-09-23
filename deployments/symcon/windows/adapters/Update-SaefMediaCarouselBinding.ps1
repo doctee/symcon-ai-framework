@@ -13,7 +13,8 @@ $result = [ordered]@{ formatVersion = 1; operation = $Operation; outcome = 'fail
 $locks = @(); $held = @(); $snapshot = $null; $evidence = $null
 
 # Bootstrap only. All subsequent validation/ACL/RPC behavior is imported from
-# exact reviewed existing sources; no initializer or adapter entry point runs.
+# exact reviewed existing sources. The channel initializer/adapter entrypoints
+# never run; optional approval initialization sees only an unpublished shadow.
 function Read-UpdateSource { param([string] $Path, [string] $Hash)
     if ($Hash -cnotmatch '^[a-f0-9]{64}$' -or -not [IO.Path]::IsPathRooted($Path) -or
         -not (Test-Path -LiteralPath $Path -PathType Leaf) -or (Get-Item -LiteralPath $Path).Length -gt 4194304) {
@@ -45,7 +46,7 @@ function Assert-UpdatePreservation { param($Before, $After, [string] $Generation
 
 function Publish-UpdateGeneration {
     param([string] $ChannelPath, [string] $Generation, [byte[]] $Before, [byte[]] $After,
-        [byte[]] $Adapter, [byte[]] $Policy)
+        [byte[]] $Adapter, [byte[]] $Policy, $ApprovalBootstrap = $null)
     # Exactly one authoritative pointer changes. Generation files are never
     # overwritten or deleted, including on failure or interrupted execution.
     if (Test-Path -LiteralPath $Generation) { throw 'Existing generation requires independent recovery review.' }
@@ -74,6 +75,12 @@ function Publish-UpdateGeneration {
     Set-Acl -LiteralPath $candidate -AclObject $acl
     $published = $false
     try {
+        if ($null -ne $ApprovalBootstrap) {
+            $After = Stage-ApprovalProfile -Generation $Generation -ChannelBytes $After -Context $ApprovalBootstrap
+            $afterHash = Get-BytesSha256 $After
+            [IO.File]::WriteAllBytes($candidate, $After)
+            $null = Read-AdditionBoundBytes $candidate $afterHash
+        }
         Assert-AdditionBindings (ConvertFrom-AdditionJson $After).standaloneModuleTargets
         Assert-UpdateRuntime
         $null = Read-AdditionBoundBytes $ChannelPath $beforeHash
@@ -85,6 +92,8 @@ function Publish-UpdateGeneration {
         if ((Get-Acl -LiteralPath $ChannelPath).Sddl -cne $acl.Sddl) { throw 'Publication changed ACL.' }
         Assert-AdditionBindings (ConvertFrom-AdditionJson $After).standaloneModuleTargets
         Assert-UpdateRuntime
+        $result.channelPolicySha256 = $afterHash
+        $result.approvalProfileInstalled = $null -ne $ApprovalBootstrap
     } catch {
         $failure = $_
         try {
@@ -102,6 +111,99 @@ function Publish-UpdateGeneration {
         } catch { $result.rollbackSucceeded = $false }
         throw $failure
     }
+}
+
+function Get-ApprovalBootstrapContext {
+    param($Spec, [string] $Package, [string] $Windows, [string] $DeploymentUser, $Channel)
+    $target = @($Channel.standaloneModuleTargets | Where-Object { $_.targetId -ceq 'saef-media-carousel' })
+    if ($target.Count -ne 1 -or @($target[0].PSObject.Properties.Name | Where-Object {
+        $_ -imatch '^(approvalRunnerPath|expectedApprovalRunnerSha256|approvalPolicyPath|expectedApprovalPolicySha256)$'
+    }).Count -ne 0) { throw 'Approval bootstrap requires an unbound MediaCarousel target.' }
+    $paths = @{
+        initializer = Join-Path $Windows 'Initialize-SaefScopeBoundApprovalProfile.ps1'
+        runner = Join-Path $Windows 'Invoke-SaefScopeBoundApprovalRunner.ps1'
+        reseal = Join-Path $Windows 'adapters/Invoke-SaefOwnTracksPositionMapActiveIdentityReseal.ps1'
+        child = Join-Path $Windows 'SaefChildProcess.ps1'
+        qualification = Join-Path $Package 'qualification.local.json'
+    }
+    foreach ($name in $paths.Keys) {
+        Assert-AdditionProtectedPath $paths[$name]
+        $null = Read-AdditionBoundBytes $paths[$name] $Spec.sourceHashes.$name 4194304
+    }
+    foreach ($field in @('channelHostBindingSha256', 'approverIdentitySha256', 'executionHostIdentitySha256')) {
+        if ($Spec.$field -isnot [string] -or $Spec.$field -cnotmatch '^[a-f0-9]{64}$') { throw 'Invalid approval identity binding.' }
+    }
+    if ($Spec.maximumStateFiles -isnot [int] -or $Spec.maximumStateFiles -lt 1 -or $Spec.maximumStateFiles -gt 4096 -or
+        $Spec.sourceHashes.child -cne $Channel.expectedChildProcessContractSha256) { throw 'Invalid approval bootstrap contract.' }
+    Assert-AdditionProtectedPath $Spec.approvalSecretRecordPath
+    $secretBytes = Read-AdditionBoundBytes $Spec.approvalSecretRecordPath $Spec.approvalSecretSha256
+    [Array]::Clear($secretBytes, 0, $secretBytes.Length)
+    return @{ spec = $Spec; paths = $paths; deploymentUser = $DeploymentUser }
+}
+
+function Stage-ApprovalProfile {
+    param([string] $Generation, [byte[]] $ChannelBytes, $Context)
+    # Both live locks are already held by the caller. The existing initializer
+    # sees only a shadow channel; no second live publication or mutex bypass.
+    $spec = $Context.spec
+    $shadow = Join-Path $Generation 'profile-staging'
+    $approvalRoot = Join-Path $Generation 'approval'
+    $null = [IO.Directory]::CreateDirectory($shadow)
+    Set-RestrictedAcl $shadow '*S-1-5-32-544' '(OI)(CI)F'
+    $shadowPolicy = Join-Path $shadow 'deployment-channel.local.json'
+    [IO.File]::WriteAllBytes($shadowPolicy, $ChannelBytes)
+    Set-RestrictedFileAcl $shadowPolicy
+    $secretBytes = Read-AdditionBoundBytes $spec.approvalSecretRecordPath $spec.approvalSecretSha256
+    [Array]::Clear($secretBytes, 0, $secretBytes.Length)
+    $arguments = @('-DeploymentUser', $Context.deploymentUser, '-TargetId', 'saef-media-carousel',
+        '-QualificationProfile', 'saef-windows-powershell-5.1-media-carousel-v1',
+        '-PostflightProfile', 'saef-media-carousel-health-v1',
+        '-ChannelHostBindingSha256', $spec.channelHostBindingSha256,
+        '-ApproverIdentitySha256', $spec.approverIdentitySha256,
+        '-ExecutionHostIdentitySha256', $spec.executionHostIdentitySha256,
+        '-ApprovalSecretRecordPath', $spec.approvalSecretRecordPath,
+        '-QualificationEvidencePath', $Context.paths.qualification,
+        '-ExpectedQualificationEvidenceSha256', $spec.sourceHashes.qualification,
+        '-ExpectedRunnerSha256', $spec.sourceHashes.runner, '-RunnerSourcePath', $Context.paths.runner,
+        '-ResealEnabled', '-ResealSourcePath', $Context.paths.reseal,
+        '-ExpectedResealScriptSha256', $spec.sourceHashes.reseal,
+        '-MaximumStateFiles', [string] $spec.maximumStateFiles,
+        '-ChannelInstallRoot', $shadow, '-ApprovalRoot', $approvalRoot)
+    foreach ($phase in @('preflight', 'install', 'postflight')) {
+        $statusPath = Join-Path $shadow ($phase + '.local.json')
+        $extra = if ($phase -ceq 'install') { @() } else { @('-PreflightOnly') }
+        $child = Invoke-SaefPowerShellChildProcess -ScriptPath $Context.paths.initializer `
+            -ExpectedScriptSha256 $spec.sourceHashes.initializer `
+            -Arguments (@($arguments + @('-StatusPath', $statusPath)) + $extra) `
+            -TimeoutSeconds 120 -MaximumOutputBytes 8192
+        if ($child.terminationReason -cne 'exited' -or $child.exitCode -ne 0) { throw 'Staged approval initializer failed.' }
+        $status = ConvertFrom-AdditionJson (Read-AdditionBoundBytes $statusPath (Get-BytesSha256 ([IO.File]::ReadAllBytes($statusPath))))
+        $required = if ($phase -ceq 'install') { 'installed' } else { 'passed' }
+        if ($status.outcome -cne $required -or $status.exitCode -ne 0 -or
+            ($phase -ceq 'postflight' -and $status.repairRequired)) { throw 'Staged approval postflight differs.' }
+    }
+    $after = [IO.File]::ReadAllBytes($shadowPolicy)
+    $expected = ConvertFrom-AdditionJson $ChannelBytes
+    $target = @($expected.standaloneModuleTargets | Where-Object { $_.targetId -ceq 'saef-media-carousel' })[0]
+    foreach ($binding in @(
+        @('approvalRunnerPath', (Join-Path $Generation 'approval-runner.ps1')),
+        @('approvalPolicyPath', (Join-Path $Generation 'approval-policy.local.json'))
+    )) { $target | Add-Member NoteProperty $binding[0] $binding[1] }
+    $target | Add-Member NoteProperty expectedApprovalRunnerSha256 $spec.sourceHashes.runner
+    $target | Add-Member NoteProperty expectedApprovalPolicySha256 (Get-BytesSha256 ([IO.File]::ReadAllBytes($target.approvalPolicyPath)))
+    if (($expected | ConvertTo-Json -Depth 100 -Compress) -cne
+        ((ConvertFrom-AdditionJson $after) | ConvertTo-Json -Depth 100 -Compress)) { throw 'Staged profile changed unrelated channel fields.' }
+    foreach ($binding in @(
+        @($target.approvalRunnerPath, $spec.sourceHashes.runner),
+        @((Join-Path $Generation 'active-identity-reseal.ps1'), $spec.sourceHashes.reseal),
+        @((Join-Path $Generation 'approval-qualification.local.json'), $spec.sourceHashes.qualification),
+        @((Join-Path $approvalRoot 'saef-media-carousel/approval-secret.local.json'), $spec.approvalSecretSha256)
+    )) {
+        Assert-AdditionProtectedPath $binding[0]
+        $bound = Read-AdditionBoundBytes $binding[0] $binding[1] 4194304
+        [Array]::Clear($bound, 0, $bound.Length)
+    }
+    return ,$after
 }
 
 function Assert-UpdateRuntime {
@@ -231,6 +333,13 @@ try {
     $generation = Join-Path (Join-Path $plan.installRoot 'standalone-modules/saef-media-carousel') $plan.updateId
     $after = Read-AdditionBoundBytes $afterPath $plan.candidateChannelSha256
     Assert-UpdatePreservation $channel (ConvertFrom-AdditionJson $after) $generation $plan.sourceHashes.adapter $plan.candidatePolicySha256
+    $approvalContext = $null
+    if ($plan.PSObject.Properties.Name -icontains 'approvalBootstrap') {
+        if (-not $reconcile) { throw 'Approval bootstrap requires reviewed baseline reconciliation.' }
+        $approvalContext = Get-ApprovalBootstrapContext $plan.approvalBootstrap $package $windows $plan.deploymentUser $channel
+        # One exact helper import in this isolated updater process.
+        . $approvalContext.paths.child
+    }
     $RpcUri = [string] $channel.rpcUri
     $uri = [uri] $RpcUri
     if (-not $uri.IsLoopback -or $uri.Scheme -cne 'http' -or $uri.UserInfo) { throw 'Loopback RPC required.' }
@@ -259,10 +368,10 @@ try {
     if ($Operation -ceq 'install') {
         $result.stage = 'publish'
         Publish-UpdateGeneration $channelPath $generation $before $after `
-            (Read-AdditionBoundBytes $sources.adapter $plan.sourceHashes.adapter 4194304) $policyBytes
+            (Read-AdditionBoundBytes $sources.adapter $plan.sourceHashes.adapter 4194304) $policyBytes $approvalContext
         $result.outcome = 'installed'
     } else { $result.outcome = 'ready' }
-    $result.channelPolicySha256 = $plan.candidateChannelSha256
+    if ($Operation -cne 'install') { $result.channelPolicySha256 = $plan.candidateChannelSha256 }
     $result.adapterSha256 = $plan.sourceHashes.adapter
     $result.adapterPolicySha256 = $plan.candidatePolicySha256
     $result.stage = 'complete'; $result.exitCode = 0
