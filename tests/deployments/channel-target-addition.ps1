@@ -104,6 +104,12 @@ function Expect-Rejected {
 
 $savedCulture = [Threading.Thread]::CurrentThread.CurrentCulture
 try {
+    foreach ($unsafePath in @('C:relative', '\root-relative', '\\server\share\file', 'C:\safe\file:stream')) {
+        $rejected = $false
+        try { Assert-AdditionPlainPath $unsafePath } catch { $rejected = $true }
+        Assert-Test $rejected ('Unsafe path accepted: ' + $unsafePath)
+        $passed++
+    }
     foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
         [Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo($culture)
         New-Fixture

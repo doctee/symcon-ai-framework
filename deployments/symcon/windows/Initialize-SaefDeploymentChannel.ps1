@@ -400,7 +400,7 @@ function Assert-InitialSetupTargetSafety {
 
 function Assert-AdditionPlainPath {
     param([string] $Path)
-    if (-not [IO.Path]::IsPathRooted($Path) -or $Path.StartsWith('\\') -or
+    if ($Path -cnotmatch '^[A-Za-z]:[\\/]' -or $Path.StartsWith('\\') -or
         $Path.Substring(2).Contains(':')) {
         throw [IO.IOException]::new('Target addition requires local absolute paths without alternate streams.')
     }
