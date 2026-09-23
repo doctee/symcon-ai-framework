@@ -165,6 +165,28 @@ class MediaCarousel extends IPSModuleStrict
                 throw new OutOfRangeException('Requested media index is outside the configured sequence.');
             }
 
+            $receiptDispatchNanoseconds = 0;
+            $receiptDispatchCompleted = null;
+            if (($request['diagnosticReceipt'] ?? false) === true) {
+                $receiptStartedAt = hrtime(true);
+                try {
+                    $this->UpdateVisualizationValue(
+                        $this->encodeMessage([
+                            'action'                => 'mediaStarted',
+                            'configurationRevision' => $configurationRevision,
+                            'requestID'             => $requestID,
+                            'index'                 => $index,
+                        ])
+                    );
+                    // Completion is not a client-delivery acknowledgement.
+                    $receiptDispatchCompleted = true;
+                } catch (Throwable) {
+                    // Optional measurement must not prevent the normal image response.
+                    $receiptDispatchCompleted = false;
+                }
+                $receiptDispatchNanoseconds = hrtime(true) - $receiptStartedAt;
+            }
+
             $message = $this->createMediaMessage(
                 $items,
                 $index,
@@ -174,8 +196,15 @@ class MediaCarousel extends IPSModuleStrict
             // Timing metadata only; excludes host queueing and transport.
             $message['preparationMilliseconds'] = min(
                 3600000,
-                (int) round((hrtime(true) - $startedAt) / 1000000)
+                (int) round((hrtime(true) - $startedAt - $receiptDispatchNanoseconds) / 1000000)
             );
+            if ($receiptDispatchCompleted !== null) {
+                $message['receiptDispatchCompleted'] = $receiptDispatchCompleted;
+                $message['receiptDispatchMilliseconds'] = min(
+                    3600000,
+                    (int) round($receiptDispatchNanoseconds / 1000000)
+                );
+            }
             $this->UpdateVisualizationValue($this->encodeMessage($message));
         } catch (Throwable $exception) {
             $this->SendDebug('LoadMedia failed', $exception->getMessage(), 0);

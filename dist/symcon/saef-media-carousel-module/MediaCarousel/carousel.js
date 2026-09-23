@@ -2,6 +2,7 @@
     'use strict';
 
     const MAX_PENDING_REQUESTS = 2;
+    const MAX_RECEIPT_PROBES = 6;
 
     const carousel = document.getElementById('carousel');
     const track = document.getElementById('track');
@@ -26,6 +27,7 @@
         sources: new Map(),
         readyRevisions: new Map(),
         pending: new Map(),
+        receiptProbes: new Map(),
         failures: new Map(),
         stale: new Set(),
         mediaGenerations: new Map(),
@@ -47,12 +49,19 @@
     // Bounded, view-local evidence only: no IDs, titles, image bytes, history,
     // storage writes or extra requests. Readable through the tile DOM in QA.
     const diagnostics = {
-        version: 1, bootstraps: 0, requested: 0, accepted: 0, timeouts: 0,
+        version: 2, bootstraps: 0, requested: 0, accepted: 0, timeouts: 0,
         mediaErrors: 0, revisionRejected: 0, requestRejected: 0,
         invalidations: 0, superseded: 0, imageReady: 0, imageFailed: 0,
         lastRoundTripMs: 0, maxRoundTripMs: 0, lastPreparationMs: 0,
         maxPreparationMs: 0, lastImageReadyMs: 0, maxImageReadyMs: 0,
-        lastSourceCharacters: 0
+        lastSourceCharacters: 0,
+        receiptRequested: 0, receipts: 0, receiptRejected: 0,
+        lateReceipts: 0, lateProbeResponses: 0, reorderedReceipts: 0,
+        pairedResponses: 0, receiptDispatchFailures: 0,
+        lastReceiptRoundTripMs: 0, maxReceiptRoundTripMs: 0,
+        lastPairedReceiptMs: 0, lastPairedAfterReceiptMs: 0,
+        lastPairedRoundTripMs: 0, lastPairedPreparationMs: 0,
+        lastPairedReceiptDispatchMs: 0
     };
 
     function publishDiagnostics() {
@@ -289,6 +298,51 @@
         message.hidden = false;
     }
 
+    function receiveReceipt(payload) {
+        const probe = state.receiptProbes.get(payload.requestID);
+        if (payload.configurationRevision !== state.configurationRevision
+            || !probe || probe.index !== payload.index
+            || probe.configurationRevision !== payload.configurationRevision
+            || probe.receiptAt !== null) {
+            countDiagnostic('receiptRejected');
+            return;
+        }
+        probe.receiptAt = performance.now();
+        const pending = state.pending.get(payload.index);
+        if (!pending || pending.requestID !== payload.requestID) {
+            countDiagnostic('lateReceipts');
+        }
+        if (probe.responseAt !== null) countDiagnostic('reorderedReceipts');
+        timeDiagnostic('ReceiptRoundTrip', probe.receiptAt - probe.startedAt);
+        // Do not clear/extend the timeout, free a slot or change visible state.
+        countDiagnostic('receipts');
+    }
+
+    function recordProbeResponse(payload) {
+        const probe = state.receiptProbes.get(payload.requestID);
+        if (!probe || probe.index !== payload.index
+            || probe.configurationRevision !== payload.configurationRevision
+            || probe.responseAt !== null) return;
+        probe.responseAt = performance.now();
+        const pending = state.pending.get(payload.index);
+        if (!pending || pending.requestID !== payload.requestID) {
+            countDiagnostic('lateProbeResponses');
+        }
+        if (payload.receiptDispatchCompleted === false) countDiagnostic('receiptDispatchFailures');
+        if (probe.receiptAt === null
+            || !Number.isFinite(payload.preparationMilliseconds)
+            || payload.preparationMilliseconds < 0
+            || !Number.isFinite(payload.receiptDispatchMilliseconds)
+            || payload.receiptDispatchMilliseconds < 0) return;
+        const bounded = value => Math.min(3600000, Math.round(value));
+        diagnostics.lastPairedReceiptMs = bounded(probe.receiptAt - probe.startedAt);
+        diagnostics.lastPairedAfterReceiptMs = bounded(probe.responseAt - probe.receiptAt);
+        diagnostics.lastPairedRoundTripMs = bounded(probe.responseAt - probe.startedAt);
+        diagnostics.lastPairedPreparationMs = bounded(payload.preparationMilliseconds);
+        diagnostics.lastPairedReceiptDispatchMs = bounded(payload.receiptDispatchMilliseconds);
+        countDiagnostic('pairedResponses');
+    }
+
     function receiveMedia(payload, shouldRender) {
         if (payload.configurationRevision !== state.configurationRevision) {
             countDiagnostic('revisionRejected');
@@ -307,6 +361,7 @@
             return;
         }
 
+        if (!isPreview) recordProbeResponse(payload);
         const pending = state.pending.get(payload.index);
         // Responses are broadcast to every tile. Only our current request may
         // replace an image; a late response must not overwrite newer content.
@@ -422,17 +477,27 @@
             handleRequestFailure(index);
         }, state.settings.loadTimeoutSeconds * 1000);
 
+        const diagnosticReceipt = diagnostics.receiptRequested < MAX_RECEIPT_PROBES;
         state.pending.set(index, {
             requestID: id, timer: timeout,
             startedAt: performance.now(),
             generation: state.mediaGenerations.get(index) || 0
         });
+        if (diagnosticReceipt) {
+            state.receiptProbes.set(id, {
+                index: index, configurationRevision: state.configurationRevision,
+                startedAt: performance.now(), receiptAt: null, responseAt: null
+            });
+            countDiagnostic('receiptRequested');
+        }
         countDiagnostic('requested');
-        requestAction('LoadMedia', JSON.stringify({
+        const request = {
             index: index,
             requestID: id,
             configurationRevision: state.configurationRevision
-        }));
+        };
+        if (diagnosticReceipt) request.diagnosticReceipt = true;
+        requestAction('LoadMedia', JSON.stringify(request));
     }
 
     function handleRequestFailure(index) {
@@ -864,6 +929,9 @@
                 break;
             case 'media':
                 receiveMedia(payload);
+                break;
+            case 'mediaStarted':
+                receiveReceipt(payload);
                 break;
             case 'invalidate':
                 invalidateMedia(payload);
