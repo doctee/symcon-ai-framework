@@ -144,6 +144,11 @@ function Invoke-MediaCarouselApprovalPipeline {
         $status = Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
         if ($child.exitCode -ne 0 -or $status.outcome -cne 'activated') {
             Write-Output ($status | ConvertTo-Json -Depth 10 -Compress)
+            $phaseRoot = Join-Path $approvalPolicy.approvalStateRoot $status.approvalPlanSha256
+            foreach ($phase in @('preflight', 'activation', 'postflight', 'reseal', 'rollback')) {
+                $phaseStatus = Join-Path $phaseRoot ($phase + '-status.json')
+                if (Test-Path -LiteralPath $phaseStatus) { Write-Output (Get-Content -LiteralPath $phaseStatus -Raw) }
+            }
             throw 'Complete installed approval pipeline failed.'
         }
         $postChannel = Get-Content -LiteralPath $channelPath -Raw | ConvertFrom-Json
