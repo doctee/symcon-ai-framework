@@ -63,7 +63,7 @@ try {
         $null = [IO.Directory]::CreateDirectory($stateParent)
         Set-RestrictedAcl $stateParent ('*' + $sid) '(OI)(CI)F'
         $stateRoot = Join-Path $stateParent 'media-carousel'
-        $script:policy = Get-Content (Join-Path $bundle 'adapters/media-carousel-adapter-policy.example.json') -Raw | ConvertFrom-Json
+        $script:policy = Get-Content (Join-Path $bundle 'adapters/media-carousel-adapter-policy.example.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         $script:policy.activeModulePath = $module
         $script:policy.adapterStateRoot = $stateRoot
         $script:policy.moduleControlInstanceId = 12345
@@ -97,7 +97,7 @@ try {
         Write-Json $planPath $plan
         $record = Invoke-Coordinator install 0
         Assert-Test ($record.outcome -ceq 'installed' -and (Test-Path -LiteralPath $stateRoot)) 'Installation incomplete.'
-        $after = Get-Content -LiteralPath $policyPath -Raw | ConvertFrom-Json
+        $after = Get-Content -LiteralPath $policyPath -Raw -Encoding UTF8 | ConvertFrom-Json
         Assert-Test ($after.standaloneModuleTargets.Count -eq 2) 'Target not added.'
         Assert-Test (($after.standaloneModuleTargets[0] | ConvertTo-Json -Depth 50 -Compress) -ceq
             (($beforeText | ConvertFrom-Json).standaloneModuleTargets[0] | ConvertTo-Json -Depth 50 -Compress)) 'Existing bindings changed.'
