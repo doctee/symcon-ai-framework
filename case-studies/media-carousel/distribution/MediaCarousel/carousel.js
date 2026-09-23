@@ -44,6 +44,37 @@
         lifecycleRenderFrame: null
     };
 
+    // Bounded, view-local evidence only: no IDs, titles, image bytes, history,
+    // storage writes or extra requests. Readable through the tile DOM in QA.
+    const diagnostics = {
+        version: 1, bootstraps: 0, requested: 0, accepted: 0, timeouts: 0,
+        mediaErrors: 0, revisionRejected: 0, requestRejected: 0,
+        invalidations: 0, superseded: 0, imageReady: 0, imageFailed: 0,
+        lastRoundTripMs: 0, maxRoundTripMs: 0, lastPreparationMs: 0,
+        maxPreparationMs: 0, lastImageReadyMs: 0, maxImageReadyMs: 0,
+        lastSourceCharacters: 0
+    };
+
+    function publishDiagnostics() {
+        carousel.dataset.loadDiagnostics = JSON.stringify(Object.assign({}, diagnostics, {
+            pending: state.pending.size, cached: state.sources.size,
+            ready: state.readyRevisions.size, currentIndex: state.currentIndex,
+            itemCount: state.items.length
+        }));
+    }
+
+    function countDiagnostic(name) {
+        diagnostics[name] = Math.min(1000000000, diagnostics[name] + 1);
+        publishDiagnostics();
+    }
+
+    function timeDiagnostic(name, value) {
+        if (!Number.isFinite(value) || value < 0) return;
+        const bounded = Math.min(3600000, Math.round(value));
+        diagnostics['last' + name + 'Ms'] = bounded;
+        diagnostics['max' + name + 'Ms'] = Math.max(diagnostics['max' + name + 'Ms'], bounded);
+    }
+
     function localize(text) {
         return typeof translate === 'function' ? translate(text) : text;
     }
@@ -208,6 +239,7 @@
     }
 
     function applyBootstrap(payload) {
+        countDiagnostic('bootstraps');
         const revisionChanged = state.configurationRevision !== payload.configurationRevision;
         if (revisionChanged) {
             resetClientCache();
@@ -259,6 +291,7 @@
 
     function receiveMedia(payload, shouldRender) {
         if (payload.configurationRevision !== state.configurationRevision) {
+            countDiagnostic('revisionRejected');
             return;
         }
         if (!Number.isInteger(payload.index) || payload.index < 0 || payload.index >= state.items.length) {
@@ -278,12 +311,16 @@
         // Responses are broadcast to every tile. Only our current request may
         // replace an image; a late response must not overwrite newer content.
         if (!isPreview && (!pending || pending.requestID !== payload.requestID)) {
+            countDiagnostic('requestRejected');
             return;
         }
         if (pending && !isPreview) {
             clearTimeout(pending.timer);
             state.pending.delete(payload.index);
+            timeDiagnostic('RoundTrip', performance.now() - pending.startedAt);
+            timeDiagnostic('Preparation', payload.preparationMilliseconds);
             if (pending.generation !== (state.mediaGenerations.get(payload.index) || 0)) {
+                countDiagnostic('superseded');
                 pumpPrefetch();
                 return;
             }
@@ -294,6 +331,10 @@
             contentRevision: payload.contentRevision,
             preview: isPreview
         });
+        if (!isPreview) {
+            diagnostics.lastSourceCharacters = Math.min(1000000000, payload.source.length);
+            countDiagnostic('accepted');
+        }
         state.readyRevisions.delete(payload.index);
         state.failures.delete(payload.index);
         if (!isPreview) {
@@ -320,6 +361,7 @@
         // Keep the last usable frame while refreshing it in the background.
         state.stale.add(payload.index);
         state.mediaGenerations.set(payload.index, (state.mediaGenerations.get(payload.index) || 0) + 1);
+        countDiagnostic('invalidations');
         state.failures.delete(payload.index);
         buildPrefetchOrder();
         pumpPrefetch();
@@ -342,6 +384,7 @@
             clearTimeout(pending.timer);
             state.pending.delete(failedIndex);
         }
+        countDiagnostic('mediaErrors');
         handleRequestFailure(failedIndex);
     }
 
@@ -375,13 +418,16 @@
                 return;
             }
             state.pending.delete(index);
+            countDiagnostic('timeouts');
             handleRequestFailure(index);
         }, state.settings.loadTimeoutSeconds * 1000);
 
         state.pending.set(index, {
             requestID: id, timer: timeout,
+            startedAt: performance.now(),
             generation: state.mediaGenerations.get(index) || 0
         });
+        countDiagnostic('requested');
         requestAction('LoadMedia', JSON.stringify({
             index: index,
             requestID: id,
@@ -492,6 +538,7 @@
 
         return new Promise(function (resolve) {
             const probe = new Image();
+            const startedAt = performance.now();
             let settled = false;
             const finish = function (ready) {
                 if (settled) {
@@ -502,6 +549,8 @@
                 if (ready) {
                     state.readyRevisions.set(index, entry.contentRevision);
                 }
+                timeDiagnostic('ImageReady', performance.now() - startedAt);
+                countDiagnostic(ready ? 'imageReady' : 'imageFailed');
                 resolve(ready);
             };
             const timer = window.setTimeout(function () {
@@ -570,6 +619,7 @@
         }
 
         centerTrack(false);
+        publishDiagnostics();
     }
 
     function updatePresentationMetadata() {

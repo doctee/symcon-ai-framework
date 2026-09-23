@@ -135,6 +135,7 @@ class MediaCarousel extends IPSModuleStrict
         }
 
         $requestID = '';
+        $startedAt = hrtime(true);
 
         try {
             if (!is_string($value)) {
@@ -164,16 +165,18 @@ class MediaCarousel extends IPSModuleStrict
                 throw new OutOfRangeException('Requested media index is outside the configured sequence.');
             }
 
-            $this->UpdateVisualizationValue(
-                $this->encodeMessage(
-                    $this->createMediaMessage(
-                        $items,
-                        $index,
-                        $requestID,
-                        $configurationRevision
-                    )
-                )
+            $message = $this->createMediaMessage(
+                $items,
+                $index,
+                $requestID,
+                $configurationRevision
             );
+            // Timing metadata only; excludes host queueing and transport.
+            $message['preparationMilliseconds'] = min(
+                3600000,
+                (int) round((hrtime(true) - $startedAt) / 1000000)
+            );
+            $this->UpdateVisualizationValue($this->encodeMessage($message));
         } catch (Throwable $exception) {
             $this->SendDebug('LoadMedia failed', $exception->getMessage(), 0);
             $this->UpdateVisualizationValue(
