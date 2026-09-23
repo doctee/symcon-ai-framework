@@ -20,6 +20,24 @@ function Assert-UpdateRuntime {
     $script:runtimeCalls++
     if ($script:scenario -ceq 'postflight-failure' -and $script:runtimeCalls -eq 2) { throw 'Synthetic postflight failure.' }
 }
+# Execute the actual resealer guards with the real initializer's output paths.
+$resealAst = [Management.Automation.Language.Parser]::ParseFile(
+    (Join-Path $windows 'adapters/Invoke-SaefOwnTracksPositionMapActiveIdentityReseal.ps1'), [ref] $tokens, [ref] $errors)
+$contains = @($resealAst.FindAll({ param($n)
+    $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -ceq 'Test-PathContains'
+}, $false))
+$guards = @($resealAst.FindAll({ param($n)
+    $n -is [Management.Automation.Language.ForEachStatementAst] -and $n.Variable.VariablePath.UserPath -ceq 'managedRoot'
+}, $true))
+if ($contains.Count -ne 1 -or $guards.Count -ne 2 -or @($errors).Count) { throw 'Actual resealer path guard boundary changed.' }
+. ([scriptblock]::Create($contains[0].Extent.Text))
+function Test-InstalledResealPaths {
+    param($Channel, [string] $ChannelPath, [string] $Status)
+    $channelPolicy = $Channel; $ChannelPolicyPath = $ChannelPath; $StatusPath = $Status
+    $script:adapterPolicyPath = $Channel.standaloneModuleTargets[1].adapterPolicyPath
+    $adapterPolicy = ConvertFrom-AdditionJson ([IO.File]::ReadAllBytes($script:adapterPolicyPath))
+    foreach ($guard in $guards) { . ([scriptblock]::Create($guard.Extent.Text)) }
+}
 $scratch = Join-Path ([IO.Path]::GetTempPath()) ('saef-bootstrap-test-' + [guid]::NewGuid().ToString('N'))
 $null = [IO.Directory]::CreateDirectory($scratch)
 Set-RestrictedAcl $scratch '*S-1-5-32-544' '(OI)(CI)F'
@@ -40,7 +58,8 @@ try {
     $secretPath = Join-Path $scratch 'controller-secret.local.json'
     Write-Json $secretPath @{ formatVersion = 1; encoding = 'base64'; secretBase64 = [Convert]::ToBase64String($utf8.GetBytes(('synthetic-only-' * 3))) }
     $adapterBytes = [IO.File]::ReadAllBytes((Join-Path $windows 'adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1'))
-    $policyBytes = $utf8.GetBytes('{"formatVersion":1,"adapterProfile":"saef-media-carousel-v1"}')
+    $policyBytes = $utf8.GetBytes((@{ formatVersion = 1; adapterProfile = 'saef-media-carousel-v1'
+        activeModulePath = (Join-Path $scratch 'active'); adapterStateRoot = (Join-Path $scratch 'adapter-state') } | ConvertTo-Json))
     $spec = [pscustomobject]@{
         approvalSecretRecordPath = $secretPath; approvalSecretSha256 = (Hash-File $secretPath)
         channelHostBindingSha256 = ('a' * 64); approverIdentitySha256 = ('b' * 64); executionHostIdentitySha256 = ('c' * 64)
@@ -59,6 +78,7 @@ try {
             $root = Join-Path $scratch ($culture + '-' + $scenario)
             $null = [IO.Directory]::CreateDirectory($root)
             $generation = Join-Path $root 'generation'
+            $spec | Add-Member NoteProperty approvalRoot (Join-Path $scratch ($culture + '-' + $scenario + '-approvals')) -Force
             $channelPath = Join-Path $root 'channel.json'
             $oldAdapter = Join-Path $root 'old-adapter.ps1'; $oldPolicy = Join-Path $root 'old-policy.json'
             [IO.File]::WriteAllBytes($oldAdapter, $adapterBytes); Set-RestrictedFileAcl $oldAdapter
@@ -66,6 +86,8 @@ try {
             $old = [ordered]@{
                 formatVersion = 1; deploymentUser = $account.Name.ToLowerInvariant()
                 expectedChildProcessContractSha256 = $spec.sourceHashes.child
+                stateRoot = (Join-Path $root 'deployments'); managedFilesetRoot = (Join-Path $root 'filesets')
+                adapterStateRoot = (Join-Path $root 'adapter-states')
                 unrelatedField = @{ preserved = @('yes', 42) }
                 standaloneModuleTargets = @(
                     @{ targetId = 'saef-owntracks-position-map'; libraryGuid = '{11111111-1111-1111-1111-111111111111}'
@@ -98,7 +120,7 @@ try {
             }
             Write-Json (Join-Path $package 'qualification.local.json') $qualification
             $spec.sourceHashes.qualification = Hash-File (Join-Path $package 'qualification.local.json')
-            $context = Get-ApprovalBootstrapContext $spec $package $packageWindows $account.Name (ConvertFrom-AdditionJson $before)
+            $context = Get-ApprovalBootstrapContext $spec $package $packageWindows $account.Name (ConvertFrom-AdditionJson $before) $root
             $result = [ordered]@{ bindingMutationAttempted = $false; rollbackSucceeded = $null }
             $runtimeCalls = 0; $threw = $false
             try { Publish-UpdateGeneration $channelPath $generation $before $after $adapterBytes $policyBytes $context }
@@ -110,6 +132,39 @@ try {
                 if (($actual.standaloneModuleTargets[0] | ConvertTo-Json -Depth 30 -Compress) -cne
                     ($candidate.standaloneModuleTargets[0] | ConvertTo-Json -Depth 30 -Compress) -or
                     -not $result.approvalProfileInstalled -or $result.channelPolicySha256 -cne (Hash-File $channelPath)) { throw 'Bootstrap preservation/readback differs.' }
+                # Exercise the same installed profile through a second generation.
+                # The consumed record must survive byte-for-byte, never reset.
+                $oldApproval = ConvertFrom-AdditionJson ([IO.File]::ReadAllBytes($actual.standaloneModuleTargets[1].approvalPolicyPath))
+                $statusSuffix = ('d' * 64) + '/reseal-status.json'
+                Test-InstalledResealPaths $actual $channelPath (Join-Path $oldApproval.approvalStateRoot $statusSuffix)
+                $guardRejected = $false
+                try { Test-InstalledResealPaths $actual $channelPath (Join-Path $generation ('approval/state/' + $statusSuffix)) }
+                catch { $guardRejected = $_.Exception.Message -ceq 'Status path is inside a managed channel or module root.' }
+                if (-not $guardRejected) { throw 'Original live path defect was not reproduced.' }
+                $recordPath = Join-Path $oldApproval.approvalStateRoot (('d' * 64) + '.json')
+                Write-Json $recordPath @{ targetId = 'saef-media-carousel'; adapterProfile = 'saef-media-carousel-v1'
+                    outcome = 'rolled_back'; phaseState = 'completed'; stateSignature = 'synthetic-preserved-signature' }
+                $ledgerHash = (Get-ApprovalStateInventory $oldApproval.approvalStateRoot).sha256
+                $spec | Add-Member NoteProperty approvalStateSha256 $ledgerHash -Force
+                $spec.approvalRoot = Join-Path $scratch ($culture + '-migrated-approvals')
+                $second = Join-Path $root 'second-generation'
+                $prior = [IO.File]::ReadAllBytes($channelPath)
+                $next = ConvertFrom-AdditionJson $prior
+                $next.standaloneModuleTargets[1].adapterPath = Join-Path $second 'adapter.ps1'
+                $next.standaloneModuleTargets[1].adapterPolicyPath = Join-Path $second 'adapter-policy.local.json'
+                $migration = Get-ApprovalBootstrapContext $spec $package $packageWindows $account.Name $actual $root
+                Publish-UpdateGeneration $channelPath $second $prior ($utf8.GetBytes(($next | ConvertTo-Json -Depth 30))) $adapterBytes $policyBytes $migration
+                $migrated = Join-Path $spec.approvalRoot 'saef-media-carousel/state'
+                if ((Get-ApprovalStateInventory $migrated).sha256 -cne $ledgerHash -or
+                    (Get-ApprovalStateInventory $oldApproval.approvalStateRoot).sha256 -cne $ledgerHash) { throw 'Replay ledger was not retained.' }
+                $migratedChannel = ConvertFrom-AdditionJson ([IO.File]::ReadAllBytes($channelPath))
+                Test-InstalledResealPaths $migratedChannel $channelPath (Join-Path $migrated $statusSuffix)
+                # A managed-root candidate is rejected without creating it.
+                $spec.approvalRoot = Join-Path $root 'forbidden-approvals'
+                $rejected = $false
+                try { $null = Get-ApprovalBootstrapContext $spec $package $packageWindows $account.Name $actual $root }
+                catch { $rejected = $_.Exception.Message -ceq 'Approval root overlaps a managed channel or module root.' }
+                if (-not $rejected -or (Test-Path $spec.approvalRoot)) { throw 'Managed-root approval path was admitted.' }
             } elseif ((Hash-File $channelPath) -cne (Get-BytesSha256 $before) -or -not $result.rollbackSucceeded) { throw 'Original channel not restored.' }
             if ((Get-Acl -LiteralPath $channelPath).Sddl -cne $originalAcl -or
                 (Hash-File $oldAdapter) -cne (Get-BytesSha256 $adapterBytes) -or

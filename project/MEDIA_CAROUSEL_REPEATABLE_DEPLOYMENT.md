@@ -128,6 +128,30 @@ The diagnostic candidate must not change instance schema or camera settings.
 
 ## Operator boundary
 
+### Approval state path correction
+
+The bootstrap plan must explicitly provide `approvalBootstrap.approvalRoot`:
+a new absolute root outside the channel installation, adapter policy, module,
+managed-fileset and runtime-state roots. Its existing parent must already have
+trusted write ownership. The installer retains the resealer's existing path
+guards unchanged; putting approval evidence inside the generation is invalid.
+The initializer still owns secret/state ACL provisioning.
+
+A fully bound MediaCarousel profile may be relocated only with an exact reviewed
+`approvalStateSha256`. The updater inventories bounded terminal ledger records
+and phase evidence in ordinal order, copies every byte into the new profile and
+rechecks both inventories under the channel-before-adapter locks. Identity,
+secret, runner and resealer bindings remain unchanged. Nonterminal records,
+unexpected entries, state drift and unrelated policy changes fail closed. It
+publishes only one atomic channel pointer after copy/readback, retains the old
+profile and ledger on success or failure, and never resets consumed approvals.
+
+The Windows bootstrap regression feeds the real initializer's output paths
+through both actual resealer managed-root guards, reproduces the former invalid
+path, and exercises a second profile generation with preserved consumed state.
+This is path-boundary and migration evidence; full adapter/resealer transaction
+tests and later live activation remain separate gates.
+
 The restricted channel cannot install its own new protected binding or approval
 profile. Administrative bootstrap is a capability boundary, not another user
 approval request. If no separately authorized administrative execution channel
