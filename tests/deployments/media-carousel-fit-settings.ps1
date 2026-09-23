@@ -16,7 +16,7 @@ Write-Json $channel $settingsChannel
 Set-RestrictedFileAcl $channel
 foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
     foreach ($scenario in @('fit-success', 'fit-preflight', 'fit-response-lost', 'fit-apply-fails',
-        'fit-drift', 'fit-zero', 'fit-outside', 'fit-duplicate', 'fit-stale', 'fit-package', 'fit-enabled')) {
+        'fit-drift', 'fit-zero', 'fit-outside', 'fit-duplicate', 'fit-stale', 'fit-package', 'fit-enabled', 'fit-multi-fails')) {
         $settingsPlan = @{ formatVersion = 1; targetId = 'saef-media-carousel'
             deploymentUser = $user; expectedDeploymentSid = $sid; installRoot = $fixture
             channelSha256 = Hash-File $channel; installedPolicySha256 = Hash-File $policyPath
@@ -30,6 +30,11 @@ foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
             'fit-duplicate' { $settingsPlan.targets += $settingsPlan.targets[0] }
             'fit-stale' { $actual['11111'] += ' ' }
             'fit-package' { $settingsPlan.activePackageIdentitySha256 = 'a' * 64 }
+            'fit-multi-fails' {
+                $actual['33333'] = $settingsConfigs['11111']
+                $settingsPlan.instances += @{ instanceId = 33333; configurationSha256 = Get-TextSha256 $actual['33333'] }
+                $settingsPlan.targets += @{ instanceId = 33333; parentId = 234 }
+            }
             'fit-enabled' {
                 $actual['11111'] = $actual['11111'].Replace('false', 'true')
                 $settingsPlan.instances = @(
@@ -39,7 +44,9 @@ foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
         }
         $settingsPath = Join-Path $fixture 'settings-plan.local.json'
         Write-Json $settingsPath $settingsPlan
-        Write-Json $mockPath @{ policy = $script:policy; configurations = $actual; scenario = $scenario; logPath = $logPath }
+        $mockPolicy = $script:policy | ConvertTo-Json -Depth 40 | ConvertFrom-Json
+        $mockPolicy.expectedInstances = $settingsPlan.instances
+        Write-Json $mockPath @{ policy = $mockPolicy; configurations = $actual; scenario = $scenario; logPath = $logPath }
         $operation = if ($scenario -ceq 'fit-preflight') { 'preflight' } else { 'apply' }
         $child = Invoke-SaefPowerShellChildProcess -ScriptPath $wrapper -ExpectedScriptSha256 (Hash-File $wrapper) `
             -Arguments @('-PlanPath', $settingsPath, '-ExpectedPlanSha256', (Hash-File $settingsPath),
@@ -48,10 +55,10 @@ foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
         $text = [Text.Encoding]::UTF8.GetString($child.standardOutput)
         $record = $text | ConvertFrom-Json
         $expectedExit = if ($scenario -in @('fit-success', 'fit-preflight')) { 0 }
-            elseif ($scenario -in @('fit-response-lost', 'fit-apply-fails', 'fit-drift')) { 40 } else { 10 }
+            elseif ($scenario -in @('fit-response-lost', 'fit-apply-fails', 'fit-drift', 'fit-multi-fails')) { 40 } else { 10 }
         Assert-Test ($child.terminationReason -ceq 'exited' -and $child.exitCode -eq $expectedExit) ('Settings ' + $scenario + ': ' + $text)
         Assert-Test (-not $record.serviceRestartAttempted) 'Settings restarted service.'
-        if ($scenario -in @('fit-success', 'fit-response-lost', 'fit-apply-fails', 'fit-drift')) {
+        if ($scenario -in @('fit-success', 'fit-response-lost', 'fit-apply-fails', 'fit-drift', 'fit-multi-fails')) {
             $log = Get-Content $logPath -Raw | ConvertFrom-Json
             Assert-Test ($log.reloads -eq 0 -and $log.creates -eq 0 -and $log.deletes -eq 0) 'Settings changed module or objects.'
             Assert-Test ($log.configurations.'22222' -ceq $settingsConfigs['22222']) 'Excluded instance changed.'
@@ -63,6 +70,10 @@ foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
                 Assert-Test ($record.rollbackSucceeded -eq $false -and $log.mutations -eq 1) 'Foreign drift overwritten.'
             } else {
                 Assert-Test ($record.rollbackSucceeded -eq $true -and $log.configurations.'11111' -ceq $settingsConfigs['11111']) 'Settings rollback failed.'
+                if ($scenario -ceq 'fit-multi-fails') {
+                    Assert-Test (($log.settingsWrites -join ',') -ceq '11111:True,33333:True,33333:False,11111:False' -and
+                        $log.configurations.'33333' -ceq $settingsConfigs['11111']) 'Reverse multi-instance rollback failed.'
+                }
             }
         } else { Assert-Test (-not $record.productionMutationAttempted) 'Rejected plan reached settings mutation.' }
         Assert-Test ((Hash-File $channel) -ceq $settingsPlan.channelSha256 -and
