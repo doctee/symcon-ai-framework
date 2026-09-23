@@ -1,16 +1,18 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)][string] $ZipPath,
+    [Parameter()][string] $ZipPath = '',
     [Parameter(Mandatory = $true)][ValidatePattern('^[a-f0-9]{64}$')][string] $ExpectedZipSha256
 )
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
+$DefaultZipName = 'MediaCarousel-SchemaQualification.zip'
 
 # Package-local bootstrap, not a new general archive extraction API. The entire
 # archive is hash-bound before parsing; only these fixed regular files may exist.
 function Expand-SchemaPackage { param([string] $Path, [string] $Hash)
     $allowed = @('schema-plan.local.json', 'windows/Initialize-SaefDeploymentChannel.ps1',
         'windows/SaefChildProcess.ps1', 'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1',
+        'windows/adapters/Invoke-SaefMediaCarouselModuleOwnershipMigration.ps1',
         'windows/adapters/Test-SaefMediaCarouselSchema.ps1',
         'windows/adapters/schema-probe/library.json', 'windows/adapters/schema-probe/SchemaProbe/module.json',
         'windows/adapters/schema-probe/legacy.php', 'windows/adapters/schema-probe/candidate.php')
@@ -84,6 +86,7 @@ try {
     if ($PSVersionTable.PSEdition -cne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5) {
         throw 'Elevated Windows PowerShell 5.1 required.'
     }
+    if ([string]::IsNullOrWhiteSpace($ZipPath)) { $ZipPath = Join-Path $PSScriptRoot $DefaultZipName }
     $package = Expand-SchemaPackage ([IO.Path]::GetFullPath($ZipPath)) $ExpectedZipSha256
     $launcher = Join-Path $package.root 'windows/SaefChildProcess.ps1'
     if ((Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash.ToLowerInvariant() -cne

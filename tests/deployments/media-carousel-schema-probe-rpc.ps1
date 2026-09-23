@@ -58,6 +58,11 @@ function Invoke-RestMethod {
         'IPS_GetLibraryModules' { $v = @($p.moduleGuid) }
         'MC_ReloadModule' {
             if ($a[1] -cne 'saef-media-carousel-schema-probe') { throw 'Production reload prohibited.' }
+            $testAcl = Get-Acl -LiteralPath $testPath
+            if (-not $testAcl.AreAccessRulesProtected) { throw 'Unprotected test module reached reload.' }
+            foreach ($rule in $testAcl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {
+                if ($rule.IdentityReference.Value -eq 'S-1-5-32-545') { throw 'Shared Users ACE reached test module.' }
+            }
             $s.reloads++; $s.registered = $true
             if ((Get-Content (Join-Path $testPath 'SchemaProbe/module.php') -Raw).Contains('ShowFitToggle')) {
                 $s.candidate = $true

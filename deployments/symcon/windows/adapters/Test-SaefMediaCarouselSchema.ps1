@@ -14,6 +14,9 @@ $testID = $null
 $owned = $false
 $createAttempted = $false
 $snapshot = $null
+$modulesParent = $null
+$parentSddl = $null
+$stagingPath = $null
 $lock = $null
 $locked = $false
 $testLibrary = '{85DE8006-9775-49E6-BB7E-1924BAA5459A}'
@@ -52,14 +55,43 @@ function Invoke-ProbeMutation { param([string] $Method, [object[]] $Arguments = 
 }
 function Save-ProbeJournal {
     Write-AtomicJson (Join-Path $evidence 'journal.local.json') ([ordered]@{
-        stage = $result.stage; testPath = $testPath; testInstanceId = $testID
+        stage = $result.stage; testPath = $testPath; stagingPath = $stagingPath; testInstanceId = $testID
         createAttempted = $createAttempted; ownedDirectory = $owned
         productionMutationAttempted = $false; timestampUtc = [DateTime]::UtcNow.ToString('o')
     })
 }
+function Assert-ProbeParent {
+    # Shared parents may grant creation rights. They must not grant untrusted
+    # principals replacement/deletion or ACL takeover of a protected child.
+    Assert-AdditionPlainPath $modulesParent
+    Assert-PlainDirectory $modulesParent
+    $acl = Get-Acl -LiteralPath $modulesParent
+    $trusted = @('S-1-5-18', 'S-1-5-32-544', $additionDeploymentSid)
+    $raw = [Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorBinaryForm(), 0)
+    if ($null -eq $raw.DiscretionaryAcl -or
+        $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value -notin $trusted) {
+        throw 'Shared modules parent has an untrusted owner or null DACL.'
+    }
+    $danger = [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles -bor
+        [Security.AccessControl.FileSystemRights]::Delete -bor
+        [Security.AccessControl.FileSystemRights]::ChangePermissions -bor
+        [Security.AccessControl.FileSystemRights]::TakeOwnership
+    foreach ($rule in $acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {
+        if ($rule.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow -and
+            ($rule.PropagationFlags -band [Security.AccessControl.PropagationFlags]::InheritOnly) -eq 0 -and
+            $rule.IdentityReference.Value -notin $trusted -and ($rule.FileSystemRights -band $danger) -ne 0) {
+            throw 'Shared modules parent permits untrusted replacement or permission takeover.'
+        }
+    }
+    if ($null -ne $parentSddl -and $acl.Sddl -cne $parentSddl) { throw 'Shared modules parent ACL changed.' }
+}
 function Assert-ProbeTree {
     Assert-AdditionProtectedPath $testPath
+    Assert-ManagedRootAcl $testPath $additionDeploymentSid
     Assert-SafeDirectoryTree $testPath
+    foreach ($entry in @(Get-ChildItem -LiteralPath $testPath -Recurse -Force)) {
+        Assert-AdditionProtectedPath $entry.FullName
+    }
     $actual = @(Get-ChildItem -LiteralPath $testPath -Recurse -Force -File)
     if ($actual.Count -ne 3 -or @(Get-ChildItem -LiteralPath $testPath -Recurse -Force -Directory).Count -ne 1) {
         throw 'Unexpected test tree entries; retain for review.'
@@ -75,6 +107,7 @@ function Assert-ProbeTree {
     }
 }
 function Assert-ProbeProduction {
+    if ($null -ne $parentSddl) { Assert-ProbeParent }
     Assert-SnapshotPreserved $snapshot
     Assert-ModuleTreeIdentity $script:policy.activeModulePath
     if ((Get-DirectoryPackageIdentity $script:policy.activeModulePath) -cne
@@ -94,6 +127,7 @@ try {
     $sources = @{
         channel = Join-Path $windows 'Initialize-SaefDeploymentChannel.ps1'
         adapter = Join-Path $PSScriptRoot 'Invoke-SaefMediaCarouselModuleAdapter.ps1'
+        ownership = Join-Path $PSScriptRoot 'Invoke-SaefMediaCarouselModuleOwnershipMigration.ps1'
     }
     $imports = @{
         channel = @('Get-BytesSha256', 'Assert-AdditionPlainPath', 'Assert-AdditionProtectedPath',
@@ -102,8 +136,9 @@ try {
             'Import-MachineCredential', 'Invoke-SymconRpc', 'Get-InstanceSnapshot', 'Assert-SnapshotPreserved',
             'Get-DirectoryPackageIdentity', 'Assert-ModuleTreeIdentity', 'Assert-SymconOwnership',
             'Get-ConfigurationTokens', 'Assert-FitDefaultAddition', 'Write-AtomicJson', 'Write-AtomicText')
+        ownership = @('Assert-PlainDirectory', 'Set-ManagedTreeAcl', 'Assert-ManagedRootAcl')
     }
-    foreach ($key in @('channel', 'adapter')) {
+    foreach ($key in @('channel', 'adapter', 'ownership')) {
         $text = Read-ProbeBoundSource $sources[$key] $plan.sourceHashes.$key
         $tokens = $null; $errors = $null
         $ast = [Management.Automation.Language.Parser]::ParseInput($text, [ref] $tokens, [ref] $errors)
@@ -156,7 +191,10 @@ try {
     if ($parent.ObjectType -ne 0 -or $parent.ObjectIdent -cne $plan.parentIdent -or
         $parentParent -ne $plan.parentParentId) { throw 'Private test parent identity changed.' }
     $testPath = Join-Path (Split-Path -Parent $script:policy.activeModulePath) $testFolder
-    Assert-AdditionProtectedPath (Split-Path -Parent $testPath)
+    $result.stage = 'shared_parent_preflight'
+    $modulesParent = Split-Path -Parent $testPath
+    Assert-ProbeParent
+    $parentSddl = (Get-Acl -LiteralPath $modulesParent).Sddl
     if ((Test-Path -LiteralPath $testPath) -or (Invoke-SymconRpc 'IPS_LibraryExists' @($testLibrary)) -or
         (Invoke-SymconRpc 'IPS_ModuleExists' @($testModule))) { throw 'Existing test artifacts require separate recovery.' }
     foreach ($method in @('MC_ReloadModule', 'MC_DeleteModule')) {
@@ -174,16 +212,29 @@ try {
     $null = [IO.Directory]::CreateDirectory($evidence)
     Assert-AdditionProtectedPath $evidence
     $result.evidenceRoot = $evidence
+    Write-AtomicJson (Join-Path $evidence 'shared-parent-acl.local.json') @{ path = $modulesParent; sddl = $parentSddl }
     Write-AtomicJson (Join-Path $evidence 'before.local.json') $snapshot
+    $result.stage = 'protected_test_staging'
+    $stagingPath = Join-Path $evidence 'owned-test-library'
+    if ([IO.Path]::GetPathRoot($stagingPath) -ine [IO.Path]::GetPathRoot($testPath)) {
+        throw 'Protected staging and modules parent must be on the same volume.'
+    }
+    Save-ProbeJournal
+    # Build under the already protected evidence root; never inherit the shared
+    # parent ACL during creation. Existing managed-tree helpers own this DACL.
+    $null = New-Item -ItemType Directory -Path $stagingPath -ErrorAction Stop
+    Set-ManagedTreeAcl $stagingPath ([Security.Principal.SecurityIdentifier]::new($additionDeploymentSid))
+    Assert-ManagedRootAcl $stagingPath $additionDeploymentSid
+    $null = [IO.Directory]::CreateDirectory((Join-Path $stagingPath 'SchemaProbe'))
+    foreach ($name in @('library.json', 'SchemaProbe/module.json')) { Write-AtomicText (Join-Path $stagingPath $name) $fixture[$name] }
+    Write-AtomicText (Join-Path $stagingPath 'SchemaProbe/module.php') $fixture['legacy.php']
+    Assert-ProbeParent
     $result.stage = 'test_registration'
     Save-ProbeJournal
-    # Fixed new directory only. No adoption, production reload or camera logic.
     $result.testMutationAttempted = $true
-    $null = New-Item -ItemType Directory -Path $testPath -ErrorAction Stop
+    # Same-volume rename is exclusive: never adopt or overwrite an existing path.
+    [IO.Directory]::Move($stagingPath, $testPath)
     $owned = $true
-    $null = [IO.Directory]::CreateDirectory((Join-Path $testPath 'SchemaProbe'))
-    foreach ($name in @('library.json', 'SchemaProbe/module.json')) { Write-AtomicText (Join-Path $testPath $name) $fixture[$name] }
-    Write-AtomicText (Join-Path $testPath 'SchemaProbe/module.php') $fixture['legacy.php']
     Assert-ProbeTree
     Save-ProbeJournal
     if ((Invoke-SymconRpc 'MC_ReloadModule' @([int] $script:policy.moduleControlInstanceId, $testFolder)) -ne $true -or
