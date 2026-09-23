@@ -33,6 +33,15 @@ and parent before each mutator. Each property write is followed by ApplyChanges
 and complete inventory/configuration/object-metadata readback. Intent and
 verified records are retained separately.
 
+`IPS_SetProperty` stages a desired value; it does not itself apply it. The
+pre-ApplyChanges readback therefore accepts either the exact applied baseline
+or the exact desired configuration, recording its hash and pending flag.
+Any third configuration is still rejected. Only the exact desired state with
+no pending changes passes the subsequent full postflight. Rollback observes
+the same staged/applied distinction. The synthetic fixture models separate
+pending values instead of incorrectly making SetProperty immediately effective.
+See the official [SetProperty contract](https://www.symcon.de/en/service/documentation/command-reference/management-instances/configuration/ips-setproperty/).
+
 Symcon has no atomic multi-instance property transaction. Caught failures use
 reverse-order compensating rollback, including an uncertain last request.
 Rollback accepts only the known before/after configuration hashes; external
