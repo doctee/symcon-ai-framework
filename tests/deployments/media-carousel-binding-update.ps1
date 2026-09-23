@@ -133,13 +133,20 @@ try {
         }
     }
     Add-Type -AssemblyName System.IO.Compression
-    $zipPath = Join-Path $scratch 'binding.zip'
+    foreach ($kind in @('binding', 'repeatable')) {
+    $zipPath = Join-Path $scratch ($kind + '.zip')
     $stream = [IO.File]::Create($zipPath)
     $zip = [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Create, $true)
     try {
-        foreach ($name in @('binding-plan.local.json', 'candidate-policy.local.json', 'candidate-channel.local.json',
+        $names = @('binding-plan.local.json', 'candidate-policy.local.json', 'candidate-channel.local.json',
             'windows/Initialize-SaefDeploymentChannel.ps1', 'windows/SaefChildProcess.ps1',
-            'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1', 'windows/adapters/Update-SaefMediaCarouselBinding.ps1')) {
+            'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1', 'windows/adapters/Update-SaefMediaCarouselBinding.ps1')
+        if ($kind -ceq 'repeatable') {
+            $names += @('reviewed-baseline.local.json', 'qualification.local.json',
+                'windows/Initialize-SaefScopeBoundApprovalProfile.ps1', 'windows/Invoke-SaefScopeBoundApprovalRunner.ps1',
+                'windows/adapters/Invoke-SaefOwnTracksPositionMapActiveIdentityReseal.ps1')
+        }
+        foreach ($name in $names) {
             $bytes = $utf8.GetBytes('{}')
             if ($name -ceq 'windows/adapters/Update-SaefMediaCarouselBinding.ps1') {
                 $bytes = $utf8.GetBytes(@'
@@ -154,25 +161,26 @@ exit 0
         }
     } finally { $zip.Dispose(); $stream.Dispose() }
     $hash = Get-BytesSha256 ([IO.File]::ReadAllBytes($zipPath))
-    $expanded = Expand-SchemaPackage $zipPath $hash binding
+    $expanded = Expand-SchemaPackage $zipPath $hash $kind
     Assert-Test (Test-Path (Join-Path $expanded.root 'binding-plan.local.json')) 'Binding extraction missing.'
     foreach ($bad in @('profile', 'hash')) {
         $rejected = $false
         try {
             if ($bad -ceq 'profile') { $null = Expand-SchemaPackage $zipPath $hash schema }
-            else { $null = Expand-SchemaPackage $zipPath ('a' * 64) binding }
+            else { $null = Expand-SchemaPackage $zipPath ('a' * 64) $kind }
         } catch { $rejected = $true }
         Assert-Test $rejected 'Wrong binding profile/hash accepted.'
     }
     $launcher = Join-Path $windows 'adapters/Start-SaefMediaCarouselSchemaPackage.ps1'
     $child = Invoke-SaefPowerShellChildProcess -ScriptPath $launcher `
         -ExpectedScriptSha256 (Get-BytesSha256 ([IO.File]::ReadAllBytes($launcher))) `
-        -Arguments @('-ZipPath', $zipPath, '-ExpectedZipSha256', $hash, '-PackageKind', 'binding') `
+        -Arguments @('-ZipPath', $zipPath, '-ExpectedZipSha256', $hash, '-PackageKind', $kind) `
         -TimeoutSeconds 90 -MaximumOutputBytes 65536
     $output = $utf8.GetString($child.standardOutput)
     Assert-Test ($child.terminationReason -ceq 'exited' -and $child.exitCode -eq 0 -and
         ($output | ConvertFrom-Json).outcome -ceq 'synthetic-binding-launch') ('Binding launcher failed: ' + $output)
-    Write-Output ('PASS: MediaCarousel binding update: ' + $passed + ' Windows transaction cases / 3 cultures; binding extraction and launcher passed.')
+    }
+    Write-Output ('PASS: MediaCarousel binding update: ' + $passed + ' Windows transaction cases / 3 cultures; binding/repeatable extraction and launchers passed.')
 } finally {
     [Threading.Thread]::CurrentThread.CurrentCulture = $saved
     if ((Split-Path -Leaf $scratch) -cmatch '^saef-binding-test-[a-f0-9]{32}$') { Remove-Item -LiteralPath $scratch -Recurse -Force }

@@ -185,11 +185,11 @@ function Stage-ApprovalProfile {
     $after = [IO.File]::ReadAllBytes($shadowPolicy)
     $expected = ConvertFrom-AdditionJson $ChannelBytes
     $target = @($expected.standaloneModuleTargets | Where-Object { $_.targetId -ceq 'saef-media-carousel' })[0]
-    foreach ($binding in @(
-        @('approvalRunnerPath', (Join-Path $Generation 'approval-runner.ps1')),
-        @('approvalPolicyPath', (Join-Path $Generation 'approval-policy.local.json'))
-    )) { $target | Add-Member NoteProperty $binding[0] $binding[1] }
+    # Match the pinned initializer's property order; JSON object insertion order
+    # is otherwise different despite identical values. Keep the full comparison.
+    $target | Add-Member NoteProperty approvalRunnerPath (Join-Path $Generation 'approval-runner.ps1')
     $target | Add-Member NoteProperty expectedApprovalRunnerSha256 $spec.sourceHashes.runner
+    $target | Add-Member NoteProperty approvalPolicyPath (Join-Path $Generation 'approval-policy.local.json')
     $target | Add-Member NoteProperty expectedApprovalPolicySha256 (Get-BytesSha256 ([IO.File]::ReadAllBytes($target.approvalPolicyPath)))
     if (($expected | ConvertTo-Json -Depth 100 -Compress) -cne
         ((ConvertFrom-AdditionJson $after) | ConvertTo-Json -Depth 100 -Compress)) { throw 'Staged profile changed unrelated channel fields.' }
