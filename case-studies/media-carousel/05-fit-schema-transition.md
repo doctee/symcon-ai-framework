@@ -118,3 +118,19 @@ inspection of the journal and exact remaining identities before recovery.
 The transition is evidence, not an installed policy or activation authorization.
 Protected policy binding, inactive package staging/preflight, production reload,
 instance option changes and retained-artifact cleanup remain distinct gates.
+
+Shared-parent creation rights are not an exclusive-root ACL violation. The
+probe reuses `Set-ManagedTreeAcl` and `Assert-ManagedRootAcl` from the existing
+ownership migration, imported as hash-bound functions only. Its inert tree is
+built under protected evidence storage, then moved exclusively on the same
+volume to the absent test destination. The shared modules parent's ACL is never
+changed. Untrusted parent deletion/replacement or permission-takeover rights,
+untrusted owners, null DACLs and reparse paths still reject the operation. Exact
+parent SDDL is preserved and rechecked; every test descendant must remain protected.
+This follows the earlier target-only hardening documented in OwnTracks Gate 79
+and the MediaCarousel ownership migration, not a new host-wide ACL policy.
+
+Windows regression tests reproduce the inherited shared-parent directory-creation
+ACE and separately reject delete-child and permission-takeover rights. They also
+execute the delivered-style launcher without arguments: ZIP path resolution is
+inside the script body, never in a `$PSScriptRoot` parameter default expression.
