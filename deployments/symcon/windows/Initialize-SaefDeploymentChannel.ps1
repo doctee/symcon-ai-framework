@@ -63,6 +63,22 @@ param(
     [Parameter()]
     [string] $StandaloneModuleTargetsPath,
 
+    # Additive maintenance is deliberately separate from initial SSH/channel setup.
+    [Parameter()]
+    [switch] $AddStandaloneModuleTarget,
+
+    [Parameter()]
+    [ValidatePattern('^[a-f0-9]{64}$')]
+    [string] $ExpectedChannelPolicySha256,
+
+    [Parameter()]
+    [ValidatePattern('^[a-f0-9]{64}$')]
+    [string] $ExpectedTargetManifestSha256,
+
+    [Parameter()]
+    [ValidatePattern('^[a-f0-9]{64}$')]
+    [string] $ExpectedAdditionPlanSha256,
+
     [Parameter()]
     [string] $StatusPath
 )
@@ -212,7 +228,7 @@ function Read-StandaloneModuleTargets {
         (((Get-Item -LiteralPath $Path).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)) {
         throw [System.IO.FileNotFoundException]::new('Standalone module target policy is missing or invalid.')
     }
-    $record = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    $record = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
     $targets = @($record.targets)
     if ($record.formatVersion -ne 1 -or $targets.Count -gt 16) {
         throw [System.InvalidOperationException]::new('Standalone module target policy format is invalid.')
@@ -370,14 +386,408 @@ function Clear-FileSnapshots {
     }
 }
 
+function Assert-InitialSetupTargetSafety {
+    $existingPolicyPath = Join-Path $InstallRoot 'deployment-channel.local.json'
+    if (Test-Path -LiteralPath $existingPolicyPath) {
+        # Never project an installed target back onto the older bootstrap schema.
+        $existingPolicy = Get-Content -LiteralPath $existingPolicyPath -Raw | ConvertFrom-Json
+        if ($null -ne $existingPolicy.PSObject.Properties['standaloneModuleTargets'] -and
+            @($existingPolicy.standaloneModuleTargets).Count -gt 0) {
+            throw [InvalidOperationException]::new('Installed module targets require additive maintenance; full initialization is blocked.')
+        }
+    }
+}
+
+function Assert-AdditionPlainPath {
+    param([string] $Path)
+    if ($Path -cnotmatch '^[A-Za-z]:[\\/]' -or $Path.StartsWith('\\') -or
+        $Path.Substring(2).Contains(':')) {
+        throw [IO.IOException]::new('Target addition requires local absolute paths without alternate streams.')
+    }
+    $cursor = [IO.Path]::GetFullPath($Path)
+    while (-not [string]::IsNullOrEmpty($cursor)) {
+        if (Test-Path -LiteralPath $cursor) {
+            if (((Get-Item -LiteralPath $cursor -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+                throw [IO.IOException]::new('Target addition does not traverse reparse points.')
+            }
+        }
+        $cursor = Split-Path -Parent $cursor
+    }
+}
+
+function Assert-AdditionProtectedPath {
+    param([string] $Path)
+    Assert-AdditionPlainPath $Path
+    $acl = Get-Acl -LiteralPath $Path
+    $trusted = @('S-1-5-18', 'S-1-5-32-544',
+        [Security.Principal.WindowsIdentity]::GetCurrent().User.Value)
+    if ($null -ne (Get-Variable -Name additionDeploymentSid -ErrorAction SilentlyContinue)) {
+        $trusted += $additionDeploymentSid
+    }
+    $writeRights = [Security.AccessControl.FileSystemRights]::Write -bor
+        [Security.AccessControl.FileSystemRights]::Delete -bor
+        [Security.AccessControl.FileSystemRights]::ChangePermissions -bor
+        [Security.AccessControl.FileSystemRights]::TakeOwnership -bor
+        [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles
+    if ($acl.GetOwner([Security.Principal.SecurityIdentifier]).Value -notin $trusted) {
+        throw [Security.SecurityException]::new('Target addition requires a trusted filesystem owner.')
+    }
+    foreach ($rule in $acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {
+        if ($rule.AccessControlType -eq [Security.AccessControl.AccessControlType]::Allow -and
+            ($rule.FileSystemRights -band $writeRights) -ne 0 -and $rule.IdentityReference.Value -notin $trusted) {
+            throw [Security.SecurityException]::new('Target addition requires protected filesystem ACLs.')
+        }
+    }
+}
+
+function Assert-AdditionStatusDestination {
+    Assert-AdditionPlainPath $StatusPath
+    $destination = [IO.Path]::GetFullPath($StatusPath)
+    $protectedRoot = [IO.Path]::GetFullPath($InstallRoot).TrimEnd('\')
+    if ($destination.Equals($protectedRoot, [StringComparison]::OrdinalIgnoreCase) -or
+        $destination.StartsWith($protectedRoot + '\', [StringComparison]::OrdinalIgnoreCase) -or
+        (Split-Path -Leaf $destination) -cnotmatch '^[a-z0-9.-]*status\.local\.json$') {
+        throw [IO.IOException]::new('Addition status must be a dedicated status.local.json file outside the installed channel.')
+    }
+    $sources = @($StandaloneModuleTargetsPath)
+    if (Test-Path -LiteralPath $StandaloneModuleTargetsPath -PathType Leaf) {
+        if ((Get-Item -LiteralPath $StandaloneModuleTargetsPath).Length -gt 1048576) {
+            throw [IO.IOException]::new('Target manifest exceeds its byte limit.')
+        }
+        $record = ConvertFrom-AdditionJson ([IO.File]::ReadAllBytes($StandaloneModuleTargetsPath))
+        foreach ($target in @($record.targets)) {
+            $sources += @([string] $target.adapterPath, [string] $target.adapterPolicyPath)
+        }
+    }
+    foreach ($source in $sources) {
+        if ($destination.Equals([IO.Path]::GetFullPath($source), [StringComparison]::OrdinalIgnoreCase)) {
+            throw [IO.IOException]::new('Addition status must not overwrite an input source.')
+        }
+    }
+}
+
+function Read-AdditionBoundBytes {
+    param([string] $Path, [string] $ExpectedHash, [long] $MaximumBytes = 1048576)
+    Assert-AdditionPlainPath $Path
+    if ($ExpectedHash -cnotmatch '^[a-f0-9]{64}$' -or
+        -not (Test-Path -LiteralPath $Path -PathType Leaf) -or
+        (Get-Item -LiteralPath $Path).Length -gt $MaximumBytes) {
+        throw [IO.IOException]::new('Target addition dependency is missing, unbound or oversized.')
+    }
+    $bytes = [IO.File]::ReadAllBytes($Path)
+    if ((Get-BytesSha256 $bytes) -cne $ExpectedHash) {
+        throw [IO.IOException]::new('Target addition dependency hash changed.')
+    }
+    return ,$bytes
+}
+
+function ConvertFrom-AdditionJson {
+    param([byte[]] $Bytes)
+    $text = [Text.UTF8Encoding]::new($false, $true).GetString($Bytes)
+    # ConvertFrom-Json alone silently accepts duplicate keys. Bound depth and reject
+    # case aliases before deserializing, including inside future extension records.
+    $objects = [Collections.Generic.Stack[object]]::new()
+    for ($index = 0; $index -lt $text.Length; $index++) {
+        $char = $text[$index]
+        if ($char -eq '{' -or $char -eq '[') {
+            $objects.Push($(if ($char -eq '{') { @{} } else { $null }))
+            if ($objects.Count -gt 32) { throw [InvalidOperationException]::new('Addition JSON exceeds its nesting limit.') }
+        } elseif ($char -eq '}' -or $char -eq ']') {
+            if ($objects.Count -eq 0) { throw [InvalidOperationException]::new('Invalid addition JSON.') }
+            $null = $objects.Pop()
+        } elseif ($char -eq '"') {
+            $start = $index
+            $index++
+            while ($index -lt $text.Length -and $text[$index] -ne '"') {
+                if ($text[$index] -eq '\') { $index++ }
+                $index++
+            }
+            if ($index -ge $text.Length) { throw [InvalidOperationException]::new('Invalid addition JSON string.') }
+            $next = $index + 1
+            while ($next -lt $text.Length -and [char]::IsWhiteSpace($text[$next])) { $next++ }
+            if ($next -lt $text.Length -and $text[$next] -eq ':') {
+                $name = ('{"key":' + $text.Substring($start, $index - $start + 1) + '}') | ConvertFrom-Json
+                if ($objects.Count -eq 0 -or $null -eq $objects.Peek() -or $objects.Peek().ContainsKey($name.key)) {
+                    throw [InvalidOperationException]::new('Duplicate or invalid addition JSON property.')
+                }
+                $objects.Peek()[$name.key] = $true
+            }
+        }
+    }
+    return ($text | ConvertFrom-Json)
+}
+
+function Assert-AdditionBindings {
+    param($Targets)
+    $ids = @{}
+    $guids = @{}
+    foreach ($target in @($Targets)) {
+        if ([string] $target.targetId -cnotmatch '^saef-[a-z0-9][a-z0-9.-]{0,63}$' -or
+            $ids.ContainsKey([string] $target.targetId) -or $guids.ContainsKey([string] $target.libraryGuid)) {
+            throw [InvalidOperationException]::new('Duplicate or invalid installed target identity.')
+        }
+        $ids[[string] $target.targetId] = $true
+        $guids[[string] $target.libraryGuid] = $true
+        foreach ($binding in @(
+            @('adapterPath', 'expectedAdapterSha256'),
+            @('adapterPolicyPath', 'expectedAdapterPolicySha256'),
+            @('approvalRunnerPath', 'expectedApprovalRunnerSha256'),
+            @('approvalPolicyPath', 'expectedApprovalPolicySha256')
+        )) {
+            $hasPath = $null -ne $target.PSObject.Properties[$binding[0]]
+            $hasHash = $null -ne $target.PSObject.Properties[$binding[1]]
+            if ($hasPath -ne $hasHash -or (-not $hasPath -and $binding[0].StartsWith('adapter'))) {
+                throw [InvalidOperationException]::new('Installed target has an incomplete binding.')
+            }
+            if ($hasPath) {
+                $path = [string] $target.($binding[0])
+                Assert-AdditionProtectedPath $path
+                $null = Read-AdditionBoundBytes $path ([string] $target.($binding[1])) 4194304
+            }
+        }
+    }
+}
+
+function Invoke-StandaloneTargetAddition {
+    # Same mutex as the gateway: no deployment may overlap publication of policy.
+    $mutex = [Threading.Mutex]::new($false, 'Global\SAEF.DeploymentChannel')
+    $locked = $false
+    $published = $false
+    $moved = $false
+    $phase = 'preflight'
+    $details = @{ mutationAttempted = $false; sshdRestartAttempted = $false
+        rollbackAttempted = $false; rollbackSucceeded = $false }
+    try {
+        try { $locked = $mutex.WaitOne(0) } catch [Threading.AbandonedMutexException] {
+            $locked = $true
+            throw [InvalidOperationException]::new('Abandoned channel lock requires recovery review.')
+        }
+        if (-not $locked) { throw [InvalidOperationException]::new('Another deployment operation is active.') }
+        Assert-SourceChecksums
+        Assert-PowerShellSourceSyntax
+        $account = Get-LocalUser -Name $DeploymentUser -ErrorAction Stop
+        $group = Get-LocalGroup -SID 'S-1-5-32-544' -ErrorAction Stop
+        if (-not $account.Enabled -or $account.SID -notin @(Get-LocalGroupMember -Group $group.Name).SID) {
+            throw [Security.SecurityException]::new('Existing deployment account must remain an enabled local administrator.')
+        }
+        $additionDeploymentSid = $account.SID.Value
+        Assert-AdditionProtectedPath $InstallRoot
+        $policyPath = Join-Path $InstallRoot 'deployment-channel.local.json'
+        Assert-AdditionProtectedPath $policyPath
+        $before = Read-AdditionBoundBytes $policyPath $ExpectedChannelPolicySha256
+        $manifestBytes = Read-AdditionBoundBytes $StandaloneModuleTargetsPath $ExpectedTargetManifestSha256
+        $utf8 = [Text.UTF8Encoding]::new($false, $true)
+        $policy = ConvertFrom-AdditionJson $before
+        $manifest = ConvertFrom-AdditionJson $manifestBytes
+        if ($policy.formatVersion -ne 1 -or
+            [string] $policy.deploymentUser -cne $DeploymentUser.ToLowerInvariant() -or
+            @($policy.standaloneModuleTargets).Count -ge 16 -or @($manifest.targets).Count -ne 1) {
+            throw [InvalidOperationException]::new('Target addition requires the bound installed policy and exactly one new target.')
+        }
+        $originalTargets = @($policy.standaloneModuleTargets)
+        Assert-AdditionBindings $originalTargets
+        $targets = @(Read-StandaloneModuleTargets -Path $StandaloneModuleTargetsPath)
+        if ($targets.Count -ne 1) { throw [InvalidOperationException]::new('Exactly one new target is required.') }
+        $target = $targets[0]
+        # The reusable bootstrap reader uses paths; close the manifest reread race.
+        $null = Read-AdditionBoundBytes $StandaloneModuleTargetsPath $ExpectedTargetManifestSha256
+        $null = ConvertFrom-AdditionJson $target.adapterPolicyBytes
+        $inputTarget = @($manifest.targets)[0]
+        # Require explicit reviewed source identities, not freshly inferred approval hashes.
+        if ([string] $inputTarget.targetId -cnotmatch '^saef-[a-z0-9][a-z0-9.-]{0,63}$' -or
+            $target.targetId -cne [string] $inputTarget.targetId -or
+            $target.adapterProfile -cne [string] $inputTarget.adapterProfile -or
+            $target.libraryGuid -cne ([string] $inputTarget.libraryGuid).ToUpperInvariant() -or
+            $target.adapterSha256 -cne [string] $inputTarget.expectedAdapterSha256 -or
+            $target.adapterPolicySha256 -cne [string] $inputTarget.expectedAdapterPolicySha256) {
+            throw [InvalidOperationException]::new('New target source hashes do not match reviewed bindings.')
+        }
+        $allowed = @('targetId', 'adapterProfile', 'libraryGuid', 'adapterPath', 'adapterPolicyPath',
+            'expectedAdapterSha256', 'expectedAdapterPolicySha256')
+        foreach ($property in $inputTarget.PSObject.Properties) {
+            if ($property.Name -cnotin $allowed) {
+                throw [InvalidOperationException]::new('Unsupported new-target field; use its separately qualified installer.')
+            }
+        }
+        foreach ($existing in $originalTargets) {
+            if ([string] $existing.targetId -ieq $target.targetId -or
+                [string] $existing.libraryGuid -ieq $target.libraryGuid) {
+                throw [InvalidOperationException]::new('Target addition cannot replace an existing target or library.')
+            }
+        }
+        $targetsRoot = Join-Path $InstallRoot 'standalone-modules'
+        Assert-AdditionPlainPath $targetsRoot
+        if (Test-Path -LiteralPath $targetsRoot) { Assert-AdditionProtectedPath $targetsRoot }
+        $targetRoot = Join-Path $targetsRoot $target.targetId
+        Assert-AdditionPlainPath $targetRoot
+        if (Test-Path -LiteralPath $targetRoot) {
+            throw [IO.IOException]::new('Target directory already exists; recovery review is required.')
+        }
+        $installed = [pscustomobject][ordered]@{
+            targetId = $target.targetId; adapterProfile = $target.adapterProfile; libraryGuid = $target.libraryGuid
+            adapterPath = Join-Path $targetRoot 'adapter.ps1'; expectedAdapterSha256 = $target.adapterSha256
+            adapterPolicyPath = Join-Path $targetRoot 'adapter-policy.local.json'
+            expectedAdapterPolicySha256 = $target.adapterPolicySha256
+        }
+        # Preserve the complete existing records, including future extension fields.
+        $policy.standaloneModuleTargets = @($originalTargets) + @($installed)
+        $after = $utf8.GetBytes(($policy | ConvertTo-Json -Depth 100) + [Environment]::NewLine)
+        if ($after.Length -gt 1048576) { throw [IO.IOException]::new('Candidate channel policy exceeds its byte limit.') }
+        $afterHash = Get-BytesSha256 $after
+        $plan = $utf8.GetBytes('saef-add-target-v1' + "`n" + $ExpectedChannelPolicySha256 + "`n" +
+            $ExpectedTargetManifestSha256 + "`n" + $afterHash)
+        $planHash = Get-BytesSha256 $plan
+        $details.additionPlanSha256 = $planHash
+        $details.beforeChannelPolicySha256 = $ExpectedChannelPolicySha256
+        $details.channelPolicySha256 = $afterHash
+        $details.targetId = $target.targetId
+        $retentionRoot = Join-Path $InstallRoot 'target-additions'
+        Assert-AdditionPlainPath $retentionRoot
+        if (Test-Path -LiteralPath $retentionRoot) {
+            Assert-AdditionProtectedPath $retentionRoot
+            if (@(Get-ChildItem -LiteralPath $retentionRoot -Force).Count -ge 16) {
+                throw [IO.IOException]::new('Target-addition evidence limit reached; separately approved retention is required.')
+            }
+            foreach ($retained in @(Get-ChildItem -LiteralPath $retentionRoot -Force)) {
+                $resultPath = Join-Path $retained.FullName 'result.local.json'
+                Assert-AdditionProtectedPath $resultPath
+                $result = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
+                if ([string] $result.outcome -cnotin @('installed', 'rolled_back')) {
+                    throw [InvalidOperationException]::new('Incomplete target addition requires recovery review.')
+                }
+            }
+        }
+        if ($PreflightOnly) {
+            return @{ phase = $phase; outcome = 'passed'; exitCode = 0; details = $details }
+        }
+        if ($ExpectedAdditionPlanSha256 -cne $planHash) {
+            throw [InvalidOperationException]::new('Apply requires the exact reviewed addition plan hash.')
+        }
+        $phase = 'install'
+        $details.mutationAttempted = $true
+        if (-not (Test-Path -LiteralPath $retentionRoot)) {
+            $null = New-Item -ItemType Directory -Path $retentionRoot
+            Set-RestrictedAcl $retentionRoot '*S-1-5-32-544' '(OI)(CI)F'
+        }
+        $evidenceRoot = Join-Path $retentionRoot ([Guid]::NewGuid().ToString('N'))
+        $null = New-Item -ItemType Directory -Path $evidenceRoot
+        Set-RestrictedAcl $evidenceRoot '*S-1-5-32-544' '(OI)(CI)F'
+        $details.evidenceRoot = $evidenceRoot
+        $backupPath = Join-Path $evidenceRoot 'channel-before.local.json'
+        [IO.File]::WriteAllBytes($backupPath, $before)
+        Set-RestrictedFileAcl $backupPath
+        $beforeAcl = Get-Acl -LiteralPath $policyPath
+        [IO.File]::WriteAllText((Join-Path $evidenceRoot 'channel-before-acl.local.txt'), $beforeAcl.Sddl, $utf8)
+        [IO.File]::WriteAllBytes((Join-Path $evidenceRoot 'channel-after.local.json'), $after)
+        [IO.File]::WriteAllBytes((Join-Path $evidenceRoot 'target-manifest.local.json'), $manifestBytes)
+        $staging = Join-Path $evidenceRoot 'target'
+        $null = New-Item -ItemType Directory -Path $staging
+        Set-RestrictedAcl $staging '*S-1-5-32-544' '(OI)(CI)F'
+        [IO.File]::WriteAllBytes((Join-Path $staging 'adapter.ps1'), $target.adapterBytes)
+        [IO.File]::WriteAllBytes((Join-Path $staging 'adapter-policy.local.json'), $target.adapterPolicyBytes)
+        foreach ($file in @(Get-ChildItem -LiteralPath $staging -File)) { Set-RestrictedFileAcl $file.FullName }
+        $candidatePath = Join-Path $evidenceRoot 'channel-candidate.local.json'
+        [IO.File]::WriteAllBytes($candidatePath, $after)
+        Set-Acl -LiteralPath $candidatePath -AclObject $beforeAcl
+        # Revalidate immediately before publishing. No existing source is rewritten.
+        $null = Read-AdditionBoundBytes $policyPath $ExpectedChannelPolicySha256
+        $null = Read-AdditionBoundBytes $StandaloneModuleTargetsPath $ExpectedTargetManifestSha256
+        Assert-AdditionBindings $originalTargets
+        if (-not (Test-Path -LiteralPath $targetsRoot)) {
+            $null = New-Item -ItemType Directory -Path $targetsRoot
+            Set-RestrictedAcl $targetsRoot '*S-1-5-32-544' '(OI)(CI)F'
+        }
+        [IO.Directory]::Move($staging, $targetRoot)
+        $moved = $true
+        Assert-AdditionBindings @($installed)
+        [IO.File]::Replace($candidatePath, $policyPath, (Join-Path $evidenceRoot 'channel-replaced.local.json'))
+        $published = $true
+        $null = Read-AdditionBoundBytes $policyPath $afterHash
+        Assert-AdditionProtectedPath $policyPath
+        if ((Get-Acl -LiteralPath $policyPath).Sddl -cne $beforeAcl.Sddl) {
+            throw [Security.SecurityException]::new('Channel policy ACL changed during publication.')
+        }
+        Assert-AdditionBindings $policy.standaloneModuleTargets
+        $details.outcome = 'installed'
+        [IO.File]::WriteAllText((Join-Path $evidenceRoot 'result.local.json'), ($details | ConvertTo-Json), $utf8)
+        $details.Remove('outcome')
+        return @{ phase = $phase; outcome = 'installed'; exitCode = 0; details = $details }
+    } catch {
+        $details.errorType = $_.Exception.GetType().FullName
+        $details.failureReason = $_.Exception.Message
+        $details.rollbackAttempted = $published -or $moved
+        try {
+            if ($published) {
+                # Do not overwrite an intervening external edit, even during recovery.
+                $null = Read-AdditionBoundBytes $policyPath $afterHash
+                $restorePath = Join-Path $evidenceRoot 'channel-restore.local.json'
+                [IO.File]::WriteAllBytes($restorePath, $before)
+                Set-Acl -LiteralPath $restorePath -AclObject $beforeAcl
+                [IO.File]::Replace($restorePath, $policyPath, (Join-Path $evidenceRoot 'channel-failed.local.json'))
+                $null = Read-AdditionBoundBytes $policyPath $ExpectedChannelPolicySha256
+                if ((Get-Acl -LiteralPath $policyPath).Sddl -cne $beforeAcl.Sddl) {
+                    throw [Security.SecurityException]::new('Channel policy ACL rollback failed.')
+                }
+            }
+            if ($moved) {
+                $null = Read-AdditionBoundBytes $policyPath $ExpectedChannelPolicySha256
+                Assert-AdditionBindings @($installed)
+                [IO.Directory]::Move($targetRoot, $staging)
+            }
+            $details.rollbackSucceeded = $true
+        } catch { $details.rollbackSucceeded = $false }
+        if ($details.ContainsKey('evidenceRoot')) {
+            try {
+                $details.outcome = $(if ($details.rollbackSucceeded) { 'rolled_back' } else { 'recovery_required' })
+                [IO.File]::WriteAllText((Join-Path $details.evidenceRoot 'result.local.json'), ($details | ConvertTo-Json), $utf8)
+            } catch { $details.rollbackSucceeded = $false }
+            $details.Remove('outcome')
+        }
+        return @{ phase = $phase; outcome = 'failed'; exitCode = $(if ($phase -eq 'preflight') { 10 } else { 20 }); details = $details }
+    } finally {
+        if ($locked) { $mutex.ReleaseMutex() }
+        $mutex.Dispose()
+    }
+}
+
 $phase = 'preflight'
 $failedStep = 'elevation'
 $sshdConfigBackup = $null
 $sshdConfigChanged = $false
 $fileSnapshots = @()
 $mutationsStarted = $false
+$statusSafe = $true
+$bootstrapMutex = $null
+$bootstrapLocked = $false
 try {
     Assert-Elevated | Out-Null
+    if ($AddStandaloneModuleTarget) {
+        $statusSafe = $false
+        Assert-AdditionStatusDestination
+        $statusSafe = $true
+        $failedStep = 'standalone_target_addition'
+        $addition = Invoke-StandaloneTargetAddition
+        try {
+            Write-BootstrapStatus -Phase $addition.phase -Outcome $addition.outcome `
+                -ExitCode $addition.exitCode -Details $addition.details
+        } catch {
+            # Installation has its own protected result. A reporting failure must
+            # not be presented as a no-mutation preflight failure or rolled back.
+            [Console]::Error.WriteLine('Addition status write failed; inspect retained target-additions evidence before retrying.')
+            exit $ExitInstallFailed
+        }
+        exit $addition.exitCode
+    }
+    if ($ExpectedChannelPolicySha256 -or $ExpectedTargetManifestSha256 -or $ExpectedAdditionPlanSha256) {
+        throw [InvalidOperationException]::new('Addition hash parameters require AddStandaloneModuleTarget mode.')
+    }
+    $bootstrapMutex = [Threading.Mutex]::new($false, 'Global\SAEF.DeploymentChannel')
+    try { $bootstrapLocked = $bootstrapMutex.WaitOne(0) } catch [Threading.AbandonedMutexException] {
+        $bootstrapLocked = $true
+        throw [InvalidOperationException]::new('Abandoned channel lock requires recovery review.')
+    }
+    if (-not $bootstrapLocked) { throw [InvalidOperationException]::new('Another deployment operation is active.') }
+    Assert-InitialSetupTargetSafety
     $failedStep = 'deployment_account'
     $deploymentAccount = Get-LocalUser -Name $DeploymentUser -ErrorAction Stop
     if (-not $deploymentAccount.Enabled) {
@@ -734,6 +1144,10 @@ $markerEnd
     }
     Clear-FileSnapshots -Snapshots $fileSnapshots
     $exitCode = if ($phase -eq 'preflight') { $ExitPreflightFailed } else { $ExitInstallFailed }
+    if (-not $statusSafe) {
+        [Console]::Error.WriteLine('Unsafe addition status destination or malformed input; no status file written.')
+        exit $exitCode
+    }
     Write-BootstrapStatus -Phase $phase -Outcome 'failed' -ExitCode $exitCode `
         -Details @{
             errorType = $failureException.GetType().FullName
@@ -742,4 +1156,7 @@ $markerEnd
             rollbackSucceeded = $rollbackSucceeded
         }
     exit $exitCode
+} finally {
+    if ($bootstrapLocked) { $bootstrapMutex.ReleaseMutex() }
+    if ($null -ne $bootstrapMutex) { $bootstrapMutex.Dispose() }
 }

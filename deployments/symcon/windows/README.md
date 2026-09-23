@@ -549,6 +549,68 @@ interactive and Remote Desktop logon for that account. OpenSSH Server must
 already be installed and running; the initializer deliberately does not add a
 Windows capability or change firewall rules.
 
+### Adding a target to an installed channel
+
+Use the **same initializer** with `-AddStandaloneModuleTarget`, not the original
+full setup path. Full initialization is now refused when the installed policy
+already contains module targets: its historical projection cannot preserve later
+approval bindings. This guard also applies to full-setup preflight. Fresh setup
+remains unchanged; this change does not implement a general channel upgrade.
+
+The additive mode requires a protected existing installation, an enabled local
+administrator deployment account, and a private version-1 target manifest with
+**exactly one new target**. In addition to the existing source fields, that target
+must supply reviewed `expectedAdapterSha256` and `expectedAdapterPolicySha256`
+values. Unknown fields on the **new** target are rejected; installing its own
+approval profile remains a separate qualified operation. All fields on existing
+targets (including approval runner/policy bindings and future extensions) and all
+other policy settings are retained. Existing target IDs or library GUIDs cannot
+be replaced. An already present target directory fails closed, not as an
+unverified idempotent success.
+
+```powershell
+$addition = @{
+    DeploymentUser = '<existing-private-deployment-user>'
+    AddStandaloneModuleTarget = $true
+    InstallRoot = '<existing-private-channel-root>'
+    StandaloneModuleTargetsPath = '<private-single-target-manifest>'
+    ExpectedChannelPolicySha256 = '<reviewed-existing-policy-sha256>'
+    ExpectedTargetManifestSha256 = '<reviewed-manifest-sha256>'
+    StatusPath = '<private-directory-outside-channel>\addition-status.local.json'
+}
+& .\Initialize-SaefDeploymentChannel.ps1 @addition -PreflightOnly
+# Review exit 0 / outcome passed and additionPlanSha256 from the status file.
+# Apply only after approval of that exact plan, with the same inputs:
+& .\Initialize-SaefDeploymentChannel.ps1 @addition `
+    -ExpectedAdditionPlanSha256 '<reviewed-addition-plan-sha256>'
+```
+
+The gateway's global mutex excludes concurrent deployments. Preflight verifies
+all existing adapter/policy and optional approval bindings, source hashes,
+bounded JSON (including duplicate/case-alias rejection), plain paths and protected
+ACLs. It writes only the explicitly selected status file. Apply stages the new
+target, retains original policy bytes and ACL evidence, and atomically replaces
+the policy only after a final drift check. Postflight checks installed bindings,
+exact policy hash and its original ACL. A failure restores the original policy
+atomically and retains the failed target outside the active target directory.
+An external policy edit blocks automatic rollback rather than being overwritten.
+
+There is **no RPC, Module Control reload, credential/key rewrite, gateway update,
+Symcon restart or OpenSSH restart** in this mode. Adapter-owned runtime state and
+module activation are not provisioned or executed here; their existing adapter
+preflight and approval gates remain mandatory. This is installation-integrity
+verification, not a live module health check.
+
+Evidence stays below protected `target-additions/<operation-id>` in the channel
+root. Incomplete operations block further additions pending recovery review;
+at 16 retained operations, a separately approved retention decision is required.
+No previous target, failed package or backup is automatically deleted. Full
+setup uses the same mutex and cannot overlap additive maintenance. The Windows 5.1
+qualification `tests/deployments/channel-target-addition.ps1` uses isolated
+synthetic files and the original CLI; it does not touch a live installation.
+
+### Initial setup
+
 Copy this directory to the Windows host and verify `SHA256SUMS`. Run the
 initializer from an elevated PowerShell process under an independent local
 administrator account. The configured deployment account must exist, be
