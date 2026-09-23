@@ -11,7 +11,9 @@ param(
     [Parameter(Mandatory = $true)][switch] $ChannelMutexAlreadyHeld,
     [Parameter(Mandatory = $true)][string] $CoordinatorPlanSha256,
     [Parameter(Mandatory = $true)][string] $ActivationStatusPath,
-    [Parameter(Mandatory = $true)][string] $Confirmation
+    [Parameter(Mandatory = $true)][string] $Confirmation,
+    [Parameter()][ValidateSet('saef-owntracks-position-map', 'saef-media-carousel')]
+    [string] $TargetId = 'saef-owntracks-position-map'
 )
 
 Set-StrictMode -Version 2.0
@@ -23,7 +25,7 @@ function Get-Sha256 {
 }
 
 if (-not [bool] $ChannelMutexAlreadyHeld -or
-    $Confirmation -cne 'reseal-saef-owntracks-position-map-active-identity' -or
+    $Confirmation -cne ('reseal-' + $TargetId + '-active-identity') -or
     (Get-Sha256 -Path $ChannelPolicyPath) -cne $ExpectedChannelPolicySha256 -or
     -not (Test-Path -LiteralPath $ActivationStatusPath -PathType Leaf)) {
     throw [Security.SecurityException]::new('Synthetic reseal binding differs.')

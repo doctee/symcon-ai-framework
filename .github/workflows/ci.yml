@@ -5,6 +5,19 @@ on:
   pull_request:
 
 jobs:
+  scope-bound-approval-windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [saef-owntracks-position-map, saef-media-carousel]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Qualify isolated approval runner and profile installer
+        shell: powershell
+        run: ./tests/deployments/scope-bound-approval-native.ps1 -TargetId '${{ matrix.target }}'
+
   channel-target-addition-windows:
     runs-on: windows-latest
     timeout-minutes: 10

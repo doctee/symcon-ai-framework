@@ -15,6 +15,10 @@ This project adheres to Semantic Versioning.
   conservative inspection and post-success rollback with durable predecessor
   evidence. Repeatable approval-profile/reseal installation remains a separate
   unfinished integration gate; no live installation is implied.
+- Added target-bound MediaCarousel code-only reseal and an explicit hash-bound
+  reviewed-baseline reconciliation mode. OwnTracks keeps its default reseal
+  contract; shared-runner qualification covers both target labels using isolated
+  synthetic fixtures, without changing live bindings.
 - Added an opt-in HA Matter HS feedback quantization profile with transport-bin
   regression coverage and unchanged default color comparisons. Its deployment
   candidate includes the separately reviewed missing structured-color repair.

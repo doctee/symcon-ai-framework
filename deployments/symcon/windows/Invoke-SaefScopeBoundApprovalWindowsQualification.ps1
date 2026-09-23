@@ -38,7 +38,13 @@ param(
     [string] $ChildProcessContractPath = (Join-Path $PSScriptRoot 'SaefChildProcess.ps1'),
 
     [Parameter()]
-    [string] $StatusPath
+    [string] $StatusPath,
+
+    # Target labels select production argument contracts only. All paths,
+    # adapters and policies in the scenarios remain isolated synthetic fixtures.
+    [Parameter()]
+    [ValidateSet('saef-owntracks-position-map', 'saef-media-carousel')]
+    [string] $QualificationTargetId = 'saef-owntracks-position-map'
 )
 
 Set-StrictMode -Version 2.0
@@ -455,8 +461,8 @@ function Invoke-ProfileInstallerScenario {
         [IO.Directory]::CreateDirectory($directory) | Out-Null
     }
 
-    $targetId = 'saef-qualification-target'
-    $adapterProfile = 'saef-qualification-adapter-v1'
+    $targetId = $QualificationTargetId
+    $adapterProfile = $QualificationTargetId + '-v1'
     $targetAdapterPath = Join-Path $targetRoot 'synthetic-adapter.ps1'
     $targetResealPath = Join-Path $targetRoot 'synthetic-reseal.ps1'
     $adapterPolicyPath = Join-Path $targetRoot 'adapter-policy.json'
@@ -647,8 +653,8 @@ function Invoke-RunnerScenario {
     $candidatePackage = Get-TextSha256 -Text ('candidate:' + $Label)
     $packageSha256 = Get-TextSha256 -Text ('archive:' + $Label)
     $deploymentId = 'saef-qualification-' + $Label.Replace('_', '-')
-    $targetId = 'saef-qualification-target'
-    $adapterProfile = 'saef-qualification-adapter-v1'
+    $targetId = $QualificationTargetId
+    $adapterProfile = $QualificationTargetId + '-v1'
 
     $script:runnerScenarioPhase = 'fixture_files'
     Write-Json -Path $transactionPath -Value ([ordered]@{ formatVersion = 1 })
