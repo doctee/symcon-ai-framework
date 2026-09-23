@@ -354,6 +354,8 @@ function Start-MockRpc {
                 $errorRecord = $null
                 switch ($method) {
                     'SAEF_Utf8Probe' { $result = [string] $request.params[0] }
+                    'SAEF_Utf8RequestProbe' { $result = ([string] $request.params[0] -ceq $ConfigurationOne) }
+                    'SAEF_InvalidUtf8Probe' { $result = $null }
                     'IPS_GetKernelRunlevel' { $result = 10103 }
                     'IPS_FunctionExists' { $result = ([string] $request.params[0] -eq 'MC_ReloadModule') }
                     'IPS_InstanceExists' {
@@ -450,6 +452,7 @@ function Start-MockRpc {
                     ($response | ConvertTo-Json -Depth 8 -Compress)
                 )
                 $context.Response.StatusCode = 200
+                if ($method -ceq 'SAEF_InvalidUtf8Probe') { $bytes = [byte[]] @(0xc3, 0x28) }
                 $context.Response.ContentType = 'application/json'
                 $context.Response.ContentLength64 = $bytes.Length
                 $context.Response.OutputStream.Write($bytes, 0, $bytes.Length)
@@ -671,10 +674,14 @@ try {
                 if ((Invoke-SymconRpc 'SAEF_Utf8Probe' @($value)) -cne $value) { throw 'UTF8 HTTP roundtrip differs.' }
             }
         }
-        $legacyBody = @{ jsonrpc = '2.0'; id = 1; method = 'SAEF_Utf8Probe'; params = @($configurationOne) } |
+        if ((Invoke-SymconRpc 'SAEF_Utf8RequestProbe' @($configurationOne)) -ne $true) { throw 'UTF8 request bytes differ.' }
+        $legacyBody = @{ jsonrpc = '2.0'; id = 1; method = 'SAEF_Utf8RequestProbe'; params = @($configurationOne) } |
             ConvertTo-Json -Depth 10 -Compress
         $legacy = Invoke-RestMethod -Uri $RpcUri -Method Post -ContentType 'application/json' -Body $legacyBody -TimeoutSec 10
-        if ($legacy.result -ceq $configurationOne) { throw 'Legacy encoding negative control did not reproduce corruption.' }
+        if ($legacy.result -ne $false) { throw 'Legacy request encoding negative control did not reproduce corruption.' }
+        $invalidRejected = $false
+        try { $null = Invoke-SymconRpc 'SAEF_InvalidUtf8Probe' @() } catch { $invalidRejected = $true }
+        if (-not $invalidRejected) { throw 'Invalid UTF8 response was accepted.' }
         $passedScenarios += 'explicit-utf8-http-roundtrip-three-cultures-and-legacy-negative-control'
         $positiveCaseCount++
     } finally {
