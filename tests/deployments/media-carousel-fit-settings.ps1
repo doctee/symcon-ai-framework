@@ -72,6 +72,9 @@ foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
 }
 
 Add-Type -AssemblyName System.IO.Compression
+# Real settings launcher dispatch, rejected before any RPC by a stale binding.
+$settingsPlan.channelSha256 = 'a' * 64
+Write-Json $settingsPath $settingsPlan
 $settingsEntries = @('settings-plan.local.json', 'windows/Initialize-SaefDeploymentChannel.ps1',
     'windows/SaefChildProcess.ps1', 'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1',
     'windows/adapters/Set-SaefMediaCarouselFitToggle.ps1')
@@ -89,4 +92,14 @@ $expanded = Expand-SchemaPackage $settingsZipPath (Hash-File $settingsZipPath) s
 foreach ($name in $settingsEntries) {
     Assert-Test ((Hash-File (Join-Path $expanded.root $name)) -ceq (Hash-File (Join-Path $fixture $name))) 'Settings extraction differs.'
 }
+$passed++
+$launch = Invoke-SaefPowerShellChildProcess `
+    -ScriptPath (Join-Path $windowsRoot 'adapters/Start-SaefMediaCarouselSchemaPackage.ps1') `
+    -ExpectedScriptSha256 (Hash-File (Join-Path $windowsRoot 'adapters/Start-SaefMediaCarouselSchemaPackage.ps1')) `
+    -Arguments @('-ZipPath', $settingsZipPath, '-ExpectedZipSha256', (Hash-File $settingsZipPath), '-PackageKind', 'settings') `
+    -TimeoutSeconds 60 -MaximumOutputBytes 65536
+$launchText = [Text.Encoding]::UTF8.GetString($launch.standardOutput)
+$launchResult = $launchText | ConvertFrom-Json
+Assert-Test ($launch.terminationReason -ceq 'exited' -and $launch.exitCode -eq 10 -and
+    $launchResult.operation -ceq 'enable_fit_toggle' -and -not $launchResult.productionMutationAttempted) ('Settings launcher: ' + $launchText)
 $passed++
