@@ -790,4 +790,33 @@ $final = $receiptModule->testLastVisualizationUpdate();
 check($final['action'] === 'media', 'Optional receipt failure must not block image.');
 check($final['receiptDispatchCompleted'] === false, 'Receipt failure not exposed.');
 
+$batch = [
+    ['index' => 0, 'requestID' => 'batch_a', 'configurationRevision' => $receiptRevision],
+    ['index' => 1, 'requestID' => 'batch_b', 'configurationRevision' => $receiptRevision],
+];
+$beforeCount = count($receiptModule->testVisualizationUpdates());
+$beforeReads = count($mediaContentReads);
+$receiptModule->RequestAction('LoadMediaBatch', json_encode($batch, JSON_THROW_ON_ERROR));
+$batchUpdates = array_map(
+    static fn (string $json): array => json_decode($json, true, 32, JSON_THROW_ON_ERROR),
+    array_slice($receiptModule->testVisualizationUpdates(), $beforeCount)
+);
+check(count($mediaContentReads) === $beforeReads + 2, 'Batch must read exactly two requested images.');
+check(array_column($batchUpdates, 'requestID') === ['batch_a', 'batch_b'], 'Batch response correlation/order lost.');
+check(array_column($batchUpdates, 'action') === ['media', 'media'], 'Batch did not retain separate image responses.');
+foreach ([[], [$batch[0], $batch[1], $batch[0]], [$batch[0], $batch[0]], ['bad'], ['entry' => $batch[0]]] as $invalidBatch) {
+    $beforeReads = count($mediaContentReads);
+    $rejected = false;
+    try {
+        $receiptModule->RequestAction('LoadMediaBatch', json_encode($invalidBatch, JSON_THROW_ON_ERROR));
+    } catch (InvalidArgumentException) {
+        $rejected = true;
+    }
+    check($rejected && count($mediaContentReads) === $beforeReads, 'Invalid batch must fail before reading images.');
+}
+$batch[0]['index'] = 999;
+$receiptModule->RequestAction('LoadMediaBatch', json_encode($batch, JSON_THROW_ON_ERROR));
+check($receiptModule->testLastVisualizationUpdate()['requestID'] === 'batch_b', 'One image failure blocked its neighbour.');
+check($receiptModule->testLastVisualizationUpdate()['action'] === 'media', 'Valid batch neighbour was lost.');
+
 echo "media-carousel-module: ok\n";

@@ -14,6 +14,8 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added bounded MediaCarousel two-image SDK batches with one active batch per
+  view, independent image correlation and unchanged configuration/ownership.
 - Added a six-request-per-view MediaCarousel delivery-stage probe with small
   correlated receipts, paired timing and unchanged image timeout/retry behavior.
 - Added bounded, view-local MediaCarousel loading diagnostics and server image

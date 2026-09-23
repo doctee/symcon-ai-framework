@@ -130,6 +130,40 @@ class MediaCarousel extends IPSModuleStrict
 
     public function RequestAction(string $ident, mixed $value): void
     {
+        if ($ident === 'LoadMediaBatch') {
+            if (!is_string($value) || strlen($value) > 4096) {
+                throw new InvalidArgumentException('Invalid media batch envelope.');
+            }
+            $requests = json_decode($value, true, 16, JSON_THROW_ON_ERROR);
+            if (
+                !is_array($requests) || !array_is_list($requests)
+                || count($requests) < 1 || count($requests) > 2
+            ) {
+                throw new InvalidArgumentException('Media batches require one or two requests.');
+            }
+            $ids = [];
+            $indices = [];
+            foreach ($requests as $request) {
+                if (!is_array($request)) {
+                    throw new InvalidArgumentException('Invalid media batch entry.');
+                }
+                $id = $this->readRequestID($request);
+                $index = $this->readRequestIndex($request);
+                $this->readRequestConfigurationRevision($request);
+                if (in_array($id, $ids, true) || in_array($index, $indices, true)) {
+                    throw new InvalidArgumentException('Duplicate media batch entry.');
+                }
+                $ids[] = $id;
+                $indices[] = $index;
+            }
+            // Reuse the single-image path: no combined large payload, no new
+            // media ownership, and a failed image cannot discard its neighbour.
+            foreach ($requests as $request) {
+                $this->RequestAction('LoadMedia', json_encode($request, JSON_THROW_ON_ERROR));
+            }
+
+            return;
+        }
         if ($ident !== 'LoadMedia') {
             throw new InvalidArgumentException('Unsupported action: ' . $ident);
         }
