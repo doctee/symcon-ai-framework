@@ -42,6 +42,9 @@ function Invoke-MediaCarouselApprovalPipeline {
     $originalAdapter = Join-Path $package 'original-adapter.ps1'
     [IO.File]::WriteAllBytes($originalAdapter, $adapterBytes)
     Set-RestrictedFileAcl $originalAdapter
+    $originalPolicy = Join-Path $package 'original-policy.json'
+    Copy-Item -LiteralPath $policyPath -Destination $originalPolicy
+    $policyPath = $originalPolicy
     Set-RestrictedFileAcl $policyPath
     $channelPath = Join-Path $channelRoot 'deployment-channel.local.json'
     $channel = [ordered]@{
