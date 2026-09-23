@@ -10,7 +10,7 @@ $ErrorActionPreference = 'Stop'
 $result = [ordered]@{ formatVersion = 1; operation = $Operation; outcome = 'failed'
     stage = 'inputs'; stateProvisioningAttempted = $false; targetInstallationAttempted = $false
     moduleActivationAttempted = $false; symconRpcContactAttempted = $false
-    serviceRestartAttempted = $false; stateRootRetained = $false; exitCode = 10 }
+    serviceRestartAttempted = $false; stateRootRetained = $null; exitCode = 10 }
 $evidence = $null
 
 # Bootstrap reads only bound data/functions; the existing shared validator then
@@ -18,11 +18,18 @@ $evidence = $null
 function Read-BoundSource { param([string] $Path, [string] $Hash)
     if ($Hash -cnotmatch '^[a-f0-9]{64}$' -or -not [IO.Path]::IsPathRooted($Path) -or
         -not (Test-Path -LiteralPath $Path -PathType Leaf) -or
-        (Get-Item -LiteralPath $Path -Force).Length -gt 4194304 -or
-        (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() -cne $Hash) {
+        (Get-Item -LiteralPath $Path -Force).Length -gt 4194304) {
         throw 'Missing, oversized or changed installation input.'
     }
-    return [IO.File]::ReadAllText($Path, [Text.UTF8Encoding]::new($false, $true))
+    $bytes = [IO.File]::ReadAllBytes($Path)
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    try {
+        if ($bytes.Length -gt 4194304 -or
+            ([BitConverter]::ToString($algorithm.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant() -cne $Hash) {
+            throw 'Installation input hash differs.'
+        }
+        return [Text.UTF8Encoding]::new($false, $true).GetString($bytes)
+    } finally { $algorithm.Dispose() }
 }
 function Invoke-InstallationChild {
     param([string] $Path, [string] $Hash, [string[]] $Arguments, [string] $Status)
@@ -58,21 +65,22 @@ try {
         channel = $initializer; state = $stateInitializer; adapter = $adapter; launcher = $launcher
         checksums = (Join-Path $windows 'SHA256SUMS')
     }
+    $boundTexts = @{}
     foreach ($key in $fixedSources.Keys) {
-        $null = Read-BoundSource $fixedSources[$key] ([string] $plan.sourceHashes.$key)
+        $boundTexts[$key] = Read-BoundSource $fixedSources[$key] ([string] $plan.sourceHashes.$key)
     }
     # Import only named pure/reviewed functions from exact bound source bytes.
     # Never dot-source the entry points: their top-level code performs operations.
     $imports = @(
-        @{ path = $initializer; names = @('Get-BytesSha256', 'Assert-AdditionPlainPath',
+        @{ key = 'channel'; names = @('Get-BytesSha256', 'Assert-AdditionPlainPath',
             'Assert-AdditionProtectedPath', 'Read-AdditionBoundBytes', 'ConvertFrom-AdditionJson',
             'Assert-AdditionBindings', 'Assert-Elevated') },
-        @{ path = $adapter; names = @('Get-Sha256', 'Get-TextSha256', 'Assert-SafeDirectoryTree',
+        @{ key = 'adapter'; names = @('Get-Sha256', 'Get-TextSha256', 'Assert-SafeDirectoryTree',
             'Assert-ModuleTreeIdentity', 'Get-DirectoryPackageIdentity') }
     )
     foreach ($import in $imports) {
         $tokens = $null; $errors = $null
-        $ast = [Management.Automation.Language.Parser]::ParseFile($import.path, [ref] $tokens, [ref] $errors)
+        $ast = [Management.Automation.Language.Parser]::ParseInput($boundTexts[$import.key], [ref] $tokens, [ref] $errors)
         if (@($errors).Count) { throw 'Bound source has syntax errors.' }
         foreach ($name in $import.names) {
             $matches = @($ast.FindAll({ param($n)
