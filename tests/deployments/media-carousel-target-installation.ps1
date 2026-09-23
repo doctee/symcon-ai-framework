@@ -34,9 +34,9 @@ $fixtureNumber = 0
 $passed = 0
 $savedCulture = [Threading.Thread]::CurrentThread.CurrentCulture
 function Invoke-Coordinator { param([string] $Operation, [int] $ExpectedExit)
-    $child = Invoke-SaefPowerShellChildProcess -ScriptPath $coordinator -ExpectedScriptSha256 (Hash-File $coordinator) `
+    $child = Invoke-SaefPowerShellChildProcess -ScriptPath $cultureEntry -ExpectedScriptSha256 (Hash-File $cultureEntry) `
         -Arguments @('-PlanPath', $planPath, '-ExpectedPlanSha256', (Hash-File $planPath),
-            '-Operation', $Operation, '-Confirmation', 'install-saef-media-carousel-target') `
+            '-Operation', $Operation, '-Confirmation', 'install-saef-media-carousel-target', '-Culture', $culture) `
         -TimeoutSeconds 180 -MaximumOutputBytes 131072
     $output = [Text.Encoding]::UTF8.GetString($child.standardOutput)
     Assert-Test ($child.terminationReason -ceq 'exited' -and $child.exitCode -eq $ExpectedExit) `
@@ -57,6 +57,17 @@ try {
         Copy-Item -LiteralPath $windowsRoot -Destination (Join-Path $package 'windows') -Recurse
         $bundle = Join-Path $package 'windows'
         $coordinator = Join-Path $bundle 'adapters/Install-SaefMediaCarouselTarget.ps1'
+        # A new child does not inherit CurrentCulture from the parent thread.
+        # This synthetic, hash-bound entry sets it before the unchanged real CLI.
+        $cultureEntry = Join-Path $package 'culture-entry.ps1'
+        [IO.File]::WriteAllText($cultureEntry, @'
+param($PlanPath, $ExpectedPlanSha256, $Operation, $Confirmation,
+    [ValidateSet('en-US', 'de-DE', 'tr-TR')] $Culture)
+[Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo($Culture)
+& (Join-Path $PSScriptRoot 'windows/adapters/Install-SaefMediaCarouselTarget.ps1') `
+    -PlanPath $PlanPath -ExpectedPlanSha256 $ExpectedPlanSha256 -Operation $Operation -Confirmation $Confirmation
+exit $LASTEXITCODE
+'@, [Text.UTF8Encoding]::new($false))
         $module = Join-Path $fixture 'module'
         $null = [IO.Directory]::CreateDirectory((Join-Path $module 'MediaCarousel'))
         $stateParent = Join-Path $fixture 'adapter-states'
