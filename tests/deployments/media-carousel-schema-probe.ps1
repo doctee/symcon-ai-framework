@@ -6,6 +6,7 @@ $windowsRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../deployment
 $imports = @(
     @{ path = (Join-Path $windowsRoot 'Initialize-SaefDeploymentChannel.ps1'); names = @('Set-RestrictedAcl', 'Assert-Elevated') },
     @{ path = (Join-Path $PSScriptRoot 'channel-target-addition.ps1'); names = @('Write-Json', 'Hash-File', 'Assert-Test') },
+    @{ path = (Join-Path $windowsRoot 'adapters/Start-SaefMediaCarouselSchemaPackage.ps1'); names = @('Expand-SchemaPackage') },
     @{ path = (Join-Path $windowsRoot 'adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1'); names = @(
         'Get-Sha256', 'Get-TextSha256', 'Assert-SafeDirectoryTree', 'Get-DirectoryPackageIdentity') }
 )
@@ -115,5 +116,42 @@ try {
             $passed++
         }
     }
-    Write-Output ('MediaCarousel schema probe: ' + $passed + ' scenarios passed.')
+    Add-Type -AssemblyName System.IO.Compression
+    # Exercise exact self-extraction with the same private-plan shape and source files.
+    $packageEntries = @('schema-plan.local.json', 'windows/Initialize-SaefDeploymentChannel.ps1',
+        'windows/SaefChildProcess.ps1', 'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1',
+        'windows/adapters/Test-SaefMediaCarouselSchema.ps1',
+        'windows/adapters/schema-probe/library.json', 'windows/adapters/schema-probe/SchemaProbe/module.json',
+        'windows/adapters/schema-probe/legacy.php', 'windows/adapters/schema-probe/candidate.php')
+    foreach ($fault in @('none', 'wrong-hash', 'traversal', 'case-alias', 'missing', 'oversized')) {
+        $zipPath = Join-Path $scratch ($fault + '.zip')
+        $file = [IO.File]::Create($zipPath)
+        $zip = [IO.Compression.ZipArchive]::new($file, [IO.Compression.ZipArchiveMode]::Create, $true)
+        try {
+            foreach ($name in $packageEntries) {
+                if ($fault -eq 'missing' -and $name -eq 'schema-plan.local.json') { continue }
+                $entryName = $name
+                if ($name -eq 'schema-plan.local.json') {
+                    if ($fault -eq 'traversal') { $entryName = '../escape.json' }
+                    if ($fault -eq 'case-alias') { $entryName = 'SCHEMA-plan.local.json' }
+                    $content = [IO.File]::ReadAllBytes($planPath)
+                    if ($fault -eq 'oversized') { $content = New-Object byte[] 1048577 }
+                } else { $content = [IO.File]::ReadAllBytes((Join-Path $fixture $name)) }
+                $stream = $zip.CreateEntry($entryName).Open()
+                try { $stream.Write($content, 0, $content.Length) } finally { $stream.Dispose() }
+            }
+        } finally { $zip.Dispose(); $file.Dispose() }
+        $hash = Hash-File $zipPath
+        if ($fault -eq 'wrong-hash') { $hash = 'a' * 64 }
+        $rejected = $false; $expanded = $null
+        try { $expanded = Expand-SchemaPackage $zipPath $hash } catch { $rejected = $true }
+        if ($fault -eq 'none') {
+            Assert-Test (-not $rejected -and $null -ne $expanded) 'Self-extraction failed.'
+            foreach ($name in $packageEntries) {
+                Assert-Test ((Hash-File (Join-Path $expanded.root $name)) -ceq $expanded.hashes[$name]) 'Extracted bytes differ.'
+            }
+        } else { Assert-Test $rejected ('Unsafe ZIP accepted: ' + $fault) }
+        $passed++
+    }
+    Write-Output ('MediaCarousel schema probe and extraction: ' + $passed + ' scenarios passed.')
 } finally { Remove-Item -LiteralPath $scratch -Recurse -Force }
