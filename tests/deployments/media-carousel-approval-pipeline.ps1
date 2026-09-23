@@ -22,7 +22,9 @@ function Invoke-MediaCarouselApprovalPipeline {
     $channelRoot = Join-Path $scratchRoot 'channel'
     $stateRoot = Join-Path $scratchRoot 'deployments'
     $managedRoot = Join-Path $scratchRoot 'filesets'
-    foreach ($path in @((Join-Path $packageWindows 'adapters'), $channelRoot, $stateRoot, $managedRoot)) {
+    $adapterParent = Join-Path $scratchRoot 'adapters'
+    $adapterState = Join-Path $adapterParent 'saef-media-carousel'
+    foreach ($path in @((Join-Path $packageWindows 'adapters'), $channelRoot, $stateRoot, $managedRoot, $adapterState)) {
         $null = [IO.Directory]::CreateDirectory($path)
     }
     Set-RestrictedAcl $channelRoot ('*' + $additionDeploymentSid) '(OI)(CI)RX'
@@ -45,12 +47,15 @@ function Invoke-MediaCarouselApprovalPipeline {
     $originalPolicy = Join-Path $package 'original-policy.json'
     Copy-Item -LiteralPath $policyPath -Destination $originalPolicy
     $policyPath = $originalPolicy
+    $installedPolicy = Get-Content -LiteralPath $policyPath -Raw | ConvertFrom-Json
+    $installedPolicy.adapterStateRoot = $adapterState
+    Write-Json $policyPath $installedPolicy
     Set-RestrictedFileAcl $policyPath
     $channelPath = Join-Path $channelRoot 'deployment-channel.local.json'
     $channel = [ordered]@{
         formatVersion = 1; deploymentUser = $account.Name.ToLowerInvariant()
         expectedChildProcessContractSha256 = $script:childProcessContractSha256
-        stateRoot = $stateRoot; managedFilesetRoot = $managedRoot; adapterStateRoot = $adapterState
+        stateRoot = $stateRoot; managedFilesetRoot = $managedRoot; adapterStateRoot = $adapterParent
         standaloneModuleTargets = @(
             @{ targetId = 'saef-owntracks-position-map'; libraryGuid = '{11111111-1111-1111-1111-111111111111}'
                 adapterPath = $originalAdapter; expectedAdapterSha256 = (Get-Sha256 $originalAdapter)
