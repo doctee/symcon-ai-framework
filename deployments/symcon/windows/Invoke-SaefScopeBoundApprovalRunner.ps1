@@ -577,6 +577,17 @@ function Assert-AdapterOutcome {
     }
 }
 
+function Get-ResealTargetArguments {
+    param([string] $TargetId, [string] $AdapterProfile)
+    if ($TargetId -ceq 'saef-owntracks-position-map' -and $AdapterProfile -ceq 'saef-owntracks-position-map-v1') {
+        return @('-Confirmation', 'reseal-saef-owntracks-position-map-active-identity')
+    }
+    if ($TargetId -ceq 'saef-media-carousel' -and $AdapterProfile -ceq 'saef-media-carousel-v1') {
+        return @('-TargetId', 'saef-media-carousel', '-Confirmation', 'reseal-saef-media-carousel-active-identity')
+    }
+    throw [InvalidOperationException]::new('Reseal target/profile pair is unsupported.')
+}
+
 function Invoke-Reseal {
     param([Parameter(Mandatory = $true)][string] $ChildStatusPath)
     if (-not [bool] $script:policy.resealEnabled) {
@@ -597,9 +608,10 @@ function Invoke-Reseal {
         '-StatusPath', $ChildStatusPath,
         '-ChannelMutexAlreadyHeld',
         '-CoordinatorPlanSha256', $script:planSha256,
-        '-ActivationStatusPath', (Join-Path $script:stateDirectory 'activation-status.json'),
-        '-Confirmation', 'reseal-saef-owntracks-position-map-active-identity'
+        '-ActivationStatusPath', (Join-Path $script:stateDirectory 'activation-status.json')
     )
+    $arguments += @(Get-ResealTargetArguments -TargetId ([string] $script:policy.targetId) `
+        -AdapterProfile ([string] $script:policy.adapterProfile))
     $result = Invoke-SaefPowerShellChildProcess `
         -ScriptPath ([string] $script:policy.resealScriptPath) `
         -ExpectedScriptSha256 ([string] $script:policy.expectedResealScriptSha256) `

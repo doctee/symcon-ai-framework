@@ -40,7 +40,13 @@ param(
     [string] $ActivationStatusPath = '',
 
     [Parameter()]
-    [string] $Confirmation = ''
+    [string] $Confirmation = '',
+
+    # Keep the legacy entrypoint and its default contract. A separately pinned
+    # MediaCarousel profile reuses this implementation, not a copied resealer.
+    [Parameter()]
+    [ValidateSet('saef-owntracks-position-map', 'saef-media-carousel')]
+    [string] $TargetId = 'saef-owntracks-position-map'
 )
 
 Set-StrictMode -Version 2.0
@@ -51,12 +57,11 @@ $ExitPreflightFailed = 10
 $ExitApplyFailed = 20
 $ExitRolledBack = 30
 $ExitManualRecovery = 40
-$ExpectedConfirmation = 'reseal-saef-owntracks-position-map-active-identity'
+$ExpectedConfirmation = 'reseal-' + $TargetId + '-active-identity'
 $MaximumPolicyBytes = 1048576
 $MaximumPackageBytes = 67108864
 $MaximumPackageFiles = 256
-$TargetId = 'saef-owntracks-position-map'
-$AdapterProfile = 'saef-owntracks-position-map-v1'
+$AdapterProfile = $TargetId + '-v1'
 
 $script:channelMutex = $null
 $script:adapterMutex = $null
@@ -370,11 +375,47 @@ function Write-AtomicBytes {
     }
 }
 
+function Assert-MediaCarouselCodeOnlyBaseline {
+    param($Policy, $Before, $After)
+
+    if ($Policy.PSObject.Properties.Name -icontains 'configurationTransition') {
+        throw [InvalidOperationException]::new('MediaCarousel reseal requires a reconciled code-only baseline.')
+    }
+    if (($Before.instances | ConvertTo-Json -Depth 20 -Compress) -cne
+        ($After.instances | ConvertTo-Json -Depth 20 -Compress)) {
+        throw [InvalidOperationException]::new('MediaCarousel reseal instance snapshots differ.')
+    }
+    $expectedByID = @{}
+    foreach ($expected in @($Policy.expectedInstances)) {
+        if (($expected.instanceId -isnot [int] -and $expected.instanceId -isnot [long]) -or
+            $expected.instanceId -le 0 -or $expected.instanceId -gt [int]::MaxValue -or
+            $expectedByID.ContainsKey([int] $expected.instanceId) -or
+            $expected.configurationSha256 -isnot [string] -or
+            $expected.configurationSha256 -cnotmatch '^[a-f0-9]{64}$') {
+            throw [InvalidOperationException]::new('Invalid reseal instance baseline.')
+        }
+        $expectedByID[[int] $expected.instanceId] = $expected.configurationSha256
+    }
+    if ($expectedByID.Count -lt 1 -or @($Before.instances).Count -ne $expectedByID.Count) {
+        throw [InvalidOperationException]::new('Reseal instance inventory differs.')
+    }
+    foreach ($instance in @($Before.instances)) {
+        if (($instance.instanceId -isnot [int] -and $instance.instanceId -isnot [long]) -or
+            $instance.instanceId -le 0 -or $instance.instanceId -gt [int]::MaxValue -or
+            -not $expectedByID.ContainsKey([int] $instance.instanceId) -or
+            $expectedByID[[int] $instance.instanceId] -cne [string] $instance.configurationSha256) {
+            throw [InvalidOperationException]::new('Reseal configuration differs.')
+        }
+        $expectedByID.Remove([int] $instance.instanceId)
+    }
+    if ($expectedByID.Count -ne 0) { throw 'Reseal instance membership differs.' }
+}
+
 function Write-ResealStatus {
     $details = [ordered]@{
         formatVersion = 1
         timestampUtc = [DateTime]::UtcNow.ToString('o')
-        phase = 'owntracks_active_identity_reseal'
+        phase = if ($TargetId -ceq 'saef-media-carousel') { 'media_carousel_active_identity_reseal' } else { 'owntracks_active_identity_reseal' }
         operation = $Operation
         outcome = $script:finalOutcome
         exitCode = $script:finalExitCode
@@ -625,6 +666,19 @@ try {
         throw [InvalidOperationException]::new('Active, staged or rollback package identity differs.')
     }
 
+    if ($TargetId -ceq 'saef-media-carousel') {
+        # Repeatable code-only updates preserve the reviewed configuration
+        # baseline. Schema/configuration migrations need a separate contract;
+        # never bless arbitrary current settings while resealing package bytes.
+        $candidateSnapshotPath = Join-Path $transactionRoot 'candidate-snapshot.json'
+        $candidateSnapshot = Read-BoundedJson -Path $candidateSnapshotPath
+        if ([string] $transaction.manifestSha256 -cne (Get-Sha256 (Join-Path $deploymentRoot 'deployment.json')) -or
+            [string] $transaction.snapshotSha256 -cne (Get-Sha256 (Join-Path $transactionRoot 'snapshot.json')) -or
+            [string] $transaction.candidateSnapshotSha256 -cne (Get-Sha256 $candidateSnapshotPath)) {
+            throw [InvalidOperationException]::new('MediaCarousel reseal snapshot binding differs.')
+        }
+        Assert-MediaCarouselCodeOnlyBaseline -Policy $adapterPolicy -Before $snapshot -After $candidateSnapshot
+    }
     $adapterPolicy.expectedActivePackageIdentitySha256 = $ExpectedActivePackageIdentitySha256
     $candidateAdapterBytes = ConvertTo-Utf8JsonBytes -Value $adapterPolicy
     $script:proposedAdapterPolicySha256 = Get-BytesSha256 -Bytes $candidateAdapterBytes

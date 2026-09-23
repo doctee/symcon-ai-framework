@@ -1,7 +1,7 @@
 # MediaCarousel repeatable deployment
 
-Status: recovery implementation candidate; native qualification and the
-remaining profile/reseal integration are pending. Not live-ready.
+Status: recovery, code-only reseal and baseline-reconciliation candidates;
+full profile/bootstrap integration is pending. Not live-ready.
 
 ## Current implementation slice
 
@@ -15,7 +15,27 @@ Legacy records without the new evidence require manual review.
 Recovery-state tests exercise invalid evidence and UTF-8 across three cultures.
 The existing real Windows loopback-RPC transaction suite now exercises these
 operations, rejects tampered recovery evidence, and covers predecessor state
-both present and absent. No successful native result is claimed until CI runs.
+both present and absent. The first recovery slice passed native Windows CI.
+Later changes require their own qualification.
+
+The shared runner now binds reseal arguments to exact target/profile pairs.
+The existing OwnTracks reseal entrypoint keeps its filename and default contract;
+only a separately pinned MediaCarousel profile passes the new explicit target.
+MediaCarousel reseal verifies transaction/snapshot hashes and unchanged instance
+snapshots against the protected configuration baseline. It rejects a remaining
+schema transition and changes only the package identity, not configuration hashes.
+
+The binding updater has a separate `reviewed_baseline_reconciliation` plan kind.
+It accepts a hash-bound `reviewed-baseline.local.json` containing the exact active
+package identity, unchanged instance membership with reviewed configuration hashes,
+and identities of prior independent evidence. The candidate policy may only adopt
+these exact hashes and remove the consumed schema transition. All other fields,
+including unknown future fields, remain unchanged. Existing schema-transition
+plans retain their original behavior. Live ownership, full instance snapshots
+and package bytes are still checked before and after atomic pointer publication.
+Evidence preparation is a review responsibility: the updater must never generate
+an approved baseline by merely observing current drift. This new mode is not an
+implicit repair option of an ordinary deployment.
 
 ## Scope and current gap
 
@@ -44,10 +64,10 @@ unrelated target bindings. It must not restart a service or relax ACL checks.
 | Profile installation | `Initialize-SaefScopeBoundApprovalProfile.ps1` | Reuse protected installation; requires an administrative bootstrap outside the five-verb channel |
 | Active identity reseal reference | `adapters/Invoke-SaefOwnTracksPositionMapActiveIdentityReseal.ps1` | Reuse its reviewed safeguards; do not execute it for MediaCarousel as-is |
 
-The existing runner passes a literal OwnTracks confirmation. The existing
-reseal additionally expects snapshot fields that MediaCarousel does not yet
-persist. Merely installing a MediaCarousel approval-policy JSON or renaming
-the existing reseal script would therefore be incorrect.
+The installed runner passes a literal OwnTracks confirmation. The installed
+MediaCarousel adapter lacks the new recovery fields. Merely installing an
+approval-policy JSON or renaming the reseal script would therefore be incorrect;
+the new sources must first pass the complete profile qualification together.
 
 Existing OwnTracks live sources and bindings remain untouched. Any shared
 source extension must retain its old default contract and pass the existing

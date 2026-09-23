@@ -33,6 +33,50 @@ $passed = 0
 try {
     foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
         [Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo($culture)
+        foreach ($baselineCase in @('success', 'unreviewed-config', 'package-drift', 'added-instance',
+            'removed-instance', 'duplicate-instance', 'zero-instance', 'fractional-instance',
+            'bad-hash', 'missing-prior-evidence', 'unrelated-policy', 'retained-transition')) {
+            $oldBaseline = [ordered]@{
+                expectedActivePackageIdentitySha256 = ('a' * 64)
+                configurationTransition = @{ kind = 'reviewed-legacy-transition' }
+                maximumStateBytes = 4096
+                expectedInstances = @(@{ instanceId = 101; configurationSha256 = ('b' * 64) })
+            } | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+            $newBaseline = $oldBaseline | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+            $newBaseline.PSObject.Properties.Remove('configurationTransition')
+            $newBaseline.expectedActivePackageIdentitySha256 = ('c' * 64)
+            $newBaseline.expectedInstances[0].configurationSha256 = ('d' * 64)
+            $review = [ordered]@{
+                formatVersion = 1; targetId = 'saef-media-carousel'
+                operation = 'reviewed_baseline_reconciliation'
+                sourceEvidenceSha256 = @(('e' * 64))
+                activePackageIdentitySha256 = ('c' * 64)
+                expectedInstances = @(@{ instanceId = 101; configurationSha256 = ('d' * 64) })
+            } | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+            switch -CaseSensitive ($baselineCase) {
+                'unreviewed-config' { $newBaseline.expectedInstances[0].configurationSha256 = ('f' * 64) }
+                'package-drift' { $newBaseline.expectedActivePackageIdentitySha256 = ('f' * 64) }
+                'added-instance' { $review.expectedInstances += [pscustomobject]@{ instanceId = 102; configurationSha256 = ('d' * 64) } }
+                'removed-instance' { $newBaseline.expectedInstances = @() }
+                'duplicate-instance' { $review.expectedInstances += $review.expectedInstances[0] }
+                'zero-instance' { $review.expectedInstances[0].instanceId = 0 }
+                'fractional-instance' { $review.expectedInstances[0].instanceId = 101.1 }
+                'bad-hash' { $review.expectedInstances[0].configurationSha256 = '' }
+                'missing-prior-evidence' { $review.sourceEvidenceSha256 = @() }
+                'unrelated-policy' { $newBaseline.maximumStateBytes = 8192 }
+                'retained-transition' { $newBaseline | Add-Member NoteProperty configurationTransition @{} }
+            }
+            $oldJson = $oldBaseline | ConvertTo-Json -Depth 20 -Compress
+            $newJson = $newBaseline | ConvertTo-Json -Depth 20 -Compress
+            $reviewJson = $review | ConvertTo-Json -Depth 20 -Compress
+            $rejected = $false
+            try { Assert-ReconciledBaseline $oldBaseline $newBaseline $review } catch { $rejected = $true }
+            Assert-Test ($rejected -eq ($baselineCase -cne 'success')) ('Baseline outcome differs: ' + $baselineCase)
+            Assert-Test (($oldBaseline | ConvertTo-Json -Depth 20 -Compress) -ceq $oldJson -and
+                ($newBaseline | ConvertTo-Json -Depth 20 -Compress) -ceq $newJson -and
+                ($review | ConvertTo-Json -Depth 20 -Compress) -ceq $reviewJson) 'Baseline validation mutated inputs.'
+            $passed++
+        }
         foreach ($scenario in @('success', 'postflight-failure', 'prepublish-failure', 'external-drift', 'existing-generation', 'unrelated-change', 'inherited-channel')) {
             $root = Join-Path $scratch ($culture + '-' + $scenario)
             $null = [IO.Directory]::CreateDirectory($root)

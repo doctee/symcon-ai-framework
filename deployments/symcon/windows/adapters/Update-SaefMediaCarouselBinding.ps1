@@ -113,6 +113,47 @@ function Assert-UpdateRuntime {
     }
 }
 
+function Assert-ReconciledBaseline {
+    param($Before, $After, $Evidence)
+    # Administrative bootstrap only: the separately reviewed evidence is bound
+    # by the exact plan hash. Never generate it from arbitrary current drift.
+    if ($Evidence.formatVersion -ne 1 -or $Evidence.targetId -cne 'saef-media-carousel' -or
+        $Evidence.operation -cne 'reviewed_baseline_reconciliation' -or
+        $Evidence.activePackageIdentitySha256 -cnotmatch '^[a-f0-9]{64}$' -or
+        @($Evidence.sourceEvidenceSha256).Count -lt 1 -or
+        $After.PSObject.Properties.Name -icontains 'configurationTransition') {
+        throw 'Invalid reviewed reconciliation evidence.'
+    }
+    foreach ($hash in @($Evidence.sourceEvidenceSha256)) {
+        if ($hash -isnot [string] -or $hash -cnotmatch '^[a-f0-9]{64}$') { throw 'Invalid prior evidence identity.' }
+    }
+    $baseline = @{}
+    foreach ($instance in @($Evidence.expectedInstances)) {
+        if (($instance.instanceId -isnot [int] -and $instance.instanceId -isnot [long]) -or
+            $instance.instanceId -le 0 -or $instance.instanceId -gt [int]::MaxValue -or
+            $baseline.ContainsKey([int] $instance.instanceId) -or
+            $instance.configurationSha256 -isnot [string] -or
+            $instance.configurationSha256 -cnotmatch '^[a-f0-9]{64}$') { throw 'Invalid reviewed instance baseline.' }
+        $baseline[[int] $instance.instanceId] = $instance.configurationSha256
+    }
+    if ($baseline.Count -lt 1 -or @($Before.expectedInstances).Count -ne $baseline.Count) {
+        throw 'Reconciliation cannot change instance membership.'
+    }
+    $copy = ConvertFrom-AdditionJson ([Text.Encoding]::UTF8.GetBytes(($Before | ConvertTo-Json -Depth 100)))
+    $copy.PSObject.Properties.Remove('configurationTransition')
+    $copy.expectedActivePackageIdentitySha256 = $Evidence.activePackageIdentitySha256
+    foreach ($instance in @($copy.expectedInstances)) {
+        $id = [int] $instance.instanceId
+        if ($id -le 0 -or -not $baseline.ContainsKey($id)) { throw 'Reconciliation instance membership differs.' }
+        $instance.configurationSha256 = $baseline[$id]
+        $baseline.Remove($id)
+    }
+    if ($baseline.Count -ne 0 -or
+        ($copy | ConvertTo-Json -Depth 100 -Compress) -cne ($After | ConvertTo-Json -Depth 100 -Compress)) {
+        throw 'Policy exceeds the exact reviewed baseline reconciliation.'
+    }
+}
+
 try {
     if ($PSVersionTable.PSEdition -cne 'Desktop' -or $PSVersionTable.PSVersion.Major -ne 5) { throw 'Windows PowerShell 5.1 required.' }
     if ($Operation -ceq 'install' -and $Confirmation -cne 'update-saef-media-carousel-binding') { throw 'Exact confirmation required.' }
@@ -146,6 +187,11 @@ try {
     $plan = ConvertFrom-AdditionJson ([Text.Encoding]::UTF8.GetBytes($planText))
     if ($plan.formatVersion -ne 1 -or $plan.targetId -cne 'saef-media-carousel' -or
         $plan.updateId -cnotmatch '^[a-z0-9][a-z0-9-]{1,63}$') { throw 'Invalid update plan.' }
+    $reconcile = $false
+    if ($plan.PSObject.Properties.Name -icontains 'updateKind') {
+        if ($plan.updateKind -cne 'reviewed_baseline_reconciliation') { throw 'Unsupported binding update kind.' }
+        $reconcile = $true
+    }
     Assert-Elevated | Out-Null
     $additionDeploymentSid = (Get-LocalUser $plan.deploymentUser).SID.Value
     if ($additionDeploymentSid -cne $plan.expectedDeploymentSid) { throw 'Deployment identity changed.' }
@@ -167,13 +213,20 @@ try {
     $policyBytes = Read-AdditionBoundBytes $policyPath $plan.candidatePolicySha256
     $script:policy = ConvertFrom-AdditionJson $policyBytes
     if ($script:policy.targetId -cne 'saef-media-carousel' -or
-        $script:policy.adapterProfile -cne 'saef-media-carousel-v1' -or
-        $script:policy.PSObject.Properties.Name -cnotcontains 'configurationTransition') { throw 'Required transition missing.' }
-    if ($oldPolicy.PSObject.Properties.Name -icontains 'configurationTransition') { throw 'Existing transition requires separate review.' }
-    $comparison = ConvertFrom-AdditionJson $policyBytes
-    $comparison.PSObject.Properties.Remove('configurationTransition')
-    if (($comparison | ConvertTo-Json -Depth 100 -Compress) -cne ($oldPolicy | ConvertTo-Json -Depth 100 -Compress)) {
-        throw 'Adapter policy changes exceed the accepted transition.'
+        $script:policy.adapterProfile -cne 'saef-media-carousel-v1') { throw 'Unexpected adapter policy target.' }
+    if ($reconcile) {
+        $baselinePath = Join-Path $package 'reviewed-baseline.local.json'
+        Assert-AdditionProtectedPath $baselinePath
+        $baselineEvidence = ConvertFrom-AdditionJson (Read-AdditionBoundBytes $baselinePath $plan.reviewedBaselineSha256)
+        Assert-ReconciledBaseline $oldPolicy $script:policy $baselineEvidence
+    } else {
+        if ($script:policy.PSObject.Properties.Name -cnotcontains 'configurationTransition') { throw 'Required transition missing.' }
+        if ($oldPolicy.PSObject.Properties.Name -icontains 'configurationTransition') { throw 'Existing transition requires separate review.' }
+        $comparison = ConvertFrom-AdditionJson $policyBytes
+        $comparison.PSObject.Properties.Remove('configurationTransition')
+        if (($comparison | ConvertTo-Json -Depth 100 -Compress) -cne ($oldPolicy | ConvertTo-Json -Depth 100 -Compress)) {
+            throw 'Adapter policy changes exceed the accepted transition.'
+        }
     }
     $generation = Join-Path (Join-Path $plan.installRoot 'standalone-modules/saef-media-carousel') $plan.updateId
     $after = Read-AdditionBoundBytes $afterPath $plan.candidateChannelSha256
@@ -193,9 +246,11 @@ try {
     Assert-AdditionBindings $channel.standaloneModuleTargets
     $snapshot = @{ instances = @(Get-InstanceSnapshot) }
     if ($snapshot.instances.Count -lt 1) { throw 'Empty production inventory.' }
-    $script:manifest = @{ deploymentId = $plan.deploymentId }
-    $script:packageIdentitySha256 = $plan.candidatePackageIdentitySha256
-    $null = Get-CandidateSnapshot $snapshot
+    if (-not $reconcile) {
+        $script:manifest = @{ deploymentId = $plan.deploymentId }
+        $script:packageIdentitySha256 = $plan.candidatePackageIdentitySha256
+        $null = Get-CandidateSnapshot $snapshot
+    }
     Assert-UpdateRuntime
     $result.stage = 'preflight'
     if (-not (Get-Acl -LiteralPath $channelPath).AreAccessRulesProtected) { throw 'Inherited channel ACL requires separate review.' }
