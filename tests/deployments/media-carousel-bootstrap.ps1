@@ -144,6 +144,10 @@ try {
                 $recordPath = Join-Path $oldApproval.approvalStateRoot (('d' * 64) + '.json')
                 Write-Json $recordPath @{ targetId = 'saef-media-carousel'; adapterProfile = 'saef-media-carousel-v1'
                     outcome = 'rolled_back'; phaseState = 'completed'; stateSignature = 'synthetic-preserved-signature' }
+                $phaseRoot = Join-Path $oldApproval.approvalStateRoot ('d' * 64)
+                $null = [IO.Directory]::CreateDirectory($phaseRoot)
+                Write-Json (Join-Path $phaseRoot 'rollback-status.json') @{ outcome = 'rolled_back'; exitCode = 30 }
+                [IO.File]::WriteAllBytes((Join-Path $phaseRoot 'adapter-policy.rollback.bin'), $policyBytes)
                 $ledgerHash = (Get-ApprovalStateInventory $oldApproval.approvalStateRoot).sha256
                 $spec | Add-Member NoteProperty approvalStateSha256 $ledgerHash -Force
                 $spec.approvalRoot = Join-Path $scratch ($culture + '-migrated-approvals')
@@ -169,6 +173,22 @@ try {
                 catch { $rejected = $_.Exception.Message -ceq 'Reviewed approval migration baseline differs.' }
                 if (-not $rejected) { throw 'Ledger drift admitted.' }
                 [IO.File]::WriteAllBytes($recordPath, $recordBytes)
+                # Failure after pointer publication restores the prior profile,
+                # while both old and newly copied ledgers remain available.
+                $scenario = 'postflight-failure'; $runtimeCalls = 0; $rejected = $false
+                try { Publish-UpdateGeneration $channelPath $second $prior ($utf8.GetBytes(($next | ConvertTo-Json -Depth 30))) $adapterBytes $policyBytes $migration }
+                catch { $rejected = $true }
+                if (-not $rejected -or -not $result.rollbackSucceeded -or (Hash-File $channelPath) -cne (Get-BytesSha256 $prior) -or
+                    (Get-ApprovalStateInventory $oldApproval.approvalStateRoot).sha256 -cne $ledgerHash -or
+                    (Get-ApprovalStateInventory (Join-Path $spec.approvalRoot 'saef-media-carousel/state')).sha256 -cne $ledgerHash) {
+                    throw 'Migration rollback or retained ledger differs.'
+                }
+                $scenario = 'success'; $runtimeCalls = 0
+                $spec.approvalRoot += '-retry'
+                $second += '-retry'
+                $next.standaloneModuleTargets[1].adapterPath = Join-Path $second 'adapter.ps1'
+                $next.standaloneModuleTargets[1].adapterPolicyPath = Join-Path $second 'adapter-policy.local.json'
+                $migration = Get-ApprovalBootstrapContext $spec $package $packageWindows $account.Name $actual $root
                 Publish-UpdateGeneration $channelPath $second $prior ($utf8.GetBytes(($next | ConvertTo-Json -Depth 30))) $adapterBytes $policyBytes $migration
                 $migrated = Join-Path $spec.approvalRoot 'saef-media-carousel/state'
                 if ((Get-ApprovalStateInventory $migrated).sha256 -cne $ledgerHash -or
