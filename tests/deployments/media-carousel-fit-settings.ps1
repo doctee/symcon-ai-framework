@@ -67,7 +67,7 @@ foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
                     $log.mutations -eq 1 -and $log.applies -eq 1 -and
                     $log.configurations.'11111' -ceq $settingsConfigs['11111'].Replace('"ShowFitToggle":false', '"ShowFitToggle":true')) 'Settings preservation failed.'
             } elseif ($scenario -ceq 'fit-drift') {
-                Assert-Test ($record.rollbackSucceeded -eq $false -and $log.mutations -eq 1) 'Foreign drift overwritten.'
+                Assert-Test ($record.rollbackSucceeded -eq $false -and $log.mutations -eq 1 -and $log.applies -eq 0) 'Foreign drift applied or overwritten.'
             } else {
                 Assert-Test ($record.rollbackSucceeded -eq $true -and $log.configurations.'11111' -ceq $settingsConfigs['11111']) ('Settings rollback failed: ' + $scenario + ' ' + $text + ' ' + ($log | ConvertTo-Json -Depth 10 -Compress))
                 if ($scenario -ceq 'fit-multi-fails') {

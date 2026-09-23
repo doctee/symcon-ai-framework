@@ -170,9 +170,11 @@ try {
             $null = Invoke-SymconRpc -Method 'IPS_SetProperty' -Parameters @($id, 'ShowFitToggle', $true)
             # Recheck identity immediately before the second mutator, too.
             Assert-FitScope
+            $desired = @($after.instances | Where-Object { $_.instanceId -eq $id })[0]
+            if ((Get-TextSha256 ([string] (Invoke-SymconRpc -Method 'IPS_GetConfiguration' -Parameters @($id)))) -cne
+                $desired.configurationSha256) { throw 'Configuration drift before ApplyChanges.' }
             $null = Invoke-SymconRpc -Method 'IPS_ApplyChanges' -Parameters @($id)
             $record = @($current.instances | Where-Object { $_.instanceId -eq $id })[0]
-            $desired = @($after.instances | Where-Object { $_.instanceId -eq $id })[0]
             $record.configurationBase64 = $desired.configurationBase64; $record.configurationSha256 = $desired.configurationSha256
             Assert-SnapshotPreserved $current
             Write-FitEvidence ('verified-' + $id + '.local.json') @{ instanceId = $id; configurationSha256 = $desired.configurationSha256 }
@@ -197,6 +199,8 @@ try {
                 if ($hash -cne $old.configurationSha256 -and $hash -cne $new.configurationSha256) { throw 'Foreign drift blocks rollback.' }
                 $null = Invoke-SymconRpc -Method 'IPS_SetProperty' -Parameters @($id, 'ShowFitToggle', $false)
                 Assert-FitScope
+                if ((Get-TextSha256 ([string] (Invoke-SymconRpc -Method 'IPS_GetConfiguration' -Parameters @($id)))) -cne
+                    $old.configurationSha256) { throw 'Configuration drift before rollback ApplyChanges.' }
                 $null = Invoke-SymconRpc -Method 'IPS_ApplyChanges' -Parameters @($id)
             }
             Assert-SnapshotPreserved $before
