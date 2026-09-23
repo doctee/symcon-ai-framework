@@ -42,8 +42,8 @@ function Invoke-RestMethod {
         $s.configurations = $f.configurations
         [IO.File]::WriteAllText($f.logPath, ($s | ConvertTo-Json -Depth 10))
         if (($f.scenario -ceq 'fit-response-lost' -and $s.productionWrites -eq 1) -or
-            ($f.scenario -ceq 'fit-apply-fails' -and $s.applies -eq 1) -or
-            ($f.scenario -ceq 'fit-multi-fails' -and $s.applies -eq 2)) { throw 'Synthetic uncertain settings RPC.' }
+            ($m -ceq 'IPS_ApplyChanges' -and $f.scenario -ceq 'fit-apply-fails' -and $s.applies -eq 1) -or
+            ($m -ceq 'IPS_ApplyChanges' -and $f.scenario -ceq 'fit-multi-fails' -and $s.applies -eq 2)) { throw 'Synthetic uncertain settings RPC.' }
         return [pscustomobject]@{ result = $true }
     }
     if ($m -in @('IPS_SetParent', 'IPS_SetIdent', 'IPS_SetName', 'IPS_SetHidden',
