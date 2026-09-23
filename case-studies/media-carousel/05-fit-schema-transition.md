@@ -134,3 +134,26 @@ Windows regression tests reproduce the inherited shared-parent directory-creatio
 ACE and separately reject delete-child and permission-takeover rights. They also
 execute the delivered-style launcher without arguments: ZIP path resolution is
 inside the script body, never in a `$PSScriptRoot` parameter default expression.
+
+## Failure evidence
+
+The isolated operator test preserves its first failure before cleanup. The
+original stage, exception type and line remain separate from cleanup and
+production-postflight failures. The recovery journal also retains the original
+failure. This follows RS-001.26 and the existing ownership coordinator's
+null-safe error metadata pattern; successful cleanup is not schema acceptance.
+
+A test-local wrapper invokes the hash-verified adapter RPC function unchanged.
+On failure it records only the bounded method name, parameter count and coarse
+parameter types. It does not duplicate transport, alter imported source, update
+the installed adapter or expose exception messages, source lines, parameter
+values, credentials or raw server responses. The existing transport discards
+server error details; the wrapper cannot reconstruct their numeric code or
+message and does not pretend to do so.
+
+Windows regressions inject JSON-RPC errors, malformed responses, transport
+exceptions and a subsequent cleanup failure. They prove retained original
+context, separately reported cleanup failure, no accepted transition on error
+and no sensitive sentinel in console or journal. Native mutator argument counts
+and JSON types are checked independently by the mock. These tests qualify
+diagnostics, not the unknown cause of a real-kernel RPC failure.
