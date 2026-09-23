@@ -18,11 +18,13 @@ foreach (['legacy', 'candidate'] as $version) {
         throw new RuntimeException('Inert fixture differs from runtime property registration.');
     }
     foreach (token_get_all($fixture) as $token) {
-        if (is_array($token) && $token[0] === T_STRING && !in_array($token[1], [
+        if (
+            is_array($token) && $token[0] === T_STRING && !in_array($token[1], [
             'strict_types', 'SAEFMediaCarouselSchemaProbe', 'IPSModuleStrict', 'Create', 'ApplyChanges',
             'void', 'parent', 'RegisterPropertyString', 'RegisterPropertyInteger', 'RegisterPropertyBoolean',
             'true', 'false', 'self', 'SOURCE_LIST',
-        ], true)) {
+            ], true)
+        ) {
             throw new RuntimeException('Unexpected executable token in inert schema fixture: ' . $token[1]);
         }
     }

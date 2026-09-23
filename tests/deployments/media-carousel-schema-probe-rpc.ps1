@@ -94,7 +94,8 @@ function Invoke-RestMethod {
         default { throw ('Unexpected RPC method: ' + $m) }
     }
     [IO.File]::WriteAllText($f.logPath, ($s | ConvertTo-Json))
-    return @{ result = $v }
+    # Match Invoke-RestMethod's JSON object/array types, not PowerShell hashtables.
+    return (ConvertTo-Json -InputObject @{ result = $v } -Depth 20 -Compress | ConvertFrom-Json)
 }
 & $EntryPath -PlanPath $PlanPath -ExpectedPlanSha256 $ExpectedPlanSha256 -Confirmation qualify-media-carousel-schema
 exit $LASTEXITCODE
