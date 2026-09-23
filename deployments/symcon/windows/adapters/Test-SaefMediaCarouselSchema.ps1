@@ -44,7 +44,7 @@ function Assert-ProbeInstance {
     if ($object.ObjectType -ne 1 -or $instance.ModuleInfo.ModuleID -cne $testModule -or
         @(Invoke-SymconRpc 'IPS_GetChildrenIDs' @($testID)).Count -ne 0) { throw 'Test instance ownership changed.' }
 }
-function Invoke-ProbeMutation { param([string] $Method, [object[]] $Arguments)
+function Invoke-ProbeMutation { param([string] $Method, [object[]] $Arguments = @())
     Assert-ProbeInstance
     if ($Method -cnotin @('IPS_SetParent', 'IPS_SetIdent', 'IPS_SetName', 'IPS_SetHidden',
         'IPS_SetConfiguration', 'IPS_ApplyChanges', 'IPS_DeleteInstance')) { throw 'Unapproved test mutation.' }
@@ -255,12 +255,14 @@ finally {
         try { Assert-ProbeProduction; $result.productionPreserved = $true }
         catch { $result.postflightError = $_.Exception.Message; $result.outcome = 'manual_recovery_required' }
     }
-    if ($result.outcome -ceq 'schema_observed' -and $result.cleanupVerified -and $result.productionPreserved) {
-        $accepted = Join-Path $evidence 'configuration-transition.local.json'
-        Write-AtomicJson $accepted $transition
-        $result.transitionSha256 = Get-Sha256 $accepted
-        $result.outcome = 'qualified'; $result.exitCode = 0; $result.stage = 'complete'
-    } elseif ($result.testMutationAttempted) { $result.exitCode = 40 }
+    try {
+        if ($result.outcome -ceq 'schema_observed' -and $result.cleanupVerified -and $result.productionPreserved) {
+            $accepted = Join-Path $evidence 'configuration-transition.local.json'
+            Write-AtomicJson $accepted $transition
+            $result.transitionSha256 = Get-Sha256 $accepted
+            $result.outcome = 'qualified'; $result.exitCode = 0; $result.stage = 'complete'
+        } elseif ($result.testMutationAttempted) { $result.exitCode = 40 }
+    } catch { $result.outcome = 'evidence_write_failed'; $result.exitCode = 40; $result.error = $_.Exception.Message }
     if ($locked) { $lock.ReleaseMutex() }
     if ($null -ne $lock) { $lock.Dispose() }
     $script:credential = $null
