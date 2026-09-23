@@ -13,6 +13,7 @@ $evidence = $null
 $testID = $null
 $owned = $false
 $createAttempted = $false
+$sequenceIndex = 0
 $snapshot = $null
 $modulesParent = $null
 $parentSddl = $null
@@ -32,7 +33,8 @@ function Get-ProbeFailure { param([Management.Automation.ErrorRecord] $Record)
     if ($type.Length -gt 160 -or $type -cnotmatch '^[A-Za-z0-9_.+`]+$') { $type = 'UnknownException' }
     $line = $null
     if ($null -ne $Record.InvocationInfo) { $line = [int] $Record.InvocationInfo.ScriptLineNumber }
-    return [ordered]@{ stage = $result.stage; errorType = $type; line = $line; rpc = $script:probeRpcFailure }
+    return [ordered]@{ stage = $result.stage; sequenceIndex = $sequenceIndex
+        errorType = $type; line = $line; rpc = $script:probeRpcFailure }
 }
 
 function Read-ProbeBoundSource { param([string] $Path, [string] $Hash)
@@ -67,6 +69,7 @@ function Invoke-ProbeMutation { param([string] $Method, [object[]] $Arguments = 
 function Save-ProbeJournal {
     Write-AtomicJson (Join-Path $evidence 'journal.local.json') ([ordered]@{
         stage = $result.stage; testPath = $testPath; stagingPath = $stagingPath; testInstanceId = $testID
+        sequenceIndex = $sequenceIndex
         createAttempted = $createAttempted; ownedDirectory = $owned
         failure = if ($result.Contains('failure')) { $result.failure } else { $null }
         productionMutationAttempted = $false; timestampUtc = [DateTime]::UtcNow.ToString('o')
@@ -275,6 +278,25 @@ try {
     if ((Invoke-SymconRpc 'MC_ReloadModule' @([int] $script:policy.moduleControlInstanceId, $testFolder)) -ne $true -or
         -not (Invoke-SymconRpc 'IPS_ModuleExists' @($testModule))) { throw 'Test library registration failed.' }
     if (@(Invoke-SymconRpc 'IPS_GetInstanceListByModuleID' @($testModule)).Count -ne 0) { throw 'Unexpected test instance.' }
+    $transition = [ordered]@{ kind = 'show-fit-toggle-default-false-v1'; deploymentId = $plan.deploymentId
+        sourcePackageIdentitySha256 = $script:policy.expectedActivePackageIdentitySha256
+        candidatePackageIdentitySha256 = $plan.candidatePackageIdentitySha256; instances = @() }
+    foreach ($record in $snapshot.instances) {
+    $sequenceIndex++
+    # Every input starts with a fresh legacy instance. Never submit legacy JSON
+    # to an upgraded schema or assume a downgrade removes registered properties.
+    $result.stage = 'test_legacy_registration'
+    Save-ProbeJournal
+    if ($sequenceIndex -gt 1) {
+        Write-AtomicText (Join-Path $testPath 'SchemaProbe/module.php') $fixture['legacy.php']
+        Assert-ProbeTree
+        if ((Invoke-SymconRpc 'MC_ReloadModule' @([int] $script:policy.moduleControlInstanceId, $testFolder)) -ne $true) {
+            throw 'Test legacy reload failed.'
+        }
+    }
+    if (@(Invoke-SymconRpc 'IPS_GetInstanceListByModuleID' @($testModule)).Count -ne 0) {
+        throw 'Previous test instance remains; sequence stopped.'
+    }
     $createAttempted = $true
     Save-ProbeJournal
     $newID = Invoke-SymconRpc 'IPS_CreateInstance' @($testModule)
@@ -286,12 +308,12 @@ try {
     Invoke-ProbeMutation 'IPS_SetIdent' @($testIdent)
     Invoke-ProbeMutation 'IPS_SetName' @('SAEF MediaCarousel isolated schema test')
     Invoke-ProbeMutation 'IPS_SetHidden' @($true)
-    $first = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($snapshot.instances[0].configurationBase64))
+    $before = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($record.configurationBase64))
     $result.stage = 'test_legacy_configuration'
     Save-ProbeJournal
-    Invoke-ProbeMutation 'IPS_SetConfiguration' @($first)
+    Invoke-ProbeMutation 'IPS_SetConfiguration' @($before)
     Invoke-ProbeMutation 'IPS_ApplyChanges' @()
-    if ((Invoke-SymconRpc 'IPS_GetConfiguration' @($testID)) -cne $first) { throw 'Legacy test registration does not reproduce baseline.' }
+    if ((Invoke-SymconRpc 'IPS_GetConfiguration' @($testID)) -cne $before) { throw 'Legacy test registration does not reproduce baseline.' }
     $result.stage = 'test_default_registration'
     Save-ProbeJournal
     Write-AtomicText (Join-Path $testPath 'SchemaProbe/module.php') $fixture['candidate.php']
@@ -299,22 +321,19 @@ try {
     if ((Invoke-SymconRpc 'MC_ReloadModule' @([int] $script:policy.moduleControlInstanceId, $testFolder)) -ne $true) {
         throw 'Test candidate reload failed.'
     }
-    $registered = [string] (Invoke-SymconRpc 'IPS_GetConfiguration' @($testID))
-    Assert-FitDefaultAddition $first $registered
-    $transition = [ordered]@{ kind = 'show-fit-toggle-default-false-v1'; deploymentId = $plan.deploymentId
-        sourcePackageIdentitySha256 = $script:policy.expectedActivePackageIdentitySha256
-        candidatePackageIdentitySha256 = $plan.candidatePackageIdentitySha256; instances = @() }
-    $result.stage = 'test_configuration_sequence'
-    Save-ProbeJournal
-    foreach ($record in $snapshot.instances) {
-        $before = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($record.configurationBase64))
-        Invoke-ProbeMutation 'IPS_SetConfiguration' @($before)
-        Invoke-ProbeMutation 'IPS_ApplyChanges' @()
         $after = [string] (Invoke-SymconRpc 'IPS_GetConfiguration' @($testID))
         Assert-FitDefaultAddition $before $after
         $transition.instances += [ordered]@{ instanceId = $record.instanceId
             configurationBase64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($after))
             configurationSha256 = Get-TextSha256 $after }
+        Write-AtomicJson (Join-Path $evidence 'transition.unaccepted.local.json') $transition
+        $result.stage = 'test_instance_cleanup'
+        Save-ProbeJournal
+        Invoke-ProbeMutation 'IPS_DeleteInstance' @()
+        if (Invoke-SymconRpc 'IPS_InstanceExists' @($testID)) { throw 'Test instance deletion incomplete.' }
+        $testID = $null
+        $createAttempted = $false
+        Save-ProbeJournal
     }
     Write-AtomicJson (Join-Path $evidence 'transition.unaccepted.local.json') $transition
     $result.qualifiedInstanceCount = $transition.instances.Count

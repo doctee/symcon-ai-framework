@@ -38,7 +38,7 @@ try {
         foreach ($scenario in @('success', 'schema-drift', 'zero-id', 'creation-response-lost',
             'cleanup-fails', 'foreign-child', 'production-drift', 'changed-plan',
             'shared-parent', 'parent-delete-child', 'parent-takeover',
-            'rpc-error', 'rpc-error-cleanup', 'rpc-malformed', 'rpc-transport')) {
+            'rpc-error', 'rpc-error-cleanup', 'rpc-malformed', 'rpc-transport', 'second-input-fails')) {
             $fixture = Join-Path $scratch ($culture + '-' + $scenario)
             $null = [IO.Directory]::CreateDirectory($fixture)
             Copy-Item $windowsRoot (Join-Path $fixture 'windows') -Recurse
@@ -152,6 +152,16 @@ try {
             if (Test-Path $logPath) {
                 $log = Get-Content $logPath -Raw | ConvertFrom-Json
                 Assert-Test ($log.productionWrites -eq 0) 'Production write occurred.'
+                if ($scenario -in @('success', 'shared-parent')) {
+                    Assert-Test ($log.creates -eq 2 -and $log.deletes -eq 2 -and $log.reloads -eq 4) 'Each baseline requires its own complete legacy-to-candidate cycle.'
+                }
+            }
+            if ($scenario -eq 'second-input-fails') {
+                Assert-Test ($result.failure.sequenceIndex -eq 2 -and
+                    $result.failure.rpc.method -ceq 'IPS_SetConfiguration' -and
+                    $result.cleanupVerified -and $result.productionPreserved) 'Second input failure identity or cleanup lost.'
+                $partial = Get-Content (Join-Path $result.evidenceRoot 'transition.unaccepted.local.json') -Raw | ConvertFrom-Json
+                Assert-Test ($partial.instances.Count -eq 1) 'Partial observation was not preserved.'
             }
             Assert-Test ((Hash-File $channel) -ceq $plan.channelPolicySha256) 'Channel modified.'
             Assert-Test ((Get-Acl -LiteralPath (Split-Path -Parent $module)).Sddl -ceq $parentBefore) 'Shared parent ACL changed.'

@@ -3,7 +3,7 @@ param($PlanPath, $ExpectedPlanSha256, $FixturePath, $EntryPath, $Culture)
 [Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo($Culture)
 $global:probeMock = Get-Content -LiteralPath $FixturePath -Raw | ConvertFrom-Json
 $global:probeState = @{ registered = $false; exists = $false; candidate = $false; configuration = ''
-    mutations = 0; reloads = 0; productionWrites = 0 }
+    mutations = 0; reloads = 0; productionWrites = 0; creates = 0; deletes = 0 }
 function Invoke-RestMethod {
     param($Uri, $Method, $ContentType, $Body, $TimeoutSec, $Headers)
     $request = $Body | ConvertFrom-Json
@@ -32,6 +32,7 @@ function Invoke-RestMethod {
         return ([pscustomobject]@{ error = [pscustomobject]@{ code = -32602; message = 'PRIVATE_SENTINEL'; data = 'PRIVATE_SENTINEL' } })
     }
     switch ($m) {
+        # Later-input failure must not accept the earlier partial observation.
         'IPS_GetKernelRunlevel' { $v = 10103 }
         'IPS_FunctionExists' { $v = $true }
         'IPS_GetFunction' { $v = @{ Parameters = @(@{ Type_ = 1 }, @{ Type_ = 3 }) } }
@@ -77,21 +78,30 @@ function Invoke-RestMethod {
             }
             $s.reloads++; $s.registered = $true
             if ((Get-Content (Join-Path $testPath 'SchemaProbe/module.php') -Raw).Contains('ShowFitToggle')) {
+                if (-not $s.exists -or $s.candidate) { throw 'Candidate requires one legacy instance.' }
                 $s.candidate = $true
                 $s.configuration = $s.configuration.TrimEnd('}') + ',"ShowFitToggle":false}'
                 if ($f.scenario -eq 'schema-drift') { $s.configuration = $s.configuration.Replace('false', 'true') }
+            } else {
+                if ($s.exists) { throw 'Do not assume schema downgrade removes properties.' }
+                $s.candidate = $false
             }
             $v = $true
         }
         'IPS_CreateInstance' {
             if ($a[0] -cne $testGuid) { throw 'Foreign creation prohibited.' }
+            if ($s.exists -or $s.candidate) { throw 'Fresh legacy schema required.' }
+            $s.creates++
             $s.exists = $true; $v = 54321
             if ($f.scenario -eq 'creation-response-lost') { throw 'Synthetic uncertain creation.' }
             if ($f.scenario -eq 'zero-id') { $v = 0 }
         }
         'IPS_SetConfiguration' {
+            if ($f.scenario -eq 'second-input-fails' -and $s.creates -eq 2) {
+                return ([pscustomobject]@{ error = [pscustomobject]@{ code = -32602; message = 'PRIVATE_SENTINEL' } })
+            }
+            if ($s.candidate) { throw 'Legacy configuration cannot be submitted to candidate schema.' }
             $s.configuration = [string] $a[1]
-            if ($s.candidate) { $s.configuration = $s.configuration.TrimEnd('}') + ',"ShowFitToggle":false}' }
             $v = $true
         }
         'IPS_SetParent' { $v = $true }
@@ -102,6 +112,7 @@ function Invoke-RestMethod {
         'IPS_DeleteInstance' {
             if ($f.scenario -in @('cleanup-fails', 'rpc-error-cleanup')) { throw 'PRIVATE_SENTINEL cleanup failure.' }
             $s.exists = $false; $v = $true
+            $s.deletes++
         }
         'MC_DeleteModule' {
             if ($a[1] -cne 'saef-media-carousel-schema-probe' -or $s.exists) { throw 'Unsafe test library delete.' }
