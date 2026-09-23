@@ -2,7 +2,7 @@
 param(
     [Parameter()][string] $ZipPath = '',
     [Parameter(Mandatory = $true)][ValidatePattern('^[a-f0-9]{64}$')][string] $ExpectedZipSha256,
-    [Parameter()][ValidateSet('schema', 'binding')][string] $PackageKind = 'schema'
+    [Parameter()][ValidateSet('schema', 'binding', 'settings')][string] $PackageKind = 'schema'
 )
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
@@ -11,7 +11,7 @@ $DefaultZipName = 'MediaCarousel-SchemaQualification.zip'
 # Package-local bootstrap, not a new general archive extraction API. The entire
 # archive is hash-bound before parsing; only these fixed regular files may exist.
 function Expand-SchemaPackage { param([string] $Path, [string] $Hash,
-    [ValidateSet('schema', 'binding')][string] $Kind = 'schema')
+    [ValidateSet('schema', 'binding', 'settings')][string] $Kind = 'schema')
     $allowed = @('schema-plan.local.json', 'windows/Initialize-SaefDeploymentChannel.ps1',
         'windows/SaefChildProcess.ps1', 'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1',
         'windows/adapters/Invoke-SaefMediaCarouselModuleOwnershipMigration.ps1',
@@ -22,6 +22,11 @@ function Expand-SchemaPackage { param([string] $Path, [string] $Hash,
         $allowed = @('binding-plan.local.json', 'candidate-policy.local.json', 'candidate-channel.local.json',
             'windows/Initialize-SaefDeploymentChannel.ps1', 'windows/SaefChildProcess.ps1',
             'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1', 'windows/adapters/Update-SaefMediaCarouselBinding.ps1')
+    }
+    if ($Kind -ceq 'settings') {
+        $allowed = @('settings-plan.local.json', 'windows/Initialize-SaefDeploymentChannel.ps1',
+            'windows/SaefChildProcess.ps1', 'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1',
+            'windows/adapters/Set-SaefMediaCarouselFitToggle.ps1')
     }
     if (-not [IO.Path]::IsPathRooted($Path) -or -not (Test-Path -LiteralPath $Path -PathType Leaf) -or
         (Get-Item -LiteralPath $Path).Length -gt 4194304) { throw 'Missing or oversized schema archive.' }
@@ -109,6 +114,12 @@ try {
         $planName = 'binding-plan.local.json'
         $confirmation = 'update-saef-media-carousel-binding'
         $extra = @('-Operation', 'install')
+    }
+    if ($PackageKind -ceq 'settings') {
+        $entry = 'windows/adapters/Set-SaefMediaCarouselFitToggle.ps1'
+        $planName = 'settings-plan.local.json'
+        $confirmation = 'enable-media-carousel-fit-toggle'
+        $extra = @('-Operation', 'apply')
     }
     $child = Invoke-SaefPowerShellChildProcess `
         -ScriptPath (Join-Path $package.root $entry) `
