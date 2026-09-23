@@ -35,10 +35,17 @@ $qualificationResult = Invoke-SaefPowerShellChildProcess -ScriptPath $qualificat
     -Arguments @('-ExpectedRunnerSha256', (Get-TestHash $runner), '-ExpectedAdapterSha256', (Get-TestHash $adapter),
         '-ExpectedResealSha256', (Get-TestHash $reseal), '-ExpectedChildProcessContractSha256', (Get-TestHash $childContract),
         '-RunnerPath', $runner, '-AdapterPath', $adapter, '-ResealPath', $reseal, '-ChildProcessContractPath', $childContract,
+        '-ProfileInitializerPath', $initializer,
         '-SyntheticAdapterPath', (Join-Path $fixtures 'Invoke-SaefApprovalSyntheticAdapter.ps1'),
         '-SyntheticResealPath', (Join-Path $fixtures 'Invoke-SaefApprovalSyntheticReseal.ps1'),
         '-QualificationTargetId', $TargetId, '-QualificationDeploymentUser', $deploymentUser, '-StatusPath', $status)
 $qualificationExit = $qualificationResult.exitCode
+if (-not (Test-Path -LiteralPath $status -PathType Leaf)) {
+    # These are isolated fixtures with generated dummy credentials only. Surface
+    # the bounded native startup error instead of hiding it behind Get-Content.
+    Write-Output ([Text.Encoding]::UTF8.GetString($qualificationResult.standardError))
+    throw ('Qualification produced no status; termination=' + $qualificationResult.terminationReason + '; exit=' + $qualificationExit)
+}
 Get-Content -LiteralPath $status
 if ($qualificationExit -ne 0) { exit $qualificationExit }
 $result = Get-Content -LiteralPath $status -Raw | ConvertFrom-Json
