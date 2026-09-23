@@ -91,7 +91,7 @@ try {
     foreach ($path in @($package, $PlanPath, $PSScriptRoot, $windows, $policyPath) + @($fixedSources.Values)) {
         Assert-AdditionProtectedPath $path
     }
-    Assert-Elevated
+    Assert-Elevated | Out-Null
     # Must remain at script scope for Windows PowerShell 5.1.
     . $launcher
     $script:policy = ConvertFrom-AdditionJson (Read-AdditionBoundBytes $policyPath $plan.adapterPolicySha256)

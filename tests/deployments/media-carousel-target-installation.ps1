@@ -24,7 +24,7 @@ foreach ($import in $imports) {
     }
 }
 . (Join-Path $windowsRoot 'SaefChildProcess.ps1')
-Assert-Elevated
+Assert-Elevated | Out-Null
 $DeploymentUser = [Security.Principal.WindowsIdentity]::GetCurrent().Name.Split('\')[-1]
 $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $scratch = Join-Path ([IO.Path]::GetTempPath()) ('saef-target-install-test-' + [Guid]::NewGuid().ToString('N'))
