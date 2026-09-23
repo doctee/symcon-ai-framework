@@ -353,6 +353,9 @@ function Start-MockRpc {
                 $result = $null
                 $errorRecord = $null
                 switch ($method) {
+                    'SAEF_Utf8Probe' { $result = [string] $request.params[0] }
+                    'SAEF_Utf8RequestProbe' { $result = ([string] $request.params[0] -ceq $ConfigurationOne) }
+                    'SAEF_InvalidUtf8Probe' { $result = $null }
                     'IPS_GetKernelRunlevel' { $result = 10103 }
                     'IPS_FunctionExists' { $result = ([string] $request.params[0] -eq 'MC_ReloadModule') }
                     'IPS_InstanceExists' {
@@ -449,6 +452,7 @@ function Start-MockRpc {
                     ($response | ConvertTo-Json -Depth 8 -Compress)
                 )
                 $context.Response.StatusCode = 200
+                if ($method -ceq 'SAEF_InvalidUtf8Probe') { $bytes = [byte[]] @(0xc3, 0x28) }
                 $context.Response.ContentType = 'application/json'
                 $context.Response.ContentLength64 = $bytes.Length
                 $context.Response.OutputStream.Write($bytes, 0, $bytes.Length)
@@ -536,8 +540,28 @@ try {
             $adapterSource,
             [regex]::Escape("-Method 'MC_ReloadModule'")
         ).Count -ne 1 -or
-        $adapterSource -match 'Restart-Service|Stop-Service|Start-Service|MC_UpdateModule|Invoke-WebRequest') {
+        $adapterSource -match 'Restart-Service|Stop-Service|Start-Service|MC_UpdateModule|Invoke-RestMethod') {
         throw [InvalidOperationException]::new('Adapter action boundary differs from the reviewed contract.')
+    }
+    $boundaryTokens = $null; $boundaryErrors = $null
+    $boundaryAst = [Management.Automation.Language.Parser]::ParseFile(
+        $adapterPath, [ref] $boundaryTokens, [ref] $boundaryErrors)
+    $webCalls = @($boundaryAst.FindAll({ param($node)
+        $node -is [Management.Automation.Language.CommandAst] -and
+        $node.GetCommandName() -ieq 'Invoke-WebRequest'
+    }, $true))
+    if (@($boundaryErrors).Count -ne 0 -or $webCalls.Count -ne 1) {
+        throw [InvalidOperationException]::new('Expected exactly one reviewed RPC HTTP transport.')
+    }
+    $owner = $webCalls[0].Parent
+    while ($null -ne $owner -and $owner -isnot [Management.Automation.Language.FunctionDefinitionAst]) {
+        $owner = $owner.Parent
+    }
+    if ($null -eq $owner -or $owner.Name -cne 'Invoke-SymconRpc' -or
+        -not $webCalls[0].Extent.Text.StartsWith(
+            "Invoke-WebRequest -UseBasicParsing -Uri `$RpcUri -Method Post -ContentType 'application/json; charset=utf-8'",
+            [StringComparison]::Ordinal)) {
+        throw [InvalidOperationException]::new('HTTP transport escaped the reviewed UTF8 RPC boundary.')
     }
     $passedScenarios += 'static-targeted-reload-only-boundary'
     $positiveCaseCount++
@@ -569,7 +593,11 @@ try {
     New-SyntheticModuleTree -Path $candidateSuccess -Marker 'candidate-success'
     New-SyntheticModuleTree -Path $candidateFailure -Marker 'candidate-failure'
 
-    $configurationOne = '{"Enabled":true,"Synthetic":"one"}'
+    # ASCII source, but genuine Unicode wire data: umlaut, euro, CJK,
+    # supplementary plane and decomposed accent; no locale-dependent literals.
+    $unicode = [string] [char] 0x00e4 + [char] 0x20ac + [char] 0x6c34 +
+        [char]::ConvertFromUtf32(0x1f4f7) + 'e' + [char] 0x0301
+    $configurationOne = '{"Enabled":true,"Synthetic":"' + $unicode + '"}'
     $configurationTwo = '{"Enabled":true,"Synthetic":"two"}'
     New-CredentialFile -Path (Join-Path $scratchRoot 'credential.json')
     $policyPath = Join-Path $scratchRoot 'adapter-policy.json'
@@ -643,6 +671,43 @@ try {
         -ControlPath $controlPath -ConfigurationOne $configurationOne `
         -ConfigurationTwo $configurationTwo -RequestLogPath $requestLogPath `
         -StopPath $mockStopPath -ActivePath $activePath
+
+    # Exercise actual Windows web cmdlets, not the schema test's transport fake.
+    # The server deliberately returns UTF8 JSON without a charset declaration.
+    $rpcTokens = $null; $rpcErrors = $null
+    $rpcAst = [Management.Automation.Language.Parser]::ParseFile(
+        (Join-Path $sourceRoot 'Invoke-SaefMediaCarouselModuleAdapter.ps1'), [ref] $rpcTokens, [ref] $rpcErrors)
+    $rpcFunction = @($rpcAst.FindAll({ param($node)
+        $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -ceq 'Invoke-SymconRpc'
+    }, $false))
+    if (@($rpcErrors).Count -ne 0 -or $rpcFunction.Count -ne 1) { throw 'RPC source extraction failed.' }
+    . ([scriptblock]::Create($rpcFunction[0].Extent.Text))
+    $RpcUri = "http://127.0.0.1:$port/"
+    $script:credential = [Management.Automation.PSCredential]::new('synthetic',
+        (ConvertTo-SecureString 'synthetic' -AsPlainText -Force))
+    $script:policy = $policy
+    $originalCulture = [Threading.Thread]::CurrentThread.CurrentCulture
+    try {
+        foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
+            [Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo($culture)
+            foreach ($value in @('ASCII', $configurationOne)) {
+                if ((Invoke-SymconRpc 'SAEF_Utf8Probe' @($value)) -cne $value) { throw 'UTF8 HTTP roundtrip differs.' }
+            }
+        }
+        if ((Invoke-SymconRpc 'SAEF_Utf8RequestProbe' @($configurationOne)) -ne $true) { throw 'UTF8 request bytes differ.' }
+        $legacyBody = @{ jsonrpc = '2.0'; id = 1; method = 'SAEF_Utf8RequestProbe'; params = @($configurationOne) } |
+            ConvertTo-Json -Depth 10 -Compress
+        $legacy = Invoke-RestMethod -Uri $RpcUri -Method Post -ContentType 'application/json' -Body $legacyBody -TimeoutSec 10
+        if ($legacy.result -ne $false) { throw 'Legacy request encoding negative control did not reproduce corruption.' }
+        $invalidRejected = $false
+        try { $null = Invoke-SymconRpc 'SAEF_InvalidUtf8Probe' @() } catch { $invalidRejected = $true }
+        if (-not $invalidRejected) { throw 'Invalid UTF8 response was accepted.' }
+        $passedScenarios += 'explicit-utf8-http-roundtrip-three-cultures-and-legacy-negative-control'
+        $positiveCaseCount++
+    } finally {
+        [Threading.Thread]::CurrentThread.CurrentCulture = $originalCulture
+        $script:credential = $null
+    }
 
     $activeInitialIdentity = Get-PackageIdentity -Path $activePath
     $failureCode = 'synthetic_preflight'

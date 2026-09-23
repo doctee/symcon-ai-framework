@@ -204,7 +204,10 @@ try {
     $targets = @($channel.standaloneModuleTargets | Where-Object { $_.targetId -ceq 'saef-media-carousel' })
     if ($targets.Count -ne 1) { throw 'Installed target missing or ambiguous.' }
     $target = $targets[0]
-    if ($target.expectedAdapterSha256 -cne $plan.sourceHashes.adapter -or
+    # The reviewed test transport may precede its protected installation. Pin
+    # both identities explicitly; never substitute candidate hash for live hash.
+    if ($plan.installedAdapterSha256 -cnotmatch '^[a-f0-9]{64}$' -or
+        $target.expectedAdapterSha256 -cne $plan.installedAdapterSha256 -or
         $target.expectedAdapterPolicySha256 -cne $plan.adapterPolicySha256) { throw 'Installed binding changed.' }
     $script:policy = ConvertFrom-AdditionJson (Read-AdditionBoundBytes $target.adapterPolicyPath $plan.adapterPolicySha256)
     if ($script:policy.targetId -cne 'saef-media-carousel' -or $script:policy.adapterProfile -cne 'saef-media-carousel-v1' -or

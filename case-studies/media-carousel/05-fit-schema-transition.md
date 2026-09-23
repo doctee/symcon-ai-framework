@@ -168,3 +168,28 @@ observation is retained as unaccepted evidence until complete cleanup and
 production postflight pass. Strict mocks reject legacy writes to candidate
 instances and schema downgrades with surviving instances. A second-input
 failure proves that partial evidence cannot authorize a transition.
+
+## Explicit UTF-8 RPC boundary
+
+The MediaCarousel adapter now sends UTF-8 bytes with an explicit charset and
+decodes response bytes as strict UTF-8, including responses without a charset.
+Windows PowerShell 5.1 string-body and response defaults must not determine
+configuration identity. Credentials, endpoint restrictions and timeout remain
+unchanged. The existing synthetic HTTP server verifies ASCII and Unicode
+roundtrips under three cultures, an old-transport negative control, and complete
+activation/rollback transactions with Unicode configuration. It uses real web
+cmdlets rather than mocking the HTTP encoding boundary.
+
+Affected consumers are the adapter's configuration restoration and snapshot
+paths, the isolated schema probe's imported RPC function, exact-source Windows
+qualification and target installation/hash binding. The ownership migration,
+OwnTracks adapter and generic channel have their own RPC implementations; they
+are inventoried but not modified or implicitly qualified by this target fix.
+
+The isolated probe plan pins `installedAdapterSha256` separately from
+`sourceHashes.adapter`. Existing installed bindings are still validated against
+their actual protected files, while the imported candidate comes only from the
+separately hash-bound test package. A candidate source change never updates or
+bypasses an installed binding. This permits isolated real-kernel qualification
+before a later protected adapter/policy installation, not production use of an
+uninstalled candidate. Wrong installed hashes fail before test mutation.

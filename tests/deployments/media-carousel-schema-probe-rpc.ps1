@@ -4,6 +4,17 @@ param($PlanPath, $ExpectedPlanSha256, $FixturePath, $EntryPath, $Culture)
 $global:probeMock = Get-Content -LiteralPath $FixturePath -Raw | ConvertFrom-Json
 $global:probeState = @{ registered = $false; exists = $false; candidate = $false; configuration = ''
     mutations = 0; reloads = 0; productionWrites = 0; creates = 0; deletes = 0 }
+function Invoke-WebRequest {
+    param([switch] $UseBasicParsing, $Uri, $Method, $ContentType, $Body, $TimeoutSec, $Headers)
+    if (-not $UseBasicParsing -or $Body -isnot [byte[]] -or $ContentType -cne 'application/json; charset=utf-8') {
+        throw 'Explicit UTF8 byte transport required.'
+    }
+    $utf8 = [Text.UTF8Encoding]::new($false, $true)
+    $reply = Invoke-RestMethod -Uri $Uri -Method $Method -ContentType $ContentType `
+        -Body ($utf8.GetString($Body)) -TimeoutSec $TimeoutSec -Headers $Headers
+    $bytes = $utf8.GetBytes(($reply | ConvertTo-Json -Depth 20 -Compress))
+    return [pscustomobject]@{ RawContentStream = [IO.MemoryStream]::new($bytes, $false) }
+}
 function Invoke-RestMethod {
     param($Uri, $Method, $ContentType, $Body, $TimeoutSec, $Headers)
     $request = $Body | ConvertFrom-Json
