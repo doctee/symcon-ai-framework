@@ -123,7 +123,7 @@ try {
             $context = Get-ApprovalBootstrapContext $spec $package $packageWindows $account.Name (ConvertFrom-AdditionJson $before) $root
             $result = [ordered]@{ bindingMutationAttempted = $false; rollbackSucceeded = $null }
             $runtimeCalls = 0; $threw = $false
-            try { Publish-UpdateGeneration $channelPath $generation $before $after $adapterBytes $policyBytes $context }
+            try { Publish-UpdateGeneration $channelPath $generation $before $after $adapterBytes $policyBytes $context -DeploymentSid $additionDeploymentSid }
             catch { $threw = $true; if ($scenario -ceq 'success') { throw } }
             if ($threw -ne ($scenario -cne 'success')) { throw 'Unexpected bootstrap outcome.' }
             if ($scenario -ceq 'success') {
@@ -176,7 +176,7 @@ try {
                 # Failure after pointer publication restores the prior profile,
                 # while both old and newly copied ledgers remain available.
                 $scenario = 'postflight-failure'; $runtimeCalls = 0; $rejected = $false
-                try { Publish-UpdateGeneration $channelPath $second $prior ($utf8.GetBytes(($next | ConvertTo-Json -Depth 30))) $adapterBytes $policyBytes $migration }
+                try { Publish-UpdateGeneration $channelPath $second $prior ($utf8.GetBytes(($next | ConvertTo-Json -Depth 30))) $adapterBytes $policyBytes $migration -DeploymentSid $additionDeploymentSid }
                 catch { $rejected = $true }
                 if (-not $rejected -or -not $result.rollbackSucceeded -or (Hash-File $channelPath) -cne (Get-BytesSha256 $prior) -or
                     (Get-ApprovalStateInventory $oldApproval.approvalStateRoot).sha256 -cne $ledgerHash -or
@@ -189,7 +189,7 @@ try {
                 $next.standaloneModuleTargets[1].adapterPath = Join-Path $second 'adapter.ps1'
                 $next.standaloneModuleTargets[1].adapterPolicyPath = Join-Path $second 'adapter-policy.local.json'
                 $migration = Get-ApprovalBootstrapContext $spec $package $packageWindows $account.Name $actual $root
-                Publish-UpdateGeneration $channelPath $second $prior ($utf8.GetBytes(($next | ConvertTo-Json -Depth 30))) $adapterBytes $policyBytes $migration
+                Publish-UpdateGeneration $channelPath $second $prior ($utf8.GetBytes(($next | ConvertTo-Json -Depth 30))) $adapterBytes $policyBytes $migration -DeploymentSid $additionDeploymentSid
                 $migrated = Join-Path $spec.approvalRoot 'saef-media-carousel/state'
                 if ((Get-ApprovalStateInventory $migrated).sha256 -cne $ledgerHash -or
                     (Get-ApprovalStateInventory $oldApproval.approvalStateRoot).sha256 -cne $ledgerHash) { throw 'Replay ledger was not retained.' }

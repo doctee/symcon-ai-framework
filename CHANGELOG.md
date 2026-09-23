@@ -9,6 +9,7 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+- Give MediaCarousel binding generations the required explicit deployment-principal read/execute directory rule and exercise publisher-produced ACLs through the complete resealer, including rejection of the original missing-rule defect.
 - Keep MediaCarousel approval state outside managed deployment roots and preserve consumed approval records during atomic profile relocation; exercise actual resealer path guards in Windows bootstrap tests.
 
 ### Added

@@ -113,7 +113,8 @@ try {
             try {
                 Assert-UpdatePreservation (ConvertFrom-AdditionJson $before) $new $generation `
                     (Get-BytesSha256 $candidateAdapter) (Get-BytesSha256 $candidatePolicy)
-                Publish-UpdateGeneration $channelPath $generation $before $after $candidateAdapter $candidatePolicy
+                Publish-UpdateGeneration $channelPath $generation $before $after $candidateAdapter $candidatePolicy `
+                    -DeploymentSid ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value)
             } catch { $threw = $true }
             Assert-Test ($threw -eq ($scenario -cne 'success')) ('Unexpected outcome: ' + $scenario)
             $current = [IO.File]::ReadAllBytes($channelPath)

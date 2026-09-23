@@ -5,6 +5,17 @@ if ($PSVersionTable.PSEdition -cne 'Desktop' -or $PSVersionTable.PSVersion.Major
 $windows = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../deployments/symcon/windows'))
 $source = Join-Path $windows 'adapters/Invoke-SaefOwnTracksPositionMapActiveIdentityReseal.ps1'
 . (Join-Path $windows 'SaefChildProcess.ps1')
+# Use the actual binding publisher to produce the policy generation. Hand-built
+# policy ACLs previously hid the installer/resealer contract mismatch.
+foreach ($inputSource in @('Initialize-SaefDeploymentChannel.ps1', 'adapters/Update-SaefMediaCarouselBinding.ps1')) {
+    $tokens = $null; $errors = $null
+    $inputAst = [Management.Automation.Language.Parser]::ParseFile((Join-Path $windows $inputSource), [ref] $tokens, [ref] $errors)
+    if (@($errors).Count) { throw 'Binding source does not parse.' }
+    foreach ($fn in @($inputAst.FindAll({ param($node)
+        $node -is [Management.Automation.Language.FunctionDefinitionAst]
+    }, $false))) { . ([scriptblock]::Create($fn.Extent.Text)) }
+}
+function Assert-UpdateRuntime { } # Explicit no-RPC boundary in this filesystem integration.
 $tokens = $null; $errors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile($source, [ref] $tokens, [ref] $errors)
 if (@($errors).Count) { throw 'Reseal source does not parse.' }
@@ -19,6 +30,7 @@ $MaximumPackageBytes = 67108864; $MaximumPackageFiles = 256
 $utf8 = [Text.UTF8Encoding]::new($false)
 $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User
 $account = Get-LocalUser -SID $sid
+$additionDeploymentSid = $sid.Value
 $sourceHash = Get-Sha256 $source
 function New-Directory { param([string] $Path) $null = [IO.Directory]::CreateDirectory($Path) }
 function Write-Json { param([string] $Path, $Value) [IO.File]::WriteAllText($Path, ($Value | ConvertTo-Json -Depth 30), $utf8) }
@@ -67,16 +79,34 @@ try {
     [IO.File]::WriteAllText((Join-Path $active 'module.txt'), 'predecessor', $utf8)
     $policy.expectedActivePackageIdentitySha256 = (Get-DirectoryPackageIdentity $active).sha256
     Write-Json $policyPath $policy
+    $adapterSource = Join-Path $policyRoot 'original-adapter.ps1'
+    Copy-Item -LiteralPath (Join-Path $windows 'adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1') -Destination $adapterSource
+    Set-RestrictedFileAcl $adapterSource
+    Set-RestrictedFileAcl $policyPath
     $unrelated = [ordered]@{ targetId = 'saef-owntracks-position-map'; adapterProfile = 'saef-owntracks-position-map-v1'
-        expectedApprovalPolicySha256 = ('e' * 64); approvalPolicyPath = 'synthetic-unrelated-preserved' }
+        libraryGuid = '{11111111-1111-1111-1111-111111111111}'
+        adapterPath = $adapterSource; expectedAdapterSha256 = (Get-Sha256 $adapterSource)
+        adapterPolicyPath = $policyPath; expectedAdapterPolicySha256 = (Get-Sha256 $policyPath) }
     $channel = [ordered]@{
         formatVersion = 1; stateRoot = $state; managedFilesetRoot = $managed; adapterStateRoot = $adapters
         standaloneModuleTargets = @($unrelated, [ordered]@{
             targetId = 'saef-media-carousel'; adapterProfile = 'saef-media-carousel-v1'
+            libraryGuid = '{22222222-2222-2222-2222-222222222222}'
+            adapterPath = $adapterSource; expectedAdapterSha256 = (Get-Sha256 $adapterSource)
             adapterPolicyPath = $policyPath; expectedAdapterPolicySha256 = (Get-Sha256 $policyPath)
         })
     }
     Write-Json $channelPath $channel
+    Set-RestrictedFileAcl $channelPath
+    $before = [IO.File]::ReadAllBytes($channelPath)
+    $generation = Join-Path $channelRoot 'installed-generation'
+    $candidate = ConvertFrom-AdditionJson $before
+    $candidate.standaloneModuleTargets[1].adapterPath = Join-Path $generation 'adapter.ps1'
+    $candidate.standaloneModuleTargets[1].adapterPolicyPath = Join-Path $generation 'adapter-policy.local.json'
+    $result = [ordered]@{ bindingMutationAttempted = $false; rollbackSucceeded = $null }
+    Publish-UpdateGeneration $channelPath $generation $before ($utf8.GetBytes(($candidate | ConvertTo-Json -Depth 30))) `
+        ([IO.File]::ReadAllBytes($adapterSource)) ([IO.File]::ReadAllBytes($policyPath)) -DeploymentSid $sid.Value
+    $policyPath = $candidate.standaloneModuleTargets[1].adapterPolicyPath
     foreach ($step in @(1, 2)) {
         $previousHash = (Get-DirectoryPackageIdentity $active).sha256
         $deploymentId = 'saef-reseal-test-' + $step
@@ -115,7 +145,13 @@ try {
             packageIdentitySha256 = $candidateHash; transactionDirectoryName = $transactionName
             rollbackDirectoryName = 'rollback'; snapshotFileName = 'snapshot.json'
         }
-        foreach ($scenario in @('tampered-snapshot', 'configuration-drift', 'consumed-transition', 'success')) {
+        foreach ($scenario in @('missing-deployment-acl', 'tampered-snapshot', 'configuration-drift', 'consumed-transition', 'success')) {
+            $installedAcl = Get-Acl -LiteralPath $generation
+            if ($scenario -ceq 'missing-deployment-acl') {
+                $brokenAcl = Get-Acl -LiteralPath $generation
+                $brokenAcl.PurgeAccessRules($sid)
+                Set-Acl -LiteralPath $generation -AclObject $brokenAcl
+            }
             $beforePolicy = [IO.File]::ReadAllBytes($policyPath)
             $beforeChannel = [IO.File]::ReadAllBytes($channelPath)
             $beforeSnapshot = [IO.File]::ReadAllBytes((Join-Path $transactionRoot 'candidate-snapshot.json'))
@@ -146,6 +182,11 @@ try {
                     '-StatusPath', $statusPath, '-Confirmation', 'reseal-saef-media-carousel-active-identity') `
                 -TimeoutSeconds 60 -MaximumOutputBytes 8192
             $status = Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
+            Set-Acl -LiteralPath $generation -AclObject $installedAcl
+            if ($scenario -ceq 'missing-deployment-acl' -and
+                ($status.failureCode -cne 'adapter_policy_acl' -or $status.failureDetail -cne 'Managed policy ACL lacks a required principal rule.')) {
+                throw 'Original missing deployment rule was not reproduced by the full resealer.'
+            }
             if ($scenario -ceq 'success') {
                 if ($child.exitCode -ne 0 -or $status.outcome -cne 'resealed') { throw ('Actual reseal failed: ' + ($status | ConvertTo-Json -Compress)) }
                 $actualPolicy = Get-Content -LiteralPath $policyPath -Raw | ConvertFrom-Json

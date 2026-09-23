@@ -46,7 +46,8 @@ function Assert-UpdatePreservation { param($Before, $After, [string] $Generation
 
 function Publish-UpdateGeneration {
     param([string] $ChannelPath, [string] $Generation, [byte[]] $Before, [byte[]] $After,
-        [byte[]] $Adapter, [byte[]] $Policy, $ApprovalBootstrap = $null)
+        [byte[]] $Adapter, [byte[]] $Policy, $ApprovalBootstrap = $null,
+        [Parameter(Mandatory = $true)][ValidatePattern('^S-1-5-21-[0-9-]+$')][string] $DeploymentSid)
     # Exactly one authoritative pointer changes. Generation files are never
     # overwritten or deleted, including on failure or interrupted execution.
     if (Test-Path -LiteralPath $Generation) { throw 'Existing generation requires independent recovery review.' }
@@ -58,7 +59,10 @@ function Publish-UpdateGeneration {
     $acl = Get-Acl -LiteralPath $ChannelPath
     if (-not $acl.AreAccessRulesProtected) { throw 'Channel policy requires an explicit protected ACL before replacement.' }
     $null = [IO.Directory]::CreateDirectory($Generation)
-    Set-RestrictedAcl $Generation '*S-1-5-32-544' '(OI)(CI)F'
+    # Policy directories require an explicit read/execute rule for the bound
+    # deployment principal. Administrator group membership is not that rule.
+    # Files containing policy/rollback material remain admin/SYSTEM-only below.
+    Set-RestrictedAcl $Generation ('*' + $DeploymentSid) '(OI)(CI)RX'
     $script:evidence = $Generation
     $backup = Join-Path $Generation 'channel-before.local.json'
     $candidate = Join-Path $Generation 'channel-candidate.local.json'
@@ -469,7 +473,8 @@ try {
     if ($Operation -ceq 'install') {
         $result.stage = 'publish'
         Publish-UpdateGeneration $channelPath $generation $before $after `
-            (Read-AdditionBoundBytes $sources.adapter $plan.sourceHashes.adapter 4194304) $policyBytes $approvalContext
+            (Read-AdditionBoundBytes $sources.adapter $plan.sourceHashes.adapter 4194304) $policyBytes $approvalContext `
+            -DeploymentSid $additionDeploymentSid
         $result.outcome = 'installed'
     } else { $result.outcome = 'ready' }
     if ($Operation -cne 'install') { $result.channelPolicySha256 = $plan.candidateChannelSha256 }
