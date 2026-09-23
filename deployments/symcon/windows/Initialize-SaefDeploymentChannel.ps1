@@ -767,8 +767,15 @@ try {
         $statusSafe = $true
         $failedStep = 'standalone_target_addition'
         $addition = Invoke-StandaloneTargetAddition
-        Write-BootstrapStatus -Phase $addition.phase -Outcome $addition.outcome `
-            -ExitCode $addition.exitCode -Details $addition.details
+        try {
+            Write-BootstrapStatus -Phase $addition.phase -Outcome $addition.outcome `
+                -ExitCode $addition.exitCode -Details $addition.details
+        } catch {
+            # Installation has its own protected result. A reporting failure must
+            # not be presented as a no-mutation preflight failure or rolled back.
+            [Console]::Error.WriteLine('Addition status write failed; inspect retained target-additions evidence before retrying.')
+            exit $ExitInstallFailed
+        }
         exit $addition.exitCode
     }
     if ($ExpectedChannelPolicySha256 -or $ExpectedTargetManifestSha256 -or $ExpectedAdditionPlanSha256) {
