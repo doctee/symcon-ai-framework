@@ -3,7 +3,7 @@ param($PlanPath, $ExpectedPlanSha256, $FixturePath, $EntryPath, $Culture, $Bindi
 [Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo($Culture)
 $global:probeMock = Get-Content -LiteralPath $FixturePath -Raw | ConvertFrom-Json
 $global:probeState = @{ registered = $false; exists = $false; candidate = $false; configuration = ''
-    mutations = 0; reloads = 0; productionWrites = 0; creates = 0; deletes = 0; applies = 0; settingsWrites = @() }
+    mutations = 0; reloads = 0; productionWrites = 0; creates = 0; deletes = 0; applies = 0; settingsWrites = @(); pending = @{} }
 function Invoke-WebRequest {
     param([switch] $UseBasicParsing, $Uri, $Method, $ContentType, $Body, $TimeoutSec, $Headers)
     if (-not $UseBasicParsing -or $Body -isnot [byte[]] -or $ContentType -cne 'application/json; charset=utf-8') {
@@ -32,11 +32,15 @@ function Invoke-RestMethod {
             if ($a.Count -ne 3 -or $a[1] -cne 'ShowFitToggle' -or $a[2] -isnot [bool]) { throw 'Unexpected settings mutation.' }
             $s.mutations++
             $s.settingsWrites += ([string] $a[0] + ':' + $a[2].ToString())
-            $f.configurations.([string] $a[0]) = $f.configurations.([string] $a[0]).Replace('"ShowFitToggle":' + (-not $a[2]).ToString().ToLowerInvariant(),
+            $s.pending[[string] $a[0]] = $f.configurations.([string] $a[0]).Replace('"ShowFitToggle":' + (-not $a[2]).ToString().ToLowerInvariant(),
                 '"ShowFitToggle":' + $a[2].ToString().ToLowerInvariant())
         } else {
             if ($a.Count -ne 1) { throw 'Unexpected apply arguments.' }
             $s.applies++
+            if ($s.pending.ContainsKey([string] $a[0])) {
+                $f.configurations.([string] $a[0]) = $s.pending[[string] $a[0]]
+                $s.pending.Remove([string] $a[0])
+            }
         }
         if ($f.scenario -ceq 'fit-drift' -and $s.mutations -eq 1) { $f.configurations.'11111' += ' ' }
         $s.configurations = $f.configurations
@@ -88,11 +92,19 @@ function Invoke-RestMethod {
             $v = @()
             if ($f.scenario -eq 'foreign-child') { $v = @(65432) }
         }
-        'IPS_HasChanges' { $v = $false }
+        'IPS_HasChanges' {
+            $v = $false
+            if ($SettingsOperation -and $s.pending.ContainsKey([string] $a[0])) {
+                $v = $s.pending[[string] $a[0]] -cne $f.configurations.([string] $a[0])
+            }
+        }
         'IPS_GetConfiguration' {
             if ($a[0] -eq 54321) { $v = $s.configuration }
             else {
                 $v = [string] $f.configurations.([string] $a[0])
+                if ($f.scenario -ceq 'fit-success-immediate' -and $s.pending.ContainsKey([string] $a[0])) {
+                    $v = $s.pending[[string] $a[0]]
+                }
                 if ($f.scenario -eq 'production-drift' -and $s.reloads -gt 0) { $v += ' ' }
             }
         }

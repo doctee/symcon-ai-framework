@@ -15,7 +15,7 @@ $settingsChannel.standaloneModuleTargets[0].expectedAdapterPolicySha256 = Hash-F
 Write-Json $channel $settingsChannel
 Set-RestrictedFileAcl $channel
 foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
-    foreach ($scenario in @('fit-success', 'fit-preflight', 'fit-response-lost', 'fit-apply-fails',
+    foreach ($scenario in @('fit-success', 'fit-success-immediate', 'fit-preflight', 'fit-response-lost', 'fit-apply-fails',
         'fit-drift', 'fit-zero', 'fit-outside', 'fit-duplicate', 'fit-stale', 'fit-package', 'fit-enabled', 'fit-multi-fails')) {
         $settingsPlan = @{ formatVersion = 1; targetId = 'saef-media-carousel'
             deploymentUser = $user; expectedDeploymentSid = $sid; installRoot = $fixture
@@ -54,15 +54,19 @@ foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
                 '-Culture', $culture, '-SettingsOperation', $operation) -TimeoutSeconds 120 -MaximumOutputBytes 65536
         $text = [Text.Encoding]::UTF8.GetString($child.standardOutput)
         $record = $text | ConvertFrom-Json
-        $expectedExit = if ($scenario -in @('fit-success', 'fit-preflight')) { 0 }
+        $expectedExit = if ($scenario -in @('fit-success', 'fit-success-immediate', 'fit-preflight')) { 0 }
             elseif ($scenario -in @('fit-response-lost', 'fit-apply-fails', 'fit-drift', 'fit-multi-fails')) { 40 } else { 10 }
         Assert-Test ($child.terminationReason -ceq 'exited' -and $child.exitCode -eq $expectedExit) ('Settings ' + $scenario + ': ' + $text)
         Assert-Test (-not $record.serviceRestartAttempted) 'Settings restarted service.'
-        if ($scenario -in @('fit-success', 'fit-response-lost', 'fit-apply-fails', 'fit-drift', 'fit-multi-fails')) {
+        if ($scenario -in @('fit-success', 'fit-success-immediate', 'fit-response-lost', 'fit-apply-fails', 'fit-drift', 'fit-multi-fails')) {
             $log = Get-Content $logPath -Raw | ConvertFrom-Json
             Assert-Test ($log.reloads -eq 0 -and $log.creates -eq 0 -and $log.deletes -eq 0) 'Settings changed module or objects.'
             Assert-Test ($log.configurations.'22222' -ceq $settingsConfigs['22222']) 'Excluded instance changed.'
-            if ($scenario -ceq 'fit-success') {
+            if ($scenario -in @('fit-success', 'fit-success-immediate')) {
+                $staged = Get-Content (Join-Path $record.evidenceRoot 'staged-11111.local.json') -Raw | ConvertFrom-Json
+                $expectedStaged = $settingsConfigs['11111']
+                if ($scenario -ceq 'fit-success-immediate') { $expectedStaged = $expectedStaged.Replace('"ShowFitToggle":false', '"ShowFitToggle":true') }
+                Assert-Test ($staged.pending -and $staged.observedConfigurationSha256 -ceq (Get-TextSha256 $expectedStaged)) 'Staged/applied observation differs.'
                 Assert-Test ($record.changedInstanceCount -eq 1 -and $record.preservedInstanceCount -eq 1 -and
                     $log.mutations -eq 1 -and $log.applies -eq 1 -and
                     $log.configurations.'11111' -ceq $settingsConfigs['11111'].Replace('"ShowFitToggle":false', '"ShowFitToggle":true')) 'Settings preservation failed.'
