@@ -93,9 +93,13 @@ Existing channel validators check all target bindings, including unrelated ones.
 
 An inert, separately identified test library reproduces only property
 registrations. It has no camera access, timers, visualization or runtime actions.
-The test creates one instance, reproduces a legacy configuration, reloads only
-the test library with the added default, and records actual kernel serialization
-for every production configuration. PHP tests bind both fixture registrations
+The test keeps at most one inert instance alive at a time. For each production
+configuration it loads the legacy fixture with no existing test instance,
+creates a fresh instance, reproduces the legacy bytes, reloads only the test
+library with the added default, and records actual kernel serialization. It
+then deletes and verifies absence of that owned instance before the next cycle.
+It never writes legacy JSON to an already upgraded schema, synthesizes the new
+field, or assumes that a downgrade removes registered properties. PHP tests bind both fixture registrations
 to current module source. Synthetic Windows tests qualify the operator entry
 point; they do not stand in for real kernel results.
 
@@ -157,3 +161,10 @@ context, separately reported cleanup failure, no accepted transition on error
 and no sensitive sentinel in console or journal. Native mutator argument counts
 and JSON types are checked independently by the mock. These tests qualify
 diagnostics, not the unknown cause of a real-kernel RPC failure.
+
+The sequence is bounded by the existing instance limit and child timeout. The
+journal and failure record identify the one-based input index; each successful
+observation is retained as unaccepted evidence until complete cleanup and
+production postflight pass. Strict mocks reject legacy writes to candidate
+instances and schema downgrades with surviving instances. A second-input
+failure proves that partial evidence cannot authorize a transition.
