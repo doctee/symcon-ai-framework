@@ -756,6 +756,25 @@ try {
             }
             $positiveCaseCount++
         }
+        $transactions = @(Get-ChildItem -LiteralPath $adapterState -Directory |
+            Where-Object { $_.Name.StartsWith($deploymentID + '-', [StringComparison]::Ordinal) })
+        if ($transactions.Count -ne 1) { throw 'Schema transaction evidence is ambiguous.' }
+        $beforeSnapshot = Get-Content (Join-Path $transactions[0].FullName 'snapshot.json') -Raw | ConvertFrom-Json
+        $afterSnapshot = Get-Content (Join-Path $transactions[0].FullName 'candidate-snapshot.json') -Raw | ConvertFrom-Json
+        if (@($beforeSnapshot.instances).Count -ne 2 -or @($afterSnapshot.instances).Count -ne 2 -or
+            $beforeSnapshot.instances[0].configurationSha256 -cne (Get-TextSha256 $configurationOne) -or
+            $beforeSnapshot.instances[1].configurationSha256 -cne (Get-TextSha256 $configurationTwo) -or
+            $afterSnapshot.instances[0].configurationSha256 -cne (Get-TextSha256 $afterOne) -or
+            $afterSnapshot.instances[1].configurationSha256 -cne (Get-TextSha256 $afterTwo)) {
+            throw 'Retained before/after snapshot identity differs.'
+        }
+        $retainedPath = if ($mode -ceq 'schema-drift') {
+            Join-Path $transactions[0].FullName 'failed-candidate'
+        } else { Join-Path $transactions[0].FullName 'rollback' }
+        $retainedIdentity = if ($mode -ceq 'schema-drift') { $fitIdentity } else { $successIdentity }
+        if ((Get-PackageIdentity $retainedPath) -cne $retainedIdentity) {
+            throw 'Retained package identity differs.'
+        }
         $passedScenarios += $mode
     }
     $successIdentity = $fitIdentity
