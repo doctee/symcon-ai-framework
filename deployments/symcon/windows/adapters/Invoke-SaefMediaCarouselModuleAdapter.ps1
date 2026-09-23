@@ -293,6 +293,15 @@ function Read-Contracts {
         [bool] $transaction.retention.implemented) {
         throw [InvalidOperationException]::new('MediaCarousel transaction contract is unsupported.')
     }
+    if ($script:policy.PSObject.Properties.Name -icontains 'configurationTransition' -and
+        $script:policy.PSObject.Properties.Name -cnotcontains 'configurationTransition') {
+        throw [InvalidOperationException]::new('Schema transition property casing is invalid.')
+    }
+    if ($script:policy.PSObject.Properties.Name -ccontains 'configurationTransition' -and
+        ($transaction.configuration.PSObject.Properties.Name -cnotcontains 'optionalSchemaTransition' -or
+        $transaction.configuration.optionalSchemaTransition -cne 'show-fit-toggle-default-false-v1')) {
+        throw [InvalidOperationException]::new('Package transaction does not authorize the schema transition.')
+    }
     foreach ($guid in @(
         [string] $script:policy.libraryGuid,
         [string] $script:policy.moduleGuid,
@@ -438,9 +447,10 @@ function Get-DirectoryPackageIdentity {
 }
 
 function Get-InstanceSnapshot {
+    param([Parameter()][object[]] $ExpectedInstances = @($script:policy.expectedInstances))
     $instanceIDs = @(Invoke-SymconRpc -Method 'IPS_GetInstanceListByModuleID' `
         -Parameters @([string] $script:policy.moduleGuid))
-    $expectedInstances = @($script:policy.expectedInstances)
+    $expectedInstances = @($ExpectedInstances)
     if ($instanceIDs.Count -ne $expectedInstances.Count -or
         $instanceIDs.Count -gt [int] $script:policy.maximumInstanceCount) {
         throw [InvalidOperationException]::new('MediaCarousel instance inventory differs from policy.')
@@ -533,7 +543,7 @@ function Assert-SymconOwnership {
 
 function Assert-SnapshotPreserved {
     param([Parameter(Mandatory = $true)] $Snapshot)
-    $current = @(Get-InstanceSnapshot)
+    $current = @(Get-InstanceSnapshot -ExpectedInstances @($Snapshot.instances))
     if ($current.Count -ne @($Snapshot.instances).Count) {
         throw [InvalidOperationException]::new('MediaCarousel instance inventory changed during deployment.')
     }
@@ -544,11 +554,126 @@ function Assert-SnapshotPreserved {
             'instanceId', 'configurationBase64', 'configurationSha256', 'objectIdent', 'objectName',
             'parentId', 'position', 'hidden', 'disabled', 'readOnly', 'status'
         )) {
-            if ([string] $before.$field -ne [string] $after.$field) {
+            if (-not [string]::Equals([string] $before.$field, [string] $after.$field, [StringComparison]::Ordinal)) {
                 throw [InvalidOperationException]::new('MediaCarousel configuration or object state changed.')
             }
         }
     }
+}
+
+function Get-ConfigurationTokens {
+    param([Parameter(Mandatory = $true)][string] $Text)
+    # Symcon properties are scalar values; complex lists are JSON inside strings.
+    # Parse the compact wire representation without reserializing any old bytes.
+    $stringValue = '"(?:[^"\\\x00-\x1f]|\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4}))*"'
+    $number = '-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?'
+    $pattern = '\G(?<separator>[{,])"(?<name>[A-Za-z][A-Za-z0-9]*)":(?<value>' +
+        $stringValue + '|true|false|null|' + $number + ')'
+    $regex = [regex]::new($pattern, [Text.RegularExpressions.RegexOptions]::CultureInvariant,
+        [TimeSpan]::FromSeconds(1))
+    $names = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $offset = 0
+    $tokens = @()
+    if ($Text -ceq '{}') { return @() }
+    while ($offset -lt $Text.Length - 1) {
+        $match = $regex.Match($Text, $offset)
+        $separator = if ($offset -eq 0) { '{' } else { ',' }
+        if (-not $match.Success -or $match.Index -ne $offset -or
+            $match.Groups['separator'].Value -cne $separator -or
+            -not $names.Add($match.Groups['name'].Value) -or $tokens.Count -ge 128) {
+            throw [InvalidOperationException]::new('Configuration wire format is ambiguous or unsupported.')
+        }
+        $tokens += $match
+        $offset += $match.Length
+    }
+    if ($offset -ne $Text.Length - 1 -or $Text[$offset] -cne '}') {
+        throw [InvalidOperationException]::new('Configuration wire format is incomplete.')
+    }
+    return $tokens
+}
+
+function Assert-FitDefaultAddition {
+    param([Parameter(Mandatory = $true)][string] $Before, [Parameter(Mandatory = $true)][string] $After)
+    $beforeTokens = @(Get-ConfigurationTokens -Text $Before)
+    $afterTokens = @(Get-ConfigurationTokens -Text $After)
+    $added = @($afterTokens | Where-Object { $_.Groups['name'].Value -ceq 'ShowFitToggle' })
+    if (@($beforeTokens | Where-Object { $_.Groups['name'].Value -ieq 'ShowFitToggle' }).Count -ne 0 -or
+        $afterTokens.Count -ne $beforeTokens.Count + 1 -or $added.Count -ne 1 -or
+        $added[0].Groups['value'].Value -cne 'false') {
+        throw [InvalidOperationException]::new('Only the absent ShowFitToggle false default may be added.')
+    }
+    $token = $added[0]
+    if ($token.Index -eq 0) {
+        $without = if ($afterTokens.Count -eq 1) { '{}' } else {
+            '{' + $After.Substring($token.Length + 1)
+        }
+    } else {
+        $without = $After.Remove($token.Index, $token.Length)
+    }
+    if (-not [string]::Equals($Before, $without, [StringComparison]::Ordinal)) {
+        throw [InvalidOperationException]::new('Schema transition changed existing configuration bytes.')
+    }
+}
+
+function Get-CandidateSnapshot {
+    param([Parameter(Mandatory = $true)] $Snapshot)
+    if ($script:policy.PSObject.Properties.Name -cnotcontains 'configurationTransition') {
+        return $Snapshot
+    }
+    $transition = $script:policy.configurationTransition
+    foreach ($name in @('kind', 'sourcePackageIdentitySha256', 'candidatePackageIdentitySha256', 'deploymentId', 'instances')) {
+        if ($transition.PSObject.Properties.Name -cnotcontains $name) {
+            throw [InvalidOperationException]::new('Configuration transition property is missing.')
+        }
+    }
+    if (@($transition.PSObject.Properties.Name).Count -ne 5 -or
+        $transition.kind -cne 'show-fit-toggle-default-false-v1' -or
+        $transition.sourcePackageIdentitySha256 -cne $script:policy.expectedActivePackageIdentitySha256 -or
+        $transition.candidatePackageIdentitySha256 -cne $script:packageIdentitySha256 -or
+        $transition.deploymentId -cne $script:manifest.deploymentId -or
+        @($transition.instances).Count -ne @($Snapshot.instances).Count) {
+        throw [InvalidOperationException]::new('Configuration transition is not bound to this deployment.')
+    }
+    $byID = @{}
+    $totalBytes = 0L
+    foreach ($entry in @($transition.instances)) {
+        foreach ($name in @('instanceId', 'configurationBase64', 'configurationSha256')) {
+            if ($entry.PSObject.Properties.Name -cnotcontains $name) {
+                throw [InvalidOperationException]::new('Configuration transition instance property is missing.')
+            }
+        }
+        if (@($entry.PSObject.Properties.Name).Count -ne 3 -or
+            $entry.instanceId -isnot [int] -or $entry.instanceId -le 0 -or
+            $entry.configurationBase64 -isnot [string] -or
+            $entry.configurationSha256 -isnot [string] -or
+            -not (Test-HexSha256 -Value $entry.configurationSha256) -or
+            $byID.ContainsKey($entry.instanceId) -or
+            $entry.configurationBase64.Length -gt [int] $script:policy.maximumStateBytes * 2) {
+            throw [InvalidOperationException]::new('Configuration transition instance binding is invalid.')
+        }
+        $bytes = [Convert]::FromBase64String($entry.configurationBase64)
+        $text = [Text.UTF8Encoding]::new($false, $true).GetString($bytes)
+        $totalBytes += $bytes.Length
+        if ([Convert]::ToBase64String($bytes) -cne $entry.configurationBase64 -or
+            (Get-TextSha256 -Text $text) -cne $entry.configurationSha256 -or
+            $totalBytes -gt [int] $script:policy.maximumStateBytes) {
+            throw [InvalidOperationException]::new('Configuration transition bytes differ from their binding.')
+        }
+        $byID[$entry.instanceId] = $text
+    }
+    $candidate = $Snapshot | ConvertTo-Json -Depth 10 | ConvertFrom-Json
+    foreach ($record in @($candidate.instances)) {
+        $id = [int] $record.instanceId
+        if (-not $byID.ContainsKey($id)) {
+            throw [InvalidOperationException]::new('Configuration transition instance set differs.')
+        }
+        $before = [Text.UTF8Encoding]::new($false, $true).GetString(
+            [Convert]::FromBase64String([string] $record.configurationBase64))
+        Assert-FitDefaultAddition -Before $before -After $byID[$id]
+        $record.configurationBase64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($byID[$id]))
+        $record.configurationSha256 = Get-TextSha256 -Text $byID[$id]
+    }
+    return $candidate
 }
 
 function Invoke-TargetedReload {
@@ -582,6 +707,16 @@ function Restore-Configurations {
     param([Parameter(Mandatory = $true)] $Snapshot)
     foreach ($record in @($Snapshot.instances)) {
         $instanceID = [int] $record.instanceId
+        if ($instanceID -le 0 -or
+            -not [bool] (Invoke-SymconRpc -Method 'IPS_InstanceExists' -Parameters @($instanceID))) {
+            throw [InvalidOperationException]::new('Rollback instance is missing.')
+        }
+        $instance = Invoke-SymconRpc -Method 'IPS_GetInstance' -Parameters @($instanceID)
+        $object = Invoke-SymconRpc -Method 'IPS_GetObject' -Parameters @($instanceID)
+        if ([int] $object.ObjectType -ne 1 -or
+            [string] $instance.ModuleInfo.ModuleID -cne [string] $script:policy.moduleGuid) {
+            throw [InvalidOperationException]::new('Rollback instance ownership differs.')
+        }
         $current = [string] (Invoke-SymconRpc -Method 'IPS_GetConfiguration' -Parameters @($instanceID))
         if ((Get-TextSha256 -Text $current) -ne [string] $record.configurationSha256) {
             $bytes = [Convert]::FromBase64String([string] $record.configurationBase64)
@@ -706,6 +841,7 @@ try {
         packageIdentitySha256 = $script:packageIdentitySha256
         instances = @(Get-InstanceSnapshot)
     }
+    $candidateSnapshot = Get-CandidateSnapshot -Snapshot $script:snapshot
 
     if ($Operation -eq 'preflight') {
         $script:failureCode = 'none'
@@ -734,6 +870,7 @@ try {
         throw [InvalidOperationException]::new('Fresh configuration snapshot exceeds the adapter state limit.')
     }
     Write-AtomicText -Path (Join-Path $script:transactionRoot 'snapshot.json') -Text $snapshotText
+    Write-AtomicJson -Path (Join-Path $script:transactionRoot 'candidate-snapshot.json') -Value $candidateSnapshot
 
     $script:failureCode = 'pre_mutation_recheck'
     Assert-SymconOwnership
@@ -753,7 +890,7 @@ try {
     Invoke-TargetedReload
     $script:failureCode = 'post_activation_health'
     $null = Get-ModuleTreePackageIdentity -Path ([string] $script:policy.activeModulePath)
-    Wait-Healthy -Snapshot $script:snapshot
+    Wait-Healthy -Snapshot $candidateSnapshot
     $activeRecord = [ordered]@{
         formatVersion = 1
         adapterProfile = 'saef-media-carousel-v1'

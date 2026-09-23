@@ -5,6 +5,14 @@ on:
   pull_request:
 
 jobs:
+  media-carousel-schema-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Qualify MediaCarousel schema transition on Windows PowerShell 5.1
+        shell: powershell
+        run: ./tests/deployments/media-carousel-fit-schema.ps1
+
   validate:
     runs-on: ubuntu-latest
 

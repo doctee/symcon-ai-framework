@@ -1,0 +1,13 @@
+{
+    "kind": "show-fit-toggle-default-false-v1",
+    "sourcePackageIdentitySha256": "<private-source-package-sha256>",
+    "candidatePackageIdentitySha256": "<reviewed-candidate-package-sha256>",
+    "deploymentId": "<reviewed-deployment-id>",
+    "instances": [
+        {
+            "instanceId": 0,
+            "configurationBase64": "<exact-reviewed-after-configuration-utf8-base64>",
+            "configurationSha256": "<exact-reviewed-after-configuration-sha256>"
+        }
+    ]
+}
