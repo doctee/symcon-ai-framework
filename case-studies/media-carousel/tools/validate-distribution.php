@@ -32,8 +32,8 @@ if ($library !== []) {
         $errors
     );
     validateGuid($library['id'] ?? null, 'library GUID', $errors);
-    if (($library['version'] ?? null) !== '0.2.4') {
-        $errors[] = 'Library version must identify the 0.2.4 preview candidate.';
+    if (($library['version'] ?? null) !== '0.2.5') {
+        $errors[] = 'Library version must identify the 0.2.5 diagnostic candidate.';
     }
     if (($library['compatibility']['version'] ?? null) !== '8.1') {
         $errors[] = 'Library compatibility must require IP-Symcon 8.1.';
