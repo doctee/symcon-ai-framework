@@ -247,10 +247,15 @@ function Invoke-SymconRpc {
         $script:credential.UserName + ':' + $networkCredential.Password
     )
     try {
-        $response = Invoke-RestMethod -Uri $RpcUri -Method Post -ContentType 'application/json' `
-            -Body $body -TimeoutSec ([int] $script:policy.rpcTimeoutSeconds) -Headers @{
+        # JSON-RPC is UTF-8 in both directions, independently of Windows 5.1
+        # string-body and missing-response-charset defaults.
+        $utf8 = [Text.UTF8Encoding]::new($false, $true)
+        $http = Invoke-WebRequest -UseBasicParsing -Uri $RpcUri -Method Post -ContentType 'application/json; charset=utf-8' `
+            -Body ($utf8.GetBytes($body)) -TimeoutSec ([int] $script:policy.rpcTimeoutSeconds) -Headers @{
                 Authorization = 'Basic ' + [Convert]::ToBase64String($authorization)
             }
+        try { $response = $utf8.GetString($http.RawContentStream.ToArray()) | ConvertFrom-Json }
+        finally { $http.RawContentStream.Dispose() }
     } finally {
         [Array]::Clear($authorization, 0, $authorization.Length)
         $networkCredential = $null

@@ -353,6 +353,7 @@ function Start-MockRpc {
                 $result = $null
                 $errorRecord = $null
                 switch ($method) {
+                    'SAEF_Utf8Probe' { $result = [string] $request.params[0] }
                     'IPS_GetKernelRunlevel' { $result = 10103 }
                     'IPS_FunctionExists' { $result = ([string] $request.params[0] -eq 'MC_ReloadModule') }
                     'IPS_InstanceExists' {
@@ -569,7 +570,11 @@ try {
     New-SyntheticModuleTree -Path $candidateSuccess -Marker 'candidate-success'
     New-SyntheticModuleTree -Path $candidateFailure -Marker 'candidate-failure'
 
-    $configurationOne = '{"Enabled":true,"Synthetic":"one"}'
+    # ASCII source, but genuine Unicode wire data: umlaut, euro, CJK,
+    # supplementary plane and decomposed accent; no locale-dependent literals.
+    $unicode = [string] [char] 0x00e4 + [char] 0x20ac + [char] 0x6c34 +
+        [char]::ConvertFromUtf32(0x1f4f7) + 'e' + [char] 0x0301
+    $configurationOne = '{"Enabled":true,"Synthetic":"' + $unicode + '"}'
     $configurationTwo = '{"Enabled":true,"Synthetic":"two"}'
     New-CredentialFile -Path (Join-Path $scratchRoot 'credential.json')
     $policyPath = Join-Path $scratchRoot 'adapter-policy.json'
@@ -643,6 +648,39 @@ try {
         -ControlPath $controlPath -ConfigurationOne $configurationOne `
         -ConfigurationTwo $configurationTwo -RequestLogPath $requestLogPath `
         -StopPath $mockStopPath -ActivePath $activePath
+
+    # Exercise actual Windows web cmdlets, not the schema test's transport fake.
+    # The server deliberately returns UTF8 JSON without a charset declaration.
+    $rpcTokens = $null; $rpcErrors = $null
+    $rpcAst = [Management.Automation.Language.Parser]::ParseFile(
+        (Join-Path $sourceRoot 'Invoke-SaefMediaCarouselModuleAdapter.ps1'), [ref] $rpcTokens, [ref] $rpcErrors)
+    $rpcFunction = @($rpcAst.FindAll({ param($node)
+        $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -ceq 'Invoke-SymconRpc'
+    }, $false))
+    if (@($rpcErrors).Count -ne 0 -or $rpcFunction.Count -ne 1) { throw 'RPC source extraction failed.' }
+    . ([scriptblock]::Create($rpcFunction[0].Extent.Text))
+    $RpcUri = "http://127.0.0.1:$port/"
+    $script:credential = [Management.Automation.PSCredential]::new('synthetic',
+        (ConvertTo-SecureString 'synthetic' -AsPlainText -Force))
+    $script:policy = $policy
+    $originalCulture = [Threading.Thread]::CurrentThread.CurrentCulture
+    try {
+        foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
+            [Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo($culture)
+            foreach ($value in @('ASCII', $configurationOne)) {
+                if ((Invoke-SymconRpc 'SAEF_Utf8Probe' @($value)) -cne $value) { throw 'UTF8 HTTP roundtrip differs.' }
+            }
+        }
+        $legacyBody = @{ jsonrpc = '2.0'; id = 1; method = 'SAEF_Utf8Probe'; params = @($configurationOne) } |
+            ConvertTo-Json -Depth 10 -Compress
+        $legacy = Invoke-RestMethod -Uri $RpcUri -Method Post -ContentType 'application/json' -Body $legacyBody -TimeoutSec 10
+        if ($legacy.result -ceq $configurationOne) { throw 'Legacy encoding negative control did not reproduce corruption.' }
+        $passedScenarios += 'explicit-utf8-http-roundtrip-three-cultures-and-legacy-negative-control'
+        $positiveCaseCount++
+    } finally {
+        [Threading.Thread]::CurrentThread.CurrentCulture = $originalCulture
+        $script:credential = $null
+    }
 
     $activeInitialIdentity = Get-PackageIdentity -Path $activePath
     $failureCode = 'synthetic_preflight'

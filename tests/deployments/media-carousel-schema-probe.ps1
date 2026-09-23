@@ -38,7 +38,8 @@ try {
         foreach ($scenario in @('success', 'schema-drift', 'zero-id', 'creation-response-lost',
             'cleanup-fails', 'foreign-child', 'production-drift', 'changed-plan',
             'shared-parent', 'parent-delete-child', 'parent-takeover',
-            'rpc-error', 'rpc-error-cleanup', 'rpc-malformed', 'rpc-transport', 'second-input-fails')) {
+            'rpc-error', 'rpc-error-cleanup', 'rpc-malformed', 'rpc-transport', 'second-input-fails',
+            'different-installed-source', 'wrong-installed-hash')) {
             $fixture = Join-Path $scratch ($culture + '-' + $scenario)
             $null = [IO.Directory]::CreateDirectory($fixture)
             Copy-Item $windowsRoot (Join-Path $fixture 'windows') -Recurse
@@ -82,14 +83,20 @@ try {
             Write-Json $credential @{ formatVersion = 1; protectionScope = 'LocalMachine'; username = 'synthetic'
                 protectedPasswordBase64 = [Convert]::ToBase64String($protected) }
             $channel = Join-Path $fixture 'deployment-channel.local.json'
+            $installedAdapter = $adapter
+            if ($scenario -eq 'different-installed-source') {
+                $installedAdapter = Join-Path $fixture 'installed-adapter.ps1'
+                [IO.File]::WriteAllText($installedAdapter, '# Synthetic independently pinned installed predecessor.')
+            }
             Write-Json $channel @{ rpcUri = 'http://127.0.0.1:1234/api/'; credentialPath = $credential
                 standaloneModuleTargets = @(@{ targetId = 'saef-media-carousel'; libraryGuid = $script:policy.libraryGuid
-                    adapterPath = $adapter; expectedAdapterSha256 = Hash-File $adapter
+                    adapterPath = $installedAdapter; expectedAdapterSha256 = Hash-File $installedAdapter
                     adapterPolicyPath = $policyPath; expectedAdapterPolicySha256 = Hash-File $policyPath }) }
             $plan = @{ formatVersion = 1; targetId = 'saef-media-carousel'; parentId = 234; parentParentId = 345
                 parentIdent = 'ProbeParent'; deploymentId = 'synthetic-schema'; candidatePackageIdentitySha256 = ('b' * 64)
                 deploymentUser = $user; expectedDeploymentSid = $sid; installRoot = $fixture
                 channelPolicySha256 = Hash-File $channel; adapterPolicySha256 = Hash-File $policyPath
+                installedAdapterSha256 = Hash-File $installedAdapter
                 sourceHashes = @{ channel = Hash-File (Join-Path $bundle 'Initialize-SaefDeploymentChannel.ps1'); adapter = Hash-File $adapter
                     ownership = Hash-File (Join-Path $bundle 'adapters/Invoke-SaefMediaCarouselModuleOwnershipMigration.ps1') }
                 fixtureHashes = @{} }
@@ -97,6 +104,7 @@ try {
                 $plan.fixtureHashes[$name] = Hash-File (Join-Path (Join-Path $bundle 'adapters/schema-probe') $name)
             }
             $planPath = Join-Path $fixture 'plan.local.json'
+            if ($scenario -eq 'wrong-installed-hash') { $plan.installedAdapterSha256 = 'a' * 64 }
             Write-Json $planPath $plan
             $planHash = Hash-File $planPath
             if ($scenario -eq 'changed-plan') { $planHash = 'a' * 64 }
@@ -113,13 +121,13 @@ try {
             $result = $stdout | ConvertFrom-Json
             Assert-Test (-not $stdout.Contains('PRIVATE_SENTINEL')) 'Private RPC details leaked.'
             Assert-Test (-not $result.productionMutationAttempted -and -not $result.serviceRestartAttempted) 'Unexpected production action.'
-            if ($scenario -in @('success', 'shared-parent')) {
+            if ($scenario -in @('success', 'shared-parent', 'different-installed-source')) {
                 Assert-Test ($child.exitCode -eq 0 -and $result.outcome -ceq 'qualified' -and
                     $result.cleanupVerified -and $result.productionPreserved -and $result.qualifiedInstanceCount -eq 2) ('Success failed: ' + $stdout)
                 Assert-Test (Test-Path (Join-Path $result.evidenceRoot 'configuration-transition.local.json')) 'Accepted evidence missing.'
             } else {
                 Assert-Test ($child.exitCode -ne 0 -and $result.outcome -cne 'qualified') ('Unsafe acceptance: ' + $scenario)
-                if ($scenario -notin @('changed-plan', 'parent-delete-child', 'parent-takeover')) {
+                if ($scenario -notin @('changed-plan', 'parent-delete-child', 'parent-takeover', 'wrong-installed-hash')) {
                     Assert-Test (-not (Test-Path (Join-Path $result.evidenceRoot 'configuration-transition.local.json'))) 'Failed test accepted evidence.'
                     if ($scenario -in @('schema-drift', 'zero-id', 'creation-response-lost', 'production-drift',
                         'rpc-error', 'rpc-malformed', 'rpc-transport')) {
@@ -152,9 +160,12 @@ try {
             if (Test-Path $logPath) {
                 $log = Get-Content $logPath -Raw | ConvertFrom-Json
                 Assert-Test ($log.productionWrites -eq 0) 'Production write occurred.'
-                if ($scenario -in @('success', 'shared-parent')) {
+                if ($scenario -in @('success', 'shared-parent', 'different-installed-source')) {
                     Assert-Test ($log.creates -eq 2 -and $log.deletes -eq 2 -and $log.reloads -eq 4) 'Each baseline requires its own complete legacy-to-candidate cycle.'
                 }
+            }
+            if ($scenario -eq 'wrong-installed-hash') {
+                Assert-Test (-not $result.testMutationAttempted -and $result.stage -ceq 'inputs') 'Wrong live binding reached mutation.'
             }
             if ($scenario -eq 'second-input-fails') {
                 Assert-Test ($result.failure.sequenceIndex -eq 2 -and
