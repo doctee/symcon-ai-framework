@@ -9,6 +9,8 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+- Keep MediaCarousel approval state outside managed deployment roots and preserve consumed approval records during atomic profile relocation; exercise actual resealer path guards in Windows bootstrap tests.
+
 ### Added
 
 - Added bounded, view-local MediaCarousel loading diagnostics and server image

@@ -113,12 +113,71 @@ function Publish-UpdateGeneration {
     }
 }
 
+function Get-ApprovalStateInventory {
+    param([string] $Root)
+    Assert-AdditionProtectedPath $Root
+    $files = [Collections.Generic.SortedDictionary[string,object]]::new([StringComparer]::Ordinal)
+    $bytes = 0L
+    foreach ($entry in @(Get-ChildItem -LiteralPath $Root -Force)) {
+        Assert-AdditionProtectedPath $entry.FullName
+        if ($entry.PSIsContainer) {
+            if ($entry.Name -cnotmatch '^[a-f0-9]{64}$') { throw 'Unexpected approval state directory.' }
+            $children = @(Get-ChildItem -LiteralPath $entry.FullName -Force)
+        } else {
+            if ($entry.Name -cnotmatch '^[a-f0-9]{64}\.json$' -or $entry.Length -gt 1048576) { throw 'Unexpected approval state record.' }
+            $record = ConvertFrom-AdditionJson ([IO.File]::ReadAllBytes($entry.FullName))
+            if ($record.targetId -cne 'saef-media-carousel' -or $record.adapterProfile -cne 'saef-media-carousel-v1' -or
+                $record.outcome -cnotin @('activated', 'rolled_back', 'aborted') -or $record.phaseState -cne 'completed') {
+                throw 'Nonterminal approval state requires recovery review.'
+            }
+            $children = @($entry)
+        }
+        foreach ($file in $children) {
+            Assert-AdditionProtectedPath $file.FullName
+            if ($file.PSIsContainer -or $file.Length -gt 4194304 -or $file.Name -cnotmatch '^[a-z0-9.-]+\.(json|bin)$') {
+                throw 'Unsafe approval evidence file.'
+            }
+            $relative = if ($entry.PSIsContainer) { $entry.Name + '/' + $file.Name } else { $file.Name }
+            $bytes += $file.Length
+            if ($files.Count -ge 4096 -or $bytes -gt 16777216) { throw 'Approval state inventory exceeds bounds.' }
+            $files.Add($relative, [pscustomobject]@{ path = $file.FullName; size = $file.Length
+                sha256 = (Get-BytesSha256 ([IO.File]::ReadAllBytes($file.FullName))) })
+        }
+    }
+    $identity = [Text.StringBuilder]::new()
+    foreach ($relative in $files.Keys) {
+        $file = $files[$relative]
+        $null = $identity.Append($relative).Append([char] 0).Append([long] $file.size).Append([char] 0).Append($file.sha256).Append("`n")
+    }
+    return @{ files = $files; sha256 = (Get-BytesSha256 ([Text.Encoding]::UTF8.GetBytes($identity.ToString()))) }
+}
+
 function Get-ApprovalBootstrapContext {
-    param($Spec, [string] $Package, [string] $Windows, [string] $DeploymentUser, $Channel)
+    param($Spec, [string] $Package, [string] $Windows, [string] $DeploymentUser, $Channel, [string] $ChannelRoot)
     $target = @($Channel.standaloneModuleTargets | Where-Object { $_.targetId -ceq 'saef-media-carousel' })
-    if ($target.Count -ne 1 -or @($target[0].PSObject.Properties.Name | Where-Object {
+    if ($target.Count -ne 1) { throw 'Unique MediaCarousel target required.' }
+    $present = @($target[0].PSObject.Properties.Name | Where-Object {
         $_ -imatch '^(approvalRunnerPath|expectedApprovalRunnerSha256|approvalPolicyPath|expectedApprovalPolicySha256)$'
-    }).Count -ne 0) { throw 'Approval bootstrap requires an unbound MediaCarousel target.' }
+    }).Count
+    if ($present -notin @(0, 4)) { throw 'Incomplete approval profile.' }
+    if (-not [IO.Path]::IsPathRooted([string] $Spec.approvalRoot) -or
+        (Test-Path -LiteralPath $Spec.approvalRoot)) { throw 'New absolute approval root required.' }
+    Assert-AdditionProtectedPath (Split-Path -Parent $Spec.approvalRoot)
+    $adapterPolicy = ConvertFrom-AdditionJson (Read-AdditionBoundBytes $target[0].adapterPolicyPath $target[0].expectedAdapterPolicySha256)
+    $roots = @($ChannelRoot, (Split-Path -Parent $target[0].adapterPolicyPath))
+    foreach ($pair in @(@($Channel, 'stateRoot'), @($Channel, 'managedFilesetRoot'), @($Channel, 'adapterStateRoot'),
+        @($adapterPolicy, 'adapterStateRoot'), @($adapterPolicy, 'activeModulePath'))) {
+        if ($pair[0].PSObject.Properties.Name -contains $pair[1]) { $roots += [string] $pair[0].($pair[1]) }
+    }
+    $candidateRoot = [IO.Path]::GetFullPath($Spec.approvalRoot).TrimEnd('\', '/')
+    foreach ($root in $roots) {
+        $protected = [IO.Path]::GetFullPath($root).TrimEnd('\', '/')
+        if ($candidateRoot.Equals($protected, [StringComparison]::OrdinalIgnoreCase) -or
+            $candidateRoot.StartsWith($protected + '\', [StringComparison]::OrdinalIgnoreCase) -or
+            $protected.StartsWith($candidateRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Approval root overlaps a managed channel or module root.'
+        }
+    }
     $paths = @{
         initializer = Join-Path $Windows 'Initialize-SaefScopeBoundApprovalProfile.ps1'
         runner = Join-Path $Windows 'Invoke-SaefScopeBoundApprovalRunner.ps1'
@@ -138,7 +197,22 @@ function Get-ApprovalBootstrapContext {
     Assert-AdditionProtectedPath $Spec.approvalSecretRecordPath
     $secretBytes = Read-AdditionBoundBytes $Spec.approvalSecretRecordPath $Spec.approvalSecretSha256
     [Array]::Clear($secretBytes, 0, $secretBytes.Length)
-    return @{ spec = $Spec; paths = $paths; deploymentUser = $DeploymentUser }
+    $previous = $null
+    if ($present -eq 4) {
+        $previous = ConvertFrom-AdditionJson (Read-AdditionBoundBytes $target[0].approvalPolicyPath $target[0].expectedApprovalPolicySha256)
+        Assert-AdditionProtectedPath $previous.approvalSecretPath
+        foreach ($field in @('channelHostBindingSha256', 'approverIdentitySha256', 'executionHostIdentitySha256', 'maximumStateFiles')) {
+            if ($previous.$field -cne $Spec.$field) { throw 'Approval migration changes an identity or state bound.' }
+        }
+        if ($previous.targetId -cne 'saef-media-carousel' -or $previous.adapterProfile -cne 'saef-media-carousel-v1' -or
+            $previous.expectedResealScriptSha256 -cne $Spec.sourceHashes.reseal -or
+            $target[0].expectedApprovalRunnerSha256 -cne $Spec.sourceHashes.runner -or
+            (Get-BytesSha256 ([IO.File]::ReadAllBytes($previous.approvalSecretPath))) -cne $Spec.approvalSecretSha256 -or
+            (Get-ApprovalStateInventory $previous.approvalStateRoot).sha256 -cne $Spec.approvalStateSha256) {
+            throw 'Reviewed approval migration baseline differs.'
+        }
+    }
+    return @{ spec = $Spec; paths = $paths; deploymentUser = $DeploymentUser; previous = $previous }
 }
 
 function Stage-ApprovalProfile {
@@ -147,7 +221,7 @@ function Stage-ApprovalProfile {
     # sees only a shadow channel; no second live publication or mutex bypass.
     $spec = $Context.spec
     $shadow = Join-Path $Generation 'profile-staging'
-    $approvalRoot = Join-Path $Generation 'approval'
+    $approvalRoot = $spec.approvalRoot
     $null = [IO.Directory]::CreateDirectory($shadow)
     Set-RestrictedAcl $shadow '*S-1-5-32-544' '(OI)(CI)F'
     $shadowPolicy = Join-Path $shadow 'deployment-channel.local.json'
@@ -187,10 +261,10 @@ function Stage-ApprovalProfile {
     $target = @($expected.standaloneModuleTargets | Where-Object { $_.targetId -ceq 'saef-media-carousel' })[0]
     # Match the pinned initializer's property order; JSON object insertion order
     # is otherwise different despite identical values. Keep the full comparison.
-    $target | Add-Member NoteProperty approvalRunnerPath (Join-Path $Generation 'approval-runner.ps1')
-    $target | Add-Member NoteProperty expectedApprovalRunnerSha256 $spec.sourceHashes.runner
-    $target | Add-Member NoteProperty approvalPolicyPath (Join-Path $Generation 'approval-policy.local.json')
-    $target | Add-Member NoteProperty expectedApprovalPolicySha256 (Get-BytesSha256 ([IO.File]::ReadAllBytes($target.approvalPolicyPath)))
+    $target | Add-Member NoteProperty approvalRunnerPath (Join-Path $Generation 'approval-runner.ps1') -Force
+    $target | Add-Member NoteProperty expectedApprovalRunnerSha256 $spec.sourceHashes.runner -Force
+    $target | Add-Member NoteProperty approvalPolicyPath (Join-Path $Generation 'approval-policy.local.json') -Force
+    $target | Add-Member NoteProperty expectedApprovalPolicySha256 (Get-BytesSha256 ([IO.File]::ReadAllBytes($target.approvalPolicyPath))) -Force
     if (($expected | ConvertTo-Json -Depth 100 -Compress) -cne
         ((ConvertFrom-AdditionJson $after) | ConvertTo-Json -Depth 100 -Compress)) { throw 'Staged profile changed unrelated channel fields.' }
     foreach ($binding in @(
@@ -202,6 +276,33 @@ function Stage-ApprovalProfile {
         Assert-AdditionProtectedPath $binding[0]
         $bound = Read-AdditionBoundBytes $binding[0] $binding[1] 4194304
         [Array]::Clear($bound, 0, $bound.Length)
+    }
+    if ($null -ne $Context.previous) {
+        $newPolicy = ConvertFrom-AdditionJson ([IO.File]::ReadAllBytes($target.approvalPolicyPath))
+        $expectedPolicy = ConvertFrom-AdditionJson ([Text.Encoding]::UTF8.GetBytes(($Context.previous | ConvertTo-Json -Depth 100)))
+        foreach ($field in @('approvalStateRoot', 'approvalSecretPath', 'qualificationEvidencePath', 'resealScriptPath')) {
+            $expectedPolicy.$field = $newPolicy.$field
+        }
+        $expectedPolicy.expectedQualificationEvidenceSha256 = $spec.sourceHashes.qualification
+        if (($expectedPolicy | ConvertTo-Json -Depth 100 -Compress) -cne ($newPolicy | ConvertTo-Json -Depth 100 -Compress)) {
+            throw 'Approval migration changed unrelated policy fields.'
+        }
+        $source = Get-ApprovalStateInventory $Context.previous.approvalStateRoot
+        if ($source.sha256 -cne $spec.approvalStateSha256) { throw 'Approval ledger drifted under lock.' }
+        $destination = Join-Path $approvalRoot 'saef-media-carousel/state'
+        if (@(Get-ChildItem -LiteralPath $destination -Force).Count -ne 0) { throw 'Approval destination must be empty.' }
+        foreach ($relative in $source.files.Keys) {
+            $file = $source.files[$relative]; $path = Join-Path $destination $relative
+            $parent = Split-Path -Parent $path
+            if (-not (Test-Path -LiteralPath $parent)) { $null = [IO.Directory]::CreateDirectory($parent) }
+            $bytes = Read-AdditionBoundBytes $file.path $file.sha256 4194304
+            [IO.File]::WriteAllBytes($path, $bytes)
+            Assert-AdditionProtectedPath $path
+        }
+        if ((Get-ApprovalStateInventory $destination).sha256 -cne $spec.approvalStateSha256 -or
+            (Get-ApprovalStateInventory $Context.previous.approvalStateRoot).sha256 -cne $spec.approvalStateSha256) {
+            throw 'Approval ledger byte-exact readback failed.'
+        }
     }
     return ,$after
 }
@@ -336,7 +437,7 @@ try {
     $approvalContext = $null
     if ($plan.PSObject.Properties.Name -icontains 'approvalBootstrap') {
         if (-not $reconcile) { throw 'Approval bootstrap requires reviewed baseline reconciliation.' }
-        $approvalContext = Get-ApprovalBootstrapContext $plan.approvalBootstrap $package $windows $plan.deploymentUser $channel
+        $approvalContext = Get-ApprovalBootstrapContext $plan.approvalBootstrap $package $windows $plan.deploymentUser $channel $plan.installRoot
         # One exact helper import in this isolated updater process.
         . $approvalContext.paths.child
     }
