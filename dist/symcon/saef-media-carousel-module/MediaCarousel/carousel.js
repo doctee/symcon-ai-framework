@@ -27,6 +27,7 @@
         sources: new Map(),
         readyRevisions: new Map(),
         pending: new Map(),
+        receiptProbes: new Map(),
         failures: new Map(),
         stale: new Set(),
         mediaGenerations: new Map(),
@@ -55,6 +56,7 @@
         maxPreparationMs: 0, lastImageReadyMs: 0, maxImageReadyMs: 0,
         lastSourceCharacters: 0,
         receiptRequested: 0, receipts: 0, receiptRejected: 0,
+        lateReceipts: 0, lateProbeResponses: 0, reorderedReceipts: 0,
         pairedResponses: 0, receiptDispatchFailures: 0,
         lastReceiptRoundTripMs: 0, maxReceiptRoundTripMs: 0,
         lastPairedReceiptMs: 0, lastPairedAfterReceiptMs: 0,
@@ -297,17 +299,48 @@
     }
 
     function receiveReceipt(payload) {
-        const pending = state.pending.get(payload.index);
+        const probe = state.receiptProbes.get(payload.requestID);
         if (payload.configurationRevision !== state.configurationRevision
-            || !pending || pending.requestID !== payload.requestID
-            || !pending.diagnosticReceipt || pending.receiptAt !== null) {
+            || !probe || probe.index !== payload.index
+            || probe.configurationRevision !== payload.configurationRevision
+            || probe.receiptAt !== null) {
             countDiagnostic('receiptRejected');
             return;
         }
-        pending.receiptAt = performance.now();
-        timeDiagnostic('ReceiptRoundTrip', pending.receiptAt - pending.startedAt);
+        probe.receiptAt = performance.now();
+        const pending = state.pending.get(payload.index);
+        if (!pending || pending.requestID !== payload.requestID) {
+            countDiagnostic('lateReceipts');
+        }
+        if (probe.responseAt !== null) countDiagnostic('reorderedReceipts');
+        timeDiagnostic('ReceiptRoundTrip', probe.receiptAt - probe.startedAt);
         // Do not clear/extend the timeout, free a slot or change visible state.
         countDiagnostic('receipts');
+    }
+
+    function recordProbeResponse(payload) {
+        const probe = state.receiptProbes.get(payload.requestID);
+        if (!probe || probe.index !== payload.index
+            || probe.configurationRevision !== payload.configurationRevision
+            || probe.responseAt !== null) return;
+        probe.responseAt = performance.now();
+        const pending = state.pending.get(payload.index);
+        if (!pending || pending.requestID !== payload.requestID) {
+            countDiagnostic('lateProbeResponses');
+        }
+        if (payload.receiptDispatchCompleted === false) countDiagnostic('receiptDispatchFailures');
+        if (probe.receiptAt === null
+            || !Number.isFinite(payload.preparationMilliseconds)
+            || payload.preparationMilliseconds < 0
+            || !Number.isFinite(payload.receiptDispatchMilliseconds)
+            || payload.receiptDispatchMilliseconds < 0) return;
+        const bounded = value => Math.min(3600000, Math.round(value));
+        diagnostics.lastPairedReceiptMs = bounded(probe.receiptAt - probe.startedAt);
+        diagnostics.lastPairedAfterReceiptMs = bounded(probe.responseAt - probe.receiptAt);
+        diagnostics.lastPairedRoundTripMs = bounded(probe.responseAt - probe.startedAt);
+        diagnostics.lastPairedPreparationMs = bounded(payload.preparationMilliseconds);
+        diagnostics.lastPairedReceiptDispatchMs = bounded(payload.receiptDispatchMilliseconds);
+        countDiagnostic('pairedResponses');
     }
 
     function receiveMedia(payload, shouldRender) {
@@ -328,6 +361,7 @@
             return;
         }
 
+        if (!isPreview) recordProbeResponse(payload);
         const pending = state.pending.get(payload.index);
         // Responses are broadcast to every tile. Only our current request may
         // replace an image; a late response must not overwrite newer content.
@@ -340,23 +374,6 @@
             state.pending.delete(payload.index);
             timeDiagnostic('RoundTrip', performance.now() - pending.startedAt);
             timeDiagnostic('Preparation', payload.preparationMilliseconds);
-            if (pending.diagnosticReceipt && payload.receiptDispatchCompleted === false) {
-                countDiagnostic('receiptDispatchFailures');
-            }
-            if (pending.receiptAt !== null
-                && Number.isFinite(payload.preparationMilliseconds)
-                && payload.preparationMilliseconds >= 0
-                && Number.isFinite(payload.receiptDispatchMilliseconds)
-                && payload.receiptDispatchMilliseconds >= 0) {
-                const bounded = value => Math.min(3600000, Math.round(value));
-                const now = performance.now();
-                diagnostics.lastPairedReceiptMs = bounded(pending.receiptAt - pending.startedAt);
-                diagnostics.lastPairedAfterReceiptMs = bounded(now - pending.receiptAt);
-                diagnostics.lastPairedRoundTripMs = bounded(now - pending.startedAt);
-                diagnostics.lastPairedPreparationMs = bounded(payload.preparationMilliseconds);
-                diagnostics.lastPairedReceiptDispatchMs = bounded(payload.receiptDispatchMilliseconds);
-                countDiagnostic('pairedResponses');
-            }
             if (pending.generation !== (state.mediaGenerations.get(payload.index) || 0)) {
                 countDiagnostic('superseded');
                 pumpPrefetch();
@@ -464,10 +481,15 @@
         state.pending.set(index, {
             requestID: id, timer: timeout,
             startedAt: performance.now(),
-            diagnosticReceipt: diagnosticReceipt, receiptAt: null,
             generation: state.mediaGenerations.get(index) || 0
         });
-        if (diagnosticReceipt) countDiagnostic('receiptRequested');
+        if (diagnosticReceipt) {
+            state.receiptProbes.set(id, {
+                index: index, configurationRevision: state.configurationRevision,
+                startedAt: performance.now(), receiptAt: null, responseAt: null
+            });
+            countDiagnostic('receiptRequested');
+        }
         countDiagnostic('requested');
         const request = {
             index: index,

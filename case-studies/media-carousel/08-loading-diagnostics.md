@@ -55,8 +55,12 @@ timing tuple for the last paired image response:
 - `lastPairedReceiptDispatchMs`: duration of that server SDK call.
 
 Receipts never extend timeouts, free request slots or alter visible content.
-Late, foreign, duplicate and obsolete receipts are counted separately and
-ignored. Missing receipts do not block normal image acceptance. An exception
+Foreign, duplicate and obsolete receipts are counted separately and ignored.
+The six probe records remain in view-local memory after normal request timeout,
+so late receipt/response pairs remain measurable without accepting late images.
+No additional records are admitted after the six-request budget. Reordered
+receipts are counted but never produce a negative or fabricated paired duration.
+Missing receipts do not block normal image acceptance. An exception
 from the optional receipt call is reported in the final image metadata without
 preventing the image response. `receiptDispatchCompleted` means the SDK call
 returned without an exception, not proof that the client received it.

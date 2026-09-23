@@ -202,7 +202,7 @@ test('view diagnostics separate response and preparation timing without disclosi
     assert.ok(d.imageReady >= 1);
     assert.equal(d.lastImageReadyMs, 0);
     assert.equal(d.pending, f.api.state.pending.size);
-    assert.ok(text.length < 1200);
+    assert.ok(text.length < 1500);
     for (const forbidden of ['private', 'base64', request.requestID, 'mediaID', 'instanceID', 'title']) {
         assert.equal(text.includes(forbidden), false);
     }
@@ -262,7 +262,7 @@ test('foreign duplicate obsolete and late receipts are inert', async () => {
     f.api.receiveReceipt(request);
     f.advance(20);
     f.api.receiveReceipt(request);
-    assert.equal(f.api.state.pending.get(request.index).receiptAt, 10);
+    assert.equal(f.api.state.receiptProbes.get(request.requestID).receiptAt, 10);
     f.timers.get(f.api.state.pending.get(request.index).timer).fn();
     f.api.receiveReceipt(request);
     const d = JSON.parse(f.element('carousel').dataset.loadDiagnostics);
@@ -287,6 +287,7 @@ test('receipt probes stop after six normal requests even across bootstrap change
         items: [{mediaID: 1, title: 'one'}], settings: {...f.api.state.settings}});
     await flush();
     assert.equal(f.requests.filter(r => r.diagnosticReceipt === true).length, 6);
+    assert.equal(f.api.state.receiptProbes.size, 6);
 });
 
 test('missing receipt does not block media or fabricate a paired timing', async () => {
@@ -299,4 +300,41 @@ test('missing receipt does not block media or fabricate a paired timing', async 
     assert.equal(d.accepted, 1);
     assert.equal(d.pairedResponses, 0);
     assert.equal(d.receiptDispatchFailures, 1);
+});
+
+test('late paired responses remain measurable without accepting a timed-out image', async () => {
+    const f = fixture();
+    await flush();
+    const request = f.requests[0];
+    f.advance(10000);
+    f.timers.get(f.api.state.pending.get(request.index).timer).fn();
+    f.advance(2000);
+    f.api.receiveReceipt(request);
+    f.advance(3000);
+    f.api.receiveMedia({...request, source: 'data:image/jpeg;base64,YQ==',
+        contentRevision: 'late', preview: false, preparationMilliseconds: 200,
+        receiptDispatchMilliseconds: 1, receiptDispatchCompleted: true});
+    const d = JSON.parse(f.element('carousel').dataset.loadDiagnostics);
+    assert.equal(d.lateReceipts, 1);
+    assert.equal(d.lateProbeResponses, 1);
+    assert.equal(d.pairedResponses, 1);
+    assert.equal(d.lastPairedReceiptMs, 12000);
+    assert.equal(d.lastPairedAfterReceiptMs, 3000);
+    assert.equal(d.accepted, 0);
+    assert.equal(f.api.state.sources.has(request.index), false);
+});
+
+test('reordered receipt is counted without negative or fabricated paired latency', async () => {
+    const f = fixture();
+    await flush();
+    const request = f.requests[0];
+    f.api.receiveMedia({...request, source: 'data:image/jpeg;base64,YQ==',
+        contentRevision: 'one', preview: false, preparationMilliseconds: 20,
+        receiptDispatchMilliseconds: 1, receiptDispatchCompleted: true});
+    f.advance(100);
+    f.api.receiveReceipt(request);
+    const d = JSON.parse(f.element('carousel').dataset.loadDiagnostics);
+    assert.equal(d.reorderedReceipts, 1);
+    assert.equal(d.pairedResponses, 0);
+    assert.equal(d.accepted, 1);
 });
