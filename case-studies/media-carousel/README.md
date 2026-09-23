@@ -36,7 +36,15 @@ objects remain installation-owned rollback concerns rather than module logic.
   browser load event.
 - A failed target leaves the last good image visible.
 - Horizontal pointer gestures move the image with the finger.
-- Large arrows and keyboard navigation remain available.
+- Responsive arrows and keyboard navigation remain available. Arrow surfaces
+  scale from 36 x 44 to 48 x 72 CSS pixels; swipe remains available across the tile.
+- Manual navigation to an unloaded neighbour is queued and resumes after load
+  without a second click. Current and next frames take priority over the previous
+  frame, with no artificial delay before filling the two request slots.
+- Media refresh preserves the previous usable frame until its replacement
+  arrives. Enabled titles indicate that the frame is being updated. Responses
+  from another client or superseded requests cannot overwrite current content.
+- Session-restored images are shown immediately but refreshed in the background.
 - Resize, page-show and visibility restoration re-render the current image
   without changing the sequence index.
 - IP-Symcon 9.1 and newer use the HTML-SDK fullscreen visualization type;
@@ -58,6 +66,12 @@ ObjectID, media existence, media type and supported image extension. It never
 calls a camera action or writes media content.
 
 ## Configuration
+
+`FitMode` selects the initial image fit. Optional `ShowFitToggle` (default false)
+adds a small icon for switching between filling the area and showing the entire
+image. Its accessible touch target is 44 x 44 CSS pixels while the visible icon
+surface is 28 x 28. The choice lasts for the current HTML view, including image
+navigation; it is not a separate automatic fullscreen setting.
 
 `SourceMode=list` uses `MediaItems` with the following public schema:
 

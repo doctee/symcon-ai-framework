@@ -7,26 +7,26 @@
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/carousel.js",
             "target": "MediaCarousel/carousel.js",
-            "sha256": "d506c4914ae37983a24337beeddc2cd8da514af6d8f5a2088d523fad1b539536",
-            "bytes": 24518
+            "sha256": "98f5348d817d8ec3a0774a4da1057bc27041b191943eae689d3e6470a7f8b4fa",
+            "bytes": 28908
         },
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/form.json",
             "target": "MediaCarousel/form.json",
-            "sha256": "e757fbc80638c9f8c8e6a8463b0d820f4a8a08e853f831ed782ae9503164c48a",
-            "bytes": 3664
+            "sha256": "7f19b7c4b4d6366dd84ddfa556e3b90db8eda9ec84d6034b5c913fb623388760",
+            "bytes": 3775
         },
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/locale.json",
             "target": "MediaCarousel/locale.json",
-            "sha256": "62603caf8b8c5bee3ae5dcf726ad983516dc391a420853854bcde070302c50fe",
-            "bytes": 2010
+            "sha256": "db86b9d19ab10482227c619ca17aac3652db8f1d396d24b28a9745bf22aefd63",
+            "bytes": 2245
         },
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/module.html",
             "target": "MediaCarousel/module.html",
-            "sha256": "95e1deecf0761b3af08811709462f2133eab5e9d73772c9377ac869e5f8364ab",
-            "bytes": 6041
+            "sha256": "deefa631824954bba7629bda5c72225911c2e3f9816ece903fa348b2e26414b6",
+            "bytes": 7592
         },
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/module.json",
@@ -37,17 +37,17 @@
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/module.php",
             "target": "MediaCarousel/module.php",
-            "sha256": "64e3d8acbee38bda7207ac2672d6447c5b77a51a8051f9963930146acc265ab2",
-            "bytes": 31347
+            "sha256": "d0d70af66b8ce8085e140860930bed39eb307a2043d0a3d2570ba8bdfcbf68db",
+            "bytes": 31606
         },
         {
             "source": "case-studies/media-carousel/distribution/library.json",
             "target": "library.json",
-            "sha256": "29454c738fa0acc5f31b1e2c7f2e20cac517bc0006c6ef12fe8e340388d0797c",
+            "sha256": "08d85ca308992bd16c73b6289da5025517893745c9f0f71b73906d1f72e1f6c8",
             "bytes": 260
         }
     ],
-    "filesetSha256": "99c7e30e4d09a0f78ccc7abcb9176e7de495bed4ad785a20f7112c3dd0edab00",
+    "filesetSha256": "1a80390171576559a8efa61723d9f9c42f1acc5f74d53d3e11b6ab843255c48e",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

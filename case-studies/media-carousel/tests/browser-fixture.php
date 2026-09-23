@@ -44,6 +44,7 @@ $configuration = [
         'pauseAfterInteractionSeconds' => 10,
         'transitionMilliseconds' => 280,
         'fitMode' => 'contain',
+        'showFitToggle' => true,
         'showTitles' => true,
         'showDots' => true,
         'showArrows' => true,

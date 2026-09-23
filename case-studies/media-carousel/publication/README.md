@@ -6,7 +6,7 @@ client-local touch state.
 
 ## Status
 
-Version `0.2.3` is a preview pilot candidate. It supports explicit media lists
+Version `0.2.4` is a preview pilot candidate. It supports explicit media lists
 and bounded rolling image categories. Every newly created tile embeds a bounded
 preview before asynchronously upgrading to a bounded display image. The visible
 image is requested first, no more than two media requests run concurrently and
@@ -16,6 +16,11 @@ older compatible installations retain the compact HTML-SDK tile.
 The current index and sequence revision are stored without image data in
 device-local storage so compact and fullscreen HTML contexts can resume the
 same position. Compressed image sources remain session-only.
+Responsive arrows reduce navigation overlays on small tiles. Updated media keep
+their previous usable frame during refresh, and pending manual navigation resumes
+when its image arrives. Optional `ShowFitToggle` adds a small icon to switch
+between filling the view and showing the entire image. Each new HTML view starts
+with the configured `FitMode`; the local choice does not alter other clients.
 Adding the library does not
 create an instance, alter a visualisation or replace the native content
 switcher. Instance creation and every live-operation step require a separate

@@ -39,6 +39,7 @@ class MediaCarousel extends IPSModuleStrict
         $this->RegisterPropertyInteger('PauseAfterInteractionSeconds', 15);
         $this->RegisterPropertyInteger('TransitionMilliseconds', 320);
         $this->RegisterPropertyString('FitMode', 'cover');
+        $this->RegisterPropertyBoolean('ShowFitToggle', false);
         $this->RegisterPropertyBoolean('ShowTitles', true);
         $this->RegisterPropertyBoolean('ShowDots', true);
         $this->RegisterPropertyBoolean('ShowArrows', true);
@@ -535,6 +536,7 @@ class MediaCarousel extends IPSModuleStrict
                     'TransitionMilliseconds'
                 ),
                 'fitMode'                      => $this->ReadPropertyString('FitMode'),
+                'showFitToggle'                => $this->ReadPropertyBoolean('ShowFitToggle'),
                 'showTitles'                   => $this->ReadPropertyBoolean('ShowTitles'),
                 'showDots'                     => $this->ReadPropertyBoolean('ShowDots'),
                 'showArrows'                   => $this->ReadPropertyBoolean('ShowArrows'),
@@ -806,6 +808,7 @@ class MediaCarousel extends IPSModuleStrict
                         'TransitionMilliseconds'
                     ),
                     'fitMode'                       => $this->ReadPropertyString('FitMode'),
+                    'showFitToggle'                 => $this->ReadPropertyBoolean('ShowFitToggle'),
                     'showTitles'                    => $this->ReadPropertyBoolean('ShowTitles'),
                     'showDots'                      => $this->ReadPropertyBoolean('ShowDots'),
                     'showArrows'                    => $this->ReadPropertyBoolean('ShowArrows'),
