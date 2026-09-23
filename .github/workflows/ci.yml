@@ -31,6 +31,9 @@ jobs:
       - name: Qualify MediaCarousel schema transition on Windows PowerShell 5.1
         shell: powershell
         run: ./tests/deployments/media-carousel-fit-schema.ps1
+      - name: Qualify durable MediaCarousel recovery state
+        shell: powershell
+        run: ./tests/deployments/media-carousel-recovery-state.ps1
       - name: Qualify isolated schema probe without live Symcon
         shell: powershell
         run: ./tests/deployments/media-carousel-schema-probe.ps1

@@ -11,6 +11,10 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added MediaCarousel adapter recovery candidates for independent postflight,
+  conservative inspection and post-success rollback with durable predecessor
+  evidence. Repeatable approval-profile/reseal installation remains a separate
+  unfinished integration gate; no live installation is implied.
 - Added an opt-in HA Matter HS feedback quantization profile with transport-bin
   regression coverage and unchanged default color comparisons. Its deployment
   candidate includes the separately reviewed missing structured-color repair.

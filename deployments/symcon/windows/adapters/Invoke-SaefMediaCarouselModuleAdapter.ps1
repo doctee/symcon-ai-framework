@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('preflight', 'activate')]
+    [ValidateSet('preflight', 'activate', 'postflight', 'inspect', 'rollback')]
     [string] $Operation,
 
     [Parameter(Mandatory = $true)]
@@ -789,6 +789,90 @@ function Invoke-Rollback {
     }
 }
 
+function Read-RecoveryJson {
+    param([Parameter(Mandatory = $true)][string] $Path)
+    Assert-RootedLeaf -Path $Path -MaximumBytes ([int] $script:policy.maximumStateBytes)
+    $bytes = [IO.File]::ReadAllBytes($Path)
+    if ($bytes.Length -gt [int] $script:policy.maximumStateBytes) { throw 'Recovery evidence exceeds limit.' }
+    return ([Text.UTF8Encoding]::new($false, $true).GetString($bytes) | ConvertFrom-Json)
+}
+
+function Get-PreviousActiveStateEvidence {
+    if ($null -eq $script:previousActiveState) {
+        return [ordered]@{ existed = $false; sha256 = ''; contentBase64 = '' }
+    }
+    return [ordered]@{
+        existed = $true
+        sha256 = Get-TextSha256 ([string] $script:previousActiveState)
+        contentBase64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([string] $script:previousActiveState))
+    }
+}
+
+function Restore-PreviousActiveStateEvidence {
+    param([Parameter(Mandatory = $true)] $Record)
+    # Restore process-local evidence only. No filesystem mutation occurs here.
+    if ($Record.existed -isnot [bool] -or $Record.sha256 -isnot [string] -or
+        $Record.contentBase64 -isnot [string] -or
+        $Record.contentBase64.Length -gt ([int] $script:policy.maximumStateBytes * 2)) {
+        throw 'Invalid previous active-state evidence.'
+    }
+    if (-not $Record.existed) {
+        if ($Record.sha256 -cne '' -or $Record.contentBase64 -cne '') { throw 'Absent state contains bytes.' }
+        $script:previousActiveState = $null
+        return
+    }
+    $bytes = [Convert]::FromBase64String($Record.contentBase64)
+    $text = [Text.UTF8Encoding]::new($false, $true).GetString($bytes)
+    if ($bytes.Length -gt [int] $script:policy.maximumStateBytes -or
+        [Convert]::ToBase64String($bytes) -cne $Record.contentBase64 -or
+        (Get-TextSha256 $text) -cne $Record.sha256) { throw 'Previous active-state bytes differ.' }
+    $script:previousActiveState = $text
+}
+
+function Read-CompletedActivationContext {
+    $active = Read-RecoveryJson (Join-Path $script:policy.adapterStateRoot 'active.json')
+    $name = [string] $active.transactionDirectoryName
+    if ($active.formatVersion -ne 1 -or $active.adapterProfile -cne 'saef-media-carousel-v1' -or
+        $active.deploymentId -cne $script:manifest.deploymentId -or
+        $active.packageIdentitySha256 -cne $script:packageIdentitySha256 -or
+        $name -cnotmatch '^[a-z0-9][a-z0-9.-]+-[0-9]{8}T[0-9]{6}Z$' -or
+        -not $name.StartsWith(([string] $script:manifest.deploymentId + '-'), [StringComparison]::Ordinal) -or
+        $active.rollbackDirectoryName -cne 'rollback' -or $active.snapshotFileName -cne 'snapshot.json') {
+        throw 'Active recovery identity differs.'
+    }
+    $root = Join-Path $script:policy.adapterStateRoot $name
+    Assert-SafeDirectoryTree $root
+    $record = Read-RecoveryJson (Join-Path $root 'transaction.json')
+    if ($record.formatVersion -ne 1 -or $record.adapterProfile -cne 'saef-media-carousel-v1' -or
+        $record.transactionDirectoryName -cne $name -or $record.outcome -cne 'activated' -or
+        $record.deploymentId -cne $script:manifest.deploymentId -or
+        $record.packageIdentitySha256 -cne $script:packageIdentitySha256 -or
+        $record.manifestSha256 -cne $script:manifestSha256 -or
+        (Test-Path -LiteralPath (Join-Path $root 'candidate')) -or
+        (Test-Path -LiteralPath (Join-Path $root 'failed-candidate'))) { throw 'Completed recovery evidence differs.' }
+    foreach ($entry in @(@('snapshot.json', 'snapshotSha256'), @('candidate-snapshot.json', 'candidateSnapshotSha256'))) {
+        $path = Join-Path $root $entry[0]
+        Assert-RootedLeaf $path ([int] $script:policy.maximumStateBytes)
+        if ((Get-Sha256 $path) -cne [string] $record.($entry[1])) { throw 'Recovery snapshot hash differs.' }
+    }
+    $before = Read-RecoveryJson (Join-Path $root 'snapshot.json')
+    $after = Read-RecoveryJson (Join-Path $root 'candidate-snapshot.json')
+    foreach ($snapshot in @($before, $after)) {
+        if ($snapshot.formatVersion -ne 1 -or $snapshot.deploymentId -cne $script:manifest.deploymentId -or
+            $snapshot.packageIdentitySha256 -cne $script:packageIdentitySha256 -or
+            -not (Test-HexSha256 ([string] $snapshot.activePackageIdentitySha256))) {
+            throw 'Recovery snapshot identity differs.'
+        }
+    }
+    if ($before.activePackageIdentitySha256 -cne $after.activePackageIdentitySha256 -or
+        $before.activePackageIdentitySha256 -cne $record.previousPackageIdentitySha256 -or
+        (Get-DirectoryPackageIdentity (Join-Path $root 'rollback')) -cne $before.activePackageIdentitySha256) {
+        throw 'Rollback package identity differs.'
+    }
+    Restore-PreviousActiveStateEvidence $before.previousActiveState
+    return [ordered]@{ root = $root; before = $before; after = $after; record = $record }
+}
+
 try {
     $script:failureCode = 'contract'
     Read-Contracts
@@ -823,8 +907,11 @@ try {
     Assert-ProtectedAcl -Path ([string] $script:policy.adapterStateRoot)
     Assert-ProtectedAcl -Path ([string] $script:policy.activeModulePath)
     Assert-ModuleTreeIdentity -Path ([string] $script:policy.activeModulePath)
-    if ((Get-DirectoryPackageIdentity -Path ([string] $script:policy.activeModulePath)) -ne
-        [string] $script:policy.expectedActivePackageIdentitySha256) {
+    $activeIdentity = Get-DirectoryPackageIdentity -Path ([string] $script:policy.activeModulePath)
+    $expectedIdentity = if ($Operation -in @('postflight', 'rollback')) {
+        $script:packageIdentitySha256
+    } else { [string] $script:policy.expectedActivePackageIdentitySha256 }
+    if ($Operation -ne 'inspect' -and $activeIdentity -cne $expectedIdentity) {
         throw [InvalidOperationException]::new('Active package identity differs from policy.')
     }
     Assert-ProtectedAcl -Path $CandidatePath
@@ -839,11 +926,45 @@ try {
     $script:credential = Import-MachineCredential -Path $CredentialPath
     $script:failureCode = 'symcon_ownership'
     Assert-SymconOwnership
+    if ($Operation -in @('postflight', 'inspect', 'rollback')) {
+        $script:failureCode = 'recovery_evidence'
+        # Conservatively classify only fully completed activations. Incomplete
+        # or legacy evidence must never cause a second switch or reload.
+        $context = Read-CompletedActivationContext
+        $null = Get-ModuleTreePackageIdentity $script:policy.activeModulePath
+        Assert-SnapshotPreserved $context.after
+        if ($Operation -ne 'rollback') {
+            $script:failureCode = 'none'
+            $outcome = if ($Operation -eq 'inspect') { 'active' } else { 'passed' }
+            Write-AdapterStatus -Outcome $outcome -ExitCode $ExitSuccess
+            exit $ExitSuccess
+        }
+        if ($script:policy.expectedActivePackageIdentitySha256 -cne $context.before.activePackageIdentitySha256) {
+            throw 'Restore the protected predecessor policy before rollback.'
+        }
+        $script:transactionRoot = $context.root
+        $script:snapshot = $context.before
+        $script:rollbackPath = Join-Path $context.root 'rollback'
+        $script:failedCandidatePath = Join-Path $context.root 'failed-candidate'
+        $context.record.outcome = 'rollback_started'
+        Write-AtomicJson (Join-Path $context.root 'transaction.json') $context.record
+        $script:activeMoved = $true
+        $script:candidateActivated = $true
+        $script:activeStateWritten = $true
+        Invoke-Rollback
+        if (-not $script:rollbackSucceeded) { throw 'Post-success rollback is unproven.' }
+        $context.record.outcome = 'rolled_back'
+        Write-AtomicJson (Join-Path $context.root 'transaction.json') $context.record
+        $script:failureCode = 'none'
+        Write-AdapterStatus -Outcome 'rolled_back' -ExitCode $ExitRolledBack
+        exit $ExitRolledBack
+    }
     $script:snapshot = [ordered]@{
         formatVersion = 1
         capturedUtc = [DateTime]::UtcNow.ToString('o')
         deploymentId = [string] $script:manifest.deploymentId
         packageIdentitySha256 = $script:packageIdentitySha256
+        activePackageIdentitySha256 = $activeIdentity
         instances = @(Get-InstanceSnapshot)
     }
     $candidateSnapshot = Get-CandidateSnapshot -Snapshot $script:snapshot
@@ -860,10 +981,14 @@ try {
         if ((Get-Item -LiteralPath $activeStatePath).Length -gt [int] $script:policy.maximumStateBytes) {
             throw [InvalidOperationException]::new('Existing active adapter state is oversized.')
         }
-        $script:previousActiveState = Get-Content -LiteralPath $activeStatePath -Raw
+        Assert-RootedLeaf $activeStatePath ([int] $script:policy.maximumStateBytes)
+        $script:previousActiveState = [Text.UTF8Encoding]::new($false, $true).GetString([IO.File]::ReadAllBytes($activeStatePath))
     }
+    $script:snapshot.previousActiveState = Get-PreviousActiveStateEvidence
+    $candidateSnapshot = Get-CandidateSnapshot -Snapshot $script:snapshot
     $transactionID = [string] $script:manifest.deploymentId + '-' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ')
     $script:transactionRoot = Join-Path ([string] $script:policy.adapterStateRoot) $transactionID
+    if (Test-Path -LiteralPath $script:transactionRoot) { throw 'Existing transaction requires recovery review.' }
     $candidateTransactionPath = Join-Path $script:transactionRoot 'candidate'
     $script:rollbackPath = Join-Path $script:transactionRoot 'rollback'
     $script:failedCandidatePath = Join-Path $script:transactionRoot 'failed-candidate'
@@ -876,6 +1001,18 @@ try {
     }
     Write-AtomicText -Path (Join-Path $script:transactionRoot 'snapshot.json') -Text $snapshotText
     Write-AtomicJson -Path (Join-Path $script:transactionRoot 'candidate-snapshot.json') -Value $candidateSnapshot
+    $recoveryRecord = [ordered]@{
+        formatVersion = 1; adapterProfile = 'saef-media-carousel-v1'
+        transactionDirectoryName = $transactionID
+        deploymentId = [string] $script:manifest.deploymentId
+        packageIdentitySha256 = $script:packageIdentitySha256
+        previousPackageIdentitySha256 = $activeIdentity
+        manifestSha256 = $script:manifestSha256
+        snapshotSha256 = Get-Sha256 (Join-Path $script:transactionRoot 'snapshot.json')
+        candidateSnapshotSha256 = Get-Sha256 (Join-Path $script:transactionRoot 'candidate-snapshot.json')
+        outcome = 'activation_started'
+    }
+    Write-AtomicJson (Join-Path $script:transactionRoot 'transaction.json') $recoveryRecord
 
     $script:failureCode = 'pre_mutation_recheck'
     Assert-SymconOwnership
@@ -906,21 +1043,18 @@ try {
         rollbackDirectoryName = 'rollback'
         snapshotFileName = 'snapshot.json'
     }
-    Write-AtomicJson -Path (Join-Path $script:transactionRoot 'transaction.json') -Value ([ordered]@{
-        formatVersion = 1
-        adapterProfile = 'saef-media-carousel-v1'
-        transactionDirectoryName = $transactionID
-        deploymentId = [string] $script:manifest.deploymentId
-        packageIdentitySha256 = $script:packageIdentitySha256
-        completedUtc = [DateTime]::UtcNow.ToString('o')
-        outcome = 'activated'
-    })
+    $recoveryRecord.outcome = 'activated'
+    Write-AtomicJson -Path (Join-Path $script:transactionRoot 'transaction.json') -Value $recoveryRecord
     Write-AtomicJson -Path $activeStatePath -Value $activeRecord
     $script:activeStateWritten = $true
     $script:failureCode = 'none'
     Write-AdapterStatus -Outcome 'activated' -ExitCode $ExitSuccess
     exit $ExitSuccess
 } catch {
+    if ($Operation -in @('inspect', 'rollback')) {
+        Write-AdapterStatus -Outcome 'manual_recovery_required' -ExitCode $ExitManualRecovery
+        exit $ExitManualRecovery
+    }
     if ($Operation -eq 'activate' -and $script:activationAttempted) {
         $originalFailureCode = $script:failureCode
         Invoke-Rollback
