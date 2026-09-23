@@ -241,6 +241,8 @@ try {
         $log = Get-Content $logPath -Raw | ConvertFrom-Json
         Assert-Test ($log.productionWrites -eq 0 -and $log.reloads -eq 0 -and $log.creates -eq 0) 'Binding performed runtime mutation.'
     }
+    # Settings reuse the same protected, real-DPAPI CLI fixture; no live endpoint.
+    . (Join-Path $PSScriptRoot 'media-carousel-fit-settings.ps1')
     Add-Type -AssemblyName System.IO.Compression
     # Exercise exact self-extraction with the same private-plan shape and source files.
     $packageEntries = @('schema-plan.local.json', 'windows/Initialize-SaefDeploymentChannel.ps1',

@@ -1,9 +1,9 @@
 # Synthetic RPC surface, used only by the Windows qualification child.
-param($PlanPath, $ExpectedPlanSha256, $FixturePath, $EntryPath, $Culture, $BindingOperation = '')
+param($PlanPath, $ExpectedPlanSha256, $FixturePath, $EntryPath, $Culture, $BindingOperation = '', $SettingsOperation = '')
 [Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo($Culture)
 $global:probeMock = Get-Content -LiteralPath $FixturePath -Raw | ConvertFrom-Json
 $global:probeState = @{ registered = $false; exists = $false; candidate = $false; configuration = ''
-    mutations = 0; reloads = 0; productionWrites = 0; creates = 0; deletes = 0 }
+    mutations = 0; reloads = 0; productionWrites = 0; creates = 0; deletes = 0; applies = 0; settingsWrites = @() }
 function Invoke-WebRequest {
     param([switch] $UseBasicParsing, $Uri, $Method, $ContentType, $Body, $TimeoutSec, $Headers)
     if (-not $UseBasicParsing -or $Body -isnot [byte[]] -or $ContentType -cne 'application/json; charset=utf-8') {
@@ -25,6 +25,27 @@ function Invoke-RestMethod {
     $testLibrary = '{85DE8006-9775-49E6-BB7E-1924BAA5459A}'
     $testPath = Join-Path (Split-Path -Parent $p.activeModulePath) 'saef-media-carousel-schema-probe'
     $v = $null
+    if ($SettingsOperation -and $m -in @('IPS_SetProperty', 'IPS_ApplyChanges')) {
+        if ($a[0] -isnot [int] -or $a[0] -notin @(11111, 33333)) { throw 'Unexpected settings target.' }
+        $s.productionWrites++
+        if ($m -ceq 'IPS_SetProperty') {
+            if ($a.Count -ne 3 -or $a[1] -cne 'ShowFitToggle' -or $a[2] -isnot [bool]) { throw 'Unexpected settings mutation.' }
+            $s.mutations++
+            $s.settingsWrites += ([string] $a[0] + ':' + $a[2].ToString())
+            $f.configurations.([string] $a[0]) = $f.configurations.([string] $a[0]).Replace('"ShowFitToggle":' + (-not $a[2]).ToString().ToLowerInvariant(),
+                '"ShowFitToggle":' + $a[2].ToString().ToLowerInvariant())
+        } else {
+            if ($a.Count -ne 1) { throw 'Unexpected apply arguments.' }
+            $s.applies++
+        }
+        if ($f.scenario -ceq 'fit-drift' -and $s.mutations -eq 1) { $f.configurations.'11111' += ' ' }
+        $s.configurations = $f.configurations
+        [IO.File]::WriteAllText($f.logPath, ($s | ConvertTo-Json -Depth 10))
+        if (($f.scenario -ceq 'fit-response-lost' -and $s.productionWrites -eq 1) -or
+            ($m -ceq 'IPS_ApplyChanges' -and $f.scenario -ceq 'fit-apply-fails' -and $s.applies -eq 1) -or
+            ($m -ceq 'IPS_ApplyChanges' -and $f.scenario -ceq 'fit-multi-fails' -and $s.applies -eq 2)) { throw 'Synthetic uncertain settings RPC.' }
+        return [pscustomobject]@{ result = $true }
+    }
     if ($m -in @('IPS_SetParent', 'IPS_SetIdent', 'IPS_SetName', 'IPS_SetHidden',
         'IPS_SetConfiguration', 'IPS_ApplyChanges', 'IPS_DeleteInstance')) {
         if ($a[0] -ne 54321) { $s.productionWrites++; throw 'Production mutation in synthetic test.' }
@@ -132,11 +153,14 @@ function Invoke-RestMethod {
         }
         default { throw ('Unexpected RPC method: ' + $m) }
     }
-    [IO.File]::WriteAllText($f.logPath, ($s | ConvertTo-Json))
+    [IO.File]::WriteAllText($f.logPath, ($s | ConvertTo-Json -Depth 10))
     # Match Invoke-RestMethod's JSON object/array types, not PowerShell hashtables.
     return (ConvertTo-Json -InputObject @{ result = $v } -Depth 20 -Compress | ConvertFrom-Json)
 }
-if ($BindingOperation) {
+if ($SettingsOperation) {
+    & $EntryPath -PlanPath $PlanPath -ExpectedPlanSha256 $ExpectedPlanSha256 `
+        -Operation $SettingsOperation -Confirmation enable-media-carousel-fit-toggle
+} elseif ($BindingOperation) {
     & $EntryPath -PlanPath $PlanPath -ExpectedPlanSha256 $ExpectedPlanSha256 `
         -Operation $BindingOperation -Confirmation update-saef-media-carousel-binding
 } else {
