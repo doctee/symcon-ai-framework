@@ -118,6 +118,12 @@ assertMediaCarouselAdapter(
 );
 
 $requiredAdapterFragments = [
+    'function Assert-FitDefaultAddition',
+    'show-fit-toggle-default-false-v1',
+    'Schema transition changed existing configuration bytes.',
+    'Get-InstanceSnapshot -ExpectedInstances @($Snapshot.instances)',
+    'Wait-Healthy -Snapshot $candidateSnapshot',
+    "'candidate-snapshot.json'",
     "[ValidateSet('preflight', 'activate')]",
     "[Threading.Mutex]::new(\$false, [string] \$script:policy.mutexName)",
     '[Array]::Sort($relativePaths, [StringComparer]::Ordinal)',

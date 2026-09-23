@@ -7,7 +7,8 @@
     },
     "configuration": {
         "snapshot": "fresh-byte-exact-utf8",
-        "requireByteExactReadback": true
+        "requireByteExactReadback": true,
+        "optionalSchemaTransition": "show-fit-toggle-default-false-v1"
     },
     "quiescence": {
         "required": true,
