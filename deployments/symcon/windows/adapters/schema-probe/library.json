@@ -1,0 +1,12 @@
+{
+  "id": "{85DE8006-9775-49E6-BB7E-1924BAA5459A}",
+  "author": "SAEF",
+  "name": "SAEF MediaCarousel Schema Probe",
+  "url": "https://github.com/doctee/symcon-ai-framework",
+  "version": "1.0.0",
+  "build": 0,
+  "date": 0,
+  "compatibility": {
+    "version": "8.1"
+  }
+}
