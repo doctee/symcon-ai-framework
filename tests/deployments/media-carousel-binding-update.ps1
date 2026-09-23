@@ -33,6 +33,50 @@ $passed = 0
 try {
     foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
         [Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo($culture)
+        foreach ($baselineCase in @('success', 'unreviewed-config', 'package-drift', 'added-instance',
+            'removed-instance', 'duplicate-instance', 'zero-instance', 'fractional-instance',
+            'bad-hash', 'missing-prior-evidence', 'unrelated-policy', 'retained-transition')) {
+            $oldBaseline = [ordered]@{
+                expectedActivePackageIdentitySha256 = ('a' * 64)
+                configurationTransition = @{ kind = 'reviewed-legacy-transition' }
+                maximumStateBytes = 4096
+                expectedInstances = @(@{ instanceId = 101; configurationSha256 = ('b' * 64) })
+            } | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+            $newBaseline = $oldBaseline | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+            $newBaseline.PSObject.Properties.Remove('configurationTransition')
+            $newBaseline.expectedActivePackageIdentitySha256 = ('c' * 64)
+            $newBaseline.expectedInstances[0].configurationSha256 = ('d' * 64)
+            $review = [ordered]@{
+                formatVersion = 1; targetId = 'saef-media-carousel'
+                operation = 'reviewed_baseline_reconciliation'
+                sourceEvidenceSha256 = @(('e' * 64))
+                activePackageIdentitySha256 = ('c' * 64)
+                expectedInstances = @(@{ instanceId = 101; configurationSha256 = ('d' * 64) })
+            } | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+            switch -CaseSensitive ($baselineCase) {
+                'unreviewed-config' { $newBaseline.expectedInstances[0].configurationSha256 = ('f' * 64) }
+                'package-drift' { $newBaseline.expectedActivePackageIdentitySha256 = ('f' * 64) }
+                'added-instance' { $review.expectedInstances += [pscustomobject]@{ instanceId = 102; configurationSha256 = ('d' * 64) } }
+                'removed-instance' { $newBaseline.expectedInstances = @() }
+                'duplicate-instance' { $review.expectedInstances += $review.expectedInstances[0] }
+                'zero-instance' { $review.expectedInstances[0].instanceId = 0 }
+                'fractional-instance' { $review.expectedInstances[0].instanceId = 101.1 }
+                'bad-hash' { $review.expectedInstances[0].configurationSha256 = '' }
+                'missing-prior-evidence' { $review.sourceEvidenceSha256 = @() }
+                'unrelated-policy' { $newBaseline.maximumStateBytes = 8192 }
+                'retained-transition' { $newBaseline | Add-Member NoteProperty configurationTransition @{} }
+            }
+            $oldJson = $oldBaseline | ConvertTo-Json -Depth 20 -Compress
+            $newJson = $newBaseline | ConvertTo-Json -Depth 20 -Compress
+            $reviewJson = $review | ConvertTo-Json -Depth 20 -Compress
+            $rejected = $false
+            try { Assert-ReconciledBaseline $oldBaseline $newBaseline $review } catch { $rejected = $true }
+            Assert-Test ($rejected -eq ($baselineCase -cne 'success')) ('Baseline outcome differs: ' + $baselineCase)
+            Assert-Test (($oldBaseline | ConvertTo-Json -Depth 20 -Compress) -ceq $oldJson -and
+                ($newBaseline | ConvertTo-Json -Depth 20 -Compress) -ceq $newJson -and
+                ($review | ConvertTo-Json -Depth 20 -Compress) -ceq $reviewJson) 'Baseline validation mutated inputs.'
+            $passed++
+        }
         foreach ($scenario in @('success', 'postflight-failure', 'prepublish-failure', 'external-drift', 'existing-generation', 'unrelated-change', 'inherited-channel')) {
             $root = Join-Path $scratch ($culture + '-' + $scenario)
             $null = [IO.Directory]::CreateDirectory($root)
@@ -89,13 +133,20 @@ try {
         }
     }
     Add-Type -AssemblyName System.IO.Compression
-    $zipPath = Join-Path $scratch 'binding.zip'
+    foreach ($kind in @('binding', 'repeatable')) {
+    $zipPath = Join-Path $scratch ($kind + '.zip')
     $stream = [IO.File]::Create($zipPath)
     $zip = [IO.Compression.ZipArchive]::new($stream, [IO.Compression.ZipArchiveMode]::Create, $true)
     try {
-        foreach ($name in @('binding-plan.local.json', 'candidate-policy.local.json', 'candidate-channel.local.json',
+        $names = @('binding-plan.local.json', 'candidate-policy.local.json', 'candidate-channel.local.json',
             'windows/Initialize-SaefDeploymentChannel.ps1', 'windows/SaefChildProcess.ps1',
-            'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1', 'windows/adapters/Update-SaefMediaCarouselBinding.ps1')) {
+            'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1', 'windows/adapters/Update-SaefMediaCarouselBinding.ps1')
+        if ($kind -ceq 'repeatable') {
+            $names += @('reviewed-baseline.local.json', 'qualification.local.json',
+                'windows/Initialize-SaefScopeBoundApprovalProfile.ps1', 'windows/Invoke-SaefScopeBoundApprovalRunner.ps1',
+                'windows/adapters/Invoke-SaefOwnTracksPositionMapActiveIdentityReseal.ps1')
+        }
+        foreach ($name in $names) {
             $bytes = $utf8.GetBytes('{}')
             if ($name -ceq 'windows/adapters/Update-SaefMediaCarouselBinding.ps1') {
                 $bytes = $utf8.GetBytes(@'
@@ -110,25 +161,26 @@ exit 0
         }
     } finally { $zip.Dispose(); $stream.Dispose() }
     $hash = Get-BytesSha256 ([IO.File]::ReadAllBytes($zipPath))
-    $expanded = Expand-SchemaPackage $zipPath $hash binding
+    $expanded = Expand-SchemaPackage $zipPath $hash $kind
     Assert-Test (Test-Path (Join-Path $expanded.root 'binding-plan.local.json')) 'Binding extraction missing.'
     foreach ($bad in @('profile', 'hash')) {
         $rejected = $false
         try {
             if ($bad -ceq 'profile') { $null = Expand-SchemaPackage $zipPath $hash schema }
-            else { $null = Expand-SchemaPackage $zipPath ('a' * 64) binding }
+            else { $null = Expand-SchemaPackage $zipPath ('a' * 64) $kind }
         } catch { $rejected = $true }
         Assert-Test $rejected 'Wrong binding profile/hash accepted.'
     }
     $launcher = Join-Path $windows 'adapters/Start-SaefMediaCarouselSchemaPackage.ps1'
     $child = Invoke-SaefPowerShellChildProcess -ScriptPath $launcher `
         -ExpectedScriptSha256 (Get-BytesSha256 ([IO.File]::ReadAllBytes($launcher))) `
-        -Arguments @('-ZipPath', $zipPath, '-ExpectedZipSha256', $hash, '-PackageKind', 'binding') `
+        -Arguments @('-ZipPath', $zipPath, '-ExpectedZipSha256', $hash, '-PackageKind', $kind) `
         -TimeoutSeconds 90 -MaximumOutputBytes 65536
     $output = $utf8.GetString($child.standardOutput)
     Assert-Test ($child.terminationReason -ceq 'exited' -and $child.exitCode -eq 0 -and
         ($output | ConvertFrom-Json).outcome -ceq 'synthetic-binding-launch') ('Binding launcher failed: ' + $output)
-    Write-Output ('PASS: MediaCarousel binding update: ' + $passed + ' Windows transaction cases / 3 cultures; binding extraction and launcher passed.')
+    }
+    Write-Output ('PASS: MediaCarousel binding update: ' + $passed + ' Windows transaction cases / 3 cultures; binding/repeatable extraction and launchers passed.')
 } finally {
     [Threading.Thread]::CurrentThread.CurrentCulture = $saved
     if ((Split-Path -Leaf $scratch) -cmatch '^saef-binding-test-[a-f0-9]{32}$') { Remove-Item -LiteralPath $scratch -Recurse -Force }

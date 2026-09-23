@@ -5,6 +5,19 @@ on:
   pull_request:
 
 jobs:
+  scope-bound-approval-windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [saef-owntracks-position-map, saef-media-carousel]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Qualify isolated approval runner and profile installer
+        shell: powershell
+        run: ./tests/deployments/scope-bound-approval-native.ps1 -TargetId '${{ matrix.target }}'
+
   channel-target-addition-windows:
     runs-on: windows-latest
     timeout-minutes: 10
@@ -22,6 +35,9 @@ jobs:
       - name: Qualify atomic MediaCarousel binding generation without live RPC
         shell: powershell
         run: ./tests/deployments/media-carousel-binding-update.ps1
+      - name: Qualify atomic MediaCarousel approval bootstrap without live RPC
+        shell: powershell
+        run: ./tests/deployments/media-carousel-bootstrap.ps1
 
   media-carousel-schema-windows:
     runs-on: windows-latest
@@ -31,6 +47,15 @@ jobs:
       - name: Qualify MediaCarousel schema transition on Windows PowerShell 5.1
         shell: powershell
         run: ./tests/deployments/media-carousel-fit-schema.ps1
+      - name: Qualify durable MediaCarousel recovery state
+        shell: powershell
+        run: ./tests/deployments/media-carousel-recovery-state.ps1
+      - name: Qualify target-bound reseal and preserved configuration baseline
+        shell: powershell
+        run: ./tests/deployments/media-carousel-reseal-contract.ps1
+      - name: Qualify actual MediaCarousel reseal and consecutive baseline advances
+        shell: powershell
+        run: ./tests/deployments/media-carousel-reseal-transaction.ps1
       - name: Qualify isolated schema probe without live Symcon
         shell: powershell
         run: ./tests/deployments/media-carousel-schema-probe.ps1

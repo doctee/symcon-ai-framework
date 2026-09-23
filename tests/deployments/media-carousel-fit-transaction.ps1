@@ -751,6 +751,56 @@ try {
     $passedScenarios += 'synthetic-controlled-activation'
     $positiveCaseCount++
 
+    foreach ($operation in @('postflight', 'inspect')) {
+        $checked = Invoke-Adapter -Operation $operation -ManifestPath $successManifest `
+            -CandidatePath $candidateSuccess -PolicyPath $policyPath `
+            -StatusPath (Join-Path $scratchRoot ("status-$operation.json")) -Port $port
+        $expectedOutcome = if ($operation -eq 'inspect') { 'active' } else { 'passed' }
+        if ($checked.exitCode -ne 0 -or $checked.status.outcome -cne $expectedOutcome -or
+            $checked.status.activationAttempted -or $checked.status.rollbackAttempted) {
+            throw "Completed activation $operation failed or mutated state."
+        }
+        $passedScenarios += "completed-activation-$operation"
+        $positiveCaseCount++
+    }
+    $activeStatePath = Join-Path $adapterState 'active.json'
+    $savedActive = [IO.File]::ReadAllBytes($activeStatePath)
+    $activeRecord = Get-Content $activeStatePath -Raw | ConvertFrom-Json
+    $recordPath = Join-Path (Join-Path $adapterState $activeRecord.transactionDirectoryName) 'transaction.json'
+    $savedRecord = [IO.File]::ReadAllBytes($recordPath)
+    $brokenRecord = [Text.Encoding]::UTF8.GetString($savedRecord) | ConvertFrom-Json
+    $brokenRecord.snapshotSha256 = '0' * 64
+    Write-Utf8NoBom $recordPath ($brokenRecord | ConvertTo-Json -Depth 10)
+    $rejected = Invoke-Adapter -Operation 'rollback' -ManifestPath $successManifest `
+        -CandidatePath $candidateSuccess -PolicyPath $policyPath `
+        -StatusPath (Join-Path $scratchRoot 'status-tampered-recovery.json') -Port $port
+    if ($rejected.exitCode -ne 40 -or $rejected.status.rollbackAttempted -or
+        (Get-PackageIdentity $activePath) -cne $successIdentity -or
+        (Get-FileSha256 $activeStatePath) -cne (Get-TextSha256 ([Text.Encoding]::UTF8.GetString($savedActive)))) {
+        throw 'Tampered recovery evidence was not rejected before mutation.'
+    }
+    [IO.File]::WriteAllBytes($recordPath, $savedRecord)
+    $negativeCaseCount++
+    $passedScenarios += 'tampered-recovery-snapshot-rejected'
+
+    $reversed = Invoke-Adapter -Operation 'rollback' -ManifestPath $successManifest `
+        -CandidatePath $candidateSuccess -PolicyPath $policyPath `
+        -StatusPath (Join-Path $scratchRoot 'status-post-success-rollback.json') -Port $port
+    if ($reversed.exitCode -ne 30 -or -not $reversed.status.rollbackSucceeded -or
+        (Get-PackageIdentity $activePath) -cne $activeInitialIdentity -or (Test-Path $activeStatePath)) {
+        throw 'Post-success rollback did not restore initial package and absent prior active state.'
+    }
+    $positiveCaseCount++
+    $passedScenarios += 'post-success-rollback-preserves-absent-predecessor'
+    # A fresh deployment identity is mandatory after a terminal transaction.
+    $null = New-Manifest -ModulePath $candidateSuccess -DeploymentId 'synthetic-success-second' -OutputPath $successManifest
+    $reapplied = Invoke-Adapter -Operation 'activate' -ManifestPath $successManifest `
+        -CandidatePath $candidateSuccess -PolicyPath $policyPath `
+        -StatusPath (Join-Path $scratchRoot 'status-success-second.json') -Port $port
+    if ($reapplied.exitCode -ne 0 -or (Get-PackageIdentity $activePath) -cne $successIdentity) {
+        throw 'Fresh deployment after rollback failed.'
+    }
+
     $failureCode = 'synthetic_rollback'
     Write-GateProgress -Phase 'synthetic-rollback'
     $policy.expectedActivePackageIdentitySha256 = $successIdentity
@@ -769,11 +819,42 @@ try {
         Where-Object {
             Test-Path -LiteralPath (Join-Path $_.FullName 'failed-candidate') -PathType Container
         })
-    if ($rolledBackTransactions.Count -ne 1) {
+    if ($rolledBackTransactions.Count -ne 2) {
         throw [InvalidOperationException]::new('Failed candidate retention is not transaction-bounded.')
     }
     $passedScenarios += 'synthetic-byte-exact-rollback'
     $positiveCaseCount++
+
+    $failureCode = 'post_success_state_restore'
+    Write-Utf8NoBom $controlPath '{"configurationMode":"stable","failReloadOnce":false}'
+    $previousStateBytes = [IO.File]::ReadAllBytes($activeStatePath)
+    $candidateRecovery = Join-Path $scratchRoot 'candidate-recovery'
+    New-SyntheticModuleTree -Path $candidateRecovery -Marker 'candidate-recovery'
+    $recoveryManifest = Join-Path $scratchRoot 'manifest-recovery.json'
+    $null = New-Manifest -ModulePath $candidateRecovery -DeploymentId 'synthetic-recovery' -OutputPath $recoveryManifest
+    $recoveryActivation = Invoke-Adapter -Operation 'activate' -ManifestPath $recoveryManifest `
+        -CandidatePath $candidateRecovery -PolicyPath $policyPath `
+        -StatusPath (Join-Path $scratchRoot 'status-recovery-activation.json') -Port $port
+    if ($recoveryActivation.exitCode -ne 0) { throw 'Recovery fixture activation failed.' }
+    $recoveryRollback = Invoke-Adapter -Operation 'rollback' -ManifestPath $recoveryManifest `
+        -CandidatePath $candidateRecovery -PolicyPath $policyPath `
+        -StatusPath (Join-Path $scratchRoot 'status-recovery-rollback.json') -Port $port
+    if ($recoveryRollback.exitCode -ne 30 -or -not $recoveryRollback.status.rollbackSucceeded -or
+        (Get-PackageIdentity $activePath) -cne $successIdentity -or
+        [Convert]::ToBase64String([IO.File]::ReadAllBytes($activeStatePath)) -cne
+            [Convert]::ToBase64String($previousStateBytes)) {
+        throw 'Post-success rollback did not byte-exactly restore the prior active record.'
+    }
+    $positiveCaseCount++
+    $passedScenarios += 'post-success-rollback-preserves-existing-predecessor'
+
+    $ambiguous = Invoke-Adapter -Operation 'inspect' -ManifestPath $recoveryManifest `
+        -CandidatePath $candidateRecovery -PolicyPath $policyPath `
+        -StatusPath (Join-Path $scratchRoot 'status-recovery-inspect.json') -Port $port
+    if ($ambiguous.exitCode -ne 40 -or $ambiguous.status.rollbackAttempted -or
+        $ambiguous.status.activationAttempted) { throw 'Inspection replay was not conservative.' }
+    $negativeCaseCount++
+    $passedScenarios += 'inspection-never-repeats-terminal-or-uncertain-mutation'
 
 
     # Reuse the exact adapter, scratch ACL and bounded child path for schema changes.

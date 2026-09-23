@@ -29,7 +29,9 @@ assertOwnTracksActiveIdentityReseal(is_string($adapter), 'OwnTracks module adapt
 foreach (
     [
         "[ValidateSet('preflight', 'apply')]",
-        "'reseal-saef-owntracks-position-map-active-identity'",
+        "[string] \$TargetId = 'saef-owntracks-position-map'",
+        "\$ExpectedConfirmation = 'reseal-' + \$TargetId + '-active-identity'",
+        "\$AdapterProfile = \$TargetId + '-v1'",
         "'Global\\SAEF.DeploymentChannel'",
         '[Threading.Mutex]::new($false, [string] $adapterPolicy.mutexName)',
         'ExpectedPreviousPackageIdentitySha256',

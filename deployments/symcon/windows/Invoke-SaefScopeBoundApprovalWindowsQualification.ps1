@@ -38,7 +38,17 @@ param(
     [string] $ChildProcessContractPath = (Join-Path $PSScriptRoot 'SaefChildProcess.ps1'),
 
     [Parameter()]
-    [string] $StatusPath
+    [string] $StatusPath,
+
+    # Target labels select production argument contracts only. All paths,
+    # adapters and policies in the scenarios remain isolated synthetic fixtures.
+    [Parameter()]
+    [ValidateSet('saef-owntracks-position-map', 'saef-media-carousel')]
+    [string] $QualificationTargetId = 'saef-owntracks-position-map',
+
+    [Parameter()]
+    [ValidatePattern('^[A-Za-z0-9_.-]{1,64}$')]
+    [string] $QualificationDeploymentUser = 'saefdeploy'
 )
 
 Set-StrictMode -Version 2.0
@@ -455,8 +465,8 @@ function Invoke-ProfileInstallerScenario {
         [IO.Directory]::CreateDirectory($directory) | Out-Null
     }
 
-    $targetId = 'saef-qualification-target'
-    $adapterProfile = 'saef-qualification-adapter-v1'
+    $targetId = $QualificationTargetId
+    $adapterProfile = $QualificationTargetId + '-v1'
     $targetAdapterPath = Join-Path $targetRoot 'synthetic-adapter.ps1'
     $targetResealPath = Join-Path $targetRoot 'synthetic-reseal.ps1'
     $adapterPolicyPath = Join-Path $targetRoot 'adapter-policy.json'
@@ -475,7 +485,7 @@ function Invoke-ProfileInstallerScenario {
     $syntheticResealSha256 = Get-Sha256 -Path $targetResealPath
     Write-Json -Path $channelPolicyPath -Value ([ordered]@{
         formatVersion = 1
-        deploymentUser = 'saefdeploy'
+        deploymentUser = $QualificationDeploymentUser
         expectedChildProcessContractSha256 = $script:childProcessContractSha256
         standaloneModuleTargets = @([ordered]@{
             targetId = $targetId
@@ -499,7 +509,7 @@ function Invoke-ProfileInstallerScenario {
     Set-ScratchAcl -Path $scenarioRoot
 
     $commonArguments = @(
-        '-DeploymentUser', 'saefdeploy',
+        '-DeploymentUser', $QualificationDeploymentUser,
         '-TargetId', $targetId,
         '-QualificationProfile', 'saef-windows-powershell-5.1-qualification-v1',
         '-PostflightProfile', 'saef-qualification-health-v1',
@@ -647,8 +657,8 @@ function Invoke-RunnerScenario {
     $candidatePackage = Get-TextSha256 -Text ('candidate:' + $Label)
     $packageSha256 = Get-TextSha256 -Text ('archive:' + $Label)
     $deploymentId = 'saef-qualification-' + $Label.Replace('_', '-')
-    $targetId = 'saef-qualification-target'
-    $adapterProfile = 'saef-qualification-adapter-v1'
+    $targetId = $QualificationTargetId
+    $adapterProfile = $QualificationTargetId + '-v1'
 
     $script:runnerScenarioPhase = 'fixture_files'
     Write-Json -Path $transactionPath -Value ([ordered]@{ formatVersion = 1 })
@@ -798,7 +808,7 @@ function Invoke-RunnerScenario {
             '-ApprovalPolicyPath', $approvalPolicyPath,
             '-RpcUri', 'http://127.0.0.1:3777/api/',
             '-CredentialPath', $credentialPath,
-            '-DeploymentUser', 'saefdeploy',
+            '-DeploymentUser', $QualificationDeploymentUser,
             '-DeploymentStatusPath', $deploymentStatusPath,
             '-StatusPath', $runnerStatusPath
         )
@@ -868,7 +878,7 @@ function Invoke-ReplayCase {
         '-ApprovalPolicyPath', (Join-Path $scenarioRoot 'approval-policy.json'),
         '-RpcUri', 'http://127.0.0.1:3777/api/',
         '-CredentialPath', (Join-Path $scenarioRoot 'credential.json'),
-        '-DeploymentUser', 'saefdeploy',
+        '-DeploymentUser', $QualificationDeploymentUser,
         '-DeploymentStatusPath', (Join-Path $scenarioRoot 'deployment-status.json'),
         '-StatusPath', $runnerStatusPath
     )
