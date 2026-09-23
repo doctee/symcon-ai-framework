@@ -13,6 +13,12 @@ jobs:
       - name: Qualify additive channel maintenance on Windows PowerShell 5.1
         shell: powershell
         run: ./tests/deployments/channel-target-addition.ps1
+      - name: Qualify compatible OwnTracks and explicit MediaCarousel state provisioning
+        shell: powershell
+        run: ./tests/deployments/adapter-state-profiles.ps1
+      - name: Qualify complete MediaCarousel target installation without live RPC
+        shell: powershell
+        run: ./tests/deployments/media-carousel-target-installation.ps1
 
   media-carousel-schema-windows:
     runs-on: windows-latest

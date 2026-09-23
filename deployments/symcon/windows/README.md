@@ -478,6 +478,46 @@ the channel initializer and removes the still-empty leaf automatically if
 post-creation verification fails. Existing roots are verified but never
 rewritten by this command.
 
+The historical initializer filename is retained for existing OwnTracks callers.
+MediaCarousel must explicitly select `-AdapterProfile saef-media-carousel-v1`
+and use `-Confirmation provision-saef-media-carousel-adapter-state` for install.
+The private policy must bind the MediaCarousel target, library/module GUIDs,
+its adapter mutex and a bounded `quiescenceTimeoutSeconds`. Profile mismatch
+fails before directory creation. This composes the same reviewed provisioning,
+ACL and empty-leaf rollback implementation rather than duplicating it per module.
+`tests/deployments/adapter-state-profiles.ps1` qualifies both profiles through
+real bounded Windows PowerShell 5.1 child processes, including unchanged default
+OwnTracks calls, wrong hash/confirmation/profile rejection, post-create rollback
+and preservation of existing state and ACLs. Provisioning does not register a
+target: additive channel installation remains a distinct subsequent operation.
+
+`adapters/Install-SaefMediaCarouselTarget.ps1` is the bounded operator coordinator
+for those two operations. A private, externally SHA-256-bound plan binds the
+deployment SID, existing channel-policy bytes, MediaCarousel policy and exact
+source hashes (`channel`, `state`, `adapter`, `launcher`, `checksums`). Sources
+remain at their fixed bundle paths; no plan field selects a script or command.
+The coordinator imports only named, hash-bound validation/identity functions
+from existing implementations, and uses `SaefChildProcess.ps1` for actual child
+operations. It never runs the module adapter entry point or calls Symcon RPC.
+
+Both child preflights and the current package identity must pass before install.
+`-Operation install -Confirmation install-saef-media-carousel-target` provisions
+the state leaf, rechecks the package, then applies the exact additive channel
+plan and independently verifies installed hashes and existing target records.
+Complete JSON is printed to the console; private child reports and rollback
+evidence are retained. A source/policy mismatch stops rather than refreshing
+authorization. The extracted private package must have trusted ownership and
+no unexpected writers; the coordinator does not rewrite its directory ACLs.
+
+These are deliberately two transactions, not one claimed atomic operation.
+The state initializer rolls back its own still-empty new leaf on failure; the
+channel initializer owns atomic policy replacement/rollback. If target addition
+fails after successful state provisioning, the protected leaf remains and the
+coordinator reports `review_required`. No recursive state cleanup, module
+activation, provider contact, service restart or retention action is authorized
+by this coordinator. Independent live postflight remains a separate evidence
+step after the operator returns the console result.
+
 Installations created before the separate adapter-state root existed must not
 silently ignore the legacy directory. The target-specific
 `Invoke-SaefOwnTracksPositionMapAdapterStateMigration.ps1` acquires the channel
