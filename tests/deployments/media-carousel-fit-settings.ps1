@@ -69,7 +69,7 @@ foreach ($culture in @('en-US', 'de-DE', 'tr-TR')) {
             } elseif ($scenario -ceq 'fit-drift') {
                 Assert-Test ($record.rollbackSucceeded -eq $false -and $log.mutations -eq 1) 'Foreign drift overwritten.'
             } else {
-                Assert-Test ($record.rollbackSucceeded -eq $true -and $log.configurations.'11111' -ceq $settingsConfigs['11111']) 'Settings rollback failed.'
+                Assert-Test ($record.rollbackSucceeded -eq $true -and $log.configurations.'11111' -ceq $settingsConfigs['11111']) ('Settings rollback failed: ' + $scenario + ' ' + $text + ' ' + ($log | ConvertTo-Json -Depth 10 -Compress))
                 if ($scenario -ceq 'fit-multi-fails') {
                     Assert-Test (($log.settingsWrites -join ',') -ceq '11111:True,33333:True,33333:False,11111:False' -and
                         $log.configurations.'33333' -ceq $settingsConfigs['11111']) 'Reverse multi-instance rollback failed.'

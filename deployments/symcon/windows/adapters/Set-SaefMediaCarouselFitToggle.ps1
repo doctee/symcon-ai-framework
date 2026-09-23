@@ -201,7 +201,10 @@ try {
             }
             Assert-SnapshotPreserved $before
             $result.rollbackSucceeded = $true
-        } catch { $result.rollbackSucceeded = $false }
+        } catch {
+            $result.rollbackSucceeded = $false
+            $result.rollbackFailure = @{ errorType = $_.Exception.GetType().FullName; line = $_.InvocationInfo.ScriptLineNumber }
+        }
     }
 } finally {
     $script:credential = $null; $result.timestampUtc = [DateTime]::UtcNow.ToString('o')
