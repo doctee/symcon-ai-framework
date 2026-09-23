@@ -151,24 +151,13 @@ function Write-Status {
     foreach ($name in $Details.Keys) {
         $status[$name] = $Details[$name]
     }
-    $directory = Split-Path -Parent $StatusPath
-    Assert-PlainDirectory -Path $directory
-    $temporary = Join-Path $directory ('.saef-approval-profile-' + [Guid]::NewGuid().ToString('N') + '.tmp')
+    $bytes = [Text.UTF8Encoding]::new($false).GetBytes(
+        ($status | ConvertTo-Json -Depth 5) + [Environment]::NewLine
+    )
     try {
-        [IO.File]::WriteAllText(
-            $temporary,
-            ($status | ConvertTo-Json -Depth 5) + [Environment]::NewLine,
-            [Text.UTF8Encoding]::new($false)
-        )
-        if (Test-Path -LiteralPath $StatusPath -PathType Leaf) {
-            [IO.File]::Replace($temporary, $StatusPath, $null)
-        } else {
-            [IO.File]::Move($temporary, $StatusPath)
-        }
+        Write-AtomicBytes -Path $StatusPath -Bytes $bytes
     } finally {
-        if (Test-Path -LiteralPath $temporary -PathType Leaf) {
-            Remove-Item -LiteralPath $temporary -Force
-        }
+        [Array]::Clear($bytes, 0, $bytes.Length)
     }
 }
 

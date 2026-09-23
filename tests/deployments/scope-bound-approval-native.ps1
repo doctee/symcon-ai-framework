@@ -17,6 +17,7 @@ function Get-TestHash { param([string] $Path) return (Get-FileHash -LiteralPath 
 $initializer = Join-Path $windows 'Initialize-SaefScopeBoundApprovalProfile.ps1'
 $missingUser = 'saef-ci-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
 $failureStatus = Join-Path $PSScriptRoot ($TargetId + '-expected-profile-failure.local.json')
+foreach ($attempt in @(1, 2)) {
 $failure = Invoke-SaefPowerShellChildProcess -ScriptPath $initializer -ExpectedScriptSha256 (Get-TestHash $initializer) `
     -Arguments @('-DeploymentUser', $missingUser, '-TargetId', $TargetId, '-QualificationProfile', 'saef-test-v1',
         '-PostflightProfile', 'saef-test-v1', '-ChannelHostBindingSha256', ('a' * 64),
@@ -29,6 +30,7 @@ $failed = Get-Content -LiteralPath $failureStatus -Raw | ConvertFrom-Json
 if ($failure.exitCode -ne 10 -or $failed.outcome -cne 'failed' -or $failed.failedStep -cne 'deployment_account' -or
     $failed.mutationAttempted -or $failed.activeMutationAttempted -or $failed.serviceRestartAttempted) {
     throw 'Profile initializer did not report preflight failure without mutation.'
+}
 }
 $qualificationResult = Invoke-SaefPowerShellChildProcess -ScriptPath $qualification `
     -ExpectedScriptSha256 (Get-TestHash $qualification) -TimeoutSeconds 600 -MaximumOutputBytes 65536 `

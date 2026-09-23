@@ -18,6 +18,13 @@ operations, rejects tampered recovery evidence, and covers predecessor state
 both present and absent. The first recovery slice passed native Windows CI.
 Later changes require their own qualification.
 
+Native CI additionally executes the complete existing six-positive/eight-negative
+approval matrix for both target labels, using synthetic adapters/resealers and an
+explicit existing test account. It checks the actual MediaCarousel resealer in
+eight separate filesystem/ACL cases, including consecutive package advances and
+preserved unrelated bindings. These are isolated qualification results, not live
+installation evidence or a finished single-launch bootstrap package.
+
 The shared runner now binds reseal arguments to exact target/profile pairs.
 The existing OwnTracks reseal entrypoint keeps its filename and default contract;
 only a separately pinned MediaCarousel profile passes the new explicit target.
