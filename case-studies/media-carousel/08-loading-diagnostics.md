@@ -74,3 +74,31 @@ client scheduling. SDK message coalescing/reordering or a missing receipt must
 not be misreported as zero latency. No synchronized wall clocks are assumed.
 The existing per-view aggregate design is reused; server Registry/Statistics
 storage would not observe the client delivery boundary.
+
+## Serialized two-image batches (0.2.7)
+
+The client sends `LoadMediaBatch` with one or two individually correlated image
+requests. One batch is outstanding per view: receiving its first image does not
+start another action. The next batch uses the current navigation/prefetch order.
+An ordinary four-image sequence therefore needs two incoming SDK actions, not
+four. Five visible views can still each have an active batch; there is no global
+coordinator or shared session state.
+
+The server rejects oversized envelopes, non-list inputs, more than two entries,
+and duplicate indices/request IDs before reading images. It reuses the existing
+single-image path sequentially, including configuration validation, errors,
+invalidation protection and optional receipts. Responses remain separate so the
+first usable image is not held until the second is prepared, and one failed
+image cannot discard its neighbour. `LoadMedia` remains compatible with older
+open views. No property, configuration schema, camera request or persistent
+state is added. Timeouts and retry budgets are unchanged; after timeout another
+batch may start while an old host action is still delayed. This is a client-side
+bound, not a claim that server execution has been cancelled.
+
+Version-3 diagnostics add the fixed `batches` counter; `requested` still counts
+images. For the second image in a batch, the receipt interval includes the first
+image's server work. Compare total sequence readiness, errors and navigation,
+not only isolated per-image maxima. Batching reduces incoming calls but does not
+reduce the number or size of outgoing image messages. Browser measurements and
+physical-app acceptance remain separate from the deterministic unit-test proof
+of reduced call counts.

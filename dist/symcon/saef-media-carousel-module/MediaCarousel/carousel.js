@@ -49,7 +49,7 @@
     // Bounded, view-local evidence only: no IDs, titles, image bytes, history,
     // storage writes or extra requests. Readable through the tile DOM in QA.
     const diagnostics = {
-        version: 2, bootstraps: 0, requested: 0, accepted: 0, timeouts: 0,
+        version: 3, bootstraps: 0, batches: 0, requested: 0, accepted: 0, timeouts: 0,
         mediaErrors: 0, revisionRejected: 0, requestRejected: 0,
         invalidations: 0, superseded: 0, imageReady: 0, imageFailed: 0,
         lastRoundTripMs: 0, maxRoundTripMs: 0, lastPreparationMs: 0,
@@ -447,17 +447,18 @@
         return 'mc_' + index + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
     }
 
-    function requestMedia(index) {
+    function needsMedia(index) {
         const existing = state.sources.get(index);
-        if (
-            !state.settings
-            || (existing && existing.preview === false && !state.stale.has(index))
-            || state.pending.has(index)
-            || state.pending.size >= MAX_PENDING_REQUESTS
-            || (state.failures.get(index) || 0) > state.settings.retryCount
-            || index < 0
-            || index >= state.items.length
-        ) {
+        return state.settings && index >= 0 && index < state.items.length
+            && (!existing || existing.preview === true || state.stale.has(index))
+            && !state.pending.has(index)
+            && (state.failures.get(index) || 0) <= state.settings.retryCount;
+    }
+
+    function requestMedia(index) {
+        // One SDK action in flight per view. Its two independently correlated
+        // responses retain per-image invalidation, timeout and retry protection.
+        if (state.pending.size > 0 || !needsMedia(index)) {
             return;
         }
 
@@ -466,6 +467,17 @@
             return;
         }
 
+        const indices = [index];
+        for (const candidate of state.prefetchOrder) {
+            if (indices.length >= MAX_PENDING_REQUESTS) break;
+            if (candidate !== index && needsMedia(candidate)) indices.push(candidate);
+        }
+        const requests = indices.map(prepareMediaRequest);
+        countDiagnostic('batches');
+        requestAction('LoadMediaBatch', JSON.stringify(requests));
+    }
+
+    function prepareMediaRequest(index) {
         const id = requestID(index);
         const timeout = window.setTimeout(function () {
             const current = state.pending.get(index);
@@ -497,7 +509,7 @@
             configurationRevision: state.configurationRevision
         };
         if (diagnosticReceipt) request.diagnosticReceipt = true;
-        requestAction('LoadMedia', JSON.stringify(request));
+        return request;
     }
 
     function handleRequestFailure(index) {
@@ -508,7 +520,7 @@
             const revision = state.configurationRevision;
             window.setTimeout(function () {
                 if (revision === state.configurationRevision) {
-                    requestMedia(index);
+                    buildPrefetchOrder();
                     pumpPrefetch();
                 }
             }, 300 * failures);
@@ -549,11 +561,11 @@
     }
 
     function pumpPrefetch() {
-        if (!state.settings || state.pending.size >= MAX_PENDING_REQUESTS) {
+        if (!state.settings || state.pending.size > 0) {
             return;
         }
 
-        while (state.pending.size < MAX_PENDING_REQUESTS) {
+        while (state.pending.size === 0) {
             const nextIndex = state.prefetchOrder.find(function (index) {
                 const failures = state.failures.get(index) || 0;
                 const source = state.sources.get(index);

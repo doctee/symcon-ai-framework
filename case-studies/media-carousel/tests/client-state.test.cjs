@@ -10,6 +10,7 @@ const path = require('node:path');
 function fixture() {
     const elements = new Map();
     const requests = [];
+    const actions = [];
     const timers = new Map();
     let nextTimer = 0;
     let clock = 0;
@@ -33,7 +34,11 @@ function fixture() {
         setTimeout(fn, delay) { const id = ++nextTimer; timers.set(id, {fn, delay}); return id; },
         clearTimeout(id) { timers.delete(id); },
         requestAnimationFrame(fn) { fn(); return 1; }, addEventListener() {},
-        requestAction(action, json) { requests.push(JSON.parse(json)); },
+        requestAction(action, json) {
+            const payload = JSON.parse(json);
+            actions.push({action, payload});
+            requests.push(...(action === 'LoadMediaBatch' ? payload : [payload]));
+        },
         Image: class { constructor() { this.complete = true; this.naturalWidth = 100; } },
         ResizeObserver: class { observe() {} }, performance: {now: () => clock}
     };
@@ -51,12 +56,65 @@ function fixture() {
         api.receiveMedia({...request, source: 'data:image/jpeg;base64,YQ==',
             contentRevision: revision, preview: false});
     }
-    return {api, requests, timers, respond, element, advance(ms) { clock += ms; }};
+    return {api, requests, actions, timers, respond, element, advance(ms) { clock += ms; }};
 }
 
 async function flush() {
     for (let n = 0; n < 20; n += 1) await Promise.resolve();
 }
+
+test('four images use two serial SDK batches without filling a freed partial slot', async () => {
+    const f = fixture();
+    await flush();
+    assert.equal(f.actions.length, 1);
+    assert.equal(f.actions[0].action, 'LoadMediaBatch');
+    assert.deepEqual(f.actions[0].payload.map(r => r.index), [0, 1]);
+    f.respond(f.requests[0]);
+    await flush();
+    f.api.requestMedia(2);
+    assert.equal(f.actions.length, 1);
+    f.respond(f.requests[1]);
+    await flush();
+    assert.equal(f.actions.length, 2);
+    assert.deepEqual(f.actions[1].payload.map(r => r.index), [3, 2]);
+    for (const request of f.actions[1].payload) f.respond(request);
+    await flush();
+    assert.equal(f.api.state.sources.size, 4);
+    assert.equal(f.api.state.pending.size, 0);
+    assert.equal(f.actions.length, 2);
+    assert.equal(JSON.parse(f.element('carousel').dataset.loadDiagnostics).batches, 2);
+});
+
+test('a timed-out batch retries within the image budget and rejects both late responses', async () => {
+    const f = fixture();
+    await flush();
+    const original = [...f.requests];
+    for (const entry of [...f.api.state.pending.values()]) f.timers.get(entry.timer).fn();
+    assert.equal(f.api.state.pending.size, 0);
+    for (const {fn, delay} of [...f.timers.values()]) if (delay === 300) fn();
+    assert.equal(f.actions.length, 2);
+    for (const request of original) f.respond(request, 'expired');
+    assert.equal(f.api.state.sources.size, 0);
+    for (const request of f.actions[1].payload) f.respond(request, 'fresh');
+    assert.equal(f.api.state.sources.get(0).contentRevision, 'fresh');
+    assert.equal(f.api.state.sources.get(1).contentRevision, 'fresh');
+    assert.ok(f.api.state.pending.size <= 2);
+});
+
+test('next batch prioritizes manual navigation and retains the successful half of a failed batch', async () => {
+    const f = fixture();
+    await flush();
+    f.respond(f.requests[0]);
+    await flush();
+    await f.api.move(-1, true, false);
+    assert.equal(f.actions.length, 1);
+    f.api.receiveMediaError({requestID: f.requests[1].requestID});
+    for (const {fn, delay} of [...f.timers.values()]) if (delay === 300) fn();
+    assert.equal(f.api.state.sources.get(0).contentRevision, 'image-0');
+    assert.equal(f.actions.length, 2);
+    assert.equal(f.actions[1].payload[0].index, 3);
+    assert.ok(f.api.state.pending.size <= 2);
+});
 
 test('refresh keeps a usable image and rejects a response superseded by another invalidation', async () => {
     const f = fixture();
@@ -64,7 +122,9 @@ test('refresh keeps a usable image and rejects a response superseded by another 
     f.respond(f.requests.find(r => r.index === 0));
     await flush();
     // Free the second prefetch slot before refreshing.
-    for (const request of [...f.requests]) f.respond(request);
+    for (let n = 0; n < 4; n += 1) {
+        for (const request of [...f.requests]) f.respond(request);
+    }
     await flush();
     f.api.state.pending.forEach(entry => f.timers.delete(entry.timer));
     f.api.state.pending.clear();
@@ -134,6 +194,7 @@ test('render requests cannot bypass the exhausted retry budget', async () => {
     await flush();
     const first = f.requests.find(r => r.index === 0);
     f.api.receiveMediaError({requestID: first.requestID});
+    f.respond(f.requests.find(r => r.index === 1));
     for (const {fn, delay} of [...f.timers.values()]) if (delay === 300) fn();
     const second = f.requests.findLast(r => r.index === 0);
     assert.notEqual(first.requestID, second.requestID);
@@ -206,8 +267,8 @@ test('view diagnostics separate response and preparation timing without disclosi
     for (const forbidden of ['private', 'base64', request.requestID, 'mediaID', 'instanceID', 'title']) {
         assert.equal(text.includes(forbidden), false);
     }
-    // One accepted image frees precisely one normal prefetch slot.
-    assert.equal(f.requests.length, 3);
+    // Do not start another SDK action until both batch responses have arrived.
+    assert.equal(f.requests.length, 2);
 });
 
 test('view diagnostics distinguish rejected, timed out and failed requests', async () => {
