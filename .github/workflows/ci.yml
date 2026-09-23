@@ -7,11 +7,19 @@ on:
 jobs:
   media-carousel-schema-windows:
     runs-on: windows-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - name: Qualify MediaCarousel schema transition on Windows PowerShell 5.1
         shell: powershell
         run: ./tests/deployments/media-carousel-fit-schema.ps1
+      - name: Qualify real adapter transactions against synthetic loopback RPC
+        shell: powershell
+        run: |
+          & ./tests/deployments/media-carousel-fit-transaction.ps1
+          $qualificationExit = $LASTEXITCODE
+          Get-Content ./tests/deployments/media-carousel-windows-qualification-status.local.json
+          exit $qualificationExit
 
   validate:
     runs-on: ubuntu-latest

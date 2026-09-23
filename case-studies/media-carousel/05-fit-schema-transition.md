@@ -67,8 +67,14 @@ It covers default insertion at each position, legacy behavior, byte drift, inval
 values, duplicate/case-alias keys, changed package/deployment/instance/hash binding,
 phase-specific snapshot comparison, and byte-exact idempotent rollback writes.
 RPC is replaced by a test double; no credentials or live installation are used.
-This does not by itself prove a real Symcon kernel's serialization, protected ACL
-installation, full filesystem transaction, or physical client continuity.
+The transaction harness reuses the prior private MediaCarousel Windows
+qualification fixture with synthetic loopback RPC, protected scratch ACLs and
+DPAPI test credentials. It now invokes the existing hash-bound `SaefChildProcess`
+helper, and exercises the complete unmodified adapter entry point: legacy
+activation/reload failure, schema preflight/activation and schema drift rollback.
+It verifies directory identities and retains both snapshots within each test
+transaction. Scratch cleanup is verified. This does not prove a real Symcon
+kernel's serialization, installed profile ACLs or physical client continuity.
 
 Before live activation, require the exact reviewed source's Windows transaction
 qualification, current target-binding inventory, protected backup, private
