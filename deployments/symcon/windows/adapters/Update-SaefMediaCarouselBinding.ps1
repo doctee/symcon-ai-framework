@@ -200,6 +200,7 @@ function Get-ApprovalBootstrapContext {
     $previous = $null
     if ($present -eq 4) {
         $previous = ConvertFrom-AdditionJson (Read-AdditionBoundBytes $target[0].approvalPolicyPath $target[0].expectedApprovalPolicySha256)
+        Assert-AdditionProtectedPath $previous.approvalSecretPath
         foreach ($field in @('channelHostBindingSha256', 'approverIdentitySha256', 'executionHostIdentitySha256', 'maximumStateFiles')) {
             if ($previous.$field -cne $Spec.$field) { throw 'Approval migration changes an identity or state bound.' }
         }

@@ -153,6 +153,22 @@ try {
                 $next.standaloneModuleTargets[1].adapterPath = Join-Path $second 'adapter.ps1'
                 $next.standaloneModuleTargets[1].adapterPolicyPath = Join-Path $second 'adapter-policy.local.json'
                 $migration = Get-ApprovalBootstrapContext $spec $package $packageWindows $account.Name $actual $root
+                $recordBytes = [IO.File]::ReadAllBytes($recordPath)
+                foreach ($badOutcome in @('running', 'manual_recovery_required')) {
+                    $badRecord = ConvertFrom-AdditionJson $recordBytes
+                    $badRecord.outcome = $badOutcome
+                    Write-Json $recordPath $badRecord
+                    $rejected = $false
+                    try { $null = Get-ApprovalStateInventory $oldApproval.approvalStateRoot } catch { $rejected = $true }
+                    if (-not $rejected) { throw 'Uncertain approval state admitted.' }
+                }
+                [IO.File]::WriteAllBytes($recordPath, $recordBytes)
+                [IO.File]::AppendAllText($recordPath, ' ', $utf8)
+                $rejected = $false
+                try { $null = Get-ApprovalBootstrapContext $spec $package $packageWindows $account.Name $actual $root }
+                catch { $rejected = $_.Exception.Message -ceq 'Reviewed approval migration baseline differs.' }
+                if (-not $rejected) { throw 'Ledger drift admitted.' }
+                [IO.File]::WriteAllBytes($recordPath, $recordBytes)
                 Publish-UpdateGeneration $channelPath $second $prior ($utf8.GetBytes(($next | ConvertTo-Json -Depth 30))) $adapterBytes $policyBytes $migration
                 $migrated = Join-Path $spec.approvalRoot 'saef-media-carousel/state'
                 if ((Get-ApprovalStateInventory $migrated).sha256 -cne $ledgerHash -or
