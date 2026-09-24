@@ -131,6 +131,34 @@ final class ControlLightCore
             $normalized['capabilities']
         );
 
+        // Keep existing normalized configurations and their hashes unchanged.
+        if (array_key_exists('brightnessOffStateTransition', $configuration)) {
+            $transition = $configuration['brightnessOffStateTransition'];
+            if (!is_array($transition)) {
+                throw new InvalidArgumentException('configuration.brightnessOffStateTransition must be an array.');
+            }
+            $mode = self::requireEnum(
+                $transition,
+                'mode',
+                ['power-on-first', 'target-turns-on'],
+                'configuration.brightnessOffStateTransition'
+            );
+            if (
+                $mode === 'target-turns-on'
+                && (
+                    !$normalized['capabilities']['state']['enabled']
+                    || !$normalized['capabilities']['brightness']['enabled']
+                    || $normalized['stateCommandMode'] !== self::STATE_COMMAND_BIDIRECTIONAL
+                    || $normalized['groupFeedback']['enabled']
+                )
+            ) {
+                throw new InvalidArgumentException(
+                    'Direct dim start requires a bidirectional single target with STATE and brightness.'
+                );
+            }
+            $normalized['brightnessOffStateTransition'] = ['mode' => $mode];
+        }
+
         $normalized['dimmerTargetMax'] = self::requireIntegerRange(
             $merged,
             'dimmerTargetMax',
