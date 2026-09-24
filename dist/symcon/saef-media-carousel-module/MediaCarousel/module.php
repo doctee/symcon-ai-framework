@@ -130,7 +130,7 @@ class MediaCarousel extends IPSModuleStrict
 
     public function RequestAction(string $ident, mixed $value): void
     {
-        if ($ident === 'LoadMediaBatch') {
+        if ($ident === 'LoadMediaBatch' || $ident === 'LoadMediaBundle') {
             if (!is_string($value) || strlen($value) > 4096) {
                 throw new InvalidArgumentException('Invalid media batch envelope.');
             }
@@ -156,7 +156,43 @@ class MediaCarousel extends IPSModuleStrict
                 $ids[] = $id;
                 $indices[] = $index;
             }
-            // Reuse the single-image path: no combined large payload, no new
+            if ($ident === 'LoadMediaBundle') {
+                $receipts = [];
+                foreach ($requests as $request) {
+                    if (($request['diagnosticReceipt'] ?? false) === true) {
+                        $receipts[] = [
+                            'action' => 'mediaStarted',
+                            'configurationRevision' => $request['configurationRevision'],
+                            'requestID' => $request['requestID'],
+                            'index' => $request['index'],
+                        ];
+                    }
+                }
+                $receiptCompleted = null;
+                $receiptStartedAt = hrtime(true);
+                if ($receipts !== []) {
+                    try {
+                        $this->sendMediaBundle($receipts);
+                        $receiptCompleted = true;
+                    } catch (Throwable) {
+                        $receiptCompleted = false;
+                    }
+                }
+                $receiptMilliseconds = (int) round((hrtime(true) - $receiptStartedAt) / 1000000);
+                $responses = [];
+                foreach ($requests as $request) {
+                    $response = $this->loadMediaResponse(json_encode($request, JSON_THROW_ON_ERROR), false);
+                    if ($receiptCompleted !== null && ($request['diagnosticReceipt'] ?? false) === true) {
+                        $response['receiptDispatchCompleted'] = $receiptCompleted;
+                        $response['receiptDispatchMilliseconds'] = min(3600000, $receiptMilliseconds);
+                    }
+                    $responses[] = $response;
+                }
+                $this->sendMediaBundle($responses);
+
+                return;
+            }
+            // Compatibility for already open 0.2.7 clients: separate responses.
             // media ownership, and a failed image cannot discard its neighbour.
             foreach ($requests as $request) {
                 $this->RequestAction('LoadMedia', json_encode($request, JSON_THROW_ON_ERROR));
@@ -167,7 +203,12 @@ class MediaCarousel extends IPSModuleStrict
         if ($ident !== 'LoadMedia') {
             throw new InvalidArgumentException('Unsupported action: ' . $ident);
         }
+        $this->UpdateVisualizationValue($this->encodeMessage($this->loadMediaResponse($value)));
+    }
 
+    /** @return array<string, mixed> */
+    private function loadMediaResponse(mixed $value, bool $allowReceipt = true): array
+    {
         $requestID = '';
         $startedAt = hrtime(true);
 
@@ -188,11 +229,7 @@ class MediaCarousel extends IPSModuleStrict
             $configurationRevision = $this->configurationRevision($items);
 
             if ($this->readRequestConfigurationRevision($request) !== $configurationRevision) {
-                $this->UpdateVisualizationValue(
-                    $this->encodeMessage($this->createBootstrapMessage(true))
-                );
-
-                return;
+                return $this->createBootstrapMessage(true);
             }
 
             if (!array_key_exists($index, $items)) {
@@ -201,7 +238,7 @@ class MediaCarousel extends IPSModuleStrict
 
             $receiptDispatchNanoseconds = 0;
             $receiptDispatchCompleted = null;
-            if (($request['diagnosticReceipt'] ?? false) === true) {
+            if ($allowReceipt && ($request['diagnosticReceipt'] ?? false) === true) {
                 $receiptStartedAt = hrtime(true);
                 try {
                     $this->UpdateVisualizationValue(
@@ -239,17 +276,31 @@ class MediaCarousel extends IPSModuleStrict
                     (int) round($receiptDispatchNanoseconds / 1000000)
                 );
             }
-            $this->UpdateVisualizationValue($this->encodeMessage($message));
+            return $message;
         } catch (Throwable $exception) {
             $this->SendDebug('LoadMedia failed', $exception->getMessage(), 0);
-            $this->UpdateVisualizationValue(
-                $this->encodeMessage([
-                    'action'    => 'mediaError',
-                    'requestID' => $requestID,
-                    'message'   => $this->Translate('Image unavailable'),
-                ])
-            );
+            return [
+                'action'    => 'mediaError',
+                'requestID' => $requestID,
+                'message'   => $this->Translate('Image unavailable'),
+            ];
         }
+    }
+
+    /** @param list<array<string, mixed>> $messages */
+    private function sendMediaBundle(array $messages): void
+    {
+        $encoded = $this->encodeMessage(['action' => 'mediaBundle', 'messages' => $messages]);
+        // Avoid doubling the existing single-image transport envelope for large
+        // original fallbacks. Single messages retain the proven legacy path.
+        if (strlen($encoded) > 750000) {
+            foreach ($messages as $message) {
+                $this->UpdateVisualizationValue($this->encodeMessage($message));
+            }
+
+            return;
+        }
+        $this->UpdateVisualizationValue($encoded);
     }
 
     public function GetVisualizationTile(): string

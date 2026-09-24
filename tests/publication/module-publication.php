@@ -36,7 +36,7 @@ try {
     $mediaCandidate = buildModulePublicationCandidate($projectRoot, $mediaContract);
     modulePublicationTestSame(11, count($mediaCandidate['files']), 'MediaCarousel inventory differs.');
     modulePublicationTestSame(
-        '3aa1d488991aafd48b938bea67656e2a59de94df1da1a3cc0234eb0e2833679b',
+        'b2a587c202e5eb7e8f5d41aa76a013388b22c75de3a331f9d642bb08adb18b8d',
         $mediaCandidate['filesetSha256'],
         'MediaCarousel fileset differs.'
     );

@@ -102,3 +102,27 @@ not only isolated per-image maxima. Batching reduces incoming calls but does not
 reduce the number or size of outgoing image messages. Browser measurements and
 physical-app acceptance remain separate from the deterministic unit-test proof
 of reduced call counts.
+
+## Bidirectional bundles (0.2.8)
+
+Incoming-only 0.2.7 batching did not pass the multi-tile performance gate and was
+restored to the previous version. The 0.2.8 candidate additionally uses
+`LoadMediaBundle` / `mediaBundle`: at most two independently correlated images
+share one response. The first image waits for the bounded second image's
+preparation. Optional receipts likewise share one small envelope. The ordinary
+two-image path therefore uses one incoming and one outgoing SDK call, or two
+outgoing calls during receipt probing, instead of two/four outgoing calls.
+
+Combined JSON above 750,000 bytes falls back to the existing individual response
+path; image sizing/content limits do not change. `LoadMedia` and `LoadMediaBatch`
+remain compatible with old views. Clients accept at most two whitelisted messages
+per bundle, retain per-image request/revision/generation validation and defer
+new prefetch until the envelope is consumed. A failed image does not discard its
+successful neighbour. No configuration property, storage or ownership changes.
+
+Version-4 receipt timing starts after envelope validation but before individual
+image/configuration processing. The second timing leg now includes both images'
+preparation and combined delivery. Per-image preparation counters retain their
+old meaning; paired timings must not be compared as identical stage boundaries
+with version 2/3. No improvement claim follows merely from fewer SDK calls.
+Require single/multi-tile browser evidence and separate physical-app acceptance.
