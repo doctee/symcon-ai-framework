@@ -819,4 +819,32 @@ $receiptModule->RequestAction('LoadMediaBatch', json_encode($batch, JSON_THROW_O
 check($receiptModule->testLastVisualizationUpdate()['requestID'] === 'batch_b', 'One image failure blocked its neighbour.');
 check($receiptModule->testLastVisualizationUpdate()['action'] === 'media', 'Valid batch neighbour was lost.');
 
+$receiptModule->testFailReceipt = false;
+$batch[0]['index'] = 0;
+$beforeCount = count($receiptModule->testVisualizationUpdates());
+$receiptModule->RequestAction('LoadMediaBundle', json_encode($batch, JSON_THROW_ON_ERROR));
+$bundle = $receiptModule->testLastVisualizationUpdate();
+check(count($receiptModule->testVisualizationUpdates()) === $beforeCount + 1, 'Two images require one response.');
+check($bundle['action'] === 'mediaBundle', 'Missing response envelope.');
+check(array_column($bundle['messages'], 'requestID') === ['batch_a', 'batch_b'], 'Bundle lost correlation.');
+$batch[0]['diagnosticReceipt'] = true;
+$batch[1]['diagnosticReceipt'] = true;
+$beforeCount = count($receiptModule->testVisualizationUpdates());
+$receiptModule->RequestAction('LoadMediaBundle', json_encode($batch, JSON_THROW_ON_ERROR));
+check(count($receiptModule->testVisualizationUpdates()) === $beforeCount + 2, 'Probed bundle requires only two messages.');
+$bundle = $receiptModule->testLastVisualizationUpdate();
+check($bundle['messages'][0]['receiptDispatchCompleted'] === true, 'Bundle receipt metadata absent.');
+$batch[0]['index'] = 999;
+$receiptModule->RequestAction('LoadMediaBundle', json_encode($batch, JSON_THROW_ON_ERROR));
+check(array_column($receiptModule->testLastVisualizationUpdate()['messages'], 'action') === ['mediaError', 'media'], 'Bundle lost partial success.');
+$batch[0]['index'] = 0;
+unset($batch[0]['diagnosticReceipt'], $batch[1]['diagnosticReceipt']);
+$savedContent = $mediaFixtures[102]['content'];
+$mediaFixtures[102]['content'] = base64_encode(str_repeat('x', 600000));
+$beforeCount = count($receiptModule->testVisualizationUpdates());
+$receiptModule->RequestAction('LoadMediaBundle', json_encode($batch, JSON_THROW_ON_ERROR));
+check(count($receiptModule->testVisualizationUpdates()) === $beforeCount + 2, 'Oversized bundle must fall back to separate responses.');
+check($receiptModule->testLastVisualizationUpdate()['action'] === 'media', 'Oversized response fallback differs.');
+$mediaFixtures[102]['content'] = $savedContent;
+
 echo "media-carousel-module: ok\n";

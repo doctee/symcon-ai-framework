@@ -32,8 +32,8 @@ if ($library !== []) {
         $errors
     );
     validateGuid($library['id'] ?? null, 'library GUID', $errors);
-    if (($library['version'] ?? null) !== '0.2.7') {
-        $errors[] = 'Library version must identify the 0.2.7 batching candidate.';
+    if (($library['version'] ?? null) !== '0.2.8') {
+        $errors[] = 'Library version must identify the 0.2.8 response-bundling candidate.';
     }
     if (($library['compatibility']['version'] ?? null) !== '8.1') {
         $errors[] = 'Library compatibility must require IP-Symcon 8.1.';
@@ -70,7 +70,7 @@ $javascript = readText($distribution . '/MediaCarousel/carousel.js', $errors);
 if (substr_count($html, '/* SAEF_MEDIA_CAROUSEL_SCRIPT */') !== 1) {
     $errors[] = 'HTML script injection marker must occur exactly once.';
 }
-foreach (['window.handleMessage', "requestAction('LoadMediaBatch'", 'probe.onload', 'sessionStorage'] as $marker) {
+foreach (['window.handleMessage', "requestAction('LoadMediaBundle'", 'probe.onload', 'sessionStorage'] as $marker) {
     if (!str_contains($javascript, $marker)) {
         $errors[] = 'Frontend contract marker is missing: ' . $marker . '.';
     }

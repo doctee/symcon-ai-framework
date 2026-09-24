@@ -37,7 +37,7 @@ function fixture() {
         requestAction(action, json) {
             const payload = JSON.parse(json);
             actions.push({action, payload});
-            requests.push(...(action === 'LoadMediaBatch' ? payload : [payload]));
+            requests.push(...(['LoadMediaBatch', 'LoadMediaBundle'].includes(action) ? payload : [payload]));
         },
         Image: class { constructor() { this.complete = true; this.naturalWidth = 100; } },
         ResizeObserver: class { observe() {} }, performance: {now: () => clock}
@@ -56,18 +56,55 @@ function fixture() {
         api.receiveMedia({...request, source: 'data:image/jpeg;base64,YQ==',
             contentRevision: revision, preview: false});
     }
-    return {api, requests, actions, timers, respond, element, advance(ms) { clock += ms; }};
+    return {api, requests, actions, timers, respond, element, message: context.handleMessage, advance(ms) { clock += ms; }};
 }
 
 async function flush() {
     for (let n = 0; n < 20; n += 1) await Promise.resolve();
 }
 
+test('bundled receipts and images retain correlation and release one complete batch', async () => {
+    const f = fixture();
+    await flush();
+    const requests = [...f.requests];
+    f.advance(100);
+    f.message({action: 'mediaBundle', messages: requests.map(r => ({...r, action: 'mediaStarted'}))});
+    assert.equal(f.api.state.pending.size, 2);
+    f.advance(200);
+    f.message({action: 'mediaBundle', messages: requests.map(r => ({...r, action: 'media',
+        source: 'data:image/jpeg;base64,YQ==', contentRevision: 'bundled', preview: false,
+        preparationMilliseconds: 20, receiptDispatchMilliseconds: 0}))});
+    await flush();
+    assert.equal(f.api.state.sources.get(0).contentRevision, 'bundled');
+    assert.equal(f.api.state.sources.get(1).contentRevision, 'bundled');
+    assert.equal(f.actions.length, 2);
+    assert.equal(JSON.parse(f.element('carousel').dataset.loadDiagnostics).pairedResponses, 2);
+    assert.equal(f.api.state.receivingBundle, false);
+});
+
+test('bundled partial failure preserves the good image and rejects foreign or oversized envelopes', async () => {
+    const f = fixture();
+    await flush();
+    const good = {...f.requests[1], action: 'media', source: 'data:image/jpeg;base64,YQ==',
+        contentRevision: 'good', preview: false};
+    f.message({action: 'mediaBundle', messages: [good, good, good]});
+    assert.equal(f.api.state.sources.size, 0);
+    f.message({action: 'mediaBundle', messages: [{...good, requestID: 'foreign'}]});
+    assert.equal(f.api.state.sources.size, 0);
+    f.message({action: 'mediaBundle', messages: [
+        {action: 'mediaError', requestID: f.requests[0].requestID}, good]});
+    await flush();
+    assert.equal(f.api.state.sources.get(1).contentRevision, 'good');
+    assert.equal(f.api.state.failures.get(0), 1);
+    assert.equal(f.api.state.receivingBundle, false);
+    assert.ok(f.api.state.pending.size <= 2);
+});
+
 test('four images use two serial SDK batches without filling a freed partial slot', async () => {
     const f = fixture();
     await flush();
     assert.equal(f.actions.length, 1);
-    assert.equal(f.actions[0].action, 'LoadMediaBatch');
+    assert.equal(f.actions[0].action, 'LoadMediaBundle');
     assert.deepEqual(f.actions[0].payload.map(r => r.index), [0, 1]);
     f.respond(f.requests[0]);
     await flush();

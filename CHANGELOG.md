@@ -14,6 +14,9 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added MediaCarousel 0.2.8 paired response envelopes with bounded large-image
+  fallback and compatibility for earlier open clients. Performance acceptance
+  remains a separate live gate; incoming-only 0.2.7 did not pass it.
 - Added bounded MediaCarousel two-image SDK batches with one active batch per
   view, independent image correlation and unchanged configuration/ownership.
 - Added a six-request-per-view MediaCarousel delivery-stage probe with small

@@ -27,6 +27,7 @@
         sources: new Map(),
         readyRevisions: new Map(),
         pending: new Map(),
+        receivingBundle: false,
         receiptProbes: new Map(),
         failures: new Map(),
         stale: new Set(),
@@ -49,7 +50,7 @@
     // Bounded, view-local evidence only: no IDs, titles, image bytes, history,
     // storage writes or extra requests. Readable through the tile DOM in QA.
     const diagnostics = {
-        version: 3, bootstraps: 0, batches: 0, requested: 0, accepted: 0, timeouts: 0,
+        version: 4, bootstraps: 0, batches: 0, requested: 0, accepted: 0, timeouts: 0,
         mediaErrors: 0, revisionRejected: 0, requestRejected: 0,
         invalidations: 0, superseded: 0, imageReady: 0, imageFailed: 0,
         lastRoundTripMs: 0, maxRoundTripMs: 0, lastPreparationMs: 0,
@@ -458,7 +459,7 @@
     function requestMedia(index) {
         // One SDK action in flight per view. Its two independently correlated
         // responses retain per-image invalidation, timeout and retry protection.
-        if (state.pending.size > 0 || !needsMedia(index)) {
+        if (state.receivingBundle || state.pending.size > 0 || !needsMedia(index)) {
             return;
         }
 
@@ -474,7 +475,7 @@
         }
         const requests = indices.map(prepareMediaRequest);
         countDiagnostic('batches');
-        requestAction('LoadMediaBatch', JSON.stringify(requests));
+        requestAction('LoadMediaBundle', JSON.stringify(requests));
     }
 
     function prepareMediaRequest(index) {
@@ -561,7 +562,7 @@
     }
 
     function pumpPrefetch() {
-        if (!state.settings || state.pending.size > 0) {
+        if (state.receivingBundle || !state.settings || state.pending.size > 0) {
             return;
         }
 
@@ -936,6 +937,29 @@
         }
 
         switch (payload.action) {
+            case 'mediaBundle': {
+                if (state.receivingBundle || !Array.isArray(payload.messages)
+                    || payload.messages.length < 1 || payload.messages.length > 2
+                    || payload.messages.some(entry => !entry || typeof entry !== 'object'
+                        || !['media', 'mediaStarted', 'mediaError', 'bootstrap'].includes(entry.action))) return;
+                state.receivingBundle = true;
+                let render = false;
+                try {
+                    for (const entry of payload.messages) {
+                        if (entry.action === 'media') {
+                            receiveMedia(entry, false);
+                            render = true;
+                        } else {
+                            window.handleMessage(entry);
+                        }
+                    }
+                } finally {
+                    state.receivingBundle = false;
+                }
+                if (render && !state.busy) renderSlots().then(resumeNavigation);
+                pumpPrefetch();
+                break;
+            }
             case 'bootstrap':
                 applyBootstrap(payload);
                 break;
