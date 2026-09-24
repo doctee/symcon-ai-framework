@@ -313,6 +313,178 @@ function controlLightRuntimeFixture(string $semantics = ControlLightCore::BRIGHT
 
 $tests = [];
 
+$tests['direct dim sends exactly one brightness request from off even at retained equality'] = static function (): void {
+    foreach (['reported', 'effective'] as $semantics) {
+        foreach ([10, 100] as $retained) {
+            $fixture = controlLightRuntimeFixture($semantics);
+            $fixture['configuration']['brightnessOffStateTransition'] = ['mode' => 'target-turns-on'];
+            SetValue(21, $retained);
+            ControlLightFakeRuntime::$actionHook = static function (int $id, mixed $value): bool {
+                SetValue($id, $value);
+                SetValue(20, true);
+                return true;
+            };
+            $result = ControlLightRuntime::dispatchTargetAction(
+                1000,
+                'brightness',
+                10,
+                $fixture['resources'],
+                $fixture['configuration'],
+                $fixture['diagnostics']
+            );
+            assertControlLightRuntimeSame('confirmed', $result['status'], 'Direct dim not confirmed.');
+            assertControlLightRuntimeSame([['variableID' => 21, 'value' => 10]], ControlLightFakeRuntime::$actions, 'Separate EIN or missing command.');
+            assertControlLightRuntimeSame(true, GetValue(10), 'STATE not confirmed.');
+            assertControlLightRuntimeSame(10, GetValue(11), 'Brightness not confirmed.');
+            ControlLightRuntime::dispatchTargetAction(
+                1000,
+                'brightness',
+                10,
+                $fixture['resources'],
+                $fixture['configuration'],
+                $fixture['diagnostics']
+            );
+            assertControlLightRuntimeSame(1, count(ControlLightFakeRuntime::$actions), 'Repeated direct dim not idempotent.');
+        }
+    }
+};
+
+$tests['direct dim accepts delayed state feedback within the same wait budget'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    $fixture['configuration']['brightnessOffStateTransition'] = ['mode' => 'target-turns-on'];
+    ControlLightFakeRuntime::$feedbackMode = 'delayed';
+    ControlLightFakeRuntime::$actionHook = static function (int $id, mixed $value): bool {
+        SetValue($id, $value);
+        ControlLightFakeRuntime::$pendingFeedback = ['variableID' => 20, 'value' => true];
+        return true;
+    };
+    $result = ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        10,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame('confirmed', $result['status'], 'Delayed STATE not confirmed.');
+    assertControlLightRuntimeSame(1, count(ControlLightFakeRuntime::$actions), 'Retried instead of waiting.');
+    if (array_sum(ControlLightFakeRuntime::$sleeps) > 100) {
+        throw new RuntimeException('Direct dim exceeded one wait budget.');
+    }
+};
+
+$tests['direct dim fails closed on partial feedback without fallback EIN'] = static function (): void {
+    foreach (['state-only', 'brightness-only', 'none'] as $feedback) {
+        $fixture = controlLightRuntimeFixture();
+        SetValue(21, 100);
+        $fixture['configuration']['brightnessOffStateTransition'] = ['mode' => 'target-turns-on'];
+        ControlLightFakeRuntime::$actionHook = static function (int $id, mixed $value) use ($feedback): bool {
+            if ($feedback === 'state-only') {
+                SetValue(20, true);
+            }
+            if ($feedback === 'brightness-only') {
+                SetValue($id, $value);
+            }
+            return true;
+        };
+        try {
+            ControlLightRuntime::dispatchTargetAction(
+                1000,
+                'brightness',
+                10,
+                $fixture['resources'],
+                $fixture['configuration'],
+                $fixture['diagnostics']
+            );
+            throw new RuntimeException('Partial feedback accepted.');
+        } catch (ControlLightCommandException $error) {
+            assertControlLightRuntimeSame(1, GetValue(31), 'Missing timeout diagnostic.');
+        }
+        assertControlLightRuntimeSame([['variableID' => 21, 'value' => 10]], ControlLightFakeRuntime::$actions, 'Unexpected power-on fallback.');
+        assertControlLightRuntimeSame(1, count(ControlLightFakeRuntime::$semaphoreLeaves), 'Lock not released.');
+    }
+};
+
+$tests['direct dim guards missing state manual-on and group contracts'] = static function (): void {
+    foreach (['missing', 'manual', 'group'] as $invalid) {
+        $fixture = controlLightRuntimeFixture();
+        $fixture['configuration']['brightnessOffStateTransition'] = ['mode' => 'target-turns-on'];
+        if ($invalid === 'missing') {
+            unset($fixture['resources']['targetVariableIDs']['state']);
+        }
+        if ($invalid === 'manual') {
+            $fixture['configuration']['stateCommandMode'] = 'off-only';
+        }
+        if ($invalid === 'group') {
+            $fixture['configuration']['groupFeedback']['enabled'] = true;
+        }
+        try {
+            ControlLightRuntime::dispatchTargetAction(
+                1000,
+                'brightness',
+                10,
+                $fixture['resources'],
+                $fixture['configuration'],
+                $fixture['diagnostics']
+            );
+            throw new LogicException('Invalid target accepted.');
+        } catch (RuntimeException $error) {
+            assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Invalid target received action.');
+        }
+    }
+};
+
+$tests['direct dim preserves zero-off passive feedback and both alarm polarities'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    $fixture['configuration']['brightnessOffStateTransition'] = ['mode' => 'target-turns-on'];
+    (new ReflectionMethod(ControlLightRuntime::class, 'syncAll'))->invoke(null, $fixture['resources'], $fixture['configuration']);
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Passive feedback sent command.');
+    SetValue(20, true);
+    (new ReflectionMethod(ControlLightRuntime::class, 'dispatchLocalAction'))->invoke(
+        null,
+        1000,
+        'brightness',
+        0,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame([['variableID' => 20, 'value' => false]], ControlLightFakeRuntime::$actions, 'Zero did not use STATE off.');
+    $check = new ReflectionMethod(ControlLightRuntime::class, 'userMayControl');
+    foreach ([true, false] as $polarity) {
+        $configuration = $fixture['configuration'];
+        $configuration['alarmID'] = 22;
+        $configuration['alarmIDIsAlarmActive'] = $polarity;
+        SetValue(22, $polarity);
+        assertControlLightRuntimeSame(false, $check->invoke(null, $configuration, 'VoiceControl'), 'Alarm bypassed.');
+        SetValue(22, !$polarity);
+        assertControlLightRuntimeSame(true, $check->invoke(null, $configuration, 'VoiceControl'), 'Disarmed blocked.');
+    }
+};
+
+$tests['direct dim rejects failed actions and obeys the existing command lock'] = static function (): void {
+    foreach (['rejected', 'locked'] as $failure) {
+        $fixture = controlLightRuntimeFixture();
+        $fixture['configuration']['brightnessOffStateTransition'] = ['mode' => 'target-turns-on'];
+        ControlLightFakeRuntime::$requestActionReturnsFalse = $failure === 'rejected';
+        ControlLightFakeRuntime::$semaphoreAvailable = $failure !== 'locked';
+        try {
+            ControlLightRuntime::dispatchTargetAction(
+                1000,
+                'brightness',
+                10,
+                $fixture['resources'],
+                $fixture['configuration'],
+                $fixture['diagnostics']
+            );
+            throw new LogicException('Failure accepted.');
+        } catch (RuntimeException $error) {
+            assertControlLightRuntimeSame($failure === 'locked' ? 0 : 1, count(ControlLightFakeRuntime::$actions), 'Unexpected command count.');
+        }
+    }
+};
+
+
 /** @return array<string, mixed> */
 function controlLightExplicitColorFixture(): array
 {

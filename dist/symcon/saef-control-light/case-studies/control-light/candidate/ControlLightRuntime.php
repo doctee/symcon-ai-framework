@@ -317,13 +317,25 @@ final class ControlLightRuntime
             $stateTargetVariableID = $resources['targetVariableIDs']['state'] ?? null;
             $positiveDim = $capability === 'brightness' && (int)$localValue > 0
                 && is_int($stateTargetVariableID);
+            $directDim = $capability === 'brightness' && (int)$localValue > 0
+                && ($configuration['brightnessOffStateTransition']['mode'] ?? 'power-on-first') === 'target-turns-on';
+            if (
+                $directDim
+                && (
+                    !is_int($stateTargetVariableID) || $stateTargetVariableID <= 0
+                    || $configuration['stateCommandMode'] !== ControlLightCore::STATE_COMMAND_BIDIRECTIONAL
+                    || $configuration['groupFeedback']['enabled'] === true
+                )
+            ) {
+                throw new RuntimeException('Direct dim start requires a bidirectional single STATE target.');
+            }
             $explicitColorPowerOn = $capability === 'color'
                 && $configuration['colorOffStateTransition']['mode'] === 'power-on-first';
             if ($explicitColorPowerOn && !is_int($stateTargetVariableID)) {
                 throw new RuntimeException('Color power-on requires a STATE target.');
             }
             $requirePowerOn = $positiveDim || $explicitColorPowerOn;
-            if ($requirePowerOn) {
+            if ($requirePowerOn && !$directDim) {
                 $powerResult = self::dispatchTargetActionLocked(
                     'state',
                     true,

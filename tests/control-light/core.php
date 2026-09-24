@@ -66,6 +66,35 @@ function controlLightFixtureConfiguration(array $fixture): array
 
 $tests = [];
 
+$tests['direct dim start is explicit and validated without default hash drift'] = static function (): void {
+    $base = ['preset' => 'Z2M', 'brightnessSemantics' => 'reported'];
+    $normalized = ControlLightCore::normalizeConfiguration($base);
+    assertControlLightSame(false, array_key_exists('brightnessOffStateTransition', $normalized), 'Default hash drift.');
+    $direct = ['mode' => 'target-turns-on'];
+    $normalized = ControlLightCore::normalizeConfiguration($base + ['brightnessOffStateTransition' => $direct]);
+    assertControlLightSame($direct, $normalized['brightnessOffStateTransition'], 'Direct mode lost.');
+    foreach ([null, true, [], ['mode' => 'invalid']] as $bad) {
+        assertControlLightThrows(
+            InvalidArgumentException::class,
+            static fn(): array => ControlLightCore::normalizeConfiguration($base + ['brightnessOffStateTransition' => $bad]),
+            'Invalid dim transition accepted.'
+        );
+    }
+    foreach (
+        [['identState' => ''], ['identDim' => ''], ['stateCommandMode' => 'off-only'],
+        ['groupFeedback' => ['mode' => 'member-confirmed', 'members' => [
+            ['key' => 'member', 'stateVariableID' => 101, 'brightnessVariableID' => 102],
+        ]]]] as $invalid
+    ) {
+        assertControlLightThrows(
+            InvalidArgumentException::class,
+            static fn(): array => ControlLightCore::normalizeConfiguration($base + $invalid + ['brightnessOffStateTransition' => $direct]),
+            'Unsupported direct dim target accepted.'
+        );
+    }
+};
+
+
 $tests['explicit color power-on requires enabled state and color'] = static function (): void {
     $configuration = [
         'preset' => 'Z2M',
