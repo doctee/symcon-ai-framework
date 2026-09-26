@@ -38,6 +38,9 @@ restart services or retire still-referenced immutable packages. Exclude callers
 whose separate device qualification is incomplete.
 
 The active runtime mirror belongs in a central technical runtime location.
+An explicitly approved domain-level category is also suitable; record the
+new parent in the private ownership input rather than letting reconciliation
+recreate a mirror at its former location.
 Keep its private reference index aligned with its actual consumers. Historical
 mirrors and filesets remain rollback evidence until a separate retention gate;
 moving a mirror requires an explicit ownership migration, not ordinary Ensure

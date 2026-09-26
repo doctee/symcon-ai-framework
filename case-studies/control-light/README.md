@@ -9,6 +9,11 @@ same brightness semantics are safe for every existing consumer.
 
 ## Candidate Files
 
+Current targeted acceptance: [calibrated brightness range and direct dim
+start](brightness-range-direct-dim-acceptance.md). This report distinguishes
+identical Runtime source from the remaining range-enabled Core/package variant
+and does not supersede unrelated historical migration classifications.
+
 - `candidate/ControlLightCore.php` contains side-effect-free configuration,
   scaling, color conversion and feedback comparison.
 - `candidate/ControlLightRuntime.php` composes SAEF helpers for owned resources,

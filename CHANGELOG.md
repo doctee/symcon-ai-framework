@@ -14,6 +14,10 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added opt-in calibrated ControlLight brightness ranges with quantized-minimum
+  feedback and accepted composition with qualified direct dim starts. Existing
+  callers retain their default mapping; no fleet-wide anti-flash opt-in is implied.
+
 - Added MediaCarousel 0.2.8 paired response envelopes with bounded large-image
   fallback and compatibility for earlier open clients. Performance acceptance
   remains a separate live gate; incoming-only 0.2.7 did not pass it.

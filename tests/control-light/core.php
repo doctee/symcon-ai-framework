@@ -93,7 +93,85 @@ $tests['direct dim start is explicit and validated without default hash drift'] 
         );
     }
 };
+$tests['quantized zero minimum feedback is opt-in and never a zero positive command'] = static function (): void {
+    $raw = [
+        'preset' => 'Z2M',
+        'brightnessSemantics' => 'reported',
+        'brightnessRange' => ['localMinimum' => 10, 'targetMinimum' => 1, 'zeroFeedbackIsMinimum' => true],
+    ];
+    $configuration = ControlLightCore::normalizeConfiguration($raw);
+    foreach ([true, false, null] as $state) {
+        assertControlLightSame(10, ControlLightCore::targetToLocal('brightness', 0, $configuration, $state), 'Quantized minimum was lost.');
+    }
+    assertControlLightSame(0, ControlLightCore::targetToLocal('brightness', -1, $configuration, true), 'Negative feedback was promoted.');
+    assertControlLightSame(1, ControlLightCore::localToTarget('brightness', 10, $configuration), 'Minimum command must stay positive.');
+    for ($local = 1; $local <= 100; $local++) {
+        if (ControlLightCore::localToTarget('brightness', $local, $configuration) < 1) {
+            throw new RuntimeException('Positive facade command became native zero.');
+        }
+    }
+    $effective = ControlLightCore::normalizeConfiguration(array_replace($raw, ['brightnessSemantics' => 'effective']));
+    assertControlLightSame(0, ControlLightCore::targetToLocal('brightness', 0, $effective, false), 'Effective off differs.');
+    assertControlLightSame(10, ControlLightCore::targetToLocal('brightness', 0, $effective, true), 'Effective on minimum differs.');
+    $raw['brightnessRange']['zeroFeedbackIsMinimum'] = false;
+    $disabled = ControlLightCore::normalizeConfiguration($raw);
+    assertControlLightSame(0, ControlLightCore::targetToLocal('brightness', 0, $disabled, true), 'Opt-out changed.');
+    $raw['brightnessRange']['zeroFeedbackIsMinimum'] = 'true';
+    assertControlLightThrows(InvalidArgumentException::class, static fn(): array => ControlLightCore::normalizeConfiguration($raw), 'Non-boolean opt-in accepted.');
+};
 
+$tests['brightness spread maps commands and authoritative feedback symmetrically'] = static function (): void {
+    $raw = ['preset' => 'Z2M', 'brightnessSemantics' => 'reported',
+        'brightnessRange' => ['localMinimum' => 10, 'targetMinimum' => 65]];
+    $configuration = ControlLightCore::normalizeConfiguration($raw);
+    foreach ([-1 => 0, 0 => 0, 1 => 65, 9 => 65, 10 => 65, 55 => 83, 100 => 100, 101 => 100] as $local => $target) {
+        assertControlLightSame($target, ControlLightCore::localToTarget('brightness', $local, $configuration), 'Spread command differs.');
+    }
+    foreach ([-1 => 0, 0 => 0, 1 => 10, 64 => 10, 65 => 10, 83 => 56, 100 => 100, 101 => 100] as $target => $local) {
+        foreach ([true, false] as $state) {
+            assertControlLightSame($local, ControlLightCore::targetToLocal('brightness', $target, $configuration, $state), 'Reported feedback inferred state.');
+        }
+    }
+    $effective = ControlLightCore::normalizeConfiguration(array_replace($raw, ['brightnessSemantics' => 'effective']));
+    assertControlLightSame(0, ControlLightCore::targetToLocal('brightness', 83, $effective, false), 'Effective off contract differs.');
+    $last = 0;
+    for ($value = 0; $value <= 100; $value++) {
+        $target = ControlLightCore::localToTarget('brightness', $value, $configuration);
+        if ($target < $last) {
+            throw new RuntimeException('Spread must be monotonic.');
+        }
+        $last = $target;
+        if ($value >= 10 && abs(ControlLightCore::targetToLocal('brightness', $target, $configuration) - $value) > 1) {
+            throw new RuntimeException('Round-trip exceeded integer quantization.');
+        }
+    }
+    $default = ControlLightCore::normalizeConfiguration(['preset' => 'Z2M', 'brightnessSemantics' => 'reported']);
+    assertControlLightSame(false, array_key_exists('brightnessRange', $default), 'Default fingerprint changed.');
+    assertControlLightSame(55, ControlLightCore::localToTarget('brightness', 55, $default), 'Default mapping changed.');
+};
+
+$tests['brightness spread rejects invalid ranges and missing capabilities'] = static function (): void {
+    $raw = ['preset' => 'Z2M', 'brightnessSemantics' => 'reported',
+        'brightnessRange' => ['localMinimum' => 10, 'targetMinimum' => 65]];
+    foreach (
+        [null, [], ['localMinimum' => 0, 'targetMinimum' => 65],
+        ['localMinimum' => 100, 'targetMinimum' => 65], ['localMinimum' => 10, 'targetMinimum' => 100],
+        ['localMinimum' => 10, 'targetMinimum' => 0], ['localMinimum' => 10.0, 'targetMinimum' => 65]] as $range
+    ) {
+        assertControlLightThrows(
+            InvalidArgumentException::class,
+            static fn(): array => ControlLightCore::normalizeConfiguration(array_replace($raw, ['brightnessRange' => $range])),
+            'Invalid spread accepted.'
+        );
+    }
+    foreach (['identState', 'identDim'] as $ident) {
+        assertControlLightThrows(
+            InvalidArgumentException::class,
+            static fn(): array => ControlLightCore::normalizeConfiguration(array_replace($raw, [$ident => ''])),
+            'Missing required capability accepted.'
+        );
+    }
+};
 
 $tests['explicit color power-on requires enabled state and color'] = static function (): void {
     $configuration = [
