@@ -166,6 +166,38 @@ final class ControlLightCore
             65535,
             'configuration'
         );
+        // Opt-in only: leave existing callers and their configuration hashes unchanged.
+        if (array_key_exists('brightnessRange', $configuration)) {
+            $range = $configuration['brightnessRange'];
+            if (
+                !is_array($range)
+                || !$normalized['capabilities']['state']['enabled']
+                || !$normalized['capabilities']['brightness']['enabled']
+                || $normalized['groupFeedback']['enabled']
+                || $normalized['dimmerTargetMax'] < 2
+            ) {
+                throw new InvalidArgumentException('brightnessRange requires a single dimmable state target.');
+            }
+            $normalized['brightnessRange'] = [
+                'localMinimum' => self::requireIntegerRange(
+                    $range,
+                    'localMinimum',
+                    1,
+                    99,
+                    'configuration.brightnessRange'
+                ),
+                'targetMinimum' => self::requireIntegerRange(
+                    $range,
+                    'targetMinimum',
+                    1,
+                    $normalized['dimmerTargetMax'] - 1,
+                    'configuration.brightnessRange'
+                ),
+                'zeroFeedbackIsMinimum' => array_key_exists('zeroFeedbackIsMinimum', $range)
+                    ? self::requireBoolean($range, 'zeroFeedbackIsMinimum')
+                    : false,
+            ];
+        }
         $normalized['colorTemperatureTolerance'] = self::requireIntegerRange(
             $merged,
             'colorTemperatureTolerance',
@@ -299,11 +331,7 @@ final class ControlLightCore
 
         return match ($capability) {
             'state' => (bool)$value,
-            'brightness' => self::scaleInteger(
-                self::limitInteger((int)$value, 0, 100),
-                100,
-                (int)$configuration['dimmerTargetMax']
-            ),
+            'brightness' => self::localBrightnessToTarget((int)$value, $configuration),
             'colorTemperature' => self::localTemperatureToTarget((int)$value, $configuration),
             'color' => self::localColorToTarget((int)$value, (string)$configuration['colorTargetFormat']),
             default => throw new InvalidArgumentException('Unsupported capability: ' . $capability),
@@ -742,6 +770,26 @@ final class ControlLightCore
     }
 
     /** @param array<string, mixed> $configuration */
+    private static function localBrightnessToTarget(int $value, array $configuration): int
+    {
+        $value = self::limitInteger($value, 0, 100);
+        $maximum = (int)$configuration['dimmerTargetMax'];
+        if (!isset($configuration['brightnessRange'])) {
+            return self::scaleInteger($value, 100, $maximum);
+        }
+        if ($value === 0) {
+            return 0;
+        }
+        $range = $configuration['brightnessRange'];
+        $localMinimum = $range['localMinimum'];
+        $targetMinimum = $range['targetMinimum'];
+        return $targetMinimum + (int)round(
+            (max($value, $localMinimum) - $localMinimum)
+                * ($maximum - $targetMinimum) / (100 - $localMinimum)
+        );
+    }
+
+    /** @param array<string, mixed> $configuration */
     private static function targetBrightnessToLocal(int $value, array $configuration, ?bool $targetState): int
     {
         if (
@@ -751,7 +799,23 @@ final class ControlLightCore
             return 0;
         }
 
-        return self::scaleInteger($value, (int)$configuration['dimmerTargetMax'], 100);
+        $maximum = (int)$configuration['dimmerTargetMax'];
+        if (!isset($configuration['brightnessRange'])) {
+            return self::scaleInteger($value, $maximum, 100);
+        }
+        if ($value <= 0) {
+            if ($value === 0 && ($configuration['brightnessRange']['zeroFeedbackIsMinimum'] ?? false)) {
+                return $configuration['brightnessRange']['localMinimum'];
+            }
+            return 0;
+        }
+        $range = $configuration['brightnessRange'];
+        $localMinimum = $range['localMinimum'];
+        $targetMinimum = $range['targetMinimum'];
+        return $localMinimum + (int)round(
+            (self::limitInteger($value, $targetMinimum, $maximum) - $targetMinimum)
+                * (100 - $localMinimum) / ($maximum - $targetMinimum)
+        );
     }
 
     /** @param array<string, mixed> $configuration */

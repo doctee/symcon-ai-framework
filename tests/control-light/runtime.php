@@ -313,6 +313,59 @@ function controlLightRuntimeFixture(string $semantics = ControlLightCore::BRIGHT
 
 $tests = [];
 
+$tests['direct dim start preserves calibrated minimum and quantized zero feedback'] = static function (): void {
+    foreach ([1, 10] as $requested) {
+        $fixture = controlLightRuntimeFixture();
+        $fixture['configuration']['brightnessOffStateTransition'] = ['mode' => 'target-turns-on'];
+        $fixture['configuration']['brightnessRange'] = [
+            'localMinimum' => 10, 'targetMinimum' => 1, 'zeroFeedbackIsMinimum' => true,
+        ];
+        SetValue(21, 0);
+        ControlLightFakeRuntime::$actionHook = static function (int $id, mixed $value): bool {
+            if ($id === 21) {
+                assertControlLightRuntimeSame(1, $value, 'Minimum command bypassed range mapping.');
+                SetValue(21, 0);
+                SetValue(20, true);
+            } else {
+                SetValue($id, $value);
+            }
+            return true;
+        };
+        $result = ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'brightness',
+            $requested,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        assertControlLightRuntimeSame('confirmed', $result['status'], 'Mapped direct start not confirmed.');
+        assertControlLightRuntimeSame([['variableID' => 21, 'value' => 1]], ControlLightFakeRuntime::$actions, 'Separate EIN or zero brightness command.');
+        assertControlLightRuntimeSame(true, GetValue(10), 'State not confirmed.');
+        assertControlLightRuntimeSame(10, GetValue(11), 'Quantized minimum not mapped.');
+        ControlLightRuntime::dispatchTargetAction(
+            1000,
+            'brightness',
+            10,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        assertControlLightRuntimeSame(1, count(ControlLightFakeRuntime::$actions), 'Mapped minimum not idempotent.');
+        (new ReflectionMethod(ControlLightRuntime::class, 'dispatchLocalAction'))->invoke(
+            null,
+            1000,
+            'brightness',
+            0,
+            $fixture['resources'],
+            $fixture['configuration'],
+            $fixture['diagnostics']
+        );
+        assertControlLightRuntimeSame(['variableID' => 20, 'value' => false], ControlLightFakeRuntime::$actions[1], 'Zero must still use STATE off.');
+        assertControlLightRuntimeSame(10, GetValue(11), 'Reported minimum lost while off.');
+    }
+};
+
 $tests['direct dim sends exactly one brightness request from off even at retained equality'] = static function (): void {
     foreach (['reported', 'effective'] as $semantics) {
         foreach ([10, 100] as $retained) {
@@ -483,8 +536,6 @@ $tests['direct dim rejects failed actions and obeys the existing command lock'] 
         }
     }
 };
-
-
 /** @return array<string, mixed> */
 function controlLightExplicitColorFixture(): array
 {
@@ -632,6 +683,88 @@ $tests['positive dim powers on even when retained brightness already matches'] =
         assertControlLightRuntimeSame(100, GetValue(11), 'Authoritative brightness differs.');
         assertControlLightRuntimeSame(['SAEF_CONTROL_LIGHT_1000:100'], ControlLightFakeRuntime::$semaphoreEnters, 'Nested/released command lock.');
     }
+};
+
+$tests['brightness spread retains power, passive feedback and idempotence contracts'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    $fixture['configuration']['brightnessRange'] = ['localMinimum' => 10, 'targetMinimum' => 65];
+    $command = static fn(int $value): array => ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        $value,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    $command(10);
+    assertControlLightRuntimeSame([['variableID' => 20, 'value' => true], ['variableID' => 21, 'value' => 65]], ControlLightFakeRuntime::$actions, 'Spread did not use state plus mapped target.');
+    assertControlLightRuntimeSame(10, GetValue(11), 'Minimum feedback differs.');
+    ControlLightFakeRuntime::$actions = [];
+    assertControlLightRuntimeSame('already_confirmed', $command(1)['status'], 'Clamped repeat should be idempotent.');
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Clamped repeat sent commands.');
+    $command(55);
+    assertControlLightRuntimeSame(83, GetValue(21), 'Intermediate target differs.');
+    assertControlLightRuntimeSame(56, GetValue(11), 'Facade must report quantized feedback, not requested value.');
+    ControlLightFakeRuntime::$actions = [];
+    (new ReflectionMethod(ControlLightRuntime::class, 'dispatchLocalAction'))->invoke(
+        null,
+        1000,
+        'brightness',
+        0,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame([['variableID' => 20, 'value' => false]], ControlLightFakeRuntime::$actions, 'Zero must only switch off.');
+    assertControlLightRuntimeSame(56, GetValue(11), 'Stored reported brightness lost.');
+    ControlLightFakeRuntime::$actions = [];
+    SetValue(21, 100);
+    (new ReflectionMethod(ControlLightRuntime::class, 'syncAll'))->invoke(null, $fixture['resources'], $fixture['configuration']);
+    assertControlLightRuntimeSame(false, GetValue(10), 'Passive feedback switched on.');
+    assertControlLightRuntimeSame(100, GetValue(11), 'Passive feedback not mapped.');
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Passive feedback dispatched.');
+};
+
+$tests['quantized minimum confirms without zero commands or repeated actions'] = static function (): void {
+    $fixture = controlLightRuntimeFixture();
+    $fixture['configuration']['brightnessRange'] = ['localMinimum' => 10, 'targetMinimum' => 1, 'zeroFeedbackIsMinimum' => true];
+    ControlLightFakeRuntime::$actionHook = static function (int $id, mixed $value): bool {
+        if ($id === 21 && $value !== 1) {
+            throw new RuntimeException('Minimum must send native one, never zero.');
+        }
+        SetValue($id, $id === 21 ? 0 : $value);
+        return true;
+    };
+    $command = static fn(): array => ControlLightRuntime::dispatchTargetAction(
+        1000,
+        'brightness',
+        10,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame('confirmed', $command()['status'], 'Quantized zero did not confirm.');
+    assertControlLightRuntimeSame([['variableID' => 20, 'value' => true], ['variableID' => 21, 'value' => 1]], ControlLightFakeRuntime::$actions, 'Wrong minimum action sequence.');
+    assertControlLightRuntimeSame(true, GetValue(10), 'Minimum lost authoritative on.');
+    assertControlLightRuntimeSame(10, GetValue(11), 'Minimum facade does not show ten.');
+    ControlLightFakeRuntime::$actions = [];
+    assertControlLightRuntimeSame('already_confirmed', $command()['status'], 'Quantized repeat not idempotent.');
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Repeat dispatched.');
+    (new ReflectionMethod(ControlLightRuntime::class, 'dispatchLocalAction'))->invoke(
+        null,
+        1000,
+        'brightness',
+        0,
+        $fixture['resources'],
+        $fixture['configuration'],
+        $fixture['diagnostics']
+    );
+    assertControlLightRuntimeSame([['variableID' => 20, 'value' => false]], ControlLightFakeRuntime::$actions, 'Off must not send brightness zero.');
+    assertControlLightRuntimeSame(10, GetValue(11), 'Off lost reported retained minimum.');
+    ControlLightFakeRuntime::$actions = [];
+    (new ReflectionMethod(ControlLightRuntime::class, 'syncAll'))->invoke(null, $fixture['resources'], $fixture['configuration']);
+    assertControlLightRuntimeSame(false, GetValue(10), 'Passive minimum switched on.');
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Passive minimum dispatched.');
 };
 
 $tests['positive dim remains idempotent only when power and brightness match'] = static function (): void {
