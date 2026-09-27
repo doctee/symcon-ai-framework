@@ -23,3 +23,10 @@ When proposing architecture, code structure, or automation behavior, explain the
 ## 5. Protect private data
 
 Never move private installation details into public files.
+
+## 6. Consult current official Symcon documentation
+
+Use `https://www.symcon.de/de/llms.txt` as the entry point for current official
+Symcon documentation. When working with IP-Symcon PHP functions, load
+`https://www.symcon.de/de/llms/function-index.md` first and follow the linked
+detail page before relying on memory, stubs or community sources.

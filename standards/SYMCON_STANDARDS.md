@@ -1719,6 +1719,65 @@ Numeric cleanup ordering may use a numeric comparison for the same reason.
 
 ---
 
+### Rule RS-001.39 — Use the Official AI Documentation Entry Points
+
+#### Purpose
+
+Verify Symcon APIs against a current, token-efficient and authoritative source.
+
+#### Rule
+
+AI agents working on Symcon-specific code or guidance shall start with the
+official German AI documentation index at
+`https://www.symcon.de/de/llms.txt`. For IP-Symcon PHP functions, they shall
+first load `https://www.symcon.de/de/llms/function-index.md` and then follow
+the linked detailed documentation for the relevant command-reference or module
+function.
+
+#### Rationale
+
+The AI-oriented files are generated from the official Symcon documentation and
+provide current content without presentation markup. The function index gives
+signatures and short descriptions while linking to the detailed parameters,
+return values, examples and version requirements. This reduces token use and
+the risk of relying on outdated model memory or indirect search results.
+
+SAEF defines engineering practice and safe application of the platform. It
+complements, but does not replace, the official API contract.
+
+#### Recommended Practice
+
+- Use `llms.txt` to locate the relevant current documentation area.
+- For a PHP function, consult `function-index.md` before opening the linked
+  detailed function or module file.
+- Verify signature, parameter semantics, return values, side effects and
+  minimum Symcon version before implementation.
+- Use SAEF standards to decide how the verified API should be applied safely.
+- Treat repository stubs as development support, not as proof of the current
+  platform contract.
+
+#### Anti-Patterns
+
+- Implementing a Symcon function call from model memory alone.
+- Using a search-result excerpt instead of the linked official detail page.
+- Treating a SAEF example, local stub or community post as the authoritative
+  current API signature.
+
+#### Exceptions
+
+An offline test may use a pinned repository stub or fixture. It must not claim
+that the fixture proves the current public Symcon API, and current official
+documentation must be checked before release or live use.
+
+#### Related References
+
+- `AGENTS.md`
+- `project/AI_PROJECT.md`
+- `principles/AI_PRINCIPLES.md`
+- `standards/PHP_STANDARDS.md`
+
+---
+
 ## 13. References
 
 This stable draft standard is supported by the following SAEF artifacts:
@@ -1749,7 +1808,8 @@ This stable draft standard is supported by the following SAEF artifacts:
 - `references/RI-002-runtime-diagnostics-internal-state.md`
 - `project/SYMCON_MCP_SCRIPT_READBACK.md`
 
-It is also aligned with current official IP-Symcon documentation for variable actions, event actions, event creation and Archive Control behaviour.
+It is also aligned with current official IP-Symcon documentation for AI agents,
+variable actions, event actions, event creation and Archive Control behaviour.
 
 ## 14. Release Notes
 
