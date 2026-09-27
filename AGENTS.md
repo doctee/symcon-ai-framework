@@ -33,6 +33,22 @@ For Symcon-specific work, also read:
 Read `drafts/SYMCON_STANDARDS.md` only when historical comparison with the
 pre-stabilization draft is relevant.
 
+## Official Symcon Documentation
+
+For Symcon-specific API and platform questions, use the current official
+documentation prepared for AI agents:
+
+- Start with `https://www.symcon.de/de/llms.txt` as the documentation index.
+- For IP-Symcon PHP functions, first load
+  `https://www.symcon.de/de/llms/function-index.md`, then follow its link to
+  the detailed function or module documentation for parameters and examples.
+
+Do not treat SAEF standards, repository stubs, community knowledge or model
+memory as a substitute for the current official API contract. SAEF defines how
+the platform should be used safely and maintainably; the official Symcon
+documentation remains authoritative for current availability, signatures,
+parameters, return values and version requirements.
+
 ## Engineering Rules
 
 - Prefer complete files over isolated snippets.
