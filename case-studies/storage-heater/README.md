@@ -131,7 +131,10 @@ Eine neue Zielbibliothek braucht zunächst ein bestätigtes Repository mit Basis
 Der bestehende Publisher prüft den Kandidaten, veröffentlicht mit expliziten Hashes
 einen PR und integriert ihn in einem getrennten Schritt. Danach wird die Git-URL
 in Symcons Modulverwaltung unter **Modules → +** hinzugefügt und die deaktivierte
-Instanz **Nachtspeicher Prognose** angelegt.
+Instanz **Nachtspeicher Prognose** angelegt. Bei einer freigegebenen Installation
+über MCP kann die zuvor verifizierte Module-Control-Funktion `MC_CreateModule`
+denselben Bibliotheksschritt übernehmen; danach die Instanz mit dem bestehenden
+`SAEF_EnsureInstance`-Helfer anlegen.
 
 Siehe [SAEF-Modulinstallation](../../project/SYMCON_MODULE_INSTALLATION.md) und
 [Publikationsvertrag und Freigaben](../../deployments/symcon/publication/README.md).
@@ -142,7 +145,10 @@ Vor Aktivierung: Zielbibliothek und Elternkategorie, Helfer-Eigentümer, Quellen
 Archivtypen und Aktualität prüfen; private Vorher-Sicherung erstellen; zunächst
 deaktivierte Instanz anlegen, Properties setzen, Quellen zurücklesen. Danach nur
 die neue Beobachterinstanz aktivieren. Keine vorhandenen Heizungsvariablen oder
-Archivkonfigurationen ändern. Installation/Aktivierung sind noch nicht live qualifiziert.
+Archivkonfigurationen ändern. Die technische Installation und Aktivierung von
+Version 0.2.0 wurden auf Symcon 9.1 erfolgreich geprüft; dies ersetzt keine
+Vorprüfung einer anderen Installation und keinen Test der tatsächlichen
+Vorhersagegüte während der Heizperiode.
 
 Rücknahme: `Enabled=false` und Änderungen übernehmen. Dadurch wird der Timer
 deaktiviert; vorhandene Journal- und Anzeigedaten bleiben erhalten. Vor Entfernen

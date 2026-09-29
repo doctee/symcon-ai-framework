@@ -37,12 +37,33 @@ Private Konfiguration separat übertragen und zurücklesen. Erst dann die konkre
 autorisierte Funktion aktivieren. Rücknahme, Sicherung und Nachprüfung vorher festlegen.
 
 Für Agenten bleibt [Symcon MCP](SYMCON_MCP_SCRIPT_READBACK.md) der verbindliche
-Live-Kanal. Fehlt dort eine für den benötigten Installationsschritt geeignete
-dokumentierte Operation, darf ein Agent nicht eigenmächtig auf UI-Automation,
-Serverdateizugriff oder undokumentierte interne Befehle ausweichen. Eine manuelle
-Installation durch den Nutzer ist möglich; anschließend kann MCP die Instanz prüfen.
-Historische `MC_*`-Aufrufe in Case Studies sind allein kein aktueller öffentlicher
-API-Vertrag.
+Live-Kanal. Eine fehlende spezialisierte MCP-Installationsoperation bedeutet nicht,
+dass Module Control keine passende aufrufbare Modulfunktion bereitstellt.
+Vor einem Kanalwechsel die aktuelle Module-Control-Instanz eindeutig ermitteln
+und mit den öffentlichen Funktionen `IPS_GetFunctionList()` und
+`IPS_GetFunction()` die tatsächlich registrierten Funktionen und ihre Parameter
+prüfen. Ihre Einordnung mit der aktuellen offiziellen Dokumentation abgleichen;
+aus einer fehlenden Detailseite darf nicht auf einen internen Befehl geschlossen werden.
+
+Der bestehende SAEF-Weg verwendet `MC_CreateModule(InstanceID, ModuleURL)` für
+eine Erstinstallation und `MC_UpdateModule(InstanceID, Module)` für eine bereits
+installierte Git-Bibliothek. Belege sind
+[Open-Meteo, Schritt 05](../case-studies/open-meteo/05-inactive-live-preflight.md)
+und [Navimow, Schritt 412](../case-studies/navimow/412-compact-map-controls-publication-and-live-rollout.md).
+Historische Belege ersetzen nicht die Prüfung des aktuellen Funktionsvertrags.
+
+Ein ausdrücklich freigegebener einmaliger Installationsaufruf über den
+MCP-Codekanal ist eine administrative Mutation und muss als solche geprüft und
+protokolliert werden. Er darf nicht als reine Leseprobe ausgegeben werden.
+Positive Ziel-ID, Instanztyp und GUID, unveränderter Ausgangszustand, genaue
+Repository-URL und Zielcommit vorher prüfen; Bibliotheksidentität, Commit,
+Gültigkeit und ausschließlich erwartete Änderungen danach unabhängig zurücklesen.
+Transportfehler, Ausführungsfehler und Truncation getrennt auswerten.
+Keine Geräteaktionen, manuellen Serverdateitransporte oder Neustarts ableiten.
+
+Erst wenn die erforderliche MCP-Bindung oder eine geeignete Modulfunktion
+tatsächlich fehlt, den Fehler melden und einen anderen Live-Kanal ausdrücklich
+freigeben lassen. Eine manuelle Installation über die Modulverwaltung bleibt möglich.
 
 ## Abgrenzung zum Windows-Deployment
 
@@ -53,4 +74,5 @@ Ein neuer Windows-Adapter darf nicht nur für das Verpacken einer Git-Bibliothek
 
 Offizielle Quellen:
 [Modulverwaltung](https://www.symcon.de/de/llms/modules/module-control.md),
+[Funktionsinformationen](https://www.symcon.de/de/llms/functions/program-information.md),
 [Funktionsindex](https://www.symcon.de/de/llms/function-index.md).
