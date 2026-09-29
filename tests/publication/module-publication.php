@@ -24,7 +24,7 @@ try {
     $openCandidate = buildModulePublicationCandidate($projectRoot, $openContract);
     modulePublicationTestSame(46, count($openCandidate['files']), 'Open-Meteo inventory differs.');
     modulePublicationTestSame(
-        '9a98737bce146054cf1b4679f0cb2485c7fa35865750f02a199d0b8497f46fb1',
+        'acd2019094ed6e32fcb4e4033c0206df1ad220c5068865752392689c97e3d718',
         $openCandidate['publicationSha256'],
         'Open-Meteo publication compatibility hash differs.'
     );
@@ -36,7 +36,7 @@ try {
     $mediaCandidate = buildModulePublicationCandidate($projectRoot, $mediaContract);
     modulePublicationTestSame(11, count($mediaCandidate['files']), 'MediaCarousel inventory differs.');
     modulePublicationTestSame(
-        'b2a587c202e5eb7e8f5d41aa76a013388b22c75de3a331f9d642bb08adb18b8d',
+        '06d81bb522a13b96cdae6106b83a719f548d09eb74516b711dadead0701a5768',
         $mediaCandidate['filesetSha256'],
         'MediaCarousel fileset differs.'
     );

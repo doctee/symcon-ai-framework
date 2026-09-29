@@ -8,7 +8,8 @@
     },
     "require-dev": {
         "phpstan/phpstan": "^2.1",
-        "squizlabs/php_codesniffer": "^3.13.6"
+        "squizlabs/php_codesniffer": "^3.13.6",
+        "opis/json-schema": "^2.6"
     },
     "scripts": {
         "toolchain:verify": [
@@ -213,6 +214,12 @@
         "test:workstream-handover": [
             "tests/repository/workstream-handover.sh"
         ],
+        "symcon-schema:check": [
+            "@php tools/validate-symcon-json.php"
+        ],
+        "test:symcon-schemas": [
+            "@php tests/schemas/symcon-json.php"
+        ],
         "lint": [
             "@php tools/lint.php"
         ],
@@ -231,6 +238,8 @@
             "@test:repository-guardrails",
             "@test:workstream-handover",
             "@lint",
+            "@symcon-schema:check",
+            "@test:symcon-schemas",
             "@bundle:check",
             "@fileset:check",
             "@control-light:fileset-check",

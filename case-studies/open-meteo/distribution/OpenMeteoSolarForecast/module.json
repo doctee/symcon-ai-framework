@@ -1,4 +1,5 @@
 {
+  "$schema": "https://www.symcon.de/assets/files/validation/moduleSchema.json",
   "id": "{C86E5442-13CF-4145-B23C-EF2B7635D79E}",
   "name": "OpenMeteoSolarForecast",
   "type": 3,

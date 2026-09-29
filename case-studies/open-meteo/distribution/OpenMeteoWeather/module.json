@@ -1,4 +1,5 @@
 {
+  "$schema": "https://www.symcon.de/assets/files/validation/moduleSchema.json",
   "id": "{B52FE951-7FBE-4882-B0E6-E143E5B5F31A}",
   "name": "OpenMeteoWeather",
   "type": 3,

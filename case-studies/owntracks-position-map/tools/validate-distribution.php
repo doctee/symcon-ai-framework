@@ -73,14 +73,14 @@ $sourceMap = readJsonObject(
 
 exactKeys(
     $library,
-    ['id', 'author', 'name', 'url', 'version', 'build', 'date', 'compatibility'],
+    ['$schema', 'id', 'author', 'name', 'url', 'version', 'build', 'date', 'compatibility'],
     'library.json',
     $errors
 );
 exactKeys(
     $module,
     [
-        'id', 'name', 'type', 'vendor', 'aliases', 'url',
+        '$schema', 'id', 'name', 'type', 'vendor', 'aliases', 'url',
         'parentRequirements', 'childRequirements', 'implemented', 'prefix',
     ],
     'module.json',
@@ -93,7 +93,8 @@ if (($library['id'] ?? null) === ($module['id'] ?? null)) {
 }
 if (
     ($library['version'] ?? null) !== '0.1.0'
-    || ($library['compatibility']['version'] ?? null) !== '8.1'
+    || ($library['compatibility']['version'] ?? null) !== '6.2'
+    || ($library['compatibility']['date'] ?? null) !== 1756252800
 ) {
     $errors[] = 'Library preview version or compatibility differs.';
 }

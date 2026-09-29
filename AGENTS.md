@@ -42,12 +42,24 @@ documentation prepared for AI agents:
 - For IP-Symcon PHP functions, first load
   `https://www.symcon.de/de/llms/function-index.md`, then follow its link to
   the detailed function or module documentation for parameters and examples.
+- Distinguish public command and module APIs from entries documented as
+  internal commands. Internal commands are unstable implementation details and
+  must not be used by SAEF scripts or modules. A diagnostic exception requires
+  an explicit, read-only, version-bound engineering decision and must not
+  become a reusable runtime dependency.
+- Prefer documented Symcon constants over copied numeric or string values and
+  verify their minimum platform version before use.
 
 Do not treat SAEF standards, repository stubs, community knowledge or model
 memory as a substitute for the current official API contract. SAEF defines how
 the platform should be used safely and maintainably; the official Symcon
 documentation remains authoritative for current availability, signatures,
 parameters, return values and version requirements.
+
+Official JSON schemas for `library.json`, `module.json`, `form.json` and
+`locale.json` are pinned under `standards/schemas/symcon/`. Module metadata
+must declare the matching official `$schema` URL and pass the repository's
+offline schema check.
 
 ## Engineering Rules
 
@@ -61,6 +73,11 @@ parameters, return values and version requirements.
 - Configuration scripts should be idempotent.
 - Automatically created script events for IP-Symcon 6.0+ must include explicit event action binding.
 - Archive processing must be bounded and safe.
+- Treat trace output as transient private evidence. User, role and permission
+  mutations, special-switch changes and other platform-wide configuration are
+  separate live security gates with explicit scope, rollback and postflight.
+  Special-switch changes may require a service restart and never inherit
+  authority from an ordinary script or module change.
 - Explain engineering decisions when changing standards, knowledge, templates, helpers, or references.
 
 ## Private Data

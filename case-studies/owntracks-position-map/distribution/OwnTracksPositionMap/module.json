@@ -1,4 +1,5 @@
 {
+  "$schema": "https://www.symcon.de/assets/files/validation/moduleSchema.json",
   "id": "{7698CC84-EB18-40EC-B594-F403F50966A1}",
   "name": "OwnTracksPositionMap",
   "type": 3,

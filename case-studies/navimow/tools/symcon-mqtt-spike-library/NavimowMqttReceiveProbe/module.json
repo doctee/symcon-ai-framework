@@ -1,4 +1,5 @@
 {
+  "$schema": "https://www.symcon.de/assets/files/validation/moduleSchema.json",
   "id": "{35003FD6-161B-4211-8B43-718876ABA4F6}",
   "name": "Navimow MQTT Receive Probe",
   "type": 3,

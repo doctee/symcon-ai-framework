@@ -193,29 +193,29 @@
         {
             "source": "case-studies/owntracks-position-map/distribution/OwnTracksPositionMap/form.json",
             "target": "OwnTracksPositionMap/form.json",
-            "sha256": "c42209f561270292aa84955902cb4c22eb2d761115a7931d21d31eb8f97f7a4e",
-            "bytes": 4729
+            "sha256": "fc0e6ed176c35894bb6d33a00e9924aeb75d8cd7da116c5ff44ba2d397b18599",
+            "bytes": 4807
         },
         {
             "source": "case-studies/owntracks-position-map/distribution/OwnTracksPositionMap/locale.json",
             "target": "OwnTracksPositionMap/locale.json",
-            "sha256": "17b987d0eebf72a9e6e650d212d72ed7e20f3c58f37b6871ef9f16a119463d0d",
-            "bytes": 2143
+            "sha256": "8de5a942994309889ccaf1ecff557bf20874f75acc3022fbf33208dbbedd6c0e",
+            "bytes": 2223
         },
         {
             "source": "case-studies/owntracks-position-map/distribution/OwnTracksPositionMap/module.json",
             "target": "OwnTracksPositionMap/module.json",
-            "sha256": "75415c8a082fb4855b79ee8125c603aa640e196b2bb4d8963f173f75fc9c5775",
-            "bytes": 332
+            "sha256": "14aa2e4856b10393aaa9b4e72b443d61d7b34695bb7f786df230792602e3be57",
+            "bytes": 412
         },
         {
             "source": "case-studies/owntracks-position-map/distribution/library.json",
             "target": "library.json",
-            "sha256": "460c6405c412e707b75d3856851d2b01cf68386090249ac5d427dd291a86b0dd",
-            "bytes": 268
+            "sha256": "2291128b8b0f75f329d0d6690fec918cab54bc1c2bb5eb743973bda202bbf38c",
+            "bytes": 373
         }
     ],
-    "filesetSha256": "9fccc8ef55daa4704186e34e78e44fa70c587a666125e7dbe1e7d53d95e1f45f",
+    "filesetSha256": "08a19b4ce897ebb19cd089dbafcbaff0c3b51ea648db5893a6111b755267c214",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",
