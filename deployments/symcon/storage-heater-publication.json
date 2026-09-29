@@ -1,0 +1,75 @@
+{
+  "formatVersion": 1,
+  "name": "storage-heater",
+  "hashNamespace": "SAEF-STORAGE-HEATER-PUBLICATION",
+  "repository": {
+    "name": "doctee/saef-storage-heater",
+    "publicUrl": "https://github.com/doctee/saef-storage-heater",
+    "cloneUrl": "git@github.com:doctee/saef-storage-heater.git",
+    "baseBranch": "main",
+    "confirmation": "publish-doctee-saef-storage-heater-pr"
+  },
+  "publication": {
+    "mode": "pull_request",
+    "topicBranch": "saef/{name}-{fileset}",
+    "pullRequest": {
+      "repository": "doctee/saef-storage-heater",
+      "base": "main",
+      "title": "feat: publish StorageHeaterForecast module update",
+      "body": "Automated bounded SAEF module publication.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
+    }
+  },
+  "generated": {
+    "directory": "dist/symcon/saef-storage-heater-module",
+    "manifest": "deployments/symcon/storage-heater-module.fileset.json",
+    "sourceMap": "fileset.sources.json",
+    "sidecar": "fileset.sha256",
+    "name": "saef-storage-heater-module"
+  },
+  "metadata": [
+    {
+      "source": "LICENSE",
+      "target": "LICENSE"
+    },
+    {
+      "source": "case-studies/storage-heater/publication/README.md",
+      "target": "README.md"
+    }
+  ],
+  "inventory": [
+    "LICENSE",
+    "README.md",
+    "StorageHeaterForecast/form.json",
+    "StorageHeaterForecast/module.json",
+    "StorageHeaterForecast/module.php",
+    "fileset.sha256",
+    "fileset.sources.json",
+    "library.json",
+    "libs/ArchiveReader.php",
+    "libs/FireplaceLog.php",
+    "libs/Forecast.php",
+    "libs/saef/common/Validation.php",
+    "libs/saef/diagnostics/ConfigurationHash.php",
+    "libs/saef/diagnostics/ErrorRingBuffer.php",
+    "libs/saef/diagnostics/Registry.php",
+    "libs/saef/diagnostics/Statistics.php",
+    "libs/saef/object/EnsureVariable.php"
+  ],
+  "privacy": {
+    "forbiddenMarkers": [
+      "/Users/",
+      "properties.local.json",
+      "model.local.json"
+    ]
+  },
+  "metadataValidation": {
+    "repositoryUrlPaths": [
+      "StorageHeaterForecast/module.json",
+      "library.json"
+    ],
+    "readmeTarget": "README.md",
+    "licenseTarget": "LICENSE",
+    "licenseMarker": "PolyForm Noncommercial License 1.0.0"
+  }
+}

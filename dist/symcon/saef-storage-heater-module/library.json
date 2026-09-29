@@ -1,0 +1,14 @@
+{
+  "$schema": "https://www.symcon.de/assets/files/validation/librarySchema.json",
+  "id": "{6A9F61A8-04DB-428E-B537-0A2F3043B823}",
+  "author": "SAEF",
+  "name": "Storage Heater Forecast",
+  "url": "https://github.com/doctee/saef-storage-heater",
+  "version": "0.2.0",
+  "build": 0,
+  "date": 0,
+  "compatibility": {
+    "version": "6.2",
+    "date": 1756684800
+  }
+}

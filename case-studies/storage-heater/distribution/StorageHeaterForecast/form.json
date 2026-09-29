@@ -1,0 +1,81 @@
+{
+  "$schema": "https://www.symcon.de/assets/files/validation/formSchema.json",
+  "elements": [
+    {
+      "type": "Label",
+      "caption": "Beobachtet die Heizung; schaltet keine Geräte. Prognose 21:45–22:00, Auswertung ab 08:00."
+    },
+    {
+      "type": "CheckBox",
+      "name": "Enabled",
+      "caption": "Beobachtung aktivieren"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "HistoryStart",
+      "caption": "Beginn verlässlicher Historie (YYYY-MM-DD)"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "BindingsJSON",
+      "caption": "Geprüfte Datenquellen (JSON)"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "ModelJSON",
+      "caption": "Kalibriertes Modell (JSON)"
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "WeatherMaxAgeMinutes",
+      "caption": "Maximales Alter Wetterabruf (Minuten)",
+      "minimum": 5,
+      "maximum": 1440
+    },
+    {
+      "type": "NumberSpinner",
+      "name": "SensorMaxAgeMinutes",
+      "caption": "Maximales Alter Messwertaktualisierung (Minuten)",
+      "minimum": 5,
+      "maximum": 1440
+    }
+  ],
+  "actions": [
+    {
+      "type": "Label",
+      "caption": "Kamin nachtragen: Datum und Uhrzeit des Anzündens wählen. Keine Endzeit erforderlich."
+    },
+    {
+      "type": "SelectDateTime",
+      "name": "FireplaceStart",
+      "caption": "Kamin angezündet am"
+    },
+    {
+      "type": "Button",
+      "caption": "Kaminstart speichern",
+      "onClick": "echo SHF_RecordFireplaceStart($id, $FireplaceStart);"
+    },
+    {
+      "type": "Button",
+      "caption": "Falschen Eintrag zu diesem Zeitpunkt stornieren",
+      "onClick": "echo SHF_CancelFireplaceStart($id, $FireplaceStart);"
+    },
+    {
+      "type": "Button",
+      "caption": "Beobachtung jetzt ausführen",
+      "onClick": "SHF_Tick($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Journal ausgeben (JSON)",
+      "onClick": "echo SHF_GetJournalJson($id);"
+    }
+  ],
+  "status": [
+    {
+      "code": 201,
+      "icon": "error",
+      "caption": "Daten oder Konfiguration prüfen"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://www.symcon.de/assets/files/validation/moduleSchema.json",
+  "id": "{D335BDB2-3B9C-49E0-A771-C02004C470A7}",
+  "name": "StorageHeaterForecast",
+  "type": 3,
+  "vendor": "SAEF",
+  "aliases": [
+    "Nachtspeicher Prognose"
+  ],
+  "url": "https://github.com/doctee/saef-storage-heater",
+  "parentRequirements": [],
+  "childRequirements": [],
+  "implemented": [],
+  "prefix": "SHF"
+}

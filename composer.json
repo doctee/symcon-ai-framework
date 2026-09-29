@@ -201,6 +201,9 @@
             "@php tests/deployments/media-carousel-schema-probe.php",
             "@php tests/deployments/media-carousel-module-ownership-migration.php"
         ],
+        "test:storage-heater": [
+            "sh case-studies/storage-heater/tools/check.sh"
+        ],
         "test:module-publication": [
             "@php case-studies/open-meteo/tests/publication.php",
             "@php tests/publication/module-publication.php"
@@ -283,6 +286,7 @@
             "@test:navimow-distribution",
             "@test:media-carousel",
             "@test:module-publication",
+            "@test:storage-heater",
             "@phpstan",
             "@phpstan:bundle",
             "@phpcs"
