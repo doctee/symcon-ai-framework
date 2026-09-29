@@ -1778,6 +1778,175 @@ documentation must be checked before release or live use.
 
 ---
 
+### Rule RS-001.40 — Keep Internal Commands out of Runtime Dependencies
+
+#### Purpose
+
+Prevent reusable automation from depending on undocumented platform internals.
+
+#### Rule
+
+Functions classified by the official Symcon documentation as internal commands
+shall not be used by SAEF scripts, modules, helpers, templates or reference
+implementations.
+
+#### Rationale
+
+The official internal-command reference states that these functions may change
+or disappear without notice and that some are available only through JSON-RPC.
+Their presence in the function index therefore does not make them a stable
+public API contract.
+
+#### Recommended Practice
+
+- Follow the detailed link from `function-index.md` and verify whether the
+  function belongs to the public command reference, a module API or the
+  internal-command reference.
+- Prefer the documented public API, module API or supported diagnostic surface.
+- Reject an internal command during code review even when a local stub exposes
+  it or it works on the current installation.
+- Keep one-time platform diagnostics read-only, private and version-bound.
+
+#### Exceptions
+
+A bounded diagnostic investigation may use an internal command only after an
+explicit engineering decision identifies the exact function, Symcon version,
+read-only purpose, private output, failure behavior and removal boundary. It
+must not be published as reusable runtime code or become a production
+dependency.
+
+#### Related References
+
+- `AGENTS.md`
+- `standards/PHP_STANDARDS.md`
+- `standards/TESTING_STANDARDS.md`
+
+---
+
+### Rule RS-001.41 — Declare and Validate Official Module Metadata Schemas
+
+#### Purpose
+
+Detect invalid Symcon module metadata before publication or deployment.
+
+#### Rule
+
+Tracked `library.json`, `module.json`, `form.json` and `locale.json` files shall
+declare the matching official `$schema` URL and pass the repository's offline
+schema validation.
+
+#### Rationale
+
+IP-Symcon ignores the `$schema` member, while editors and automated checks can
+use it for completion and validation. A reviewed local snapshot keeps CI
+deterministic and avoids silently accepting a changed remote schema.
+
+#### Recommended Practice
+
+- Use the official URLs published in the Symcon SDK documentation.
+- Validate source metadata before generating distribution filesets.
+- Pin the four schema bytes with SHA-256 and record their retrieval date.
+- Review a schema update as an external contract change and run both schema and
+  module-specific tests.
+- Keep generated distributions byte-consistent with their canonical sources.
+
+#### Exceptions
+
+Historical evidence that intentionally preserves exact old bytes may remain
+unchanged when it is clearly excluded from current module sources and schema
+validation.
+
+#### Related References
+
+- `standards/TESTING_STANDARDS.md`
+- `standards/schemas/symcon/README.md`
+
+---
+
+### Rule RS-001.42 — Use Documented Symcon Constants
+
+#### Purpose
+
+Keep platform semantics readable and compatible with documented APIs.
+
+#### Rule
+
+Reusable Symcon code shall use a documented Symcon constant instead of copying
+its current numeric or string value when such a constant exists.
+
+#### Rationale
+
+Named constants communicate platform intent and reduce ambiguity between
+ObjectIDs, flags, modes and ordinary domain values. Their documentation also
+exposes the minimum Symcon version required by the code.
+
+#### Recommended Practice
+
+- Verify the constant in current official documentation before use.
+- Record or enforce the resulting minimum platform version.
+- Add an explicit compatibility branch only when older versions are an
+  intentional support target.
+- Keep stubs synchronized for offline analysis without treating them as the
+  authoritative platform contract.
+
+#### Exceptions
+
+Protocol values owned by an external provider or by SAEF itself are not Symcon
+constants and should retain their domain-specific names and validation.
+
+#### Related References
+
+- `standards/PHP_STANDARDS.md`
+- `standards/TESTING_STANDARDS.md`
+
+---
+
+### Rule RS-001.43 — Classify Platform-Wide Diagnostics and Mutations
+
+#### Purpose
+
+Apply operational controls that match the impact of traces, permissions and
+special platform switches.
+
+#### Rule
+
+Trace retrieval, user/role/permission changes and special-switch changes shall
+not be treated as ordinary script or module calls. Their privacy, security,
+installation-wide and restart effects must be classified before use.
+
+#### Rationale
+
+Trace output can contain user context, object identities, paths, values and
+request metadata. Permission APIs alter access-control boundaries. Special
+switches change platform-wide behavior and generally require a service restart
+unless the official documentation says otherwise.
+
+#### Recommended Practice
+
+- Keep trace output bounded, transient and private; redact it before any public
+  issue, fixture or documentation use.
+- Give permission, user and role mutations their own security gate, exact
+  target inventory, recovery plan and independent read-back.
+- Give special-switch changes an exact before/after value, documented version
+  requirement, restart decision, rollback and postflight.
+- Do not inherit authority for these operations from a script deployment,
+  module update, diagnostic read or unrelated restart approval.
+- Prefer a supported read-only query when the engineering question does not
+  require mutation.
+
+#### Exceptions
+
+None for production mutation. A read-only trace inspection may use the normal
+live-read gate when its scope, output bound and private handling are explicit.
+
+#### Related References
+
+- `adr/ADR-0003-private-overlay.md`
+- `project/SYMCON_MCP_SCRIPT_READBACK.md`
+- `standards/TESTING_STANDARDS.md`
+
+---
+
 ## 13. References
 
 This stable draft standard is supported by the following SAEF artifacts:

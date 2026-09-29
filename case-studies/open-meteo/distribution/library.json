@@ -1,7 +1,8 @@
 {
+  "$schema": "https://www.symcon.de/assets/files/validation/librarySchema.json",
   "id": "{6D115210-EB10-4741-B479-6331C860B200}",
   "author": "SAEF",
-  "name": "Open-Meteo Forecast",
+  "name": "Open Meteo Forecast",
   "url": "https://github.com/doctee/saef-open-meteo",
   "version": "0.8.14",
   "build": 0,

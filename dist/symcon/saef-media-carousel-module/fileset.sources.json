@@ -13,14 +13,14 @@
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/form.json",
             "target": "MediaCarousel/form.json",
-            "sha256": "7f19b7c4b4d6366dd84ddfa556e3b90db8eda9ec84d6034b5c913fb623388760",
-            "bytes": 3775
+            "sha256": "1cf0d722ed04ff02ef3add7997e17384d076b48e93461aaee09607f2d20e4e21",
+            "bytes": 3853
         },
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/locale.json",
             "target": "MediaCarousel/locale.json",
-            "sha256": "db86b9d19ab10482227c619ca17aac3652db8f1d396d24b28a9745bf22aefd63",
-            "bytes": 2245
+            "sha256": "cd863dbb24cde03bfa419f7f55b5de3a3c2ac42d57317e68596a2678b1b67c57",
+            "bytes": 2325
         },
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/module.html",
@@ -31,8 +31,8 @@
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/module.json",
             "target": "MediaCarousel/module.json",
-            "sha256": "9eeb210160afd902fcf72bd7858a82ccdf8ea0d1139cd36bf2e419f3e9d21d8d",
-            "bytes": 315
+            "sha256": "bc1984aeab1efb070ca31896e61182f072c2a4d3451ad3a4a6465747485dce7e",
+            "bytes": 395
         },
         {
             "source": "case-studies/media-carousel/distribution/MediaCarousel/module.php",
@@ -43,11 +43,11 @@
         {
             "source": "case-studies/media-carousel/distribution/library.json",
             "target": "library.json",
-            "sha256": "a26ce020e759008cf5daf96b70ea2ca37b71086a9601568ea88300f95d0f9d17",
-            "bytes": 260
+            "sha256": "da39201d13f0f250fa60501f9787f089ade70f3192efabbda1de23a8bba0b775",
+            "bytes": 365
         }
     ],
-    "filesetSha256": "b2a587c202e5eb7e8f5d41aa76a013388b22c75de3a331f9d642bb08adb18b8d",
+    "filesetSha256": "06d81bb522a13b96cdae6106b83a719f548d09eb74516b711dadead0701a5768",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

@@ -1,4 +1,5 @@
 {
+  "$schema": "https://www.symcon.de/assets/files/validation/librarySchema.json",
   "id": "{C1B6C0DD-88B1-4360-95C3-F7F542EBC7DD}",
   "author": "SAEF",
   "name": "SAEF OwnTracks Position Map",
@@ -7,6 +8,7 @@
   "build": 0,
   "date": 0,
   "compatibility": {
-    "version": "8.1"
+    "version": "6.2",
+    "date": 1756252800
   }
 }

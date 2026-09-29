@@ -27,7 +27,7 @@ foreach (['form.json', 'locale.json'] as $jsonFile) {
 if ($library !== []) {
     validateExactKeys(
         $library,
-        ['id', 'author', 'name', 'url', 'version', 'build', 'date', 'compatibility'],
+        ['$schema', 'id', 'author', 'name', 'url', 'version', 'build', 'date', 'compatibility'],
         'library.json',
         $errors
     );
@@ -35,7 +35,10 @@ if ($library !== []) {
     if (($library['version'] ?? null) !== '0.2.8') {
         $errors[] = 'Library version must identify the 0.2.8 response-bundling candidate.';
     }
-    if (($library['compatibility']['version'] ?? null) !== '8.1') {
+    if (
+        ($library['compatibility']['version'] ?? null) !== '6.2'
+        || ($library['compatibility']['date'] ?? null) !== 1756252800
+    ) {
         $errors[] = 'Library compatibility must require IP-Symcon 8.1.';
     }
     if (($library['url'] ?? null) !== $publicRepositoryUrl) {
@@ -47,7 +50,7 @@ if ($module !== []) {
     validateExactKeys(
         $module,
         [
-            'id', 'name', 'type', 'vendor', 'aliases', 'url',
+            '$schema', 'id', 'name', 'type', 'vendor', 'aliases', 'url',
             'parentRequirements', 'childRequirements', 'implemented', 'prefix',
         ],
         'module.json',

@@ -38,6 +38,21 @@ across non-identical lock files. See
 
 Tests must not unexpectedly switch real devices or modify production state.
 
+### 5.1 Symcon module metadata schemas
+
+Tracked `library.json`, `module.json`, `form.json` and `locale.json` files shall
+declare the matching official Symcon `$schema` URL and pass offline validation
+against the reviewed snapshots in `standards/schemas/symcon/`.
+
+Schema snapshots are immutable test inputs identified by source URL, retrieval
+date and SHA-256. Updating one is a separately reviewable dependency change:
+retrieve all four official files, review their semantic delta, update the
+manifest hashes and run the complete repository check. CI must not download a
+floating schema during validation.
+
+The schema check complements domain-specific module tests. It does not prove
+runtime compatibility, API availability or correct module behavior.
+
 ## 6. Live-system change gate
 
 A change to an authorized live IP-Symcon installation shall be treated as a

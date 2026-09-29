@@ -1,0 +1,26 @@
+{
+    "formatVersion": 1,
+    "retrievedAtUtc": "2026-09-29T04:09:39Z",
+    "schemas": [
+        {
+            "file": "formSchema.json",
+            "sourceUrl": "https://www.symcon.de/assets/files/validation/formSchema.json",
+            "sha256": "70915f9cb6321bd2ff34192c0db5bfd0cd768e01961d36f270fac38db6311a5f"
+        },
+        {
+            "file": "librarySchema.json",
+            "sourceUrl": "https://www.symcon.de/assets/files/validation/librarySchema.json",
+            "sha256": "768c7a87d453af4b118226beb0c4d7aced65664f82bd350eeeb370ec55f174e1"
+        },
+        {
+            "file": "localeSchema.json",
+            "sourceUrl": "https://www.symcon.de/assets/files/validation/localeSchema.json",
+            "sha256": "e8b7e621b6188c413699e4f64a9b5571a1ef1acbeb31510e1affd87145579dff"
+        },
+        {
+            "file": "moduleSchema.json",
+            "sourceUrl": "https://www.symcon.de/assets/files/validation/moduleSchema.json",
+            "sha256": "b283533a431db48a2c66a314b930ef0409061f45b1a0c3a9b64b01474422bde9"
+        }
+    ]
+}

@@ -81,6 +81,18 @@ Create functions when logic:
 
 Functions should avoid hidden dependencies and unnecessary side effects.
 
+### 5.1 Symcon constants
+
+Use a documented Symcon constant when the official API assigns one to a mode,
+object type, status, comparison, permission or other platform value. Do not
+copy its current numeric or string representation into reusable code.
+
+Before use, verify the constant and its minimum IP-Symcon version in the
+official documentation. Code that intentionally supports older versions must
+make the compatibility branch explicit and test both paths. Repository stubs
+may mirror a verified constant for offline analysis, but they are not the
+authoritative source of its value or availability.
+
 ---
 
 ## 6. Error Handling

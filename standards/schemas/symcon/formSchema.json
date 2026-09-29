@@ -1,0 +1,3687 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://www.symcon.de/assets/files/validation/formSchema.json",
+    "title": "Symcon configuration form (form.json)",
+    "type": "object",
+    "properties": {
+        "$schema": {
+            "type": "string"
+        },
+        "elements": {
+            "$ref": "#/definitions/elements",
+            "description": "Fields that set instance properties (name = property name)."
+        },
+        "actions": {
+            "$ref": "#/definitions/elements",
+            "description": "Test environment. Fields here do not change properties."
+        },
+        "status": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/status"
+            }
+        },
+        "translations": {
+            "$ref": "#/definitions/translations"
+        }
+    },
+    "additionalProperties": false,
+    "definitions": {
+        "script": {
+            "description": "PHP code. An array of strings is joined with line breaks.",
+            "oneOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            ]
+        },
+        "caption": {
+            "type": "string",
+            "description": "Visible caption. Translated via \"translations\" / locale.json."
+        },
+        "label": {
+            "type": "string",
+            "description": "Deprecated alias of \"caption\".",
+            "deprecationMessage": "Deprecated: use \"caption\" instead."
+        },
+        "width": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*(px|%)$",
+            "description": "Width in px or %, e.g. \"300px\" or \"50%\". Other values are ignored by the console."
+        },
+        "columnWidth": {
+            "type": "string",
+            "pattern": "^(auto|[0-9]+(px|%))$",
+            "description": "Column width: \"auto\", pixels (\"100px\", \"0px\" hides the column) or percent (\"25%\")."
+        },
+        "guid": {
+            "type": "string",
+            "pattern": "^\\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\\}$"
+        },
+        "objectID": {
+            "type": "integer"
+        },
+        "elements": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/element"
+            }
+        },
+        "elementsOrScript": {
+            "description": "Array of form elements or PHP code that returns the array as JSON.",
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/elements"
+                },
+                {
+                    "$ref": "#/definitions/script"
+                }
+            ]
+        },
+        "sort": {
+            "type": "object",
+            "properties": {
+                "column": {
+                    "type": "string",
+                    "description": "Name of the column to sort by."
+                },
+                "direction": {
+                    "enum": [
+                        "ascending",
+                        "descending"
+                    ]
+                }
+            },
+            "required": [
+                "column"
+            ],
+            "additionalProperties": false
+        },
+        "itemsPosition": {
+            "enum": [
+                0,
+                1
+            ],
+            "description": "Position of the \"items\": 0 = below (default), 1 = right."
+        },
+        "elementButton": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "Button"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onClick": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "confirm": {
+                    "type": "string",
+                    "description": "Question shown in a yes/no dialog before onClick runs."
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementCheckBox": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "CheckBox"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "value": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "$ref": "#/definitions/elements"
+                },
+                "itemsPosition": {
+                    "$ref": "#/definitions/itemsPosition"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementColumnLayout": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "ColumnLayout"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "$ref": "#/definitions/elements"
+                }
+            },
+            "required": [
+                "type",
+                "items"
+            ],
+            "additionalProperties": false
+        },
+        "elementRowLayout": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "RowLayout"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "$ref": "#/definitions/elements"
+                }
+            },
+            "required": [
+                "type",
+                "items"
+            ],
+            "additionalProperties": false
+        },
+        "elementExpansionPanel": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "ExpansionPanel"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onClick": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "items": {
+                    "$ref": "#/definitions/elements"
+                },
+                "expanded": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "type",
+                "items"
+            ],
+            "additionalProperties": false
+        },
+        "elementHorizontalSlider": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "HorizontalSlider"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "minimum": {
+                    "type": "number"
+                },
+                "maximum": {
+                    "type": "number"
+                },
+                "stepSize": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                },
+                "displayValue": {
+                    "type": "boolean"
+                },
+                "prefix": {
+                    "type": "string"
+                },
+                "suffix": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementImage": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "Image"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onClick": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "image": {
+                    "type": "string",
+                    "description": "URL or data URL of the image."
+                },
+                "mediaID": {
+                    "$ref": "#/definitions/objectID"
+                },
+                "center": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementIntervalBox": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "IntervalBox"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false,
+            "description": "Deprecated. Use NumberSpinner.",
+            "deprecationMessage": "IntervalBox is deprecated. Use NumberSpinner."
+        },
+        "elementLabel": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "Label"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Render URLs in the caption as links (default true)."
+                },
+                "color": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 16777215
+                },
+                "bold": {
+                    "type": "boolean"
+                },
+                "italic": {
+                    "type": "boolean"
+                },
+                "underline": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementNumberSpinner": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "NumberSpinner"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "digits": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "hex": {
+                    "type": "boolean"
+                },
+                "suffix": {
+                    "type": "string"
+                },
+                "minimum": {
+                    "type": "number"
+                },
+                "maximum": {
+                    "type": "number"
+                },
+                "moreDigits": {
+                    "type": "boolean"
+                },
+                "value": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementOpenObjectButton": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "OpenObjectButton"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "objectID": {
+                    "$ref": "#/definitions/objectID"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementPasswordTextBox": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "PasswordTextBox"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "validate": {
+                    "type": "string",
+                    "format": "regex"
+                },
+                "value": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementValidationTextBox": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "ValidationTextBox"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "validate": {
+                    "type": "string",
+                    "format": "regex",
+                    "description": "Regular expression the value must match."
+                },
+                "multiline": {
+                    "type": "boolean"
+                },
+                "value": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementPopupAlert": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "PopupAlert"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "popup": {
+                    "$ref": "#/definitions/popup"
+                }
+            },
+            "required": [
+                "type",
+                "popup"
+            ],
+            "additionalProperties": false,
+            "description": "Opens the popup as soon as the form is shown, unless \"visible\" is false."
+        },
+        "elementPopupButton": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "PopupButton"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onClick": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "popup": {
+                    "$ref": "#/definitions/popup"
+                }
+            },
+            "required": [
+                "type",
+                "popup"
+            ],
+            "additionalProperties": false
+        },
+        "elementProgressBar": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "ProgressBar"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "current": {
+                    "type": "number"
+                },
+                "minimum": {
+                    "type": "number"
+                },
+                "maximum": {
+                    "type": "number"
+                },
+                "indeterminate": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementQrCode": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "QrCode"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "boolean",
+                    "description": "Show the source text below the code (default true)."
+                },
+                "center": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelect": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "Select"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/option"
+                    }
+                },
+                "value": {},
+                "itemsPosition": {
+                    "$ref": "#/definitions/itemsPosition"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementRadioButtonGroup": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "RadioButtonGroup"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/option"
+                    }
+                },
+                "value": {},
+                "itemsPosition": {
+                    "$ref": "#/definitions/itemsPosition"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementScriptEditor": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "ScriptEditor"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "rowCount": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "value": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectAction": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectAction"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "targetID": {
+                    "type": "integer",
+                    "minimum": -2,
+                    "description": "-2 = user selects target, -1 = general actions."
+                },
+                "highestPriorityOnly": {
+                    "type": "boolean"
+                },
+                "environment": {
+                    "type": "string"
+                },
+                "includeDefaultEnvironment": {
+                    "type": "boolean"
+                },
+                "includeGeneralActions": {
+                    "type": "boolean"
+                },
+                "noActionsText": {
+                    "type": "string"
+                },
+                "saveEnvironment": {
+                    "type": "boolean"
+                },
+                "saveParent": {
+                    "type": "boolean"
+                },
+                "saveTarget": {
+                    "type": "boolean"
+                },
+                "value": {
+                    "type": "string",
+                    "description": "JSON encoded {\"actionID\": ..., \"parameters\": {...}}"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectCondition": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectCondition"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "multi": {
+                    "type": "boolean"
+                },
+                "value": {
+                    "type": "string",
+                    "description": "JSON encoded array of conditions."
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectColor": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectColor"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "allowTransparent": {
+                    "type": "boolean"
+                },
+                "transparentCaption": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "integer",
+                    "minimum": -1,
+                    "maximum": 16777215
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectDate": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectDate"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "value": {
+                    "description": "JSON encoded object or object with year, month, day.",
+                    "oneOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "year": {
+                                    "type": "integer"
+                                },
+                                "month": {
+                                    "type": "integer"
+                                },
+                                "day": {
+                                    "type": "integer"
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    ]
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectTime": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectTime"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "value": {
+                    "description": "JSON encoded object or object with hour, minute, second.",
+                    "oneOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "hour": {
+                                    "type": "integer"
+                                },
+                                "minute": {
+                                    "type": "integer"
+                                },
+                                "second": {
+                                    "type": "integer"
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    ]
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectDateTime": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectDateTime"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "value": {
+                    "description": "JSON encoded object or object with year, month, day, hour, minute, second.",
+                    "oneOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "year": {
+                                    "type": "integer"
+                                },
+                                "month": {
+                                    "type": "integer"
+                                },
+                                "day": {
+                                    "type": "integer"
+                                },
+                                "hour": {
+                                    "type": "integer"
+                                },
+                                "minute": {
+                                    "type": "integer"
+                                },
+                                "second": {
+                                    "type": "integer"
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    ]
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectFile": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectFile"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "extensions": {
+                    "type": "string",
+                    "description": "Accepted file extensions, e.g. \".txt,.csv\"."
+                },
+                "value": {
+                    "type": "string",
+                    "description": "Base64 encoded file content."
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectIcon": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectIcon"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "value": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectLocation": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectLocation"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "value": {
+                    "type": "string",
+                    "description": "JSON encoded {\"latitude\": ..., \"longitude\": ...}"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectModule": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectModule"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "moduleID": {
+                    "$ref": "#/definitions/guid"
+                },
+                "value": {
+                    "$ref": "#/definitions/objectID"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectObject": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectObject"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "value": {
+                    "$ref": "#/definitions/objectID"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectCategory": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectCategory"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "value": {
+                    "$ref": "#/definitions/objectID"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectEvent": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectEvent"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "value": {
+                    "$ref": "#/definitions/objectID"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectLink": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectLink"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "value": {
+                    "$ref": "#/definitions/objectID"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectMedia": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectMedia"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "value": {
+                    "$ref": "#/definitions/objectID"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectScript": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectScript"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "value": {
+                    "$ref": "#/definitions/objectID"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectInstance": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectInstance"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "value": {
+                    "$ref": "#/definitions/objectID"
+                },
+                "validModules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/guid"
+                    }
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectVariable": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectVariable"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "value": {
+                    "$ref": "#/definitions/objectID"
+                },
+                "validVariableTypes": {
+                    "type": "array",
+                    "items": {
+                        "enum": [
+                            0,
+                            1,
+                            2,
+                            3
+                        ]
+                    },
+                    "description": "0 = Boolean, 1 = Integer, 2 = Float, 3 = String"
+                },
+                "validPresentations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/guid"
+                    }
+                },
+                "requiredAction": {
+                    "enum": [
+                        0,
+                        1,
+                        2
+                    ],
+                    "description": "0 = ignore, 1 = with action, 2 = without action"
+                },
+                "requiredLogging": {
+                    "enum": [
+                        0,
+                        1,
+                        2,
+                        3,
+                        4
+                    ],
+                    "description": "0 = ignore, 1 = logged, 2 = not logged, 3 = logged as standard, 4 = logged as counter"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectProfile": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectProfile"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "profileType": {
+                    "enum": [
+                        0,
+                        1,
+                        2,
+                        3
+                    ]
+                },
+                "value": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementSelectValue": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "SelectValue"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "onChange": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "variableID": {
+                    "$ref": "#/definitions/objectID"
+                },
+                "value": {
+                    "type": "string",
+                    "description": "JSON encoded value."
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementTestCenter": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "TestCenter"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "enabled": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementList": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "List"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "rowCount": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "add": {
+                    "type": "boolean"
+                },
+                "delete": {
+                    "type": "boolean"
+                },
+                "multiAdd": {
+                    "type": "boolean"
+                },
+                "changeOrder": {
+                    "type": "boolean"
+                },
+                "loadValuesFromConfiguration": {
+                    "type": "boolean"
+                },
+                "columns": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/listColumn"
+                    }
+                },
+                "sort": {
+                    "$ref": "#/definitions/sort"
+                },
+                "form": {
+                    "$ref": "#/definitions/elementsOrScript"
+                },
+                "onAdd": {
+                    "$ref": "#/definitions/script"
+                },
+                "onDelete": {
+                    "$ref": "#/definitions/script"
+                },
+                "onEdit": {
+                    "$ref": "#/definitions/script"
+                },
+                "onChangeOrder": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/listRow"
+                    }
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementTree": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "Tree"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "rowCount": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "add": {
+                    "type": "boolean"
+                },
+                "delete": {
+                    "type": "boolean"
+                },
+                "multiAdd": {
+                    "type": "boolean"
+                },
+                "changeOrder": {
+                    "type": "boolean"
+                },
+                "loadValuesFromConfiguration": {
+                    "type": "boolean"
+                },
+                "columns": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/listColumn"
+                    }
+                },
+                "sort": {
+                    "$ref": "#/definitions/sort"
+                },
+                "form": {
+                    "$ref": "#/definitions/elementsOrScript"
+                },
+                "onAdd": {
+                    "$ref": "#/definitions/script"
+                },
+                "onDelete": {
+                    "$ref": "#/definitions/script"
+                },
+                "onEdit": {
+                    "$ref": "#/definitions/script"
+                },
+                "onChangeOrder": {
+                    "$ref": "#/definitions/script"
+                },
+                "onExpand": {
+                    "$ref": "#/definitions/script"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/treeRow"
+                    }
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementConfigurator": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "Configurator"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "rowCount": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "delete": {
+                    "type": "boolean"
+                },
+                "columns": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/configuratorColumn"
+                    }
+                },
+                "sort": {
+                    "$ref": "#/definitions/sort"
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/configuratorRow"
+                    }
+                },
+                "discoveryInterval": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Seconds between automatic discovery runs."
+                },
+                "onExpand": {
+                    "$ref": "#/definitions/script"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false
+        },
+        "elementZWaveConfiguratorConfigurator": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "ZWaveConfiguratorConfigurator"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "rowCount": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "delete": {
+                    "type": "boolean"
+                },
+                "columns": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/configuratorColumn"
+                    }
+                },
+                "sort": {
+                    "$ref": "#/definitions/sort"
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/configuratorRow"
+                    }
+                },
+                "discoveryInterval": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Seconds between automatic discovery runs."
+                },
+                "onExpand": {
+                    "$ref": "#/definitions/script"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false,
+            "description": "Internal element of the Z-Wave configurator."
+        },
+        "elementZWaveConfiguratorAddDeviceButton": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "ZWaveConfiguratorAddDeviceButton"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false,
+            "description": "Internal element of the Z-Wave configurator."
+        },
+        "elementZWaveConfiguratorRemoveDeviceButton": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "ZWaveConfiguratorRemoveDeviceButton"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false,
+            "description": "Internal element of the Z-Wave configurator."
+        },
+        "elementZWaveConfiguratorTestDevicesButton": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "ZWaveConfiguratorTestDevicesButton"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "instanceIDs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/objectID"
+                    }
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "additionalProperties": false,
+            "description": "Internal element of the Z-Wave configurator."
+        },
+        "element": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "enum": [
+                        "Button",
+                        "CheckBox",
+                        "ColumnLayout",
+                        "RowLayout",
+                        "ExpansionPanel",
+                        "HorizontalSlider",
+                        "Image",
+                        "IntervalBox",
+                        "Label",
+                        "NumberSpinner",
+                        "OpenObjectButton",
+                        "PasswordTextBox",
+                        "ValidationTextBox",
+                        "PopupAlert",
+                        "PopupButton",
+                        "ProgressBar",
+                        "QrCode",
+                        "Select",
+                        "RadioButtonGroup",
+                        "ScriptEditor",
+                        "SelectAction",
+                        "SelectCondition",
+                        "SelectColor",
+                        "SelectDate",
+                        "SelectTime",
+                        "SelectDateTime",
+                        "SelectFile",
+                        "SelectIcon",
+                        "SelectLocation",
+                        "SelectModule",
+                        "SelectObject",
+                        "SelectCategory",
+                        "SelectEvent",
+                        "SelectLink",
+                        "SelectMedia",
+                        "SelectScript",
+                        "SelectInstance",
+                        "SelectVariable",
+                        "SelectProfile",
+                        "SelectValue",
+                        "TestCenter",
+                        "List",
+                        "Tree",
+                        "Configurator",
+                        "ZWaveConfiguratorConfigurator",
+                        "ZWaveConfiguratorAddDeviceButton",
+                        "ZWaveConfiguratorRemoveDeviceButton",
+                        "ZWaveConfiguratorTestDevicesButton"
+                    ]
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "Button"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementButton"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "CheckBox"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementCheckBox"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "ColumnLayout"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementColumnLayout"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "RowLayout"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementRowLayout"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "ExpansionPanel"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementExpansionPanel"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "HorizontalSlider"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementHorizontalSlider"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "Image"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementImage"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "IntervalBox"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementIntervalBox"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "Label"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementLabel"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "NumberSpinner"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementNumberSpinner"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "OpenObjectButton"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementOpenObjectButton"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "PasswordTextBox"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementPasswordTextBox"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "ValidationTextBox"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementValidationTextBox"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "PopupAlert"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementPopupAlert"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "PopupButton"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementPopupButton"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "ProgressBar"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementProgressBar"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "QrCode"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementQrCode"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "Select"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelect"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "RadioButtonGroup"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementRadioButtonGroup"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "ScriptEditor"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementScriptEditor"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectAction"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectAction"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectCondition"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectCondition"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectColor"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectColor"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectDate"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectDate"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectTime"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectTime"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectDateTime"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectDateTime"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectFile"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectFile"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectIcon"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectIcon"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectLocation"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectLocation"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectModule"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectModule"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectObject"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectObject"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectCategory"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectCategory"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectEvent"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectEvent"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectLink"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectLink"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectMedia"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectMedia"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectScript"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectScript"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectInstance"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectInstance"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectVariable"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectVariable"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectProfile"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectProfile"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "SelectValue"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementSelectValue"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "TestCenter"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementTestCenter"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "List"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementList"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "Tree"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementTree"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "Configurator"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementConfigurator"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "ZWaveConfiguratorConfigurator"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementZWaveConfiguratorConfigurator"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "ZWaveConfiguratorAddDeviceButton"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementZWaveConfiguratorAddDeviceButton"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "ZWaveConfiguratorRemoveDeviceButton"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementZWaveConfiguratorRemoveDeviceButton"
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "ZWaveConfiguratorTestDevicesButton"
+                            }
+                        },
+                        "required": [
+                            "type"
+                        ]
+                    },
+                    "then": {
+                        "$ref": "#/definitions/elementZWaveConfiguratorTestDevicesButton"
+                    }
+                }
+            ]
+        },
+        "option": {
+            "type": "object",
+            "properties": {
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "value": {},
+                "enabled": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "$ref": "#/definitions/elements"
+                }
+            },
+            "required": [
+                "value"
+            ],
+            "anyOf": [
+                {
+                    "required": [
+                        "caption"
+                    ]
+                },
+                {
+                    "required": [
+                        "label"
+                    ]
+                }
+            ],
+            "additionalProperties": false
+        },
+        "popupButton": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "const": "Button",
+                    "description": "Optional, ignored."
+                },
+                "name": {
+                    "type": "string"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "onClick": {
+                    "$ref": "#/definitions/script"
+                },
+                "enabled": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "caption",
+                "onClick"
+            ],
+            "additionalProperties": false
+        },
+        "popup": {
+            "type": "object",
+            "properties": {
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "items": {
+                    "$ref": "#/definitions/elementsOrScript"
+                },
+                "buttons": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/popupButton"
+                    }
+                },
+                "closeCaption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "width": {
+                    "$ref": "#/definitions/width"
+                },
+                "initialPage": {
+                    "description": "Page index, page name or PHP code returning either.",
+                    "oneOf": [
+                        {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ]
+                },
+                "pages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/popupPage"
+                    }
+                }
+            },
+            "anyOf": [
+                {
+                    "required": [
+                        "items"
+                    ]
+                },
+                {
+                    "required": [
+                        "pages"
+                    ]
+                }
+            ],
+            "additionalProperties": false
+        },
+        "popupPage": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "items": {
+                    "$ref": "#/definitions/elementsOrScript"
+                },
+                "buttons": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/popupButton"
+                    }
+                },
+                "nextPage": {
+                    "description": "Page index, page name or PHP code returning either.",
+                    "oneOf": [
+                        {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    ]
+                },
+                "validate": {
+                    "$ref": "#/definitions/script"
+                },
+                "onConfirm": {
+                    "$ref": "#/definitions/script"
+                },
+                "onUndo": {
+                    "$ref": "#/definitions/script"
+                }
+            },
+            "additionalProperties": false
+        },
+        "addGenerator": {
+            "type": "object",
+            "properties": {
+                "strategy": {
+                    "enum": [
+                        "increment",
+                        "random-string",
+                        "random-integer",
+                        "guid"
+                    ]
+                },
+                "step": {
+                    "type": "number",
+                    "not": {
+                        "const": 0
+                    }
+                },
+                "length": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "min": {
+                    "type": "integer"
+                },
+                "max": {
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "strategy"
+            ],
+            "additionalProperties": false
+        },
+        "configuratorColumn": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "width": {
+                    "$ref": "#/definitions/columnWidth"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "sortColumn": {
+                    "type": "string"
+                },
+                "align": {
+                    "enum": [
+                        "left",
+                        "center",
+                        "right"
+                    ]
+                },
+                "quickFilter": {
+                    "type": "boolean"
+                },
+                "onClick": {
+                    "$ref": "#/definitions/script"
+                },
+                "confirm": {
+                    "type": "string"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                }
+            },
+            "required": [
+                "name"
+            ],
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "visible": {
+                                "const": false
+                            }
+                        },
+                        "required": [
+                            "visible"
+                        ]
+                    },
+                    "else": {
+                        "required": [
+                            "width"
+                        ]
+                    }
+                }
+            ],
+            "additionalProperties": false
+        },
+        "listColumn": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                },
+                "label": {
+                    "$ref": "#/definitions/label"
+                },
+                "width": {
+                    "$ref": "#/definitions/columnWidth"
+                },
+                "visible": {
+                    "type": "boolean"
+                },
+                "sortColumn": {
+                    "type": "string"
+                },
+                "align": {
+                    "enum": [
+                        "left",
+                        "center",
+                        "right"
+                    ]
+                },
+                "quickFilter": {
+                    "type": "boolean"
+                },
+                "onClick": {
+                    "$ref": "#/definitions/script"
+                },
+                "confirm": {
+                    "type": "string"
+                },
+                "link": {
+                    "type": "boolean",
+                    "description": "Open the script output as link (true) or show it as dialog (false)."
+                },
+                "download": {
+                    "type": "string",
+                    "description": "File name. A data URL returned by the script is downloaded."
+                },
+                "add": {
+                    "description": "Value of new rows. An object with \"strategy\" generates the value."
+                },
+                "edit": {
+                    "$ref": "#/definitions/element"
+                },
+                "save": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "name"
+            ],
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "visible": {
+                                "const": false
+                            }
+                        },
+                        "required": [
+                            "visible"
+                        ]
+                    },
+                    "else": {
+                        "required": [
+                            "width"
+                        ]
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "add": {
+                                "type": "object",
+                                "required": [
+                                    "strategy"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "add"
+                        ]
+                    },
+                    "then": {
+                        "properties": {
+                            "add": {
+                                "$ref": "#/definitions/addGenerator"
+                            }
+                        }
+                    }
+                }
+            ],
+            "additionalProperties": false
+        },
+        "listRow": {
+            "type": "object",
+            "properties": {
+                "rowColor": {
+                    "type": "string",
+                    "description": "CSS color of the row background, e.g. \"#C0FFC0\"."
+                },
+                "editable": {
+                    "type": "boolean"
+                },
+                "deletable": {
+                    "type": "boolean"
+                },
+                "icons": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            },
+            "description": "Keys are column names, plus the reserved keys below."
+        },
+        "treeRow": {
+            "type": "object",
+            "properties": {
+                "rowColor": {
+                    "type": "string",
+                    "description": "CSS color of the row background, e.g. \"#C0FFC0\"."
+                },
+                "editable": {
+                    "type": "boolean"
+                },
+                "deletable": {
+                    "type": "boolean"
+                },
+                "icons": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "parent": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "expanded": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "id"
+            ]
+        },
+        "create": {
+            "type": "object",
+            "properties": {
+                "moduleID": {
+                    "$ref": "#/definitions/guid"
+                },
+                "configuration": {
+                    "type": "object"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "info": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "integer"
+                },
+                "location": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "statusVariables": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "noDiscovery": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "moduleID"
+            ],
+            "additionalProperties": false
+        },
+        "createChain": {
+            "description": "Single instance, or chain of instances (device first, then its parents).",
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/create"
+                },
+                {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/create"
+                    }
+                }
+            ]
+        },
+        "configuratorRow": {
+            "type": "object",
+            "description": "Keys are column names, plus the reserved keys below.",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "parent": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "expanded": {
+                    "type": "boolean"
+                },
+                "instanceID": {
+                    "$ref": "#/definitions/objectID"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "icons": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "location": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "deprecationMessage": "Deprecated: use \"location\" inside \"create\"."
+                },
+                "create": {
+                    "if": {
+                        "type": "object",
+                        "not": {
+                            "required": [
+                                "moduleID"
+                            ]
+                        }
+                    },
+                    "then": {
+                        "description": "Alternatives: caption => instance or chain",
+                        "type": "object",
+                        "minProperties": 1,
+                        "additionalProperties": {
+                            "$ref": "#/definitions/createChain"
+                        }
+                    },
+                    "else": {
+                        "$ref": "#/definitions/createChain"
+                    }
+                }
+            }
+        },
+        "status": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "description": "101-106 for built-in states, >= 200 for errors.",
+                    "anyOf": [
+                        {
+                            "minimum": 101,
+                            "maximum": 106
+                        },
+                        {
+                            "minimum": 200
+                        }
+                    ]
+                },
+                "icon": {
+                    "enum": [
+                        "active",
+                        "inactive",
+                        "standby",
+                        "error"
+                    ]
+                },
+                "caption": {
+                    "$ref": "#/definitions/caption"
+                }
+            },
+            "required": [
+                "code",
+                "icon",
+                "caption"
+            ],
+            "additionalProperties": false
+        },
+        "translations": {
+            "type": "object",
+            "description": "Language code (e.g. \"de\", \"de_CH\") => {\"English text\": \"translation\"}",
+            "propertyNames": {
+                "pattern": "^[a-z]{2}(_[A-Z]{2})?$"
+            },
+            "additionalProperties": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

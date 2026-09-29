@@ -1,0 +1,85 @@
+{
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 38,
+      "maxLength": 38,
+      "pattern": "^\\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\\}?$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9 _]*[A-Za-z0-9])?$"
+    },
+    "type": {
+      "enum": [0, 1, 2, 3, 4, 5]
+    },
+    "vendor": {
+      "type": "string"
+    },
+    "aliases": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "url": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?:http://|https://)"
+    },
+    "parentRequirements": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 38,
+        "maxLength": 38,
+        "pattern": "^\\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\\}?$"
+      }
+    },
+    "childRequirements": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 38,
+        "maxLength": 38,
+        "pattern": "^\\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\\}?$"
+      }
+    },
+    "implemented": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 38,
+        "maxLength": 38,
+        "pattern": "^\\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\\}?$"
+      }
+    },
+    "prefix": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]+$"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "type",
+    "vendor",
+    "aliases",
+    "url",
+    "parentRequirements",
+    "childRequirements",
+    "implemented",
+    "prefix"
+  ],
+  "additionalProperties": false
+}

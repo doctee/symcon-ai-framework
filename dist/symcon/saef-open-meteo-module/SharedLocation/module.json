@@ -1,4 +1,5 @@
 {
+  "$schema": "https://www.symcon.de/assets/files/validation/moduleSchema.json",
   "id": "{3B6B9CB0-8D95-4358-874A-13FF1A8BECD1}",
   "name": "SharedLocation",
   "type": 3,

@@ -1,4 +1,5 @@
 {
+  "$schema": "https://www.symcon.de/assets/files/validation/librarySchema.json",
   "id": "{8D263598-06EF-4440-982C-9E86E3F8D130}",
   "author": "SAEF",
   "name": "SAEF Media Carousel",
@@ -7,6 +8,7 @@
   "build": 0,
   "date": 0,
   "compatibility": {
-    "version": "8.1"
+    "version": "6.2",
+    "date": 1756252800
   }
 }

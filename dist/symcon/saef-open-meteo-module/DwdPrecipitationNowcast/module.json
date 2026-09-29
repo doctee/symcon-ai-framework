@@ -1,4 +1,5 @@
 {
+  "$schema": "https://www.symcon.de/assets/files/validation/moduleSchema.json",
   "id": "{2902A52B-93E4-4FDC-A333-BFF08F635369}",
   "name": "DwdPrecipitationNowcast",
   "type": 3,

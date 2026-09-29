@@ -1,4 +1,5 @@
 {
+  "$schema": "https://www.symcon.de/assets/files/validation/moduleSchema.json",
   "id": "{41D0C5ED-8331-4B26-A44E-6FDCEC1BC41F}",
   "name": "MediaCarousel",
   "type": 3,

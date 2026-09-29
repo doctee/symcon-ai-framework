@@ -99,13 +99,19 @@ AI assistants working in this repository must follow these rules:
 7. Use the current official IP-Symcon documentation when creating or modifying
    Symcon code. Start at `https://www.symcon.de/de/llms.txt`; for IP-Symcon PHP
    functions, load `https://www.symcon.de/de/llms/function-index.md` first and
-   follow its detailed documentation link. Treat community practice as a
-   secondary source.
+   follow its detailed documentation link. Treat documented internal commands
+   as unstable platform internals rather than public script or module APIs.
+   Treat community practice as a secondary source.
 8. Avoid unnecessary hardcoded object IDs.
 9. Prefer `RequestAction()` over direct `SetValue()` when triggering device or module actions.
 10. When automatically creating Symcon events that execute scripts, include the required event action binding for Symcon 6.0+.
 11. Design helpers and templates for reuse.
 12. Keep code readable, structured, and defensive.
+13. Declare and validate official Symcon JSON schemas for module metadata.
+14. Prefer documented Symcon constants and verify their minimum version.
+15. Treat traces, permissions, roles, users and special switches according to
+    their private-data, security and restart impact rather than as ordinary API
+    calls.
 
 ## 5. Symcon Development Rules
 

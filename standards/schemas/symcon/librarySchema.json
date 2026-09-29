@@ -1,0 +1,78 @@
+{
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 38,
+      "maxLength": 38,
+      "pattern": "^\\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\\}?$"
+    },
+    "author": {
+      "type": "string",
+      "minLenght": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9 _]*[A-Za-z0-9])?$"
+    },
+    "url": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?:http://|https://)"
+    },
+    "compatibility": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "enum": [
+            "4.0",
+            "4.1",
+            "4.2",
+            "4.3",
+            "4.4",
+            "5.0",
+            "5.1",
+            "5.2",
+            "5.3",
+            "5.4",
+            "5.5",
+            "6.0",
+            "6.1",
+            "6.2"
+          ]
+        },
+        "date": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "version": {
+      "type": "string"
+    },
+    "build": {
+      "type": "integer"
+    },
+    "date": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "author",
+    "name",
+    "url",
+    "compatibility",
+    "version",
+    "build",
+    "date"
+  ],
+  "additionalProperties": false
+}
