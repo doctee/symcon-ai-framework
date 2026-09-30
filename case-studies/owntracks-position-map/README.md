@@ -19,6 +19,10 @@ visualization. It also does not introduce a general SAEF map API.
 
 ## Status
 
+[Rust reference compatibility](106-rust-reference-compatibility.md) replaces
+the native self-reference query with the SDK method and preserves the existing
+SAEF package update path.
+
 Security follow-up: [review 77](77-final-security-review.md),
 [correction 78](78-security-correction-and-supplemental-review.md), targeted
 [ACL hardening 79](79-windows-acl-hardening.md) and the final

@@ -9,6 +9,21 @@ if (!defined('IPS_KERNELSTARTED')) {
     define('IPS_KERNELSTARTED', 10001);
 }
 
+const KR_READY = 10103;
+const KR_INIT = 10102;
+$scaffoldKernelRunlevel = KR_READY;
+$scaffoldDescriptorCalls = 0;
+
+function IPS_GetKernelRunlevel(): int
+{
+    return $GLOBALS['scaffoldKernelRunlevel'];
+}
+
+function scaffoldDescriptorCallCount(): int
+{
+    return $GLOBALS['scaffoldDescriptorCalls'];
+}
+
 /** @var array<string, array<string, mixed>> $scaffoldProfiles */
 $scaffoldProfiles = [];
 
@@ -613,6 +628,7 @@ function IPS_LogMessage(string $sender, string $message): void
 
 function SAEFLOCATION_GetDescriptor(int $instanceId): string
 {
+    ++$GLOBALS['scaffoldDescriptorCalls'];
     global $scaffoldLocationModules;
 
     if (!isset($scaffoldLocationModules[$instanceId])) {
@@ -624,6 +640,7 @@ function SAEFLOCATION_GetDescriptor(int $instanceId): string
 
 function OMWEATHER_GetLocationDescriptor(int $instanceId): string
 {
+    ++$GLOBALS['scaffoldDescriptorCalls'];
     global $scaffoldWeatherModules;
 
     if (!isset($scaffoldWeatherModules[$instanceId])) {
@@ -813,7 +830,7 @@ scaffoldCheck(
     'Unmanaged user soil visibility was not preserved.'
 );
 scaffoldCheck($scaffoldProfiles === $profiles, 'Repeated profile creation was not idempotent.');
-scaffoldCheck($weather->testTimerRegistrations() === 1, 'Weather update timer is missing.');
+scaffoldCheck($weather->testTimerRegistrations() === 2, 'Weather timer contract differs.');
 scaffoldCheck($weather->testTimerInterval('UpdateData') === 0, 'Unconfigured timer must be disabled.');
 
 $weather->testSetProperty('ManageSoilVariableVisibility', true);
@@ -2008,6 +2025,41 @@ $dwdNowcast->testSetProperty('ForecastWindowMinutes', 61);
 $dwdNowcast->ApplyChanges();
 scaffoldCheck($dwdNowcast->testStatus() === 200, 'Invalid DWD window did not fail closed.');
 scaffoldCheck($dwdNowcast->testTimerInterval('UpdateData') === 0, 'Invalid DWD timer is enabled.');
+
+// Simulate early ApplyChanges followed by the kernel-ready notification.
+foreach ([new TestOpenMeteoWeather(), new TestDwdPrecipitationNowcast(), new TestOpenMeteoSolarForecast()] as $bootModule) {
+    $bootModule->Create();
+    if ($bootModule instanceof OpenMeteoSolarForecast) {
+        scaffoldConfigureSolar($bootModule, 1001);
+    } else {
+        $bootModule->testSetProperty('LocationInstanceId', 2001);
+    }
+    $bootModule->testSetProperty('EnableAutomaticUpdates', true);
+    $bootModule->ApplyChanges();
+    scaffoldCheck($bootModule->testStatus() === 102, 'Boot fixture must be valid.');
+    $bootReferences = $bootModule->testReferences();
+    $bootState = $bootModule->testReadValue('DataState');
+    $scaffoldKernelRunlevel = KR_INIT;
+    $descriptorCallsBeforeBoot = scaffoldDescriptorCallCount();
+    $bootModule->ApplyChanges();
+    $bootModule->ProcessStartupRecovery();
+    scaffoldCheck(scaffoldDescriptorCallCount() === $descriptorCallsBeforeBoot, 'Early startup called another module.');
+    scaffoldCheck($bootModule->testTimerInterval('UpdateData') === 0, 'Polling remained enabled before ready.');
+    scaffoldCheck($bootModule->testReferences() === $bootReferences, 'Early startup changed references.');
+    scaffoldCheck($bootModule->testReadValue('DataState') === $bootState, 'Early startup changed cached state.');
+    $bootModule->MessageSink(1, 1, IPS_KERNELSTARTED, []);
+    $bootModule->MessageSink(1, 0, 99999, []);
+    scaffoldCheck($bootModule->testTimerInterval('StartupRecovery') === 0, 'Unrelated notification triggered recovery.');
+    $scaffoldKernelRunlevel = KR_READY;
+    $bootModule->MessageSink(2, 0, IPS_KERNELSTARTED, []);
+    $bootModule->MessageSink(3, 0, IPS_KERNELSTARTED, []);
+    scaffoldCheck($bootModule->testTimerInterval('StartupRecovery') === 5000, 'Ready notification did not schedule recovery.');
+    $bootModule->ProcessStartupRecovery();
+    scaffoldCheck($bootModule->testStatus() === 102, 'Ready recovery did not restore active status.');
+    scaffoldCheck($bootModule->testTimerInterval('StartupRecovery') === 0, 'Recovery was not one-shot.');
+    scaffoldCheck($bootModule->testTimerInterval('UpdateData') > 0, 'Ready recovery did not resume polling.');
+    scaffoldCheck($bootModule->testReferences() === $bootReferences, 'Ready recovery changed references.');
+}
 
 echo "module-scaffold: ok\n";
 

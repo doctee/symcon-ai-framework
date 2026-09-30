@@ -2056,7 +2056,7 @@ class OwnTracksPositionMap extends IPSModuleStrict
             }
         }
 
-        $kernelReferences = IPS_GetReferenceList($this->InstanceID);
+        $kernelReferences = $this->GetReferenceList();
         $references = [];
         foreach ($kernelReferences as $referenceID) {
             if ($referenceID <= 0) {

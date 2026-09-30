@@ -546,17 +546,12 @@ class MediaCarousel extends IPSModuleStrict
      */
     private function registerConfiguredSources(array $items): void
     {
-        $registerMessage = [$this, 'Register' . 'Message'];
-        if (!is_callable($registerMessage)) {
-            throw new LogicException('RegisterMessage is unavailable.');
-        }
-
         $mediaIDs = [];
         foreach ($items as $item) {
             $mediaID = $item['mediaID'];
             $this->RegisterReference($mediaID);
             foreach (self::MEDIA_MESSAGES as $message) {
-                $registerMessage($mediaID, $message);
+                $this->RegisterMessage($mediaID, $message);
             }
             $mediaIDs[] = $mediaID;
         }

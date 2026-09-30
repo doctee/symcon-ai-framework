@@ -103,6 +103,12 @@ abstract class IPSModuleStrict
         $this->attributes[$name] = $value;
     }
 
+    /** @return list<int> */
+    protected function GetReferenceList(): array
+    {
+        return $this->references;
+    }
+
     protected function RegisterReference(int $objectID): void
     {
         if (!in_array($objectID, $this->references, true)) {
@@ -251,12 +257,7 @@ function IPS_GetInstance(int $id): array
 /** @return list<int> */
 function IPS_GetReferenceList(int $id): array
 {
-    $module = $GLOBALS['ownTracksRuntimeFake']['activeModule'] ?? null;
-    if (!$module instanceof IPSModuleStrict || $id !== $module->testInstanceID()) {
-        return [];
-    }
-
-    return $module->testReferences();
+    throw new RuntimeException('Reentrant instance reference query rejected.');
 }
 
 function SAEFLOCATION_GetDescriptor(int $instanceId): string

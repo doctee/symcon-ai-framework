@@ -86,7 +86,7 @@ class OpenMeteoSolarForecast extends IPSModule
         $this->RegisterAttributeString('PublishedTodayForecastLocalDay', '');
         $this->RegisterAttributeInteger('RegisteredWeatherReferenceId', 0);
 
-        $this->registerKernelStartMessage();
+        $this->RegisterMessage(0, IPS_KERNELSTARTED);
         $this->RegisterTimer(
             'UpdateData',
             0,
@@ -106,6 +106,13 @@ class OpenMeteoSolarForecast extends IPSModule
         Profiles::ensure();
         $this->registerVariables();
 
+        // Cross-instance module calls require a fully initialized kernel.
+        $this->SetTimerInterval('StartupRecovery', 0);
+        if (IPS_GetKernelRunlevel() !== KR_READY) {
+            $this->SetTimerInterval('UpdateData', 0);
+            return;
+        }
+
         $this->reconcileConfiguration();
     }
 
@@ -117,7 +124,7 @@ class OpenMeteoSolarForecast extends IPSModule
      */
     public function MessageSink($TimeStamp, $SenderID, $Message, $Data): void
     {
-        if ($SenderID !== 0 || $Message !== $this->kernelStartedMessageId()) {
+        if ($SenderID !== 0 || $Message !== IPS_KERNELSTARTED) {
             return;
         }
 
@@ -130,6 +137,10 @@ class OpenMeteoSolarForecast extends IPSModule
     public function ProcessStartupRecovery(): string
     {
         $this->SetTimerInterval('StartupRecovery', 0);
+        if (IPS_GetKernelRunlevel() !== KR_READY) {
+            $this->SetTimerInterval('UpdateData', 0);
+            return $this->result(false, 'kernel_not_ready');
+        }
         $outcome = $this->reconcileConfiguration();
         if ($outcome === 'configuration_invalid') {
             IPS_LogMessage(
@@ -736,20 +747,6 @@ class OpenMeteoSolarForecast extends IPSModule
             $this->RegisterReference($desiredInstanceId);
         }
         $this->WriteAttributeInteger('RegisteredWeatherReferenceId', $desiredInstanceId);
-    }
-
-    private function kernelStartedMessageId(): int
-    {
-        if (!defined('IPS_KERNELSTARTED')) {
-            return 10001;
-        }
-        return constant('IPS_KERNELSTARTED');
-    }
-
-    private function registerKernelStartMessage(): void
-    {
-        $registerMessage = [$this, 'Register' . 'Message'];
-        $registerMessage(0, $this->kernelStartedMessageId());
     }
 
     private function registerVariables(): void
