@@ -52,10 +52,11 @@ class IPSModule
         int $position
     ): void {}
 
+    /** @param string|array<string, mixed> $profile */
     protected function RegisterVariableInteger(
         string $ident,
         string $name,
-        string $profile,
+        string|array $profile,
         int $position
     ): void {}
 
@@ -73,10 +74,13 @@ class IPSModule
         int $position
     ): void {}
 
+    protected function EnableAction(string $ident): bool {}
     protected function SetValue(string $ident, mixed $value): void {}
     protected function GetValue(string $ident): mixed {}
     protected function GetIDForIdent(string $ident): int {}
     protected function RegisterReference(int $id): void {}
+    /** @return list<int> */
+    protected function GetReferenceList(): array {}
     protected function UnregisterReference(int $id): void {}
     protected function RegisterTimer(string $ident, int $interval, string $script): void {}
     protected function SetTimerInterval(string $ident, int $interval): void {}

@@ -1,0 +1,60 @@
+{
+  "formatVersion": 1,
+  "name": "saef-storage-heater-module",
+  "phpMinimum": "8.2",
+  "outputDirectory": "dist/symcon/saef-storage-heater-module",
+  "files": [
+    {
+      "source": "case-studies/storage-heater/distribution/StorageHeaterForecast/form.json",
+      "target": "StorageHeaterForecast/form.json"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/StorageHeaterForecast/module.json",
+      "target": "StorageHeaterForecast/module.json"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/StorageHeaterForecast/module.php",
+      "target": "StorageHeaterForecast/module.php"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/library.json",
+      "target": "library.json"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/libs/ArchiveReader.php",
+      "target": "libs/ArchiveReader.php"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/libs/FireplaceLog.php",
+      "target": "libs/FireplaceLog.php"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/libs/Forecast.php",
+      "target": "libs/Forecast.php"
+    },
+    {
+      "source": "helpers/common/Validation.php",
+      "target": "libs/saef/common/Validation.php"
+    },
+    {
+      "source": "helpers/diagnostics/ConfigurationHash.php",
+      "target": "libs/saef/diagnostics/ConfigurationHash.php"
+    },
+    {
+      "source": "helpers/diagnostics/ErrorRingBuffer.php",
+      "target": "libs/saef/diagnostics/ErrorRingBuffer.php"
+    },
+    {
+      "source": "helpers/diagnostics/Registry.php",
+      "target": "libs/saef/diagnostics/Registry.php"
+    },
+    {
+      "source": "helpers/diagnostics/Statistics.php",
+      "target": "libs/saef/diagnostics/Statistics.php"
+    },
+    {
+      "source": "helpers/object/EnsureVariable.php",
+      "target": "libs/saef/object/EnsureVariable.php"
+    }
+  ]
+}
