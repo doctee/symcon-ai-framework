@@ -52,4 +52,3 @@ Official contracts:
 Private before/after evidence and the exact additive setup script are retained
 outside public artifacts. Rollback removes only the newly created links/categories,
 leaf first. Preserve module configuration and journals before any module rollback.
-
