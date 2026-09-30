@@ -6,6 +6,7 @@ declare(strict_types=1);
 const VARIABLETYPE_BOOLEAN = 0;
 const VARIABLETYPE_INTEGER = 1;
 const VARIABLETYPE_FLOAT = 2;
+const VARIABLE_PRESENTATION_ENUMERATION = '{52D9E126-D7D2-2CBB-5E62-4CF7BA7C5D82}';
 const IS_ACTIVE = 102;
 const IS_INACTIVE = 104;
 $values = [];
@@ -120,6 +121,7 @@ class IPSModule
     public array $attributes = [];
     public array $ids = [];
     public array $references = [];
+    public array $actions = [];
     public int $timer = 0;
     public int $status = 104;
     public function Create(): void
@@ -194,6 +196,11 @@ class IPSModule
         $this->ids[$k] = $id;
         $GLOBALS['types'][$id] = $type;
         $GLOBALS['values'][$id] ??= $initial;
+    }
+    public function EnableAction($k): bool
+    {
+        $this->actions[$k] = true;
+        return true;
     }
     public function SetValue($k, $v): void
     {
@@ -301,6 +308,34 @@ $j = json_decode($m->GetJournalJson(), true);
 check($j['fireplaceComparison']['reported_start']['nights'] === 0, 'Cancellation refreshes comparison');
 check($j['fireplaceLog']['entries'][0]['cancelledAt'] === $now, 'Correction audit retained');
 check($archiveReads === $reads && $commands === 0, 'Fireplace logging needs no archive or device calls');
+// Native visualization edits remain independent of observation and device control.
+$draft = $now - 3600;
+$beforeInput = $m->attributes['FireplaceLog'];
+$m->RequestAction('FireplaceStartInput', $draft);
+check($m->attributes['FireplaceLog'] === $beforeInput, 'Draft selection does not log a fire');
+$m->Create();
+check(GetValue($m->ids['FireplaceStartInput']) === $draft, 'Lifecycle preserves draft');
+check(isset($m->actions['FireplaceStartInput'], $m->actions['FireplaceAction']), 'Native controls enabled');
+$m->RequestAction('FireplaceAction', 1);
+$j = json_decode($m->GetJournalJson(), true);
+check(count($j['fireplaceLog']['entries']) === 2 && $j['fireplaceLog']['entries'][1]['startedAt'] === $draft, 'Explicit save records selected timestamp');
+$m->RequestAction('FireplaceAction', 1);
+check(count(json_decode($m->GetJournalJson(), true)['fireplaceLog']['entries']) === 2, 'Visualization repeat save is idempotent');
+$m->RequestAction('FireplaceAction', 2);
+$j = json_decode($m->GetJournalJson(), true);
+check($j['fireplaceLog']['entries'][1]['cancelledAt'] === $now, 'Visualization cancellation keeps audit');
+check(GetValue($m->ids['FireplaceAction']) === 0, 'Action is not latched');
+foreach ([['FireplaceStartInput', 0], ['FireplaceStartInput', $now + 60], ['FireplaceStartInput', $now - 401 * 86400], ['FireplaceStartInput', '123'], ['FireplaceAction', true], ['FireplaceAction', 3], ['Enabled', true]] as [$ident, $value]) {
+    $beforeRejected = $m->attributes;
+    $rejected = false;
+    try {
+        $m->RequestAction($ident, $value);
+    } catch (InvalidArgumentException $error) {
+        $rejected = true;
+    }
+    check($rejected && $beforeRejected === $m->attributes, 'Invalid visualization action rejected without log edits');
+}
+check($m->attributes['Journal'] === $frozenJournal && $archiveReads === $reads && $commands === 0, 'Visualization actions preserve forecasts and never access devices');
 $m->properties['Enabled'] = true;
 $b['energy'] = 0;
 $m->properties['BindingsJSON'] = json_encode($b);

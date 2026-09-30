@@ -46,6 +46,21 @@ class StorageHeaterForecast extends IPSModule
         $this->RegisterVariableString('FireplaceStatus', 'Kaminprotokoll – letzte Eingabe', '', 140);
         $this->RegisterVariableString('FireplaceEntries', 'Kamin – erfasste Starts', '', 150);
         $this->RegisterVariableString('FireplaceComparison', 'Prognosefehler nach Kamineinträgen', '', 160);
+        $this->RegisterVariableInteger('FireplaceStartInput', 'Kamin angezündet am', '~UnixTimestamp', 170);
+        $this->RegisterVariableInteger('FireplaceAction', 'Kaminprotokoll', [
+            'PRESENTATION' => VARIABLE_PRESENTATION_ENUMERATION,
+            'DISPLAY' => 0,
+            'LAYOUT' => 1,
+            'OPTIONS' => Forecast::encode([
+                ['Value' => 1, 'Caption' => 'Start speichern'],
+                ['Value' => 2, 'Caption' => 'Start stornieren'],
+            ]),
+        ], 180);
+        $this->EnableAction('FireplaceStartInput');
+        $this->EnableAction('FireplaceAction');
+        if (GetValue($this->GetIDForIdent('FireplaceStartInput')) <= 0) {
+            $this->SetValue('FireplaceStartInput', intdiv($this->now(), 60) * 60);
+        }
     }
 
     public function ApplyChanges(): void
@@ -67,7 +82,7 @@ class StorageHeaterForecast extends IPSModule
                 $this->RegisterReference($id);
             }
             SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'configurationHash', $config['hash']);
-            SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'version', '0.2.0');
+            SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'version', '0.3.0');
             $this->SetTimerInterval('Observe', 5 * 60 * 1000);
             $this->SetStatus(IS_ACTIVE);
             $this->SetValue('StatusText', 'Bereit – Prognose täglich zwischen 21:45 und 22:00 Uhr');
@@ -167,15 +182,40 @@ class StorageHeaterForecast extends IPSModule
         return $this->editFireplace($localDateTime, true);
     }
 
-    private function editFireplace(string $localDateTime, bool $cancel): string
+    /** Visualization actions edit only the module-owned fireplace log. */
+    public function RequestAction($Ident, $Value): void
+    {
+        if ($Ident === 'FireplaceStartInput') {
+            if (!is_int($Value) || $Value <= 0 || $Value > $this->now() || $Value < $this->now() - 400 * 86400) {
+                throw new InvalidArgumentException('Bitte einen vergangenen Zeitpunkt innerhalb der letzten 400 Tage auswählen.');
+            }
+            // Selecting a date is a draft edit, never a fireplace event.
+            $this->SetValue('FireplaceStartInput', $Value);
+            return;
+        }
+        if ($Ident !== 'FireplaceAction' || !is_int($Value) || !in_array($Value, [1, 2], true)) {
+            throw new InvalidArgumentException('Unbekannte Kaminprotokoll-Aktion.');
+        }
+        $start = GetValue($this->GetIDForIdent('FireplaceStartInput'));
+        if (!is_int($start) || $start <= 0) {
+            throw new RuntimeException('Bitte zuerst Datum und Uhrzeit auswählen.');
+        }
+        $this->editFireplace($start, $Value === 2);
+        // Buttons are commands, not a persistent selected operating mode.
+        $this->SetValue('FireplaceAction', 0);
+    }
+
+    private function editFireplace(string|int $localDateTime, bool $cancel): string
     {
         $lock = 'StorageHeaterForecast.' . $this->InstanceID;
         if (!IPS_SemaphoreEnter($lock, 1000)) {
-            return 'Bitte erneut versuchen: Protokoll wird gerade verarbeitet.';
+            $message = 'Bitte erneut versuchen: Protokoll wird gerade verarbeitet.';
+            $this->SetValue('FireplaceStatus', $message);
+            return $message;
         }
         $saved = false;
         try {
-            $start = FireplaceLog::localStart($localDateTime);
+            $start = is_int($localDateTime) ? $localDateTime : FireplaceLog::localStart($localDateTime);
             $log = FireplaceLog::read($this->ReadAttributeString('FireplaceLog'));
             $log = $cancel ? FireplaceLog::cancel($log, $start, $this->now()) : FireplaceLog::record($log, $start, $this->now());
             $records = $this->journal()['records'];

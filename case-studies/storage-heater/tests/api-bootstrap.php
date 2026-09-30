@@ -7,6 +7,7 @@ require_once __DIR__ . '/../../../stubs/symcon.php';
 define('VARIABLETYPE_BOOLEAN', 0);
 define('VARIABLETYPE_INTEGER', 1);
 define('VARIABLETYPE_FLOAT', 2);
+define('VARIABLE_PRESENTATION_ENUMERATION', '{52D9E126-D7D2-2CBB-5E62-4CF7BA7C5D82}');
 function AC_GetAggregatedValues(int $archive, int $variable, int $level, int $from, int $to, int $limit): array
 {
     return [];

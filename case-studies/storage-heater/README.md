@@ -68,7 +68,7 @@ der separat markierten Änderungen von Absenkung oder Freigabe nach Ausgabe.
 
 ## Grenzen
 
-Kaminstarts werden nachträglich im Instanzformular mit Datum und Uhrzeit erfasst.
+Kaminstarts werden nachträglich im Instanzformular oder über die nativen Visualisierungsvariablen `FireplaceStartInput` und `FireplaceAction` erfasst. Datum und Uhrzeit auswählen, dann explizit speichern; die Datumsauswahl allein verändert kein Protokoll. Die Eingabe bleibt über Neustarts erhalten. Die native Aktionsdarstellung benötigt Symcon ab 8.0; das bestehende Kernel-Mindestdatum bleibt bestehen.
 Eine Endzeit, Brenndauer oder Wärmemenge ist nicht erforderlich und wird auch nicht
 aus einer Nennleistung geschätzt. Erfassungs- und gegebenenfalls Stornozeitpunkt
 bleiben getrennt erhalten. Nachträge verändern weder alte Prognosen noch deren
