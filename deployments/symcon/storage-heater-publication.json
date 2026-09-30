@@ -15,8 +15,8 @@
     "pullRequest": {
       "repository": "doctee/saef-storage-heater",
       "base": "main",
-      "title": "feat: publish StorageHeaterForecast module update",
-      "body": "Automated bounded SAEF module publication.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "title": "fix: avoid reentrant reference query on Symcon Rust",
+      "body": "StorageHeaterForecast 0.3.1 uses the SDK GetReferenceList method during ApplyChanges, avoiding a native self-query rejected by the Rust kernel. Configuration, forecast calculations and fireplace history are preserved.\n\nValidated with the command-free runtime suite, syntax/schema checks, static analysis and generated-fileset verification.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
       "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
     }
   },

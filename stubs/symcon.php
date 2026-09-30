@@ -79,6 +79,8 @@ class IPSModule
     protected function GetValue(string $ident): mixed {}
     protected function GetIDForIdent(string $ident): int {}
     protected function RegisterReference(int $id): void {}
+    /** @return list<int> */
+    protected function GetReferenceList(): array {}
     protected function UnregisterReference(int $id): void {}
     protected function RegisterTimer(string $ident, int $interval, string $script): void {}
     protected function SetTimerInterval(string $ident, int $interval): void {}

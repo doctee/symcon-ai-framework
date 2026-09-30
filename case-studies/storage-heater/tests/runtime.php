@@ -52,7 +52,7 @@ function IPS_GetChildrenIDs(int $id): array
 }
 function IPS_GetReferenceList(int $id): array
 {
-    return isset($GLOBALS['m']) ? array_keys($GLOBALS['m']->references) : [];
+    throw new RuntimeException('Native self-reference queries are forbidden during the module lifecycle');
 }
 function GetValue(int $id): mixed
 {

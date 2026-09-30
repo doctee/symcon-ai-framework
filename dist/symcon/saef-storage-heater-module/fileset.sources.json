@@ -19,13 +19,13 @@
         {
             "source": "case-studies/storage-heater/distribution/StorageHeaterForecast/module.php",
             "target": "StorageHeaterForecast/module.php",
-            "sha256": "0ed4ff70ac414d9a412d714491ebb2eb026ea6a257d9e43b8aa8c4bd11f53db0",
-            "bytes": 24879
+            "sha256": "86eda3b01a19953281c941bf2f775aef7c059eff475138d93bbf3420e3cac9d1",
+            "bytes": 24865
         },
         {
             "source": "case-studies/storage-heater/distribution/library.json",
             "target": "library.json",
-            "sha256": "b7665152785c9d1855bac81abb0c08b31fc840f7290e4caac4d05fcfe5f7973b",
+            "sha256": "c1fc29f82013bb8aef38759c6bb7a5923f2d0e76843303b7b5b6604b5020ce6a",
             "bytes": 369
         },
         {
@@ -83,7 +83,7 @@
             "bytes": 4358
         }
     ],
-    "filesetSha256": "6d8f22491a268595f9ee7d7e001a42183dda47d6f9672fb9aca2e0b8dbdd9e27",
+    "filesetSha256": "fec42c9f8c026679c4af30733fbb5598d12bea9a4450940fe44d984d0dc2a0ad",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

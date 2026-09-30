@@ -68,7 +68,7 @@ class StorageHeaterForecast extends IPSModule
         parent::ApplyChanges();
         $this->SetTimerInterval('Observe', 0);
         $this->SetValue('ForecastValid', false);
-        foreach (IPS_GetReferenceList($this->InstanceID) as $id) {
+        foreach ($this->GetReferenceList() as $id) {
             $this->UnregisterReference($id);
         }
         if (!$this->ReadPropertyBoolean('Enabled')) {
@@ -82,7 +82,7 @@ class StorageHeaterForecast extends IPSModule
                 $this->RegisterReference($id);
             }
             SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'configurationHash', $config['hash']);
-            SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'version', '0.3.0');
+            SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'version', '0.3.1');
             $this->SetTimerInterval('Observe', 5 * 60 * 1000);
             $this->SetStatus(IS_ACTIVE);
             $this->SetValue('StatusText', 'Bereit – Prognose täglich zwischen 21:45 und 22:00 Uhr');

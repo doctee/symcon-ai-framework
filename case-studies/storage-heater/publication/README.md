@@ -32,6 +32,13 @@ Kein Speicherfüllstand, keine automatische Regleroptimierung, kein Raumtemperat
 
 **Beobachtung aktivieren** abwählen und übernehmen stoppt den Timer; Kaminstarts lassen sich weiterhin nachtragen. Vor Löschen der Instanz das Journal und die Konfiguration sichern.
 
+## Version 0.3.1
+
+Die Referenzbereinigung verwendet die dokumentierte Modulmethode
+`GetReferenceList()`. Dadurch vermeidet sie beim Initialisieren unter Symcon
+Rust den abgelehnten nativen Aufruf auf die gerade ausgeführte Instanz.
+Konfiguration, Prognoseberechnung und Kaminprotokoll bleiben unverändert.
+
 ## Lizenz
 
 PolyForm Noncommercial License 1.0.0; siehe LICENSE. Keine private Installationskonfiguration oder Trainingshistorie ist Bestandteil dieser Bibliothek.
