@@ -9,6 +9,8 @@ declare(strict_types=1);
 /** @var array{SELF:int} $_IPS */
 $_IPS = ['SELF' => 0];
 
+define('KR_READY', 10103);
+define('IPS_KERNELSTARTED', 10001);
 define('IS_ACTIVE', 102);
 define('IS_INACTIVE', 104);
 define('MEDIATYPE_IMAGE', 1);
@@ -82,6 +84,7 @@ class IPSModule
     /** @return list<int> */
     protected function GetReferenceList(): array {}
     protected function UnregisterReference(int $id): void {}
+    protected function RegisterMessage(int $senderId, int $messageId): bool {}
     protected function RegisterTimer(string $ident, int $interval, string $script): void {}
     protected function SetTimerInterval(string $ident, int $interval): void {}
     protected function SetVisualizationType(int $type): void {}
@@ -112,6 +115,7 @@ function HasAction(int $variableID): bool {}
 
 function IPS_GetModuleList(): array {}
 function IPS_GetInstanceListByModuleID(string $moduleID): array {}
+function IPS_GetKernelRunlevel(): int {}
 function IPS_GetKernelDir(): string {}
 function IPS_GetObjectIDByIdent(string $ident, int $parentID): int|false {}
 function IPS_GetObject(int $id): array {}

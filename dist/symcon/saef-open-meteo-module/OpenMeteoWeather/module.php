@@ -93,6 +93,9 @@ class OpenMeteoWeather extends IPSModule
         $this->RegisterAttributeString('ForecastCache', '');
         $this->RegisterAttributeInteger('RegisteredLocationReferenceId', 0);
 
+        $this->RegisterMessage(0, IPS_KERNELSTARTED);
+        $this->RegisterTimer('StartupRecovery', 0, 'OMWEATHER_ProcessStartupRecovery($_IPS["TARGET"]);');
+
         $this->RegisterTimer(
             'UpdateData',
             0,
@@ -108,6 +111,13 @@ class OpenMeteoWeather extends IPSModule
         $this->registerOperationalVariables();
         $this->registerWeatherVariables();
         $this->registerSoilVariables();
+
+        // Cross-instance module calls require a fully initialized kernel.
+        $this->SetTimerInterval('StartupRecovery', 0);
+        if (IPS_GetKernelRunlevel() !== KR_READY) {
+            $this->SetTimerInterval('UpdateData', 0);
+            return;
+        }
 
         try {
             $this->reconcileSoilVariableVisibility();
@@ -151,6 +161,25 @@ class OpenMeteoWeather extends IPSModule
             $this->SetValue('DataState', 5);
             $this->SetStatus(self::STATUS_CONFIGURATION_ERROR);
         }
+    }
+
+    /**
+     * @param int $TimeStamp
+     * @param int $SenderID
+     * @param int $Message
+     * @param array<int, mixed> $Data
+     */
+    public function MessageSink($TimeStamp, $SenderID, $Message, $Data): void
+    {
+        if ($SenderID === 0 && $Message === IPS_KERNELSTARTED) {
+            $this->SetTimerInterval('StartupRecovery', 5000);
+        }
+    }
+
+    public function ProcessStartupRecovery(): void
+    {
+        $this->SetTimerInterval('StartupRecovery', 0);
+        $this->ApplyChanges();
     }
 
     public function UpdateData(): string

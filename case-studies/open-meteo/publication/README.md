@@ -45,6 +45,16 @@ does not authorize productive location, PV or consumer configuration.
 
 ## Integrity
 
+### 0.8.15 — kernel startup compatibility
+
+Weather, DWD and solar configuration now defer calls to other instances until
+the kernel is ready. A one-shot recovery after the kernel-start notification
+restores configured polling without discarding the last-good forecast cache.
+When updating the entire library through Module Control, let the reload finish
+before applying any instance configuration that reports an unavailable
+interface. Kernel lifecycle regression tests cover the deferred recovery;
+deployment validation does not by itself prove a complete service restart.
+
 `fileset.sources.json` records the source path, SHA-256 and byte count of every
 generated module payload. `fileset.sha256` identifies the complete generated
 fileset. README and license are publication metadata and are not part of that
