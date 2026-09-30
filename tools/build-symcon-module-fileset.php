@@ -164,11 +164,16 @@ final class SaefSymconModuleFilesetBuilder
             !str_starts_with($path, 'case-studies/open-meteo/distribution/')
             && !str_starts_with($path, 'case-studies/media-carousel/distribution/')
             && !str_starts_with($path, 'case-studies/navimow/distribution/')
+            && !str_starts_with($path, 'case-studies/storage-heater/distribution/')
             && !str_starts_with($path, 'case-studies/owntracks-position-map/candidate/')
             && !str_starts_with($path, 'case-studies/owntracks-position-map/distribution/')
             && !in_array($path, [
                 'helpers/common/Validation.php',
                 'helpers/diagnostics/ConfigurationHash.php',
+                'helpers/diagnostics/Registry.php',
+                'helpers/diagnostics/Statistics.php',
+                'helpers/diagnostics/ErrorRingBuffer.php',
+                'helpers/object/EnsureVariable.php',
                 'helpers/object/EnsureProfile.php',
             ], true)
         ) {

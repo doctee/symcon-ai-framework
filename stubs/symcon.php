@@ -54,10 +54,11 @@ class IPSModule
         int $position
     ): void {}
 
+    /** @param string|array<string, mixed> $profile */
     protected function RegisterVariableInteger(
         string $ident,
         string $name,
-        string $profile,
+        string|array $profile,
         int $position
     ): void {}
 
@@ -75,6 +76,7 @@ class IPSModule
         int $position
     ): void {}
 
+    protected function EnableAction(string $ident): bool {}
     protected function SetValue(string $ident, mixed $value): void {}
     protected function GetValue(string $ident): mixed {}
     protected function GetIDForIdent(string $ident): int {}

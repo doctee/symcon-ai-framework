@@ -1,0 +1,11 @@
+parameters:
+    level: 5
+    phpVersion: 80200
+    paths:
+        - distribution
+    bootstrapFiles:
+        - tests/api-bootstrap.php
+    scanDirectories:
+        - ../../helpers
+    parallel:
+        maximumNumberOfProcesses: 1
