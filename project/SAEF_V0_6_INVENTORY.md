@@ -1,6 +1,6 @@
 # SAEF v0.6 Engineering Inventory
 
-**Status:** Initial inventory; scope not frozen
+**Status:** Initial inventory; one product goal accepted; scope not frozen
 **Inventory date:** 2026-09-16
 **Published baseline:** `v0.5.0`
 **Baseline revision:** `f02d36a8c404f949b8d4433db8f28fa2d52dd66b`
@@ -10,6 +10,10 @@
 This inventory opens the post-v0.5 engineering intake without admitting any
 candidate to a release. It separates repository work from private observation,
 live mutation, publication and retention authority.
+
+The deployment-channel usability direction is now accepted as a v0.6 product
+goal. This records the intended operator contract but does not yet admit an
+implementation or authorize repository, Windows or live work.
 
 ## Baseline
 
@@ -25,6 +29,20 @@ These facts describe the starting point. They do not choose a v0.6 feature
 scope or authorize any operation.
 
 ## Candidate Intake
+
+### Deployment channel operator simplification
+
+Routine supported deployments should converge on two human-facing steps:
+prepare one reviewed plan, then apply that exact plan once. Qualification,
+staging, fresh preflight, one-use claim, activation, postflight and rollback
+remain explicit internal phases and retain their full machine-verifiable
+evidence. Their generation names and intermediate hash chain should not become
+the routine human approval language.
+
+The goal, preserved safety boundary, typical channel work and acceptance
+criteria are defined in
+`project/SAEF_V0_6_DEPLOYMENT_CHANNEL_USABILITY_GOAL.md`. Implementation is
+deferred to a dedicated workstream.
 
 ### Open-Meteo calibration observation
 
@@ -71,8 +89,9 @@ A candidate enters a future frozen scope only after it has:
 
 ## Non-Commitments
 
-This inventory does not decide the next version number beyond the working v0.6
-label, freeze a release scope, change the public helper API, activate a helper
-or calibration factor, publish a module, mutate a live system, restart a
-service or delete retained material. The Shared Statistics reconciliation
+This inventory does not freeze the complete v0.6 release scope, choose the
+deployment-channel implementation, change the public helper API, activate a
+helper or calibration factor, publish a module, mutate a live system, restart
+a service or delete retained material. The accepted usability goal grants no
+repository, Windows or live authority. The Shared Statistics reconciliation
 records a completed historical gate; it does not admit a new v0.6 feature.
