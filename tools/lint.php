@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 $directories = [
+    'case-studies/profile-monitor',
     'helpers',
     'templates',
     'examples',

@@ -14,6 +14,11 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added an offline Profile Monitor presentation evaluator with opt-in Zigbee2MQTT
+  and Blink battery rules, a read-only preview, compatibility tests and private
+  candidate preparation. The attributed MIT fork was published as version 1.7
+  and migrated live with preserved instance and output identities.
+
 - Added opt-in calibrated ControlLight brightness ranges with quantized-minimum
   feedback and accepted composition with qualified direct dim starts. Existing
   callers retain their default mapping; no fleet-wide anti-flash opt-in is implied.

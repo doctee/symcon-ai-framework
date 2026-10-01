@@ -31,6 +31,9 @@ example when:
   handling; or
 - a private integration should inform SAEF without exposing installation data.
 
+The [Profile Monitor case study](profile-monitor/README.md) documents an offline
+presentation-aware monitoring candidate and its upstream permission boundary.
+
 Current examples include ControlLight, MediaCarousel, the MQTT Discovery
 Exporter, Navimow, Open-Meteo and OwnTracks. Irrigation, HomeConnect or other
 domains should receive their own case study only when the material documents
