@@ -191,3 +191,7 @@ phpcs:
 
 check: test-open-meteo-offline
 	composer check
+
+.PHONY: test-profile-monitor
+test-profile-monitor:
+	composer test:profile-monitor

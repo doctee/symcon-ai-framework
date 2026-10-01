@@ -217,6 +217,10 @@
         "test:workstream-handover": [
             "tests/repository/workstream-handover.sh"
         ],
+        "test:profile-monitor": [
+            "@php case-studies/profile-monitor/tests/runtime.php",
+            "@php case-studies/profile-monitor/tests/runtime.php --legacy-runtime"
+        ],
         "symcon-schema:check": [
             "@php tools/validate-symcon-json.php"
         ],
@@ -285,6 +289,7 @@
             "@test:navimow-mqtt",
             "@test:navimow-distribution",
             "@test:media-carousel",
+            "@test:profile-monitor",
             "@test:module-publication",
             "@test:storage-heater",
             "@phpstan",

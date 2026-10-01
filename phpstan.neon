@@ -6,6 +6,8 @@ parameters:
         maximumNumberOfProcesses: 1
 
     paths:
+        - case-studies/profile-monitor/candidate
+        - case-studies/profile-monitor/tools
         - helpers
         - templates
         - examples

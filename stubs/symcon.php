@@ -140,6 +140,10 @@ function IPS_CategoryExists(int $id): bool {}
  * }
  */
 function IPS_GetVariable(int $id): array {}
+/** @return list<int> */
+function IPS_GetVariableList(): array {}
+/** Resolved presentation parameters, available since Symcon 8.1. */
+function IPS_GetVariablePresentation(int $id): array {}
 function IPS_GetEvent(int $id): array {}
 function IPS_GetInstance(int $id): array {}
 function IPS_GetConfiguration(int $instanceID): string {}
