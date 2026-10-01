@@ -1,6 +1,6 @@
 # Symcon AI Engineering Framework – AI Project Charter
 
-Version: 0.5 released; 0.6 inventory open
+Version: 0.5 released; 0.6 usability goal recorded, scope open
 Status: Stable Draft
 Scope: Public core, no private installation data
 

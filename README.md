@@ -95,6 +95,7 @@ Important current artifacts include:
 - `project/SAEF_V0_5_PUBLIC_API_AUDIT.md`
 - `project/SAEF_V0_5_RELEASE_READINESS.md`
 - `project/SAEF_V0_6_INVENTORY.md`
+- `project/SAEF_V0_6_DEPLOYMENT_CHANNEL_USABILITY_GOAL.md`
 - `project/SAEF_V0_6_SHARED_STATISTICS_RECONCILIATION.md`
 - `project/SAEF_DEPLOYMENT_CHANNEL_SECURITY_GATE.md`
 - `project/STANDALONE_MODULE_DEPLOYMENT_CHANNEL.md`
@@ -178,9 +179,14 @@ evolution.
 Current `main` starts the post-v0.5 development line. The initial v0.6
 inventory admits no work automatically: operational observations, retention
 and later case-study changes require fresh evidence and their own explicit
-gates. A repository-only reconciliation closed the stale Shared Statistics
-deferral without another live activation or restart. See
-`project/SAEF_V0_6_INVENTORY.md` for the current intake and non-commitments.
+gates. The accepted v0.6 deployment-channel usability goal reduces routine
+operator interaction to plan preparation and one exact apply action while
+preserving the existing internal qualification, preflight, claim, postflight
+and rollback contracts. Its implementation is deferred. A repository-only
+reconciliation closed the stale Shared Statistics deferral without another
+live activation or restart. See `project/SAEF_V0_6_INVENTORY.md` and
+`project/SAEF_V0_6_DEPLOYMENT_CHANNEL_USABILITY_GOAL.md` for the current
+direction and non-commitments.
 
 The v0.5 MQTT runtime fileset is active, its two owners were migrated through
 the one-use transaction, and a supervised rapid-command scenario independently
