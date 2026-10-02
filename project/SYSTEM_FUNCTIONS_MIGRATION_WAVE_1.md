@@ -3,6 +3,17 @@
 **Operational status:** 2026-07-23; all three pilot migrations and the final
 regular scheduled-execution gate passed bounded read-only verification.
 
+## Historical snapshot note
+
+The figures below describe the Wave-1 observation point. A refreshed
+2026-10-02 scanner additionally excludes calls resolved by a same-script local
+function definition. That correction removes false `System.Functions`
+attribution from the profile cohort. Current counts and the next migration
+cohorts are recorded in
+[`SYSTEM_FUNCTIONS_MIGRATION_WAVE_2.md`](SYSTEM_FUNCTIONS_MIGRATION_WAVE_2.md).
+Wave 1 remains unchanged as an audit record rather than being rewritten as if
+the later evidence had existed at the time.
+
 ## Outcome
 
 The first migration preparation wave identified direct callers without storing

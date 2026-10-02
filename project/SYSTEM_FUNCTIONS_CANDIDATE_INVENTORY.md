@@ -1,7 +1,7 @@
 # System Functions Candidate Inventory
 
-**Release-review status:** 2026-07-20; historical live evidence was not
-re-collected during this documentation review.
+**Operational review status:** 2026-10-02; direct-call evidence was refreshed
+after the second migration wave.
 
 ## Status and scope
 
@@ -23,6 +23,11 @@ global function calls. Function definitions, comments, string contents, method
 calls, static calls and longer function names were excluded. Object IDs, object
 names, script content, topics, hostnames and other installation data were not
 retained in this artifact.
+
+The refreshed scanner also excludes calls in a script that defines the same
+function locally. This distinction corrected an earlier false attribution:
+locally shadowed profile helpers are not consumers of the autoloaded
+`System.Functions` implementation.
 
 Usage counts are migration indicators, not runtime telemetry. `Scripts` is the
 number of scripts containing a direct global call and `calls` is the number of
@@ -62,7 +67,7 @@ caller scan.
 | `GetPopupByIdent` | Wilkware | No popup helper | Thin lookup wrapper with no demonstrated demand. | 0/0 | **Discard**. |
 | `CreateVariableByName` | Wilkware | `SAEF_EnsureVariable` | Reusable intent, but name-based identity and implicit profile/action assumptions conflict with SAEF. | 12/111 | **Replace with highest priority**. Migrate callers to explicit Ident, type, profile and action ownership. |
 | `GetVariableByName` | Wilkware | Native lookup; validation utilities | Name-based convenience. | 0/0 | **Discard**. |
-| `CreateVariableByIdent` | Wilkware | `SAEF_EnsureVariable` | Reusable intent already covered by a stronger helper. | 2/4 | **Replace**. |
+| `CreateVariableByIdent` | Wilkware | `SAEF_EnsureVariable` | Reusable intent already covered by a stronger helper. | 0/0 | **Replaced**; the completed pilot migrated all four direct calls. |
 | `GetVariableByIdent` | Wilkware | Native lookup; validation utilities | Thin lookup wrapper. | 0/0 | **Discard**. |
 | `CreateScriptByName` | Wilkware | `SAEF_EnsureScript` | Reusable intent, but identity is based on a mutable caption. | 0/0 | **Replace**. |
 | `GetScriptByName` | Wilkware | Native lookup; validation utilities | Name-based convenience. | 0/0 | **Discard**. |
@@ -71,9 +76,9 @@ caller scan.
 
 | Function | Origin | Existing SAEF helper | Reuse and assumptions | Usage (scripts/calls) | Decision and target |
 |---|---|---|---|---:|---|
-| `CreateProfile` | Wilkware | `SAEF_EnsureProfile` | Generic profile creation, already covered by an idempotent helper. | 1/1 | **Replace**. |
+| `CreateProfile` | Wilkware | `SAEF_EnsureProfile` | Generic profile creation, already covered by an idempotent helper. | 0/0 | **No external dependency**; one apparent call is resolved by a same-script local definition. |
 | `CreateProfileBoolean` | Wilkware | `SAEF_EnsureProfile` | Type-specific convenience adds no independent engineering contract. | 0/0 | **Replace**. |
-| `CreateProfileInteger` | Wilkware | `SAEF_EnsureProfile` | Reused locally, but duplicates existing profile reconciliation. | 2/14 | **Replace with medium priority**. |
+| `CreateProfileInteger` | Wilkware | `SAEF_EnsureProfile` | One external call remains. Thirteen other apparent calls resolve to a same-script local definition. | 1/1 | **Replace after the active runtime exports `SAEF_EnsureProfile`**; do not bypass the runtime-fileset boundary. |
 | `CreateProfileFloat` | Wilkware | `SAEF_EnsureProfile` | Type-specific convenience already covered. | 0/0 | **Replace**. |
 | `CreateProfileString` | Wilkware | `SAEF_EnsureProfile` | Type-specific convenience already covered. | 0/0 | **Replace**. |
 | `UnregisterProfile` | Wilkware | No removal helper | Destructive lifecycle operation with global impact; ownership and dependency checks are required. | 0/0 | **Adapt as Knowledge**, not as a public helper yet. |
@@ -82,10 +87,10 @@ caller scan.
 
 | Function | Origin | Existing SAEF helper | Reuse and assumptions | Usage (scripts/calls) | Decision and target |
 |---|---|---|---|---:|---|
-| `CreateEventByName` | Wilkware | `SAEF_EnsureCyclicScriptEvent` and `SAEF_EnsureTriggeredScriptEvent` cover explicit bounded contracts | Reusable event intent, but name-based ownership, caption-selected actions and implicit target binding are unsafe. | 1/1 | **Replace or adapt after caller mapping**; use an existing helper when its contract matches and document any uncovered schedule semantics before extending it. |
-| `CreateEventByNameFromTo` | Wilkware | Partial coverage by `SAEF_EnsureCyclicScriptEvent` | Time-window scheduling is reusable, but boundary, overnight and target-script semantics need an explicit contract. | 1/1 | **Adapt as Knowledge/Reference**. |
-| `CreateTimerByName` | Wilkware | Partial coverage by `SAEF_EnsureCyclicScriptEvent` | Timer creation is reusable; name identity and implicit action binding are not. | 1/1 | **Adapt**, preferably by composing or deliberately extending the existing helper. |
-| `GetEventByName` | Wilkware | Native lookup; validation utilities | Highly used name-based lookup that exposes migration debt rather than a reusable abstraction. | 36/36 | **Replace with highest priority** using stable Idents and explicit ownership. |
+| `CreateEventByName` | Wilkware | `SAEF_EnsureCyclicScriptEvent` and `SAEF_EnsureTriggeredScriptEvent` cover explicit bounded contracts | Reusable event intent, but name-based ownership, caption-selected actions and implicit target binding are unsafe. | 0/0 | **Replaced** in Wave 2 with an owner-local explicit schedule contract. |
+| `CreateEventByNameFromTo` | Wilkware | Partial coverage by `SAEF_EnsureCyclicScriptEvent` | Time-window scheduling is reusable, but boundary, overnight and target-script semantics need an explicit contract. | 0/0 | **Replaced** in Wave 2 with an owner-local explicit schedule contract; no new public helper was added. |
+| `CreateTimerByName` | Wilkware | Partial coverage by `SAEF_EnsureCyclicScriptEvent` | Timer creation is reusable; name identity and implicit action binding are not. | 0/0 | **Replaced** in Wave 2 by the existing helper. |
+| `GetEventByName` | Wilkware | Native lookup; validation utilities | Highly used name-based lookup that exposes migration debt rather than a reusable abstraction. | 35/35 | **Replace with highest priority** using stable Idents and explicit ownership. |
 
 ### Actions and `RequestAction`
 
@@ -100,7 +105,7 @@ external control and `SetValue()` only for script-owned internal state.
 |---|---|---|---|---:|---|
 | `RegisterArchive` | Wilkware | No archive-configuration helper; `EK-003` covers safe processing | Reusable configuration intent, but archive instance ownership, aggregation policy and validation must be explicit. | 1/3 | **Adapt as Knowledge/Reference**; consider a helper only after a second proven use case. |
 | `UnregisterArchive` | Wilkware | No removal helper | Destructive configuration operation that needs ownership and retention safeguards. | 0/0 | **Adapt as Knowledge**, not as a helper. |
-| `WaitForBoolValue` | Local | `SAEF_WaitForVariable` | Generic polling intent, but special-cases booleans and omits the existing validation/change contract. | 3/3 | **Replace** with the existing helper. |
+| `WaitForBoolValue` | Local | `SAEF_WaitForVariable` | Generic polling intent, but special-cases booleans and omits the existing validation/change contract. | 0/0 | **Replaced** in Wave 2 after preserving immediate-success and strict-boolean semantics at each call site. |
 | `WaitForVariable` | Local | `SAEF_WaitForVariable` | Generic duplicate with different update/change semantics, but no direct caller was found. Earlier text matching confused it with the longer SAEF helper name. | 0/0 | **Discard after an indirect-call audit**; retain `SAEF_WaitForVariable`. |
 | `UpdateDeviceWarningSummary` | Local | No direct helper; diagnostics helpers cover metadata, not this domain aggregation | Domain-specific object-tree convention: event children, links, warning polarity, captions and visibility side effects. It also persists runtime object references. | 17/17 | **Keep private**. Extract only a sanitized **Case Study** after documenting the domain contract; do not promote it to a helper. |
 
@@ -120,7 +125,7 @@ external control and `SetValue()` only for script-owned internal state.
 
 | Function | Origin | Existing SAEF helper | Reuse and assumptions | Usage (scripts/calls) | Decision and target |
 |---|---|---|---|---:|---|
-| `ExtractGuid` | Wilkware | No helper | Generic parsing convenience, but accepted input forms and failure behavior are implicit. | 1/1 | **Adapt only if recurring**; otherwise keep at the call site. |
+| `ExtractGuid` | Wilkware | No helper | Generic parsing convenience, but accepted input forms and failure behavior are implicit. | 0/0 | **Replaced** in Wave 2 by an owner-local, observed module identity; no public parser was introduced. |
 | `RegisterHook` | Wilkware | No hook helper | Reusable integration operation with global routing and ownership/security implications. | 0/0 | **Adapt as Knowledge/Reference**, not a helper. |
 | `UnregisterHook` | Wilkware | No hook helper | Destructive global operation; the inspected global function also relies on object context that is not available there. | 0/0 | **Discard implementation**; document safe owned cleanup if a real use case appears. |
 
@@ -131,8 +136,9 @@ the public helper surface:
 
 1. Variable, category, dummy, script and profile creation already have SAEF
    equivalents with stronger idempotency and ownership contracts.
-2. Both local wait functions overlap `SAEF_WaitForVariable`; call sites need a
-   semantic migration check, not another polling API.
+2. Both local wait functions overlap `SAEF_WaitForVariable`. The three active
+   boolean call sites passed their semantic migration and no new polling API
+   was introduced.
 3. Event scheduling has real usage. SAEF already covers cyclic and triggered
    script events, but time-window and caption-selected action semantics remain
    outside those contracts. Caller mapping and an explicit knowledge contract
@@ -208,7 +214,7 @@ foreign/local implementation code.
 | Local authorship | Which local additions are wholly original, and under what terms may they be published? | Establish provenance for each local function. |
 | Usage evidence | Tokenized direct-call counts do not prove runtime frequency or semantic equivalence and cannot see dynamic invocation. | Review callers in a private migration worksheet; never publish their IDs or names. |
 | Variable migration | Does every `CreateVariableByName` caller have a stable Ident and explicit action owner? | Define per-caller target Ident, type, profile and action contract. |
-| Wait semantics | Some callers may depend on update timestamps, change timestamps, lookback or strict value comparison. | Compare each caller with `SAEF_WaitForVariable` before replacement. |
+| Wait semantics | The migrated callers required immediate success when the value already matched, in addition to strict boolean comparison. | Preserve this call-site guard for future migrations; do not assume the helper alone is equivalent. |
 | Event ownership | Existing callers may depend on caption-based actions or implicit script binding. | Define target script, schedule, active state, event action and ownership explicitly. |
 | Archive ownership | Archive configuration is globally observable and may affect retention. | Define archive instance selection, aggregation policy and safe cleanup. |
 | Warning domain | The meaning of warning polarity, child links and global link visibility is installation-specific. | Keep private until a sanitized domain contract is reviewed. |
@@ -217,21 +223,22 @@ foreign/local implementation code.
 ## Concrete implementation sequence
 
 This sequence records the original migration order. The private caller
-inventory, deterministic runtime deployment and first two low-risk replacements
-are now complete as documented in the Wave 1 and pilot records. Remaining steps
-are neither completed nor authorized merely because they appear below.
+inventory, deterministic runtime deployment, Ident-based pilot and the bounded
+Wave-2 event/wait migration are complete. Remaining steps are neither completed
+nor authorized merely because they appear below.
 
 1. Create a private caller migration worksheet for the four highest-impact
    areas: variable creation, event lookup/scheduling, wait semantics and warning
    aggregation. Store no private data in public SAEF files.
 2. Migrate a low-risk `CreateVariableByIdent` caller to `SAEF_EnsureVariable`
    privately and verify idempotency before addressing name-based callers.
-3. Audit for dynamic or indirect invocation of the unused local
-   `WaitForVariable`; if none exists, retire it and retain
-   `SAEF_WaitForVariable`. Compare the three `WaitForBoolValue` call sites with
-   the SAEF helper's change/update and expected-value semantics.
-4. Map event callers to `SAEF_EnsureCyclicScriptEvent` and
-   `SAEF_EnsureTriggeredScriptEvent`. Document only the schedule-window or
+3. Completed in Wave 2: compare and migrate the three `WaitForBoolValue` call
+   sites while preserving immediate-success and strict-value semantics. The
+   unused local `WaitForVariable` remains a separate retirement decision.
+4. Partially completed in Wave 2: map event creators to
+   `SAEF_EnsureCyclicScriptEvent`, `SAEF_EnsureTriggeredScriptEvent` and
+   owner-local explicit scheduling. Continue by coordinating the remaining
+   event lookups with stable Ident ownership. Document only schedule-window or
    action semantics that remain uncovered.
 5. Create a future event-scheduling Knowledge article and Reference only after
    that uncovered contract has been approved. Validate the Reference through
