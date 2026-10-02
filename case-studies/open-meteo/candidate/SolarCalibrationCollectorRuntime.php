@@ -36,6 +36,9 @@ final class SolarCalibrationCollectorRuntime
             $captures = [];
             $analyses = [];
             foreach ($configuration['targets'] as $target) {
+                $this->recoverPendingWrites(
+                    $configuration['snapshotDirectory'] . DIRECTORY_SEPARATOR . $target['key']
+                );
                 $captures[$target['key']] = $this->capture($configuration, $target);
                 $analyses[$target['key']] = $this->analyzeBatch($configuration, $target);
             }
@@ -944,6 +947,7 @@ final class SolarCalibrationCollectorRuntime
     /** @phpstan-impure */
     private function verifiedImmutableFileExists(string $path): bool
     {
+        $this->recoverPendingWrite($path);
         $hashPath = $path . '.sha256';
         if (!is_file($path) && !is_file($hashPath)) {
             return false;
@@ -965,9 +969,96 @@ final class SolarCalibrationCollectorRuntime
         if ($this->verifiedImmutableFileExists($path)) {
             return;
         }
+        if (strlen($content) > 4 * 1024 * 1024) {
+            throw new RuntimeException('Calibration write exceeds recovery size bound.');
+        }
+        $journal = json_encode([
+            'version' => 1,
+            'name' => basename($path),
+            'sha256' => hash('sha256', $content),
+            'content' => $content,
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if (strlen($journal) > 8 * 1024 * 1024) {
+            throw new RuntimeException('Calibration recovery journal is too large.');
+        }
+        // Commit intent before either immutable file becomes visible.
+        $this->publishNewFile($path . '.pending', $journal);
+        $this->recoverPendingWrite($path);
+        if (!$this->verifiedImmutableFileExists($path)) {
+            throw new RuntimeException('Calibration snapshot verification failed.');
+        }
+    }
+
+    private function recoverPendingWrites(string $directory): void
+    {
+        $journals = glob($directory . DIRECTORY_SEPARATOR . '*.json.pending') ?: [];
+        if (count($journals) > 16) {
+            throw new RuntimeException('Calibration pending-write count exceeds recovery bound.');
+        }
+        foreach ($journals as $journal) {
+            $name = basename($journal);
+            if (preg_match('/^(forecast-[0-9]+-[a-f0-9]{64}(\.analysis-v2-[a-f0-9]{64})?|collection-limit-reached)\.json\.pending$/', $name) !== 1) {
+                throw new RuntimeException('Unrecognized calibration recovery target.');
+            }
+            $this->recoverPendingWrite(substr($journal, 0, -8));
+        }
+    }
+
+    private function recoverPendingWrite(string $path): void
+    {
+        $journalPath = $path . '.pending';
+        foreach ([$path, $path . '.sha256', $journalPath] as $candidate) {
+            if (is_link($candidate) || (file_exists($candidate) && !is_file($candidate))) {
+                throw new RuntimeException('Unsafe calibration recovery path.');
+            }
+        }
+        if (!is_file($journalPath)) {
+            return;
+        }
+        $size = filesize($journalPath);
+        if ($size === false || $size > 8 * 1024 * 1024) {
+            throw new RuntimeException('Calibration recovery journal is too large.');
+        }
+        $journal = json_decode((string) file_get_contents($journalPath), true, 16, JSON_THROW_ON_ERROR);
+        if (
+            !is_array($journal) || ($journal['version'] ?? null) !== 1
+            || ($journal['name'] ?? null) !== basename($path)
+            || !is_string($journal['content'] ?? null) || strlen($journal['content']) > 4 * 1024 * 1024
+            || !is_string($journal['sha256'] ?? null)
+            || !hash_equals(hash('sha256', $journal['content']), $journal['sha256'])
+        ) {
+            throw new RuntimeException('Invalid calibration recovery journal.');
+        }
+        $hashPath = $path . '.sha256';
+        // Check ALL existing bytes before completing either missing component.
+        if (
+            (is_file($path) && file_get_contents($path) !== $journal['content'])
+            || (is_file($hashPath) && file_get_contents($hashPath) !== $journal['sha256'] . "\n")
+        ) {
+            throw new RuntimeException('Calibration recovery conflicts with existing evidence.');
+        }
+        if (!is_file($path)) {
+            $this->publishNewFile($path, $journal['content']);
+        }
+        if (!is_file($hashPath)) {
+            $this->publishNewFile($hashPath, $journal['sha256'] . "\n");
+        }
+        if (hash_file('sha256', $path) !== $journal['sha256'] || trim((string) file_get_contents($hashPath)) !== $journal['sha256']) {
+            throw new RuntimeException('Calibration recovery readback failed.');
+        }
+        if (!unlink($journalPath)) {
+            throw new RuntimeException('Completed calibration journal could not be retired.');
+        }
+    }
+
+    // Caller owns the collector semaphore. Never overwrite an existing target.
+    private function publishNewFile(string $path, string $content): void
+    {
         $temporary = $path . '.tmp-' . bin2hex(random_bytes(8));
-        $hashTemporary = $path . '.sha256.tmp-' . bin2hex(random_bytes(8));
         try {
+            if (file_exists($path) || is_link($path)) {
+                throw new RuntimeException('Calibration publication target already exists.');
+            }
             if (file_put_contents($temporary, $content, LOCK_EX) !== strlen($content)) {
                 throw new RuntimeException('Calibration snapshot write was incomplete.');
             }
@@ -975,24 +1066,10 @@ final class SolarCalibrationCollectorRuntime
             if (is_file($path) || !rename($temporary, $path)) {
                 throw new RuntimeException('Calibration snapshot activation failed.');
             }
-            $hash = hash_file('sha256', $path);
-            if ($hash === false || file_put_contents($hashTemporary, $hash . "\n", LOCK_EX) !== 65) {
-                throw new RuntimeException('Calibration snapshot hash write failed.');
-            }
-            @chmod($hashTemporary, 0600);
-            if (is_file($path . '.sha256') || !rename($hashTemporary, $path . '.sha256')) {
-                throw new RuntimeException('Calibration snapshot hash activation failed.');
-            }
         } finally {
             if (is_file($temporary)) {
                 @unlink($temporary);
             }
-            if (is_file($hashTemporary)) {
-                @unlink($hashTemporary);
-            }
-        }
-        if (!$this->verifiedImmutableFileExists($path)) {
-            throw new RuntimeException('Calibration snapshot verification failed.');
         }
     }
 }

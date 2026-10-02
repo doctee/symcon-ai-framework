@@ -14,6 +14,9 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added bounded journal-based recovery for interrupted Open-Meteo calibration
+  writes, preserving immutable evidence and rejecting conflicting file pairs.
+
 - Added an offline Profile Monitor presentation evaluator with opt-in Zigbee2MQTT
   and Blink battery rules, a read-only preview, compatibility tests and private
   candidate preparation. The attributed MIT fork was published as version 1.7
