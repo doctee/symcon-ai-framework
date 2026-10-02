@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+const KR_INIT = 10102;
+const KR_READY = 10103;
+const IPS_KERNELSTARTED = 10001;
 const IS_ACTIVE = 102;
 const INSTANCE_VISUALIZATION_TYPE_HTML_FULLSCREEN = 2;
 
@@ -23,6 +26,31 @@ abstract class IPSModuleStrict
     private int $applyCalls = 0;
     /** @var list<array{action: string, address: string}> */
     private array $hookCalls = [];
+
+    /** @var array<string, int> */
+    public array $testTimers = [];
+    /** @var array<string, string> */
+    public array $testTimerScripts = [];
+    /** @var list<array{int, int}> */
+    public array $testMessages = [];
+
+    protected function RegisterMessage(int $sender, int $message): bool
+    {
+        $this->testMessages[] = [$sender, $message];
+
+        return true;
+    }
+
+    protected function RegisterTimer(string $ident, int $interval, string $script): void
+    {
+        $this->testTimers[$ident] = $interval;
+        $this->testTimerScripts[$ident] = $script;
+    }
+
+    protected function SetTimerInterval(string $ident, int $interval): void
+    {
+        $this->testTimers[$ident] = $interval;
+    }
 
     public function Create(): void
     {
@@ -260,8 +288,17 @@ function IPS_GetReferenceList(int $id): array
     throw new RuntimeException('Reentrant instance reference query rejected.');
 }
 
+function IPS_GetKernelRunlevel(): int
+{
+    return $GLOBALS['ownTracksRuntimeFake']['kernelRunlevel'] ?? KR_READY;
+}
+
 function SAEFLOCATION_GetDescriptor(int $instanceId): string
 {
+    $GLOBALS['ownTracksRuntimeFake']['descriptorCalls'][] = $instanceId;
+    if (IPS_GetKernelRunlevel() !== KR_READY) {
+        throw new RuntimeException('Location module has not initialized yet.');
+    }
     $descriptors = $GLOBALS['ownTracksRuntimeFake']['locationDescriptors'] ?? [];
     $descriptor = is_array($descriptors)
         ? ($descriptors[$instanceId] ?? ['success' => false])
@@ -610,6 +647,44 @@ $module->testSetProperty(
     )
 );
 $module->ApplyChanges();
+
+$startupModule = new TestOwnTracksPositionMapCandidate();
+$startupModule->Create();
+runtimeCheck(
+    $startupModule->testMessages === [[0, IPS_KERNELSTARTED]],
+    'Kernel-start message subscription is missing.'
+);
+$startupModule->testSetProperty('Sources', json_encode(runtimeSources(), JSON_THROW_ON_ERROR));
+$startupModule->testSetProperty('EtaTargetLocations', json_encode([
+    ['locationInstanceId' => $northLocationID],
+    ['locationInstanceId' => $southLocationID],
+], JSON_THROW_ON_ERROR));
+$beforeDescriptors = count($GLOBALS['ownTracksRuntimeFake']['descriptorCalls'] ?? []);
+$GLOBALS['ownTracksRuntimeFake']['kernelRunlevel'] = KR_INIT;
+$startupModule->ApplyChanges();
+runtimeCheck(
+    count($GLOBALS['ownTracksRuntimeFake']['descriptorCalls'] ?? []) === $beforeDescriptors
+        && $startupModule->testReferences() === []
+        && $startupModule->testLastUpdate() === [],
+    'Startup accessed dependencies or published invalid configuration before KR_READY.'
+);
+$startupModule->MessageSink(1, 1234, IPS_KERNELSTARTED, []);
+runtimeCheck($startupModule->testTimers['StartupRecovery'] === 0, 'Non-kernel message armed recovery.');
+$GLOBALS['ownTracksRuntimeFake']['kernelRunlevel'] = KR_READY;
+$startupModule->MessageSink(2, 0, IPS_KERNELSTARTED, []);
+runtimeCheck($startupModule->testTimers['StartupRecovery'] === 5000, 'Recovery was not scheduled.');
+runtimeCheck(
+    count($GLOBALS['ownTracksRuntimeFake']['descriptorCalls'] ?? []) === $beforeDescriptors,
+    'Synchronous kernel message called another module.'
+);
+$startupModule->ProcessStartupRecovery();
+runtimeCheck(
+    $startupModule->testStatus() === IS_ACTIVE
+        && $startupModule->testTimers['StartupRecovery'] === 0
+        && ($startupModule->testLastUpdate()['action'] ?? null) === 'bootstrap',
+    'Deferred startup did not initialize once and disarm its timer.'
+);
+$GLOBALS['ownTracksRuntimeFake']['activeModule'] = $module;
 
 runtimeCheck($module->testApplyCalls() === 1, 'Parent ApplyChanges was not called.');
 runtimeCheck($module->testStatus() === IS_ACTIVE, 'Valid runtime is not active.');
