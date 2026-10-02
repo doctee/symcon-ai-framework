@@ -103,6 +103,13 @@ class OwnTracksPositionMap extends IPSModuleStrict
             . '"tileAuthority":{"mode":"none"},'
             . '"tileFallback":{"mode":"none"}}'
         );
+        // Sender 0 denotes the documented kernel message source, not an object target.
+        $this->RegisterMessage(0, IPS_KERNELSTARTED);
+        $this->RegisterTimer(
+            'StartupRecovery',
+            0,
+            'SAEFOTPM_ProcessStartupRecovery($_IPS["TARGET"]);'
+        );
         $this->RegisterAttributeString('ActiveRequests', '{}');
         $this->RegisterAttributeString('RegisteredReferences', '[]');
         $this->RegisterAttributeString('TileCapabilitySecret', '');
@@ -121,6 +128,12 @@ class OwnTracksPositionMap extends IPSModuleStrict
     public function ApplyChanges(): void
     {
         parent::ApplyChanges();
+
+        // SharedLocation instances may be initialized later during kernel startup.
+        $this->SetTimerInterval('StartupRecovery', 0);
+        if (IPS_GetKernelRunlevel() !== KR_READY) {
+            return;
+        }
 
         $startupPhase = 'reference_cleanup';
         try {
@@ -202,6 +215,21 @@ class OwnTracksPositionMap extends IPSModuleStrict
                 ])
             );
         }
+    }
+
+    /** @param array<int, mixed> $Data */
+    public function MessageSink(int $TimeStamp, int $SenderID, int $Message, array $Data): void
+    {
+        if ($SenderID === 0 && $Message === IPS_KERNELSTARTED) {
+            // Leave the synchronous kernel notification before calling other modules.
+            $this->SetTimerInterval('StartupRecovery', 5000);
+        }
+    }
+
+    public function ProcessStartupRecovery(): void
+    {
+        $this->SetTimerInterval('StartupRecovery', 0);
+        $this->ApplyChanges();
     }
 
     private function startupFailureDiagnostic(
