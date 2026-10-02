@@ -356,6 +356,15 @@ class IPSModule
         return $this->values[$ident] ?? null;
     }
 
+    public function testSeedLegacyFloatProfile(string $ident, string $profile, float $value): void
+    {
+        if (!isset($this->variables[$ident]) || $this->variables[$ident]['type'] !== 'float') {
+            throw new RuntimeException('Legacy fixture requires an existing float variable.');
+        }
+        $this->variables[$ident]['profile'] = $profile;
+        $this->values[$ident] = $value;
+    }
+
     /** @return list<mixed> */
     public function testValueWrites(string $ident): array
     {
@@ -435,11 +444,11 @@ class IPSModule
         if (isset($this->variables[$ident])) {
             if (
                 $this->variables[$ident]['type'] !== $type
-                || $this->variables[$ident]['profile'] !== $profile
                 || $this->variables[$ident]['position'] !== $position
             ) {
                 throw new RuntimeException('Variable contract changed during repeated registration.');
             }
+            $this->variables[$ident]['profile'] = $profile;
 
             return;
         }
@@ -793,7 +802,16 @@ $weather->Create();
 $weather->ApplyChanges();
 scaffoldCheck($weather->testStatus() === 104, 'Unconfigured weather scaffold must be inactive.');
 scaffoldCheck(count($weather->testVariables()) === 43, 'Weather variable contract differs.');
-scaffoldCheck(count($scaffoldProfiles) === 12, 'Open-Meteo profile contract differs.');
+scaffoldCheck(count($scaffoldProfiles) === 13, 'Open-Meteo profile contract differs.');
+scaffoldCheck(
+    $scaffoldProfiles['OPENMETEO.Percent']['ProfileType'] === 2
+    && $scaffoldProfiles['OPENMETEO.Percent']['digits'] === 1
+    && $scaffoldProfiles['OPENMETEO.Percent']['minimum'] === 0.0
+    && $scaffoldProfiles['OPENMETEO.Percent']['maximum'] === 100.0
+    && $scaffoldProfiles['OPENMETEO.Percent']['step'] === 0.1
+    && $scaffoldProfiles['OPENMETEO.Percent']['suffix'] === ' %',
+    'Float percentage profile contract differs.'
+);
 $profiles = $scaffoldProfiles;
 $weatherVariables = $weather->testVariables();
 $soilVariableIdents = [
@@ -1348,6 +1366,11 @@ scaffoldCheck(
 );
 $solarVariables = $solar->testVariables();
 scaffoldCheck(
+    $solarVariables['CurrentHorizonLossPercent']['type'] === 'float'
+    && $solarVariables['CurrentHorizonLossPercent']['profile'] === 'OPENMETEO.Percent',
+    'Horizon loss must use a type-compatible float percentage profile.'
+);
+scaffoldCheck(
     ($solarVariables['TodayEnergyForecast']['profile'] ?? null) === '~Electricity',
     'Solar today energy profile differs from the counter presentation contract.'
 );
@@ -1638,6 +1661,19 @@ scaffoldCheck(
 scaffoldCheck(
     $counterSolar->testReadPublishedTodayForecastLocalDay() === '2025-01-02',
     'Failed solar publication advanced its local day.'
+);
+
+$horizonLossId = $runtimeSolar->testVariables()['CurrentHorizonLossPercent']['id'];
+$runtimeSolar->testSeedLegacyFloatProfile('CurrentHorizonLossPercent', '~Intensity.100', 12.75);
+$runtimeSolar->testClearValueWrites();
+$runtimeSolar->ApplyChanges();
+$runtimeSolar->ApplyChanges();
+scaffoldCheck(
+    $runtimeSolar->testVariables()['CurrentHorizonLossPercent']['id'] === $horizonLossId
+    && $runtimeSolar->testVariables()['CurrentHorizonLossPercent']['profile'] === 'OPENMETEO.Percent'
+    && $runtimeSolar->testReadValue('CurrentHorizonLossPercent') === 12.75
+    && $runtimeSolar->testValueWrites('CurrentHorizonLossPercent') === [],
+    'Profile migration must retain identity and fractional value without value writes.'
 );
 
 $runtimeSolar->testSetNow(1735716660);

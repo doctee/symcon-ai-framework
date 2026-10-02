@@ -618,7 +618,7 @@ that behavior.
 | `CurrentBaselinePowerForecast` | float | `OPENMETEO.Power` | user-owned/off | Simultaneous forecast before local-horizon correction |
 | `CurrentGtiSystem` | float | `OPENMETEO.Irradiance` | user-owned/off | Peak-power-weighted GTI after local horizon |
 | `CurrentGtiBaseline` | float | `OPENMETEO.Irradiance` | user-owned/off | Peak-power-weighted GTI before local horizon |
-| `CurrentHorizonLossPercent` | float | `~Intensity.100` | user-owned/off | Current relative GTI reduction from local horizon |
+| `CurrentHorizonLossPercent` | float | `OPENMETEO.Percent` | user-owned/off | Current relative GTI reduction from local horizon |
 | `TodayEnergyForecast` | float | `~Electricity` | user-owned/off | Forecast local-day AC energy kWh; one reset pulse precedes the first successful publication of each local day |
 | `TomorrowEnergyForecast` | float | `OPENMETEO.Energy` | user-owned/off | Next local-day AC energy kWh |
 | `ConfigurationHash` | string | none | no | Diagnostic normalized PV configuration hash |
