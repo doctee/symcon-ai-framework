@@ -20,4 +20,8 @@ recovery, timer disarming and the same behavior in the generated package.
 Official contracts: [kernel runlevel](https://www.symcon.de/de/service/dokumentation/befehlsreferenz/programminformationen/ips-getkernelrunlevel/),
 [MessageSink](https://www.symcon.de/de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/module/messagesink/)
 and [SDK messages](https://www.symcon.de/de/llms/developer/sdk-tools/sdk-php.md).
-A full service-restart verification remains a separate operational test.
+A separately authorized full service-restart test passed on 2026-10-02:
+OwnTracks initialized autonomously, preserved its configuration and references,
+and the installed package matched all 37 reviewed files. Exact installation
+identities and restart evidence remain private. This result validates the
+tested installation; it does not authorize further restarts or deployments.
