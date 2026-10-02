@@ -28,6 +28,7 @@ final class Profiles
             ]
         );
         self::integerProfile('OPENMETEO.WeatherCode', '', 0, 99);
+        self::floatProfile('OPENMETEO.Percent', ' %', 0.0, 100.0, 0.1, 1);
         self::floatProfile('OPENMETEO.Pressure', ' hPa', 800.0, 1200.0, 0.1, 1);
         self::floatProfile('OPENMETEO.WindSpeed', ' km/h', 0.0, 300.0, 0.1, 1);
         self::integerProfile('OPENMETEO.Direction', ' °', 0, 360);

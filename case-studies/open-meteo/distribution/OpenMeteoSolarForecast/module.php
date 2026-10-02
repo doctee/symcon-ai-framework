@@ -761,7 +761,7 @@ class OpenMeteoSolarForecast extends IPSModule
         $this->RegisterVariableFloat('CurrentBaselinePowerForecast', 'Current Baseline Power Forecast', 'OPENMETEO.Power', 110);
         $this->RegisterVariableFloat('CurrentGtiSystem', 'Current GTI System', 'OPENMETEO.Irradiance', 120);
         $this->RegisterVariableFloat('CurrentGtiBaseline', 'Current GTI Baseline', 'OPENMETEO.Irradiance', 130);
-        $this->RegisterVariableFloat('CurrentHorizonLossPercent', 'Current Horizon Loss', '~Intensity.100', 140);
+        $this->RegisterVariableFloat('CurrentHorizonLossPercent', 'Current Horizon Loss', 'OPENMETEO.Percent', 140);
         $this->RegisterVariableFloat('TodayEnergyForecast', 'Today Energy Forecast', '~Electricity', 150);
         $this->RegisterVariableFloat('TomorrowEnergyForecast', 'Tomorrow Energy Forecast', 'OPENMETEO.Energy', 160);
         $this->RegisterVariableString('ConfigurationHash', 'Configuration Hash', '', 170);

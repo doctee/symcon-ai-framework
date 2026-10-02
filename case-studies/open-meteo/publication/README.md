@@ -45,6 +45,14 @@ does not authorize productive location, PV or consumer configuration.
 
 ## Integrity
 
+### 0.8.16 — float horizon-loss profile
+
+`CurrentHorizonLossPercent` now uses the float profile `OPENMETEO.Percent`
+(0–100 %, one decimal place) instead of the integer profile `~Intensity.100`.
+Reapplying the module configuration updates the default profile in place;
+variable identity, values and archive settings are retained. No archive repair
+or reaggregation is needed. User-defined custom profiles remain user-owned.
+
 ### 0.8.15 — kernel startup compatibility
 
 Weather, DWD and solar configuration now defer calls to other instances until
