@@ -213,6 +213,74 @@ if (!mkdir($temporaryDirectory, 0700, true)) {
 }
 
 try {
+    $recoveryRuntime = new SolarCalibrationCollectorRuntime([]);
+    $verifyFile = new ReflectionMethod(SolarCalibrationCollectorRuntime::class, 'verifiedImmutableFileExists');
+    $writeFile = new ReflectionMethod(SolarCalibrationCollectorRuntime::class, 'writeImmutable');
+    $recoverDirectory = new ReflectionMethod(SolarCalibrationCollectorRuntime::class, 'recoverPendingWrites');
+    $recoveryDirectory = $temporaryDirectory . DIRECTORY_SEPARATOR . 'recovery';
+    mkdir($recoveryDirectory, 0700);
+    $payload = '{"value":1}';
+    $digest = hash('sha256', $payload);
+    foreach ([0, 1, 2, 3] as $state) {
+        $path = $recoveryDirectory . '/forecast-' . (100 + $state) . '-' . str_repeat('a', 64) . '.json';
+        file_put_contents($path . '.pending', json_encode([
+            'version' => 1, 'name' => basename($path), 'sha256' => $digest, 'content' => $payload,
+        ], JSON_THROW_ON_ERROR));
+        if (($state & 1) !== 0) {
+            file_put_contents($path, $payload);
+        }
+        if (($state & 2) !== 0) {
+            file_put_contents($path . '.sha256', $digest . "\n");
+        }
+        // Restart may see a newer provider issue: recover pending older issues first.
+        $recoverDirectory->invoke($recoveryRuntime, $recoveryDirectory);
+        calibrationRuntimeCheck($verifyFile->invoke($recoveryRuntime, $path) === true, 'Recovery failed.');
+        calibrationRuntimeCheck(!file_exists($path . '.pending'), 'Completed intent was not retired.');
+        calibrationRuntimeCheck(file_get_contents($path) === $payload, 'Recovery changed evidence bytes.');
+        $writeFile->invoke($recoveryRuntime, $path, 'different newly computed content');
+        calibrationRuntimeCheck(file_get_contents($path) === $payload, 'Immutable retry overwrote evidence.');
+    }
+    foreach (['no_journal', 'bad_digest', 'wrong_name', 'data_conflict', 'hash_conflict', 'malformed', 'directory'] as $failure) {
+        $path = $recoveryDirectory . '/' . $failure . '.json';
+        $journal = ['version' => 1, 'name' => basename($path), 'sha256' => $digest, 'content' => $payload];
+        if ($failure === 'bad_digest') {
+            $journal['sha256'] = str_repeat('0', 64);
+        }
+        if ($failure === 'wrong_name') {
+            $journal['name'] = '../another.json';
+        }
+        if ($failure !== 'no_journal') {
+            file_put_contents($path . '.pending', json_encode($journal, JSON_THROW_ON_ERROR));
+        }
+        if ($failure === 'malformed') {
+            file_put_contents($path . '.pending', '{');
+        }
+        if ($failure === 'directory') {
+            mkdir($path);
+        }
+        if (in_array($failure, ['no_journal', 'data_conflict'], true)) {
+            file_put_contents($path, 'untouched');
+        }
+        if ($failure === 'hash_conflict') {
+            file_put_contents($path . '.sha256', 'untouched');
+        }
+        $rejected = false;
+        try {
+            $verifyFile->invoke($recoveryRuntime, $path);
+        } catch (RuntimeException | JsonException) {
+            $rejected = true;
+        }
+        calibrationRuntimeCheck($rejected, 'Unsafe recovery was accepted: ' . $failure);
+        if (is_file($path)) {
+            calibrationRuntimeCheck(file_get_contents($path) === 'untouched', 'Conflict was overwritten.');
+        }
+        if ($failure === 'hash_conflict') {
+            calibrationRuntimeCheck(!file_exists($path), 'Data published despite conflicting checksum.');
+        }
+        if ($failure !== 'no_journal') {
+            calibrationRuntimeCheck(is_file($path . '.pending'), 'Rejected intent must remain available.');
+        }
+    }
     $configurationHash = str_repeat('a', 64);
     $firstDirectory = $temporaryDirectory . DIRECTORY_SEPARATOR . 'snapshots';
     $targetDirectory = $firstDirectory . DIRECTORY_SEPARATOR . 'solar_test';
