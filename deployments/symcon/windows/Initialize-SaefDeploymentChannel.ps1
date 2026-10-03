@@ -204,7 +204,14 @@ function Assert-PowerShellSourceSyntax {
             [ref] $parseErrors
         ) | Out-Null
         if (@($parseErrors).Count -ne 0) {
-            throw [System.InvalidOperationException]::new("PowerShell source syntax is invalid: $name")
+            $firstError = @($parseErrors)[0]
+            $errorId = [string] $firstError.ErrorId
+            $errorMessage = [string] $firstError.Message
+            $line = [int] $firstError.Extent.StartLineNumber
+            $column = [int] $firstError.Extent.StartColumnNumber
+            throw [System.InvalidOperationException]::new(
+                "PowerShell source syntax is invalid: $name; ${errorId}: ${errorMessage} at ${line}:${column}"
+            )
         }
     }
 }
