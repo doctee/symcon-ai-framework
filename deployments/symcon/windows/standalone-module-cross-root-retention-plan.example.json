@@ -1,0 +1,62 @@
+{
+    "formatVersion": 1,
+    "purpose": "saef-channel-v8-standalone-module-cross-root-retention",
+    "profile": "saef-channel-v8-standalone-module-cross-root-v1",
+    "targetId": "saef-example-module",
+    "adapterProfile": "saef-example-module-v1",
+    "allowedOperation": "quarantine",
+    "generatedAtUtc": "2026-01-01T00:00:00.0000000+00:00",
+    "expiresAtUtc": "2026-01-01T00:15:00.0000000+00:00",
+    "channelPolicySha256": "<private-reviewed-channel-policy-sha256>",
+    "adapterPolicySha256": "<private-reviewed-adapter-policy-sha256>",
+    "activePackageIdentitySha256": "<private-active-package-identity-sha256>",
+    "activeBinding": "<private-active-cross-root-binding>",
+    "inventorySha256": "<private-complete-cross-root-inventory-sha256>",
+    "expectedPostInventorySha256": "<private-expected-post-quarantine-inventory-sha256>",
+    "candidateCount": 1,
+    "candidateBytes": 0,
+    "candidates": [
+        {
+            "deploymentId": "saef-example-retired-deployment",
+            "filesetName": "saef-example-retired-fileset",
+            "transactionName": "saef-example-retired-transaction",
+            "packageIdentitySha256": "<private-retired-package-identity-sha256>",
+            "outcome": "activated",
+            "completedUtc": "2025-01-01T00:00:00.0000000+00:00",
+            "artifacts": [
+                {
+                    "role": "adapter-transaction",
+                    "name": "saef-example-retired-transaction",
+                    "bytes": 0,
+                    "entryCount": 0,
+                    "sha256": "<private-recursive-tree-sha256>"
+                },
+                {
+                    "role": "channel-state",
+                    "name": "saef-example-retired-deployment",
+                    "bytes": 0,
+                    "entryCount": 0,
+                    "sha256": "<private-recursive-tree-sha256>"
+                },
+                {
+                    "role": "managed-fileset",
+                    "name": "saef-example-retired-fileset",
+                    "bytes": 0,
+                    "entryCount": 0,
+                    "sha256": "<private-recursive-tree-sha256>"
+                }
+            ]
+        }
+    ],
+    "requiredConfirmation": "quarantine-saef-example-module-cross-root-retention",
+    "forbiddenActions": [
+        "service-restart",
+        "live-symcon-rpc",
+        "mqtt-publish",
+        "owner-mutation",
+        "event-mutation",
+        "device-action",
+        "publication",
+        "retention-deletion"
+    ]
+}

@@ -41,10 +41,21 @@
     "expectedActivePackageIdentitySha256": "<private-sha256-of-active-module-tree>",
     "maximumCandidateBytes": 67108864,
     "maximumStateBytes": 1048576,
-    "retention": {
-        "minimumAgeHours": 168,
-        "keepSuccessfulRollbackCount": 2,
-        "keepFailedCandidateCount": 2,
-        "maximumArtifactCount": 16
-    }
+  "retention": {
+    "profile": "saef-channel-v8-standalone-module-cross-root-v1",
+    "implemented": true,
+    "backupRoot": "<private-absolute-protected-cross-root-backup-root>",
+    "quarantineRoot": "<private-absolute-protected-same-volume-quarantine-root>",
+    "claimRoot": "<private-absolute-protected-retention-claim-root>",
+    "requiredConfirmation": "quarantine-saef-owntracks-position-map-cross-root-retention",
+    "minimumAgeHours": 168,
+    "keepSuccessfulRollbackCount": 2,
+    "keepFailedCandidateCount": 2,
+    "maximumArtifactCount": 16,
+    "maximumUnitBytes": 268435456,
+    "maximumPlanBytes": 536870912,
+    "maximumPlanAgeSeconds": 900,
+    "maximumReferenceFiles": 256,
+    "maximumReferenceBytes": 16777216
+  }
 }

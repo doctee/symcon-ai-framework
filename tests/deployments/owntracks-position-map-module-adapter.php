@@ -202,7 +202,9 @@ assertOwnTracksPositionMapAdapter(
     'Reload contract is not narrowly targeted.'
 );
 assertOwnTracksPositionMapAdapter(
-    $transaction['retention']['owner'] === 'owntracks-position-map-adapter'
+    $transaction['retention']['owner'] === 'channel-v8-cross-root-contract'
+        && $transaction['retention']['profile'] === 'saef-channel-v8-standalone-module-cross-root-v1'
+        && $transaction['retention']['implemented'] === true
         && $transaction['retention']['genericCleanupAllowed'] === false,
     'Retention ownership differs.'
 );
@@ -549,18 +551,20 @@ assertOwnTracksPositionMapAdapter(
 $requiredRetentionFragments = [
     "[ValidateSet('plan', 'apply')]",
     "inventorySha256 = \$inventorySha256",
-    'Retention inventory changed after approval.',
     "outcome -eq 'manual_recovery_required'",
     "-not [bool] \$_.protected",
-    'Approved artifact is not currently eligible.',
-    'Remove-Item -LiteralPath $artifactPath -Recurse -Force',
+    'Legacy adapter-only retention apply is retired; use the cross-root retention consumer.',
+    '[Array]::Sort',
+    '[DateTimeOffset]::TryParseExact',
 ];
 foreach ($requiredRetentionFragments as $fragment) {
     assertOwnTracksPositionMapAdapter(str_contains($retention, $fragment), "Retention fragment is missing: {$fragment}");
 }
 assertOwnTracksPositionMapAdapter(
-    substr_count($retention, 'Remove-Item -LiteralPath $artifactPath -Recurse -Force') === 1,
-    'Retention must have exactly one artifact deletion call site.'
+    !str_contains($retention, 'Remove-Item -LiteralPath $artifactPath -Recurse -Force')
+        && !str_contains($retention, 'Sort-Object')
+        && !str_contains($retention, '[DateTime]::Parse('),
+    'Legacy retention must remain read-only and culture invariant.'
 );
 
 $temporaryRoot = sys_get_temp_dir() . '/saef-owntracks-position-map-adapter-' . bin2hex(random_bytes(8));

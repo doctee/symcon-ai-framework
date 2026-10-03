@@ -359,8 +359,37 @@ pairs and writes a machine-readable status. A later, separately authorized
 `-Apply` run requires a local administrator, creates and SHA-256-verifies a
 private backup, removes only the declared pairs and revalidates the complete
 mapping. Deployment-only or fileset-only cleanup is intentionally unsupported.
-Standalone-module candidates are also rejected here: their target adapter must
-provide a separate state-aware retention workflow before any deletion gate.
+Standalone-module candidates are also rejected here. Their three-root state is
+handled only by the separately hash-pinned
+`Invoke-SaefStandaloneModuleCrossRootRetention.ps1` consumer described below.
+That consumer is not a new gateway verb and receives no authority from this
+generic cleanup command.
+
+### Standalone-module cross-root retention
+
+`Invoke-SaefStandaloneModuleCrossRootRetention.ps1` is the local-administrator
+consumer for one exact standalone-module retention decision. Its read-only
+`plan` operation correlates exactly one adapter transaction directory, channel
+deployment-state directory and managed-fileset directory per logical
+deployment. It rejects unknown, duplicate, unpaired, active, staged,
+rollback-relevant, manual-recovery, young, approval-referenced and cross-target
+artifacts.
+
+The consumer is self-bound by path and SHA-256 in the protected channel policy.
+Its `apply` operation requires the exact unexpired review plan and target
+confirmation, reacquires locks in channel-before-adapter order, creates a
+byte-exact protected backup, then moves the complete selected unit into
+same-volume quarantine. Any failure restores the moved bytes and verifies the
+original inventory; an unproved restoration ends in manual recovery and keeps
+both backup and quarantine. There is no permanent-delete operation.
+
+OwnTracks is the first enabled example. Its former adapter-only apply operation
+now fails closed to prevent partial cleanup. MediaCarousel remains disabled.
+Before installing or using the consumer, run the exact
+`Invoke-SaefStandaloneModuleCrossRootRetentionWindowsQualification.ps1` bytes
+in elevated Windows PowerShell 5.1 against synthetic temporary roots. Channel
+installation, production plan, apply and later backup/quarantine cleanup are
+separate approvals.
 
 ### Scope-bound one-click approval
 
@@ -429,9 +458,10 @@ full control only on its bounded state leaf, so directory permissions cannot
 be used to replace the HMAC secret.
 
 Allowlist changes, OpenSSH or Symcon restarts, provider contact, publication
-and retention deletion remain outside one-click approval. Cross-root deletion
-is specified, but still disabled, in
-`project/STANDALONE_MODULE_CROSS_ROOT_RETENTION.md`.
+and retention remain outside one-click approval. Cross-root backup/quarantine
+is repository-implemented but remains unavailable until exact Windows
+qualification and channel installation; permanent deletion is not implemented.
+See `project/STANDALONE_MODULE_CROSS_ROOT_RETENTION.md`.
 
 ### OwnTracks Position Map pilot adapter
 
@@ -449,8 +479,10 @@ OwnTracks-specific boundary is exactly one pinned
 module instance, five runtime lock files, zero active request leases, a fresh
 format-2 authoritative-state snapshot, one targeted `MC_ReloadModule` per
 activation/rollback direction and adapter-owned package/state retention.
-Format changes fail closed. The companion retention command defaults to the
-read-only `plan` operation; `apply` is a later local-administrator gate.
+Format changes fail closed. The legacy companion retention command keeps only
+its read-only inventory path; its `apply` now fails closed. Operational
+retention must use the three-root consumer above and remains a later
+local-administrator gate.
 
 Normal OwnTracks health remains exactly instance status `102`. An optional
 private one-shot recovery block may bind one exact source package, deployment,
@@ -558,9 +590,9 @@ successful rollback. The public policy contains only non-runnable placeholders.
 The candidate does not adopt the currently Git-managed live module tree. That
 ownership transition requires a fresh read-only Symcon inventory, a protected
 backup and a separately authorized reversible migration. MediaCarousel also
-does not introduce a target-local retention command: cross-root deletion stays
-disabled under `project/STANDALONE_MODULE_CROSS_ROOT_RETENTION.md` until the
-generic contract is implemented and qualified.
+does not enable cross-root retention. The generic contract is
+repository-implemented, but this target remains disabled until its adapter
+contract and the exact Windows qualification are admitted.
 
 The repository implementation in
 `case-studies/media-carousel/04-package-ownership-migration-design.md` keeps the

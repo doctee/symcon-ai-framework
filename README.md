@@ -225,7 +225,10 @@ and crash reconciliation as separate internal phases. Exact Windows
 PowerShell 5.1 qualification, protected profile installation and each live
 target activation remain independent gates. OwnTracks is the first reference
 profile; Media Carousel is a later reuse target. Standalone-module cross-root
-retention remains specified but disabled.
+retention now has a repository implementation with OwnTracks as its first
+contract, but remains operationally disabled pending exact Windows PowerShell
+5.1 qualification and a separate channel installation. Permanent
+backup/quarantine deletion is not implemented.
 
 The v0.5 release adds a shared internal Windows child-process
 contract for hash-pinned PowerShell children. It provides explicit timeout,

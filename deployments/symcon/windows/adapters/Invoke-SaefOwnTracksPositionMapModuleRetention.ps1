@@ -79,6 +79,57 @@ function Get-DirectoryBytes {
     return $total
 }
 
+function Get-OrdinalSortedFileSystemInfos {
+    param([Parameter(Mandatory = $true)][object[]] $Values)
+    $result = [object[]] @($Values)
+    [Array]::Sort($result, [Comparison[object]] {
+        param($left, $right)
+        return [string]::CompareOrdinal([string] $left.Name, [string] $right.Name)
+    })
+    return @($result)
+}
+
+function ConvertFrom-RoundtripUtcTimestamp {
+    param([Parameter(Mandatory = $true)][string] $Value)
+    $parsed = [DateTimeOffset]::MinValue
+    if (-not [DateTimeOffset]::TryParseExact(
+            $Value,
+            'o',
+            [Globalization.CultureInfo]::InvariantCulture,
+            [Globalization.DateTimeStyles]::RoundtripKind,
+            [ref] $parsed
+        )) {
+        throw [InvalidOperationException]::new('Transaction timestamp is not exact round-trip format.')
+    }
+    return $parsed.ToUniversalTime()
+}
+
+function Get-OrdinalSortedRecords {
+    param(
+        [Parameter(Mandatory = $true)][object[]] $Values,
+        [Parameter(Mandatory = $true)][ValidateSet('artifactId', 'completedUtc')][string] $Property,
+        [Parameter()][switch] $Descending
+    )
+    $result = [object[]] @($Values)
+    $propertyName = $Property
+    $isDescending = [bool] $Descending
+    [Array]::Sort($result, [Comparison[object]] {
+        param($left, $right)
+        $leftProperty = $left.PSObject.Properties[$propertyName]
+        $rightProperty = $right.PSObject.Properties[$propertyName]
+        if ($null -eq $leftProperty -or $null -eq $rightProperty) {
+            throw [InvalidOperationException]::new('Ordinal sort property is missing.')
+        }
+        $comparison = [string]::CompareOrdinal(
+            [string] $leftProperty.Value,
+            [string] $rightProperty.Value
+        )
+        if ($isDescending) { return -$comparison }
+        return $comparison
+    })
+    return @($result)
+}
+
 function Read-Inventory {
     param($Policy)
     $stateRoot = [string] $Policy.adapterStateRoot
@@ -95,7 +146,9 @@ function Read-Inventory {
         $activeTransaction = [string] $active.transactionDirectoryName
     }
     $records = @()
-    foreach ($directory in @(Get-ChildItem -LiteralPath $stateRoot -Directory -Force | Sort-Object Name)) {
+    $directories = @(Get-OrdinalSortedFileSystemInfos `
+        -Values @(Get-ChildItem -LiteralPath $stateRoot -Directory -Force))
+    foreach ($directory in $directories) {
         if ($directory.Name -notmatch '^saef-[a-z0-9.-]+-[0-9]{8}T[0-9]{6}Z$') {
             throw [InvalidOperationException]::new('Adapter state contains an unexpected directory.')
         }
@@ -112,7 +165,7 @@ function Read-Inventory {
             [string] $transaction.packageIdentitySha256 -notmatch '^[a-f0-9]{64}$') {
             throw [InvalidOperationException]::new('Transaction record contract is invalid.')
         }
-        $completed = [DateTime]::Parse([string] $transaction.completedUtc).ToUniversalTime()
+        $completed = ConvertFrom-RoundtripUtcTimestamp -Value ([string] $transaction.completedUtc)
         $records += [pscustomobject]@{
             artifactId = $directory.Name
             outcome = [string] $transaction.outcome
@@ -137,17 +190,19 @@ function Get-EligibleArtifacts {
     $kept = @{}
     foreach ($outcome in @('activated', 'rolled_back')) {
         $limit = if ($outcome -eq 'activated') { $keepActivated } else { $keepRolledBack }
-        $matching = @($Inventory | Where-Object { $_.outcome -eq $outcome } |
-            Sort-Object completedUtc -Descending)
+        $matching = @(Get-OrdinalSortedRecords `
+            -Values @($Inventory | Where-Object { $_.outcome -eq $outcome }) `
+            -Property completedUtc -Descending)
         for ($index = 0; $index -lt [Math]::Min($limit, $matching.Count); $index++) {
             $kept[[string] $matching[$index].artifactId] = $true
         }
     }
-    return @($Inventory | Where-Object {
+    $eligible = @($Inventory | Where-Object {
         -not [bool] $_.protected -and
         -not $kept.ContainsKey([string] $_.artifactId) -and
         [long] $_.ageHours -ge $minimumAge
-    } | Sort-Object artifactId)
+    })
+    return @(Get-OrdinalSortedRecords -Values $eligible -Property artifactId)
 }
 
 $outcome = 'failed'
@@ -163,6 +218,11 @@ try {
     }
     $policy = Get-Content -LiteralPath $AdapterPolicyPath -Raw | ConvertFrom-Json
     $plan = Get-Content -LiteralPath $RetentionPlanPath -Raw | ConvertFrom-Json
+    if ($Operation -eq 'apply') {
+        throw [InvalidOperationException]::new(
+            'Legacy adapter-only retention apply is retired; use the cross-root retention consumer.'
+        )
+    }
     if ($policy.formatVersion -ne 1 -or $plan.formatVersion -ne 1 -or
         [string] $policy.adapterProfile -ne 'saef-owntracks-position-map-v1' -or
         [string] $plan.adapterProfile -ne 'saef-owntracks-position-map-v1' -or
@@ -190,37 +250,7 @@ try {
         eligibleArtifactIds = @($eligible | ForEach-Object { [string] $_.artifactId })
         deletedArtifactIds = @()
     }
-    if ($Operation -eq 'apply') {
-        $principal = [Security.Principal.WindowsPrincipal]::new(
-            [Security.Principal.WindowsIdentity]::GetCurrent()
-        )
-        if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-            throw [UnauthorizedAccessException]::new('Retention apply requires an elevated local administrator.')
-        }
-        if ([string] $plan.expectedInventorySha256 -ne $inventorySha256) {
-            throw [InvalidOperationException]::new('Retention inventory changed after approval.')
-        }
-        $eligibleMap = @{}
-        foreach ($record in $eligible) { $eligibleMap[[string] $record.artifactId] = $true }
-        $approved = @($plan.approvedArtifactIds)
-        if ($approved.Count -lt 1 -or $approved.Count -ne @($approved | Select-Object -Unique).Count) {
-            throw [InvalidOperationException]::new('Retention apply requires unique approved artifacts.')
-        }
-        foreach ($artifactId in $approved) {
-            if ([string] $artifactId -notmatch '^saef-[a-z0-9.-]+-[0-9]{8}T[0-9]{6}Z$' -or
-                -not $eligibleMap.ContainsKey([string] $artifactId)) {
-                throw [InvalidOperationException]::new('Approved artifact is not currently eligible.')
-            }
-        }
-        foreach ($artifactId in $approved) {
-            $artifactPath = Join-Path ([string] $policy.adapterStateRoot) ([string] $artifactId)
-            Remove-Item -LiteralPath $artifactPath -Recurse -Force
-        }
-        $details.deletedArtifactIds = @($approved)
-        $outcome = 'applied'
-    } else {
-        $outcome = 'planned'
-    }
+    $outcome = 'planned'
     $exitCode = $ExitSuccess
 } catch {
     $details = [ordered]@{ failureCode = 'retention_contract' }
