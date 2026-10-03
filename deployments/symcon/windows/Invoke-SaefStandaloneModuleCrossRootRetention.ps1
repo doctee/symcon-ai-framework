@@ -501,7 +501,7 @@ function Get-ReferenceTexts {
         return @($texts)
     }
     Assert-RootedLeaf -Path ([string] $Contracts.target.approvalPolicyPath)
-    if ((Get-Sha256 -Path ([string] $Contracts.target.approvalPolicyPath) -cne
+    if ((Get-Sha256 -Path ([string] $Contracts.target.approvalPolicyPath)) -cne
             [string] $Contracts.target.expectedApprovalPolicySha256)) {
         throw [InvalidOperationException]::new('Approval policy differs from its channel binding.')
     }
