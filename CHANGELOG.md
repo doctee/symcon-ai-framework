@@ -18,6 +18,11 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added a solar-display migration candidate with coherent two-source reads,
+  guarded chart-only archive projection, retained recovery journals and offline
+  crash/DST tests. Native archive qualification and live consumer migration
+  remain separate, unexecuted gates.
+
 - Added bounded journal-based recovery for interrupted Open-Meteo calibration
   writes, preserving immutable evidence and rejecting conflicting file pairs.
 

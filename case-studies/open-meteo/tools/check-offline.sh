@@ -25,6 +25,8 @@ for test in \
     interval-alignment \
     local-horizon-model \
     solar-calculator \
+    solar-display-plan \
+    solar-display-runtime \
     solar-calibration-core \
     solar-calibration-evaluation \
     solar-calibration-runtime \
