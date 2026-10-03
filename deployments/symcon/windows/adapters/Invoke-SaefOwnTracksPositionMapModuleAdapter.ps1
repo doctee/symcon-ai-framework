@@ -364,7 +364,11 @@ function Read-Contracts {
         [bool] $transaction.reload.serviceRestartAllowed -or
         [string] $transaction.rollback.switch -ne 'same-volume-directory-rename' -or
         [string] $transaction.rollback.stateSwitch -ne 'same-transaction-package-and-state' -or
-        [string] $transaction.retention.owner -ne 'owntracks-position-map-adapter') {
+        [string] $transaction.retention.owner -ne 'channel-v8-cross-root-contract' -or
+        [string] $transaction.retention.profile -ne
+            'saef-channel-v8-standalone-module-cross-root-v1' -or
+        $transaction.retention.implemented -isnot [bool] -or
+        -not [bool] $transaction.retention.implemented) {
         throw [InvalidOperationException]::new('OwnTracksPositionMap transaction contract is unsupported.')
     }
     foreach ($guid in @([string] $script:policy.libraryGuid, [string] $script:policy.moduleGuid)) {

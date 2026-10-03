@@ -74,13 +74,49 @@ function Assert-PlainDirectory {
     }
 }
 
+function Get-OrdinalSortedStrings {
+    param([Parameter(Mandatory = $true)][object[]] $Values)
+    $result = [string[]] @($Values | ForEach-Object { [string] $_ })
+    [Array]::Sort($result, [StringComparer]::Ordinal)
+    return @($result)
+}
+
+function Get-OrdinalSortedFileSystemInfos {
+    param(
+        [Parameter(Mandatory = $true)][object[]] $Values,
+        [Parameter(Mandatory = $true)][ValidateSet('Name', 'FullName')][string] $Property
+    )
+    $result = [object[]] @($Values)
+    [Array]::Sort($result, [Comparison[object]] {
+        param($left, $right)
+        return [string]::CompareOrdinal([string] $left.$Property, [string] $right.$Property)
+    })
+    return @($result)
+}
+
+function Test-OrdinalStringArraysEqual {
+    param(
+        [Parameter(Mandatory = $true)][string[]] $Left,
+        [Parameter(Mandatory = $true)][string[]] $Right
+    )
+    if ($Left.Count -ne $Right.Count) { return $false }
+    for ($index = 0; $index -lt $Left.Count; $index++) {
+        if (-not [string]::Equals($Left[$index], $Right[$index], [StringComparison]::Ordinal)) {
+            return $false
+        }
+    }
+    return $true
+}
+
 function Get-Inventory {
     param(
         [Parameter(Mandatory = $true)][string] $StateRoot,
         [Parameter(Mandatory = $true)][string] $FilesetRoot
     )
-    $stateDirectories = @(Get-ChildItem -LiteralPath $StateRoot -Directory -Force | Sort-Object Name)
-    $filesetDirectories = @(Get-ChildItem -LiteralPath $FilesetRoot -Directory -Force | Sort-Object Name)
+    $stateDirectories = @(Get-OrdinalSortedFileSystemInfos `
+        -Values @(Get-ChildItem -LiteralPath $StateRoot -Directory -Force) -Property Name)
+    $filesetDirectories = @(Get-OrdinalSortedFileSystemInfos `
+        -Values @(Get-ChildItem -LiteralPath $FilesetRoot -Directory -Force) -Property Name)
     $deploymentToFileset = @{}
     $filesetToDeployment = @{}
     $deploymentKinds = @{}
@@ -125,10 +161,10 @@ function Get-Inventory {
         Assert-PlainDirectory -Path $directory.FullName
         $filesetNames += $directory.Name
     }
-    $mappedFilesets = @($filesetToDeployment.Keys | Sort-Object)
-    $filesetNames = @($filesetNames | Sort-Object)
+    $mappedFilesets = @(Get-OrdinalSortedStrings -Values @($filesetToDeployment.Keys))
+    $filesetNames = @(Get-OrdinalSortedStrings -Values @($filesetNames))
     if ($stateDirectories.Count -ne $filesetDirectories.Count -or
-        (Compare-Object -ReferenceObject $mappedFilesets -DifferenceObject $filesetNames)) {
+        -not (Test-OrdinalStringArraysEqual -Left $mappedFilesets -Right $filesetNames)) {
         throw [System.InvalidOperationException]::new(
             'Managed deployment roots violate the one-deployment-to-one-fileset invariant.'
         )
@@ -170,7 +206,9 @@ function Copy-VerifiedDirectory {
     )
     Copy-Item -LiteralPath $Source -Destination $Destination -Recurse -Force
     $records = @()
-    foreach ($file in @(Get-ChildItem -LiteralPath $Source -File -Recurse -Force | Sort-Object FullName)) {
+    $files = @(Get-OrdinalSortedFileSystemInfos `
+        -Values @(Get-ChildItem -LiteralPath $Source -File -Recurse -Force) -Property FullName)
+    foreach ($file in $files) {
         $relative = $file.FullName.Substring($Source.TrimEnd([char[]] @('\', '/')).Length + 1)
         $backupPath = Join-Path $Destination $relative
         if (-not (Test-Path -LiteralPath $backupPath -PathType Leaf)) {

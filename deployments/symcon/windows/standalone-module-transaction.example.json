@@ -11,5 +11,12 @@
         "candidateFormat": 2,
         "rollbackFormat": 1,
         "rollbackPreparation": "adapter-required"
+    },
+    "retention": {
+        "owner": "channel-v8-cross-root-contract",
+        "profile": "saef-channel-v8-standalone-module-cross-root-v1",
+        "implemented": false,
+        "genericCleanupAllowed": false,
+        "applyRequiresSeparateAuthorization": true
     }
 }

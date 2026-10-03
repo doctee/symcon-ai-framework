@@ -4,6 +4,8 @@
     "managedFilesetRoot": "<private-absolute-managed-fileset-root>",
     "stateRoot": "<private-absolute-deployment-state-root>",
     "adapterStateRoot": "<private-absolute-adapter-state-root>",
+    "standaloneModuleCrossRootRetentionPath": "<private-absolute-cross-root-retention-path>",
+    "expectedStandaloneModuleCrossRootRetentionSha256": "<reviewed-lowercase-sha256>",
     "activeBootstrapRelativePath": "<private-relative-bootstrap-path>",
     "childProcessContractPath": "<private-absolute-child-process-contract-path>",
     "expectedChildProcessContractSha256": "<reviewed-lowercase-sha256>",

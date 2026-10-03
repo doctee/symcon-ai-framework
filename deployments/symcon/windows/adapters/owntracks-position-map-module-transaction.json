@@ -47,9 +47,11 @@
         "stateSwitch": "same-transaction-package-and-state",
         "requirePostRollbackHealth": true
     },
-    "retention": {
-        "owner": "owntracks-position-map-adapter",
-        "genericCleanupAllowed": false,
+  "retention": {
+    "owner": "channel-v8-cross-root-contract",
+    "profile": "saef-channel-v8-standalone-module-cross-root-v1",
+    "implemented": true,
+    "genericCleanupAllowed": false,
         "protectActiveAndDirectRollback": true,
         "protectPackageStatePairs": true,
         "applyRequiresSeparateAuthorization": true
