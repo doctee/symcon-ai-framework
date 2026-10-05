@@ -323,6 +323,8 @@ function Invoke-Retention {
         $script:lastChildDiagnostics.statusSha256 = Get-Sha256 -Path $StatusPath
         $script:lastChildDiagnostics.status = Get-Content -LiteralPath $StatusPath -Raw -Encoding UTF8 |
             ConvertFrom-Json
+        $script:operationalMutationAttempted = $script:operationalMutationAttempted -or
+            [bool] $script:lastChildDiagnostics.status.operationalMutationAttempted
     }
     Assert-Condition -Condition ($child.terminationReason -ceq 'exited' -and
         $child.exitCode -eq $ExpectedExitCode) `
@@ -348,7 +350,10 @@ function Invoke-Retention {
 }
 
 function Add-DenyDeleteChildrenRule {
-    param([Parameter(Mandatory = $true)][string] $Path)
+    param(
+        [Parameter(Mandatory = $true)][string] $Path,
+        [Parameter(Mandatory = $true)][string] $ChildPath
+    )
     $acl = Get-Acl -LiteralPath $Path
     $rule = [Security.AccessControl.FileSystemAccessRule]::new(
         $currentSidReference,
@@ -359,6 +364,17 @@ function Add-DenyDeleteChildrenRule {
     )
     $null = $acl.AddAccessRule($rule)
     Set-Acl -LiteralPath $Path -AclObject $acl
+    # A move can use Delete on the child or DeleteChildren on its parent.
+    $childAcl = Get-Acl -LiteralPath $ChildPath
+    $childRule = [Security.AccessControl.FileSystemAccessRule]::new(
+        $currentSidReference,
+        [Security.AccessControl.FileSystemRights]::Delete,
+        [Security.AccessControl.InheritanceFlags]::None,
+        [Security.AccessControl.PropagationFlags]::None,
+        [Security.AccessControl.AccessControlType]::Deny
+    )
+    $null = $childAcl.AddAccessRule($childRule)
+    Set-Acl -LiteralPath $ChildPath -AclObject $childAcl
 }
 
 function Add-DenyWriteDataRule {
@@ -590,7 +606,7 @@ try {
     $null = Invoke-Retention -Context $context -Operation apply -PlanPath $planPath `
         -StatusPath (Join-Path $context.outputRoot 'wrong-hash-status.json') `
         -PlanSha256 ('d' * 64) -Confirmation $context.confirmation `
-        -ExpectedExitCode 10 -ExpectedOutcome failed
+        -ExpectedExitCode 10 -ExpectedOutcome failed -ExpectedErrorMessage 'Review plan hash differs.'
     Assert-Condition -Condition (@(Get-ChildItem -LiteralPath $context.claimRoot -Force).Count -eq 0) `
         -Message 'Wrong plan hash created a claim.'
     Add-PassedScenario -Name 'plan-hash-mismatch-fails-before-claim' -Kind negative
@@ -598,7 +614,8 @@ try {
     $script:failedCheck = 'confirmation-negative'
     $null = Invoke-Retention -Context $context -Operation apply -PlanPath $planPath `
         -StatusPath (Join-Path $context.outputRoot 'wrong-confirmation-status.json') `
-        -PlanSha256 $planSha256 -Confirmation 'wrong' -ExpectedExitCode 10 -ExpectedOutcome failed
+        -PlanSha256 $planSha256 -Confirmation 'wrong' -ExpectedExitCode 10 -ExpectedOutcome failed `
+        -ExpectedErrorMessage 'Retention confirmation differs.'
     Add-PassedScenario -Name 'wrong-confirmation-fails-before-claim' -Kind negative
 
     $script:failedCheck = 'channel-lock-negative'
@@ -609,7 +626,8 @@ try {
         $null = Invoke-Retention -Context $context -Operation apply -PlanPath $planPath `
             -StatusPath (Join-Path $context.outputRoot 'mutex-status.json') `
             -PlanSha256 $planSha256 -Confirmation $context.confirmation `
-            -ExpectedExitCode 10 -ExpectedOutcome failed
+            -ExpectedExitCode 10 -ExpectedOutcome failed `
+            -ExpectedErrorMessage 'Deployment channel mutex is busy.'
     } finally {
         if ($held) { $heldMutex.ReleaseMutex() }
         $heldMutex.Dispose()
@@ -622,7 +640,8 @@ try {
     $null = Invoke-Retention -Context $context -Operation apply -PlanPath $planPath `
         -StatusPath (Join-Path $context.outputRoot 'drift-status.json') `
         -PlanSha256 $planSha256 -Confirmation $context.confirmation `
-        -ExpectedExitCode 10 -ExpectedOutcome failed
+        -ExpectedExitCode 10 -ExpectedOutcome failed `
+        -ExpectedErrorMessage 'Retention plan is consumed or the inventory drifted.'
     Remove-Item -LiteralPath $driftPath -Force
     Add-PassedScenario -Name 'inventory-drift-fails-before-claim' -Kind negative
 
@@ -659,7 +678,8 @@ try {
         -StatusPath (Join-Path $rollbackContext.outputRoot 'plan-status.json') `
         -ExpectedExitCode 0 -ExpectedOutcome planned
     $rollbackPlanSha256 = Get-Sha256 -Path $rollbackPlanPath
-    Add-DenyDeleteChildrenRule -Path $rollbackContext.filesetRoot
+    Add-DenyDeleteChildrenRule -Path $rollbackContext.filesetRoot `
+        -ChildPath $rollbackContext.candidateActivated.filesetPath
     $rollbackStatus = Invoke-Retention -Context $rollbackContext -Operation apply -PlanPath $rollbackPlanPath `
         -StatusPath (Join-Path $rollbackContext.outputRoot 'apply-status.json') `
         -PlanSha256 $rollbackPlanSha256 -Confirmation $rollbackContext.confirmation `
@@ -700,7 +720,8 @@ try {
     $null = Invoke-Retention -Context $context -Operation apply -PlanPath $planPath `
         -StatusPath (Join-Path $context.outputRoot 'replay-status.json') `
         -PlanSha256 $planSha256 -Confirmation $context.confirmation `
-        -ExpectedExitCode 10 -ExpectedOutcome failed
+        -ExpectedExitCode 10 -ExpectedOutcome failed `
+        -ExpectedErrorMessage 'Retention plan is consumed or the inventory drifted.'
     Add-PassedScenario -Name 'claim-replay-fails-before-second-mutation' -Kind negative
 
     $exitCode = $ExitSuccess

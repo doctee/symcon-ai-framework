@@ -92,6 +92,17 @@ post-claim failure, partial-move rollback, successful quarantine, inspection
 and replay rejection. Passing repository tests does not substitute for running
 these exact bytes in elevated Windows PowerShell 5.1.
 
+The same synthetic qualification runs on Windows CI before an operator package
+is handed off. Negative scenarios bind the expected rejection reason as well
+as exit code and outcome, so an unrelated earlier failure cannot satisfy a
+protection test. The final qualification status retains the last child status,
+its hash, process termination and bounded stderr before scratch cleanup.
+
+Adapter transaction directory names preserve the existing UTC suffix
+`yyyyMMddTHHmmssZ`; deployment identifiers retain their separate lowercase
+contract. The partial-move fixture denies both the child's Delete right and
+the parent's DeleteChildren right to exercise actual rollback on NTFS.
+
 ## Implemented assignment
 
 The repository workstream implements an adapter-owned generic cross-root

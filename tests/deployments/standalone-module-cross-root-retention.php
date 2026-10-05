@@ -119,6 +119,7 @@ foreach (
     [
         'windows-powershell-5.1-parse',
         'ordinal-and-roundtrip-vectors-under-three-cultures',
+        'transaction-name-and-exact-three-root-artifact-vectors',
         'reparse-point-fails-before-plan',
         'broad-write-acl-fails-before-plan',
         'unpaired-cross-root-artifact-fails-before-plan',
@@ -137,6 +138,9 @@ foreach (
         "('*' + \$currentSid + ':(OI)(CI)F')",
         '[Security.AccessControl.FileSystemAccessRule]::new(',
         '$currentSidReference,',
+        'lastChildDiagnostics = $script:lastChildDiagnostics',
+        'Retention failed for an unexpected reason.',
+        '[Security.AccessControl.FileSystemRights]::Delete,',
         'productionMutationAttempted = [bool] $script:productionMutationAttempted',
         'retentionDeletionAttempted = $false',
     ] as $fragment
