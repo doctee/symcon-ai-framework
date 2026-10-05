@@ -171,6 +171,22 @@ function Get-BytesSha256 {
     }
 }
 
+function ConvertFrom-RoundtripUtcTimestamp {
+    param([Parameter(Mandatory = $true)][string] $Value)
+
+    $parsed = [DateTimeOffset]::MinValue
+    if (-not [DateTimeOffset]::TryParseExact(
+            $Value,
+            'o',
+            [Globalization.CultureInfo]::InvariantCulture,
+            [Globalization.DateTimeStyles]::RoundtripKind,
+            [ref] $parsed
+        )) {
+        throw [System.InvalidOperationException]::new('Protocol timestamp is not exact round-trip format.')
+    }
+    return $parsed.ToUniversalTime()
+}
+
 function Read-BoundedStreamBytes {
     param(
         [Parameter(Mandatory = $true)][IO.Stream] $Stream,
@@ -352,6 +368,8 @@ function Read-ChannelPolicy {
         'managedFilesetRoot',
         'stateRoot',
         'adapterStateRoot',
+        'standaloneModuleCrossRootRetentionPath',
+        'expectedStandaloneModuleCrossRootRetentionSha256',
         'activeBootstrapRelativePath',
         'childProcessContractPath',
         'expectedChildProcessContractSha256',
@@ -405,6 +423,7 @@ function Read-ChannelPolicy {
         'managedFilesetRoot',
         'stateRoot',
         'adapterStateRoot',
+        'standaloneModuleCrossRootRetentionPath',
         'childProcessContractPath',
         'restartCoordinatorPath',
         'restartPolicyPath',
@@ -453,6 +472,7 @@ function Read-ChannelPolicy {
         throw [System.InvalidOperationException]::new('Active bootstrap must be outside managed deployment roots.')
     }
     if (-not (Test-HexSha256 -Value ([string] $policy.expectedChildProcessContractSha256)) -or
+        -not (Test-HexSha256 -Value ([string] $policy.expectedStandaloneModuleCrossRootRetentionSha256)) -or
         -not (Test-HexSha256 -Value ([string] $policy.expectedRestartCoordinatorSha256)) -or
         -not (Test-HexSha256 -Value ([string] $policy.expectedRestartPolicySha256)) -or
         -not (Test-HexSha256 -Value ([string] $policy.expectedRuntimeMirrorCoordinatorSha256)) -or
@@ -1031,7 +1051,7 @@ function Invoke-StandaloneModuleAdapter {
         throw [System.InvalidOperationException]::new('Standalone module adapter status is missing or invalid.')
     }
     $status = Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
-    $statusTime = [DateTime]::Parse([string] $status.timestampUtc).ToUniversalTime()
+    $statusTime = ConvertFrom-RoundtripUtcTimestamp -Value ([string] $status.timestampUtc)
     if ($status.PSObject.Properties.Name -notcontains 'exitCode' -or
         $status.formatVersion -ne 1 -or [string] $status.operation -ne $Operation -or
         [string] $status.deploymentId -ne [string] $Deployment.manifest.deploymentId -or
@@ -1117,7 +1137,7 @@ function Invoke-ScopeBoundApprovalRunner {
         throw [System.InvalidOperationException]::new('Approval runner status is missing or invalid.')
     }
     $status = Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
-    $statusTime = [DateTime]::Parse([string] $status.timestampUtc).ToUniversalTime()
+    $statusTime = ConvertFrom-RoundtripUtcTimestamp -Value ([string] $status.timestampUtc)
     if ($status.formatVersion -ne 1 -or [string] $status.operation -cne 'activate' -or
         [string] $status.runnerProfile -cne 'saef-channel-v8-one-click-v1' -or
         [string] $status.deploymentId -cne [string] $Deployment.manifest.deploymentId -or
@@ -1312,7 +1332,7 @@ function Start-PackageUpload {
         $activeHash = $Matches[1]
         $activePaths = Get-UploadPaths -Policy $Policy -PackageSha256 $activeHash
         $activeState = Read-UploadState -Path $activePaths.statePath -ExpectedPackageSha256 $activeHash
-        $createdUtc = [DateTime]::Parse([string] $activeState.createdUtc).ToUniversalTime()
+        $createdUtc = ConvertFrom-RoundtripUtcTimestamp -Value ([string] $activeState.createdUtc)
         if (([DateTime]::UtcNow - $createdUtc).TotalSeconds -le [int] $Policy.maxPreflightAgeSeconds) {
             throw [System.InvalidOperationException]::new('Another package upload is active.')
         }
@@ -1774,7 +1794,7 @@ function Invoke-DeploymentActivation {
         throw [System.InvalidOperationException]::new('Deployment has no preflight status.')
     }
     $preflightStatus = Get-Content -LiteralPath $paths.statusPath -Raw | ConvertFrom-Json
-    $preflightTime = [DateTime]::Parse([string] $preflightStatus.timestampUtc).ToUniversalTime()
+    $preflightTime = ConvertFrom-RoundtripUtcTimestamp -Value ([string] $preflightStatus.timestampUtc)
     if ($preflightStatus.phase -ne 'preflight' -or $preflightStatus.outcome -ne 'passed' -or
         ([DateTime]::UtcNow - $preflightTime).TotalSeconds -gt [int] $Policy.maxPreflightAgeSeconds) {
         throw [System.InvalidOperationException]::new('Deployment requires a fresh successful preflight.')
@@ -1935,7 +1955,7 @@ function Invoke-ApprovedStandaloneModuleActivation {
         throw [System.InvalidOperationException]::new('Deployment has no preflight status.')
     }
     $preflightStatus = Get-Content -LiteralPath $paths.statusPath -Raw | ConvertFrom-Json
-    $preflightTime = [DateTime]::Parse([string] $preflightStatus.timestampUtc).ToUniversalTime()
+    $preflightTime = ConvertFrom-RoundtripUtcTimestamp -Value ([string] $preflightStatus.timestampUtc)
     if ([string] $preflightStatus.phase -cne 'preflight' -or
         [string] $preflightStatus.outcome -cne 'passed' -or
         ([DateTime]::UtcNow - $preflightTime).TotalSeconds -gt [int] $Policy.maxPreflightAgeSeconds) {

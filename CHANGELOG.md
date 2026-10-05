@@ -23,6 +23,13 @@ This project adheres to Semantic Versioning.
   crash/DST tests. Native archive qualification and live consumer migration
   remain separate, unexecuted gates.
 
+- Added the hash-pinned standalone-module cross-root retention consumer and
+  synthetic Windows PowerShell 5.1 qualification. The consumer correlates
+  adapter transaction, channel deployment and managed fileset as one unit,
+  creates byte-exact backup evidence, uses same-volume quarantine and restores
+  on failure. OwnTracks is the first enabled contract; productive execution
+  and permanent backup/quarantine deletion remain separate gates.
+
 - Added bounded journal-based recovery for interrupted Open-Meteo calibration
   writes, preserving immutable evidence and rejecting conflicting file pairs.
 

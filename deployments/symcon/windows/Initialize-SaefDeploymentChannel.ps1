@@ -158,6 +158,7 @@ function Assert-SourceChecksums {
     $required = @(
         'Invoke-SaefDeploymentGateway.ps1',
         'Invoke-SaefDeploymentRetentionCleanup.ps1',
+        'Invoke-SaefStandaloneModuleCrossRootRetention.ps1',
         'Invoke-SaefRuntimeMirror.ps1',
         'Invoke-SaefSymconRestart.ps1',
         'SaefChildProcess.ps1',
@@ -188,6 +189,8 @@ function Assert-PowerShellSourceSyntax {
         'Initialize-SaefDeploymentChannel.ps1',
         'Invoke-SaefDeploymentGateway.ps1',
         'Invoke-SaefDeploymentRetentionCleanup.ps1',
+        'Invoke-SaefStandaloneModuleCrossRootRetention.ps1',
+        'Invoke-SaefStandaloneModuleCrossRootRetentionWindowsQualification.ps1',
         'Invoke-SaefRuntimeMirror.ps1',
         'Invoke-SaefSymconRestart.ps1',
         'SaefChildProcess.ps1'
@@ -201,7 +204,14 @@ function Assert-PowerShellSourceSyntax {
             [ref] $parseErrors
         ) | Out-Null
         if (@($parseErrors).Count -ne 0) {
-            throw [System.InvalidOperationException]::new("PowerShell source syntax is invalid: $name")
+            $firstError = @($parseErrors)[0]
+            $errorId = [string] $firstError.ErrorId
+            $errorMessage = [string] $firstError.Message
+            $line = [int] $firstError.Extent.StartLineNumber
+            $column = [int] $firstError.Extent.StartColumnNumber
+            throw [System.InvalidOperationException]::new(
+                "PowerShell source syntax is invalid: $name; ${errorId}: ${errorMessage} at ${line}:${column}"
+            )
         }
     }
 }
@@ -949,6 +959,7 @@ $markerEnd
     $authorizedKeyPath = Join-Path $env:ProgramData 'ssh\saef_deploy_authorized_keys'
     $runtimeArtifactPaths = @(
         $gatewayPath,
+        (Join-Path $InstallRoot 'Invoke-SaefStandaloneModuleCrossRootRetention.ps1'),
         (Join-Path $InstallRoot 'Invoke-SaefRuntimeMirror.ps1'),
         (Join-Path $InstallRoot 'Invoke-SaefSymconRestart.ps1'),
         (Join-Path $InstallRoot 'SaefChildProcess.ps1'),
@@ -1017,6 +1028,7 @@ $markerEnd
     foreach ($name in @(
         'Invoke-SaefDeploymentGateway.ps1',
         'Invoke-SaefDeploymentRetentionCleanup.ps1',
+        'Invoke-SaefStandaloneModuleCrossRootRetention.ps1',
         'Invoke-SaefRuntimeMirror.ps1',
         'Invoke-SaefSymconRestart.ps1',
         'SaefChildProcess.ps1',
@@ -1036,6 +1048,10 @@ $markerEnd
         managedFilesetRoot = [IO.Path]::GetFullPath($ManagedFilesetRoot)
         stateRoot = [IO.Path]::GetFullPath($StateRoot)
         adapterStateRoot = [IO.Path]::GetFullPath($AdapterStateRoot)
+        standaloneModuleCrossRootRetentionPath = Join-Path $InstallRoot 'Invoke-SaefStandaloneModuleCrossRootRetention.ps1'
+        expectedStandaloneModuleCrossRootRetentionSha256 = (Get-FileHash -LiteralPath `
+            (Join-Path $InstallRoot 'Invoke-SaefStandaloneModuleCrossRootRetention.ps1') `
+            -Algorithm SHA256).Hash.ToLowerInvariant()
         activeBootstrapRelativePath = $ActiveBootstrapRelativePath.Replace('\', '/')
         childProcessContractPath = Join-Path $InstallRoot 'SaefChildProcess.ps1'
         expectedChildProcessContractSha256 = (Get-FileHash -LiteralPath (Join-Path $InstallRoot 'SaefChildProcess.ps1') -Algorithm SHA256).Hash.ToLowerInvariant()

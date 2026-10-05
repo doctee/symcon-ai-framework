@@ -42,16 +42,15 @@ service restart remained false.
 
 ## Separately gated follow-ups
 
-These findings are not changed by the approval-contract correction:
+These findings remain separate from the approval-contract correction:
 
-1. The generic deployment-retention inventory and the OwnTracks adapter-owned
-   retention inventory still contain default PowerShell string sorting. Before
-   cross-root retention or any changed deletion authority, names, paths and
-   hashed review-plan entries need explicit ordinal ordering plus fixed
-   mixed-case vectors.
-2. Gateway and OwnTracks retention timestamps use general `DateTime.Parse()`
-   on protocol timestamps. Before changing those contracts, use an invariant,
-   exact round-trip format and verify timezone normalization with fixed vectors.
+1. The generic deployment-retention and OwnTracks inventories now use explicit
+   ordinal ordering for security-relevant names, paths and hashed plan entries.
+   The cross-root Windows qualification extracts the production ordering code
+   and exercises fixed mixed-case vectors under `en-US`, `de-DE` and `tr-TR`.
+2. Gateway and OwnTracks retention protocol timestamps now use invariant exact
+   round-trip parsing and UTC normalization. The same Windows qualification
+   exercises fixed offset vectors under all three cultures.
 3. Any future deployment-channel runtime upgrader must ordinal-sort retained
    backup paths and prove interrupted-transaction recovery under multiple
    cultures. Its qualification remains distinct from one-click profile
@@ -60,7 +59,9 @@ These findings are not changed by the approval-contract correction:
    define normalization and add non-ASCII cross-runtime vectors first. Ordinal
    sorting alone does not define Unicode normalization.
 
-Cross-root retention remains blocked by its own contract and approval gate.
+Cross-root retention remains blocked from operational use until its exact
+Windows PowerShell 5.1 qualification and a separate channel installation gate
+pass. Permanent backup/quarantine deletion remains unimplemented.
 This inventory grants no deletion, installation, restart, provider,
 publication or live-mutation authority.
 
