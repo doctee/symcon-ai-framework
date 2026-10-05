@@ -35,6 +35,7 @@ $script:scratchMutationAttempted = $false
 $script:scratchCleanupSucceeded = $false
 $script:productionMutationAttempted = $false
 $script:operationalMutationAttempted = $false
+$script:lastChildDiagnostics = $null
 $scratchRoot = Join-Path $env:TEMP ('saef-cross-root-retention-' + [Guid]::NewGuid().ToString('N'))
 $currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $currentSidReference = [Security.Principal.SecurityIdentifier]::new($currentSid)
@@ -307,10 +308,24 @@ function Invoke-Retention {
     $child = Invoke-SaefPowerShellChildProcess -ScriptPath $RetentionScriptPath `
         -ExpectedScriptSha256 $ExpectedRetentionScriptSha256 -Arguments $arguments `
         -TimeoutSeconds 90 -MaximumOutputBytes 131072
-    $stderr = [Text.Encoding]::UTF8.GetString([byte[]] $child.standardError)
+    $script:lastChildDiagnostics = [ordered]@{
+        operation = $Operation
+        terminationReason = [string] $child.terminationReason
+        processExitCode = [int] $child.exitCode
+        statusWritten = Test-Path -LiteralPath $StatusPath -PathType Leaf
+        statusSha256 = ''
+        status = $null
+        standardErrorBytes = @($child.standardError).Count
+        standardErrorBase64 = [Convert]::ToBase64String([byte[]] $child.standardError)
+    }
+    if ($script:lastChildDiagnostics.statusWritten) {
+        $script:lastChildDiagnostics.statusSha256 = Get-Sha256 -Path $StatusPath
+        $script:lastChildDiagnostics.status = Get-Content -LiteralPath $StatusPath -Raw -Encoding UTF8 |
+            ConvertFrom-Json
+    }
     Assert-Condition -Condition ($child.terminationReason -ceq 'exited' -and
         $child.exitCode -eq $ExpectedExitCode) `
-        -Message ('Unexpected retention child result: ' + $child.exitCode + ' ' + $stderr)
+        -Message ('Unexpected retention child result: ' + $child.exitCode)
     Assert-Condition -Condition (Test-Path -LiteralPath $StatusPath -PathType Leaf) `
         -Message 'Retention child did not write its status.'
     $status = Get-Content -LiteralPath $StatusPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -388,6 +403,7 @@ function Write-QualificationStatus {
         failedCheck = if ($ExitCode -eq 0) { '' } else { $script:failedCheck }
         errorType = $ErrorType
         errorId = $ErrorId
+        lastChildDiagnostics = $script:lastChildDiagnostics
         scratchMutationAttempted = [bool] $script:scratchMutationAttempted
         scratchCleanupSucceeded = [bool] $script:scratchCleanupSucceeded
         productionMutationAttempted = [bool] $script:productionMutationAttempted
