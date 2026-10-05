@@ -294,7 +294,8 @@ function Invoke-Retention {
         [Parameter()][string] $PlanSha256 = '',
         [Parameter()][string] $Confirmation = '',
         [Parameter(Mandatory = $true)][int] $ExpectedExitCode,
-        [Parameter(Mandatory = $true)][string] $ExpectedOutcome
+        [Parameter(Mandatory = $true)][string] $ExpectedOutcome,
+        [Parameter()][string] $ExpectedErrorMessage = ''
     )
     $arguments = @(
         '-Operation', $Operation,
@@ -331,6 +332,10 @@ function Invoke-Retention {
     $status = Get-Content -LiteralPath $StatusPath -Raw -Encoding UTF8 | ConvertFrom-Json
     Assert-Condition -Condition ([string] $status.outcome -ceq $ExpectedOutcome -and
         [int] $status.exitCode -eq $ExpectedExitCode) -Message 'Retention status differs.'
+    if ($ExpectedErrorMessage) {
+        Assert-Condition -Condition ([string] $status.errorMessage -ceq $ExpectedErrorMessage) `
+            -Message 'Retention failed for an unexpected reason.'
+    }
     foreach ($flag in @(
         'serviceRestartAttempted', 'liveSymconRpcContactAttempted', 'mqttPublishAttempted',
         'ownerMutationAttempted', 'eventMutationAttempted', 'deviceActionAttempted',
@@ -456,7 +461,8 @@ try {
     Add-PassedScenario -Name 'windows-powershell-5.1-parse' -Kind positive
 
     $script:failedCheck = 'culture-invariant-functions'
-    $functionNames = @('Get-OrdinalSortedObjects', 'ConvertFrom-RoundtripUtcTimestamp')
+    $functionNames = @('Get-OrdinalSortedObjects', 'ConvertFrom-RoundtripUtcTimestamp',
+        'Test-SafeIdentifier', 'Test-TransactionDirectoryName', 'Get-UnitArtifacts')
     foreach ($functionName in $functionNames) {
         $definition = @($ast.FindAll({ param($node)
             $node -is [Management.Automation.Language.FunctionDefinitionAst] -and
@@ -490,6 +496,29 @@ try {
     }
     Add-PassedScenario -Name 'ordinal-and-roundtrip-vectors-under-three-cultures' -Kind positive
 
+    $script:failedCheck = 'transaction-name-and-artifact-vectors'
+    Assert-Condition -Condition ((Test-TransactionDirectoryName -Value 'saef-test-20260101T000000Z') -and
+        -not (Test-SafeIdentifier -Value 'saef-Test') -and
+        -not (Test-TransactionDirectoryName -Value '../saef-test-20260101T000000Z') -and
+        -not (Test-TransactionDirectoryName -Value 'saef-test-20260101t000000z')) `
+        -Message 'Transaction directory contract differs.'
+    $unitVector = [pscustomobject]@{
+        deploymentId = 'saef-test'; filesetName = 'saef-test-fileset'
+        transactionName = 'saef-test-20260101T000000Z'
+    }
+    $inventoryVector = [pscustomobject]@{ artifacts = @(
+        [pscustomobject]@{ key = 'channel-state:saef-test' }
+        [pscustomobject]@{ key = 'managed-fileset:saef-test-fileset' }
+        [pscustomobject]@{ key = 'adapter-transaction:saef-test-20260101T000000Z' }
+        [pscustomobject]@{ key = 'channel-state:saef-other' }
+    ) }
+    $matched = @(Get-UnitArtifacts -Inventory $inventoryVector -Unit $unitVector)
+    Assert-Condition -Condition ($matched.Count -eq 3 -and
+        $matched[0].key -ceq 'adapter-transaction:saef-test-20260101T000000Z' -and
+        @(Get-OrdinalSortedObjects -Values @() -Property key).Count -eq 0) `
+        -Message 'Three-root selection or empty inventory differs.'
+    Add-PassedScenario -Name 'transaction-name-and-exact-three-root-artifact-vectors' -Kind positive
+
     New-ProtectedDirectory -Path $scratchRoot
     $script:scratchMutationAttempted = $true
     $context = New-RetentionFixture -Name 'main'
@@ -502,7 +531,8 @@ try {
     $null = Invoke-Retention -Context $context -Operation plan `
         -PlanPath (Join-Path $context.outputRoot 'reparse-plan.json') `
         -StatusPath (Join-Path $context.outputRoot 'reparse-status.json') `
-        -ExpectedExitCode 10 -ExpectedOutcome failed
+        -ExpectedExitCode 10 -ExpectedOutcome failed `
+        -ExpectedErrorMessage 'Managed tree contains a reparse point.'
     Remove-Item -LiteralPath $junctionPath -Force
     Add-PassedScenario -Name 'reparse-point-fails-before-plan' -Kind negative
 
@@ -512,7 +542,8 @@ try {
     $null = Invoke-Retention -Context $context -Operation plan `
         -PlanPath (Join-Path $context.outputRoot 'acl-plan.json') `
         -StatusPath (Join-Path $context.outputRoot 'acl-status.json') `
-        -ExpectedExitCode 10 -ExpectedOutcome failed
+        -ExpectedExitCode 10 -ExpectedOutcome failed `
+        -ExpectedErrorMessage 'Managed path grants broad write access.'
     Set-ProtectedScratchAcl -Path $context.backupRoot
     Add-PassedScenario -Name 'broad-write-acl-fails-before-plan' -Kind negative
 
@@ -528,7 +559,8 @@ try {
     $null = Invoke-Retention -Context $context -Operation plan `
         -PlanPath (Join-Path $context.outputRoot 'orphan-plan.json') `
         -StatusPath (Join-Path $context.outputRoot 'orphan-status.json') `
-        -ExpectedExitCode 10 -ExpectedOutcome failed
+        -ExpectedExitCode 10 -ExpectedOutcome failed `
+        -ExpectedErrorMessage 'Adapter transaction lacks its channel deployment pair.'
     Remove-Item -LiteralPath $orphan -Recurse -Force
     Add-PassedScenario -Name 'unpaired-cross-root-artifact-fails-before-plan' -Kind negative
 

@@ -84,8 +84,13 @@ function Test-SafeIdentifier {
     return $Value -cmatch '^[a-z0-9][a-z0-9._-]{0,127}$'
 }
 
+function Test-TransactionDirectoryName {
+    param([Parameter()][string] $Value)
+    return $Value.Length -le 128 -and $Value -cmatch '^saef-[a-z0-9.-]+-[0-9]{8}T[0-9]{6}Z$'
+}
+
 function Get-OrdinalSortedStrings {
-    param([Parameter(Mandatory = $true)][object[]] $Values)
+    param([Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]] $Values)
     $result = [string[]] @($Values | ForEach-Object { [string] $_ })
     [Array]::Sort($result, [StringComparer]::Ordinal)
     return @($result)
@@ -93,7 +98,7 @@ function Get-OrdinalSortedStrings {
 
 function Get-OrdinalSortedObjects {
     param(
-        [Parameter(Mandatory = $true)][object[]] $Values,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]] $Values,
         [Parameter(Mandatory = $true)][string] $Property,
         [Parameter()][switch] $Descending
     )
@@ -208,7 +213,7 @@ function Get-ChildPath {
         [Parameter(Mandatory = $true)][string] $Root,
         [Parameter(Mandatory = $true)][string] $Name
     )
-    if (-not (Test-SafeIdentifier -Value $Name)) {
+    if (-not (Test-SafeIdentifier -Value $Name) -and -not (Test-TransactionDirectoryName -Value $Name)) {
         throw [InvalidOperationException]::new('Managed child name is unsafe.')
     }
     $fullRoot = [IO.Path]::GetFullPath($Root).TrimEnd([char[]] @('\', '/'))
@@ -364,10 +369,10 @@ function Get-InventorySha256 {
     $null = $builder.Append('active').Append([char] 0).Append($ActiveBinding).Append("`n")
     foreach ($record in $records) {
         $null = $builder.Append([string] $record.role).Append([char] 0)
-            .Append([string] $record.name).Append([char] 0)
-            .Append([long] $record.bytes).Append([char] 0)
-            .Append([int] $record.entryCount).Append([char] 0)
-            .Append([string] $record.sha256).Append("`n")
+        $null = $builder.Append([string] $record.name).Append([char] 0)
+        $null = $builder.Append([long] $record.bytes).Append([char] 0)
+        $null = $builder.Append([int] $record.entryCount).Append([char] 0)
+        $null = $builder.Append([string] $record.sha256).Append("`n")
     }
     return Get-TextSha256 -Text $builder.ToString()
 }
@@ -526,7 +531,7 @@ function Get-ReferenceTexts {
 
 function Test-Referenced {
     param(
-        [Parameter(Mandatory = $true)][string[]] $Texts,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]] $Texts,
         [Parameter(Mandatory = $true)][string] $DeploymentId,
         [Parameter(Mandatory = $true)][string] $PackageIdentitySha256
     )
@@ -600,7 +605,7 @@ function Get-Inventory {
         if ($active.formatVersion -ne 1 -or [string] $active.adapterProfile -cne
                 [string] $adapter.adapterProfile -or
             -not (Test-SafeIdentifier -Value ([string] $active.deploymentId)) -or
-            -not (Test-SafeIdentifier -Value ([string] $active.transactionDirectoryName)) -or
+            -not (Test-TransactionDirectoryName -Value ([string] $active.transactionDirectoryName)) -or
             -not (Test-HexSha256 -Value ([string] $active.packageIdentitySha256))) {
             throw [InvalidOperationException]::new('Active adapter binding is invalid.')
         }
@@ -614,7 +619,7 @@ function Get-Inventory {
     $transactionDirectories = @(Get-OrdinalSortedObjects `
         -Values @(Get-ChildItem -LiteralPath ([string] $adapter.adapterStateRoot) -Directory -Force) -Property Name)
     foreach ($directory in $transactionDirectories) {
-        if (-not (Test-SafeIdentifier -Value $directory.Name)) {
+        if (-not (Test-TransactionDirectoryName -Value $directory.Name)) {
             throw [InvalidOperationException]::new('Adapter transaction name is invalid.')
         }
         $transactionPath = Join-Path $directory.FullName 'transaction.json'
@@ -763,9 +768,9 @@ function Get-UnitArtifacts {
         [Parameter(Mandatory = $true)] $Unit
     )
     $keys = @(
-        'channel-state:' + [string] $Unit.deploymentId,
-        'managed-fileset:' + [string] $Unit.filesetName,
-        'adapter-transaction:' + [string] $Unit.transactionName
+        ('channel-state:' + [string] $Unit.deploymentId)
+        ('managed-fileset:' + [string] $Unit.filesetName)
+        ('adapter-transaction:' + [string] $Unit.transactionName)
     )
     $result = @($Inventory.artifacts | Where-Object { [string] $_.key -in $keys })
     if ($result.Count -ne 3) {
