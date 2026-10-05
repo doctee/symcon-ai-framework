@@ -1,7 +1,7 @@
 # Standalone-Module Cross-Root Retention
 
-Status: Repository implementation complete; Windows qualification and every
-operational gate remain outstanding
+Status: Repository implementation and R3 Windows qualification complete;
+every operational gate remains outstanding
 
 ## Current implementation
 
@@ -20,10 +20,13 @@ deployment. MediaCarousel remains disabled until its own target contract and
 Windows qualification are admitted. The generic channel cleaner continues to
 reject standalone-module deployments.
 
-The repository implementation does not establish operational eligibility. The
-exact source still needs the separate Windows PowerShell 5.1 scratch
-qualification described below, followed by an independently reviewed channel
-installation. No live plan or apply has been run.
+The repository implementation does not establish operational eligibility. R3
+passed the synthetic Windows PowerShell 5.1 qualification in CI and in the
+operator-reported Windows 11 run: seven positive and nine negative cases,
+with successful scratch cleanup. The qualified retention source SHA-256 is
+`59452cabec24f1cc4e46c1c15cefebd3199247f023839e3aec33c5368c695488`.
+An independently reviewed channel installation is still required. No live
+plan or apply has been run.
 
 ## Required atomic unit
 
