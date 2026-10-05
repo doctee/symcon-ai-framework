@@ -37,6 +37,7 @@ $script:productionMutationAttempted = $false
 $script:operationalMutationAttempted = $false
 $scratchRoot = Join-Path $env:TEMP ('saef-cross-root-retention-' + [Guid]::NewGuid().ToString('N'))
 $currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+$currentSidReference = [Security.Principal.SecurityIdentifier]::new($currentSid)
 
 function Get-Sha256 {
     param([Parameter(Mandatory = $true)][string] $Path)
@@ -78,7 +79,7 @@ function Set-ProtectedScratchAcl {
     if ($LASTEXITCODE -ne 0) { throw 'Cannot disable scratch ACL inheritance.' }
     & icacls.exe $Path '/remove:g' '*S-1-1-0' '*S-1-5-11' '*S-1-5-32-545' | Out-Null
     & icacls.exe $Path '/grant:r' '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' `
-        ($currentSid + ':(OI)(CI)F') | Out-Null
+        ('*' + $currentSid + ':(OI)(CI)F') | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Cannot grant scratch ACL.' }
     & icacls.exe $Path '/setowner' '*S-1-5-32-544' | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Cannot set scratch ACL owner.' }
@@ -330,7 +331,7 @@ function Add-DenyDeleteChildrenRule {
     param([Parameter(Mandatory = $true)][string] $Path)
     $acl = Get-Acl -LiteralPath $Path
     $rule = [Security.AccessControl.FileSystemAccessRule]::new(
-        $currentSid,
+        $currentSidReference,
         [Security.AccessControl.FileSystemRights]::DeleteSubdirectoriesAndFiles,
         [Security.AccessControl.InheritanceFlags]::None,
         [Security.AccessControl.PropagationFlags]::None,
@@ -344,7 +345,7 @@ function Add-DenyWriteDataRule {
     param([Parameter(Mandatory = $true)][string] $Path)
     $acl = Get-Acl -LiteralPath $Path
     $rule = [Security.AccessControl.FileSystemAccessRule]::new(
-        $currentSid,
+        $currentSidReference,
         [Security.AccessControl.FileSystemRights]::WriteData,
         [Security.AccessControl.InheritanceFlags]::ContainerInherit -bor
             [Security.AccessControl.InheritanceFlags]::ObjectInherit,

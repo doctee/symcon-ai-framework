@@ -133,6 +133,10 @@ foreach (
         'terminal-read-only-inspect',
         'claim-replay-fails-before-second-mutation',
         "@('en-US', 'de-DE', 'tr-TR')",
+        '$currentSidReference = [Security.Principal.SecurityIdentifier]::new($currentSid)',
+        "('*' + \$currentSid + ':(OI)(CI)F')",
+        '[Security.AccessControl.FileSystemAccessRule]::new(',
+        '$currentSidReference,',
         'productionMutationAttempted = [bool] $script:productionMutationAttempted',
         'retentionDeletionAttempted = $false',
     ] as $fragment
