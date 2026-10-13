@@ -44,7 +44,7 @@ function IPS_GetObject(int $id): array
 }
 function IPS_GetVariable(int $id): array
 {
-    return ['VariableType' => $GLOBALS['types'][$id], 'VariableUpdated' => $GLOBALS['now'] - ($GLOBALS['stale'] ? 12 * 3600 : 30)];
+    return ['VariableType' => $GLOBALS['types'][$id], 'VariableUpdated' => $GLOBALS['sensorUpdates'][$id] ?? ($GLOBALS['now'] - ($GLOBALS['stale'] ? 12 * 3600 : 30))];
 }
 function IPS_GetChildrenIDs(int $id): array
 {
@@ -101,6 +101,11 @@ function AC_GetAggregatedValues(int $a, int $id, int $level, int $from, int $to,
 function AC_GetLoggedValues(int $a, int $id, int $from, int $to, int $limit): array
 {
     check($from > 0 && $limit <= 2000, 'Bounded raw read');
+    if (isset($GLOBALS['rawFixtures'][$id])) {
+        $rows = array_values(array_filter($GLOBALS['rawFixtures'][$id], static fn(array $r): bool => $r['TimeStamp'] >= $from && $r['TimeStamp'] <= $to));
+        usort($rows, static fn(array $a, array $b): int => $b['TimeStamp'] <=> $a['TimeStamp']);
+        return array_slice($rows, 0, $limit);
+    }
     return $limit === 1 ? [['TimeStamp' => $to - 1, 'Value' => $id !== 20]] : [];
 }
 function OMWEATHER_GetHourlyForecastJson(int $id, int $from, int $to, string $fields): string
