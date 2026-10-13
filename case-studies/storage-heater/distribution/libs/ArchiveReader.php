@@ -44,6 +44,27 @@ final class ArchiveReader
         return Forecast::duty(array_merge($seed, $rows), $from, $to);
     }
 
+    /** Bounded changed-only samples, optionally with one carry-in for state-like sources. */
+    public function changes(int $id, int $from, int $to, bool $carry = false): array
+    {
+        $this->validate($id, 0);
+        if ($from < $this->historyStart || $to <= $from || $to - $from > 48 * 3600 || $to > time()) {
+            throw new RuntimeException('Invalid raw measurement window.');
+        }
+        $rows = AC_GetLoggedValues($this->archive, $id, $from, $to, 2000);
+        if (!is_array($rows) || count($rows) >= 2000) {
+            throw new RuntimeException('Incomplete or saturated measurement archive.');
+        }
+        if ($carry) {
+            $seed = AC_GetLoggedValues($this->archive, $id, $this->historyStart, $from - 1, 1);
+            if (!is_array($seed) || count($seed) !== 1) {
+                throw new RuntimeException('Missing measurement carry-in.');
+            }
+            $rows = array_merge($seed, $rows);
+        }
+        return $rows;
+    }
+
     private function validate(int $id, int $type): void
     {
         if ($id <= 0 || !IPS_VariableExists($id) || !AC_GetLoggingStatus($this->archive, $id) || AC_GetAggregationType($this->archive, $id) !== $type) {

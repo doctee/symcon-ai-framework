@@ -38,6 +38,20 @@
       "caption": "Maximales Alter Messwertaktualisierung (Minuten)",
       "minimum": 5,
       "maximum": 1440
+    },
+    {
+      "type": "Label",
+      "caption": "Optional: Auskühlmodell ohne zusätzliche Wärmezufuhr. Ausgabe 23:00–23:15, Vergleich bis höchstens 05:00 (max. 6 Stunden)."
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "CoolingModelJSON",
+      "caption": "Privat kalibriertes Auskühlmodell (JSON; {} deaktiviert)"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "CoolingBindingsJSON",
+      "caption": "Optionale Auskühlquellen: sofaBattery, floor, supply (JSON)"
     }
   ],
   "actions": [
@@ -69,6 +83,11 @@
       "type": "Button",
       "caption": "Journal ausgeben (JSON)",
       "onClick": "echo SHF_GetJournalJson($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Temperaturjournal ausgeben (JSON)",
+      "onClick": "echo SHF_GetCoolingJournalJson($id);"
     }
   ],
   "status": [

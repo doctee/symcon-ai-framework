@@ -1,4 +1,4 @@
-# Storage Heater Forecast – Version 0.2.0
+# Storage Heater Forecast – Version 0.4.0
 
 Beobachtendes IP-Symcon-Modul für die elektrische Nachtladung eines Nachtspeicherofens.
 Es liest Messwerte und Schaltzustände. Es besitzt keine Geräteaktionen, keine Relais-
@@ -96,7 +96,7 @@ Abweichungen. Vollständige Aggregate beweisen keine vollständige Sensorfrische
 Die Modellvalidierung verwendet gemessene spätere Außentemperaturen. Die Qualität
 mit tatsächlichen Wettervorhersagen wird erst anhand des neuen Journals messbar.
 Außerhalb der Trainingsbereiche wird eine Warnung ausgegeben, kein künstlich präzises
-Konfidenzband. Mehrtages- und Raumtemperaturmodelle werden separat entwickelt.
+Konfidenzband. Mehrtages- und Modelle mit aktiver Wärmezufuhr werden separat entwickelt.
 
 ## Entwicklung und reproduzierbare Prüfung
 
@@ -158,3 +158,62 @@ Historienlöschung ist keine automatische Rücknahmehandlung.
 Offizielle Verträge: [SDK-Modulfunktionen](https://www.symcon.de/de/llms/developer/sdk-tools/sdk-php/module.md),
 [Archive Control](https://www.symcon.de/de/llms/modules/archive-control.md),
 [Variablenverwaltung](https://www.symcon.de/de/llms/functions/management-variables.md).
+
+## Optionales Auskühlmodell (0.4.0)
+
+`CoolingModelJSON` aktiviert eine zusätzliche rein beobachtende Temperaturkurve;
+`{}` lässt sie ausgeschaltet. Modellvertrag: `schema=1`, `timezone=Europe/Berlin`,
+`window=23-05`, positiver Unix-Zeitpunkt `trainedThrough`, positive Koeffizienten
+`kPerHour.gallery` und `kPerHour.sofa` (höchstens 1/h). Optionale Zweier-Arrays
+`ranges.gallery`, `ranges.sofa` und `ranges.outside` kennzeichnen die privaten
+Kalibrierbereiche. Optional kennzeichnet `minimumDeltaK` die kleinste kalibrierte
+Temperaturdifferenz nach außen. Ohne Bereichsinformation wird dies sichtbar gemeldet.
+Parameter, Trainingsdaten und private Quellen werden nicht mitgeliefert.
+
+Die bisherigen Bindings für Galerie, Wohnzimmer (`sofa`), Außensensor und Wetter
+werden unverändert verwendet. `CoolingBindingsJSON` erlaubt zusätzlich positive
+Variablen-IDs für `sofaBattery` (numerischer Prozentwert), `floor` und `supply`
+(boolesche Zustände). Keine Root-ID oder eigenen Ausgänge als Eingänge verwenden.
+Die Batterie verhindert eine Ausgabe bei 0 % und sperrt betroffene historische
+Interpolationsintervalle; Schaltzustände liefern ausschließlich Kontext.
+
+Zwischen 23:00 und 23:15 wird genau eine Nachtkurve erzeugt, beginnend mit dem
+zum Ausgabezeitpunkt verfügbaren frischen Messwert. Das Ende liegt spätestens
+um 05:00 und höchstens sechs reale Stunden nach 23:00; Sommerzeitwechsel werden
+über echte Zeitstempel berücksichtigt. Die Kurve setzt keine zusätzliche Wärme
+voraus. Heizung, Speicherrestwärme, Kamin und Sonne werden nicht modelliert.
+Sie wird auch bei eingeschalteter Heizung als ausdrücklich gekennzeichneter
+Vergleich ausgegeben, niemals als Komfortversprechen oder Steuerempfehlung.
+Aktuelle Außentemperatur stammt aus dem konfigurierten Sensor; die zukünftige
+Außentemperatur aus der zum Ausgabezeitpunkt verfügbaren Open-Meteo-Vorhersage.
+
+Das separate `CoolingJournal` hält maximal 120 Nächte. Vorhersage, Modell,
+Ausgabezeit, Sensor-Aktualisierungen, Startkontext, damals bekannte Kaminstarts
+und Wettervorhersage bleiben unveränderlich. Ein Neustart oder eine andere
+Konfiguration ersetzt sie nicht. Keine rückwirkenden Vorhersagen und kein
+Nachtraining. Die bestehende elektrische Ladeprognose, ihr Hash und ihr Journal
+werden durch den optionalen Modellvertrag nicht verändert.
+
+Messwerte werden aus höchstens zwei noch offenen Nächten pro Lauf ergänzt.
+Je Raum werden höchstens 2.000 Rohwerte über maximal 18 Stunden gelesen;
+Sättigung wird abgewiesen. Die zusätzliche Batterieabfrage verwendet denselben
+Zeitraum plus einen expliziten archivierten Anfangszustand. Innenwerte am
+stündlichen Kurvenraster brauchen beidseitige Rohwertbelege mit maximal sechs
+Stunden Abstand, exakte archivierte Treffer bleiben exakt. Keine Vorwärtsfüllung
+oder Extrapolation, keine fehlenden Werte als null Grad. Spätestens sechs Stunden
+nach Nachtende wird abgeschlossen; nach mehr als sieben Tagen wird eine offene
+Nacht nur als abgelaufen markiert. Bereits ergänzte Messwerte bleiben erhalten.
+`VariableUpdated` ist weiterhin kein garantiertes Funk-Lebenszeichen.
+
+`CoolingComparison` ist eine read-only HTMLBox ohne JavaScript, externe Ressourcen
+oder Geräteaktionen. Sie zeigt aktuelle Temperaturen mit Aktualisierungszeit,
+getrennte Galerie-/Wohnzimmer-Kurven, eine Wertetabelle und die letzten sieben
+Nächte. `CoolingStatus` ist separat verlinkbar. Private Visualisierungen verlinken
+diese Ausgänge über SAEF EnsureCategory/EnsureLink. `SHF_GetCoolingJournalJson`
+exportiert die vollständige aufbewahrte Temperaturhistorie. Änderungen am
+Kaminprotokoll schreiben keine ausgegebene Temperaturkurve um.
+
+Rücknahme der Zusatzfunktion: `CoolingModelJSON={}` setzen und Änderungen der
+Beobachterinstanz übernehmen; Ladeprognose und Temperaturjournal bleiben erhalten.
+Die neue Anzeige kann separat ausgeblendet werden. Keine Geräte-, Regler-,
+Archiv- oder Service-Neustartoperation ist Teil der Erweiterung.

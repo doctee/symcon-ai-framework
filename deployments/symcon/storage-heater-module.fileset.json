@@ -25,6 +25,18 @@
       "target": "libs/ArchiveReader.php"
     },
     {
+      "source": "case-studies/storage-heater/distribution/libs/Cooling.php",
+      "target": "libs/Cooling.php"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/libs/CoolingObservation.php",
+      "target": "libs/CoolingObservation.php"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/libs/CoolingView.php",
+      "target": "libs/CoolingView.php"
+    },
+    {
       "source": "case-studies/storage-heater/distribution/libs/FireplaceLog.php",
       "target": "libs/FireplaceLog.php"
     },

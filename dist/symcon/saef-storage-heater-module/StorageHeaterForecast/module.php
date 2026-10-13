@@ -5,6 +5,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/../libs/Forecast.php';
 require_once __DIR__ . '/../libs/ArchiveReader.php';
 require_once __DIR__ . '/../libs/FireplaceLog.php';
+require_once __DIR__ . '/../libs/Cooling.php';
+require_once __DIR__ . '/../libs/CoolingView.php';
+require_once __DIR__ . '/../libs/CoolingObservation.php';
 require_once __DIR__ . '/../libs/saef/diagnostics/Registry.php';
 require_once __DIR__ . '/../libs/saef/diagnostics/Statistics.php';
 require_once __DIR__ . '/../libs/saef/diagnostics/ErrorRingBuffer.php';
@@ -17,9 +20,12 @@ use SAEF\StorageHeater\FireplaceLog;
 /** Observational module. Only its own variables/attributes are writable. */
 class StorageHeaterForecast extends IPSModule
 {
+    use \SAEF\StorageHeater\CoolingObservation;
+
     public function Create(): void
     {
         parent::Create();
+        $this->createCooling();
         $this->RegisterPropertyBoolean('Enabled', false);
         $this->RegisterPropertyString('BindingsJSON', '{}');
         $this->RegisterPropertyString('ModelJSON', '{}');
@@ -74,6 +80,7 @@ class StorageHeaterForecast extends IPSModule
         if (!$this->ReadPropertyBoolean('Enabled')) {
             $this->SetStatus(IS_INACTIVE);
             $this->SetValue('StatusText', 'Beobachtung deaktiviert');
+            $this->coolingDisplay([], [], 'Beobachtung deaktiviert');
             return;
         }
         try {
@@ -82,7 +89,8 @@ class StorageHeaterForecast extends IPSModule
                 $this->RegisterReference($id);
             }
             SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'configurationHash', $config['hash']);
-            SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'version', '0.3.1');
+            SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'version', '0.4.0');
+            $this->configureCooling($config);
             $this->SetTimerInterval('Observe', 5 * 60 * 1000);
             $this->SetStatus(IS_ACTIVE);
             $this->SetValue('StatusText', 'Bereit – Prognose täglich zwischen 21:45 und 22:00 Uhr');
@@ -104,6 +112,7 @@ class StorageHeaterForecast extends IPSModule
         try {
             $config = $this->configuration();
             $now = $this->now();
+            $this->observeCooling($config, $now);
             $day = (new DateTimeImmutable('@' . $now))->setTimezone(new DateTimeZone('Europe/Berlin'));
             $journal = $this->journal();
             $records = $journal['records'];

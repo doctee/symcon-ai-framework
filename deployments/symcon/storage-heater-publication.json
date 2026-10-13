@@ -15,8 +15,8 @@
     "pullRequest": {
       "repository": "doctee/saef-storage-heater",
       "base": "main",
-      "title": "fix: avoid reentrant reference query on Symcon Rust",
-      "body": "StorageHeaterForecast 0.3.1 uses the SDK GetReferenceList method during ApplyChanges, avoiding a native self-query rejected by the Rust kernel. Configuration, forecast calculations and fireplace history are preserved.\n\nValidated with the command-free runtime suite, syntax/schema checks, static analysis and generated-fileset verification.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "title": "feat: add passive cooling forecasts and temperature comparison",
+      "body": "Add an optional, privately calibrated passive cooling model with immutable nightly forecasts, bounded gap-aware measurements and a read-only visualization. Electrical charging forecasts, fireplace history and heater controls remain unchanged.\n\nValidated with command-free runtime tests, schemas, PHPStan, PSR-12 and deterministic package checks.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
       "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
     }
   },
@@ -47,6 +47,9 @@
     "fileset.sources.json",
     "library.json",
     "libs/ArchiveReader.php",
+    "libs/Cooling.php",
+    "libs/CoolingObservation.php",
+    "libs/CoolingView.php",
     "libs/FireplaceLog.php",
     "libs/Forecast.php",
     "libs/saef/common/Validation.php",

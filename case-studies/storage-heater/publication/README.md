@@ -42,3 +42,35 @@ Konfiguration, Prognoseberechnung und Kaminprotokoll bleiben unverändert.
 ## Lizenz
 
 PolyForm Noncommercial License 1.0.0; siehe LICENSE. Keine private Installationskonfiguration oder Trainingshistorie ist Bestandteil dieser Bibliothek.
+
+## Version 0.4.0: Auskühlmodell und Temperaturvergleich
+
+Optionales, privat kalibriertes `CoolingModelJSON` mit zwei Koeffizienten
+(`kPerHour.gallery`, `kPerHour.sofa`), `schema=1`, `timezone=Europe/Berlin`,
+`window=23-05` und `trainedThrough` als positivem Unix-Zeitpunkt vor Ausgabe.
+Optionale `ranges` für gallery/sofa/outside enthalten die jeweiligen unteren und
+oberen Kalibriergrenzen. `{}` deaktiviert nur diese Zusatzfunktion.
+`CoolingBindingsJSON` kann `sofaBattery` (Prozentwert), `floor` und `supply`
+(boolesche Zustände) als zusätzliche positive Quellen-IDs enthalten.
+
+Die Temperaturkurve entsteht einmal zwischen 23:00 und 23:15, startet beim
+aktuellen Sensorwert und endet spätestens 05:00 (maximal sechs reale Stunden).
+Die zukünftigen Außentemperaturen kommen aus der damals gespeicherten
+Wettervorhersage. Fehlende oder veraltete Sensorwerte, leere konfigurierte
+Batterie und unvollständiges Wetter verhindern eine neue Kurve. Versäumte
+Vorhersagen werden nicht nachgetragen. Die Kurve bleibt nach Ausgabe unverändert.
+
+`CoolingComparison` zeigt aktuelle Temperaturen, Prognose und Messung getrennt
+für Galerie und Wohnzimmer einschließlich Wertetabelle und der letzten sieben
+Nächte. Die read-only HTMLBox kann in eine bestehende Visualisierung verlinkt
+werden. `CoolingStatus` meldet fehlende Daten. Messungen werden zeitlich zwischen
+Archivänderungen interpoliert, nur bei höchstens sechs Stunden Abstand; größere
+Lücken bleiben offen. Nach höchstens sechs Stunden Wartezeit nach Nachtende wird
+die Messung abgeschlossen. Das separate exportierbare Temperaturjournal bewahrt
+maximal 120 Nächte auf und übersteht Neustarts.
+
+Die Kurve ist ausdrücklich ein **Vergleich ohne zusätzliche Wärmezufuhr**.
+Heizung, Speicherrestwärme, Kamin und Sonne sind nicht eingerechnet. Sie ist keine
+Komfort-, Frostschutz- oder mehrtägige Temperaturgarantie. Elektrische
+Ladeprognose, Kaminprotokoll und Heizungsregelung bleiben unverändert.
+Rücknahme: nur `CoolingModelJSON` auf `{}` setzen; keine Historie wird gelöscht.
