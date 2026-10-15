@@ -100,6 +100,9 @@
             "@php tests/helpers/public-api.php",
             "@php tests/helpers/wait-for-variable.php"
         ],
+        "test:mcp-workflow": [
+            "@php tests/workflows/mcp-results.php"
+        ],
         "test:mqtt-exporter-core": [
             "@php tests/mqtt-discovery-exporter/core.php"
         ],
@@ -266,6 +269,7 @@
             "@test:runtime-source-mirror",
             "@test:runtime-health-probe",
             "@test:helpers",
+            "@test:mcp-workflow",
             "@test:mqtt-exporter-core",
             "@test:mqtt-exporter-runtime",
             "@test:mqtt-exporter-reconcile",

@@ -58,6 +58,12 @@ runtime compatibility, API availability or correct module behavior.
 A change to an authorized live IP-Symcon installation shall be treated as a
 separate integration gate after repository and offline verification.
 
+Choose the route in `project/SYMCON_CHANGE_WORKFLOW.md` by impact and
+recoverability. A direct bounded change does not need custom deployment
+packaging. New behavior is first developed in isolation; migrations, deletion,
+security and coupled state changes need a specific high-impact plan. Existing
+transaction-owned targets retain their stronger contracts.
+
 Before changing a live script or object:
 
 - read the complete authorized source through the preferred read-only MCP
@@ -99,20 +105,54 @@ Idempotent configuration changes should be verified twice when execution is
 safe. The second verification must confirm stable object identity and structure,
 not only a successful function return.
 
+For control optimization, prefer an observation-only candidate: compare its
+hypothetical decisions against the baseline on the same inputs without actuator
+or production-state writes. Define representative conditions, domain metrics,
+duration, resource bounds and abort criteria before starting. Creating
+observation objects/events still needs mutation authority.
+
+Bounded development approval may cover repeated tests and corrections on a
+named isolated system. Verify isolation of credentials, references, connections,
+archives, events and device/MQTT outputs; a test category is insufficient.
+Record iteration limits and stop conditions. It does not permit production
+promotion, publication, cleanup or bypass of consumed one-run markers.
+Use the smallest reproducer and relevant regressions first, then the broader
+applicable suite before promotion. A large check count is not coverage.
+
 ## 8. MCP result evaluation
 
 Follow `project/SYMCON_MCP_SCRIPT_READBACK.md` for authorized live inspection.
 
-- Prefer `symcon_get_script_content` for source reads.
-- Use `symcon_run_script_text_ex` only for bounded probes.
-- Evaluate `transportError` and `executionError` separately.
-- Treat `truncated: true` as an incomplete result.
-- Bound `maxOutputBytes` to the expected aggregate result.
+- Prefer direct script-content operations or own-module read tools for source.
+- For inspection, use `symcon_run_script_text_ex` only for bounded probes.
+  Administrative mutations require the separate live authorization described
+  in `project/SYMCON_MODULE_INSTALLATION.md`.
+- For the legacy result channel, evaluate `transportError` and
+  `executionError` separately, reject `truncated: true` and bound
+  `maxOutputBytes` to the expected aggregate result.
+- For native tools, inspect all content blocks, structured verdicts, warnings
+  and `isError`. Missing legacy fields must not be fabricated as successful
+  checks. Unknown or incomplete result semantics block acceptance.
+- A write with `isError=false` and a syntax warning is not successful
+  deployment. A confirmed saved invalid file is a mutating failure.
+- Validate locally before writing; separately lint the changed PHP file and
+  the module folder after writing. Validate metadata and the relevant behavior
+  separately. Check deployed inventory when folder lint encounters development
+  stubs; do not silently omit files or accept an error as success.
+- Read back exact candidate bytes independently. Reload results must cover all
+  library/module registrations and affected instances, not just a top-level OK.
+- After ambiguous mutation, inspect instead of retrying. Rollback must itself
+  have complete verification; otherwise report recovery required.
 - Prefer direct result channels over temporary live objects.
 
 Temporary scripts, variables, events or markers require explicit authorization.
-Delete them immediately after use and verify their absence through a separate
-read-back.
+Only perform their exact authorized cleanup and verify absence through a
+separate read-back. When test objects must be retained, preserve them and
+record that cleanup was not performed; do not invent cleanup authority.
+
+The synthetic examples in `tests/workflows/mcp-result-cases.json` and
+`composer test:mcp-workflow` specify the acceptance decisions offline. They
+are not a live client, automatic free-text classifier or Windows qualification.
 
 ## 9. Acceptance and rollback
 
@@ -136,20 +176,31 @@ On failure, stop the migration cohort. Preserve the managed target object and
 restore only the changed source or configuration from the prepared rollback.
 Do not delete and recreate variables merely to recover from a caller migration.
 
+Check for intervening writers before restoration. Source rollback does not
+restore data migrations or physical effects; require a compatible state backup
+and explicit compensation scope where applicable. A failed or unverified
+restore is recovery required, not a successful rollback.
+
 ## 10. Live evidence closure
 
 An authorized live mutation or real-device test is not complete when the
 runtime check passes. Its evidence and the framework's current-state claims
 must also be reconciled.
 
-Keep exact installation evidence in a private machine-readable artifact. JSON
+For routine changes, use one compact private record following
+`templates/CHANGE_RECORD.md`. Reference existing backups/results rather than
+building another wrapper or evidence package. Mark inapplicable checks with a
+reason. Stronger existing managed-deployment receipts remain binding.
+
+Keep exact installation evidence in a private machine-readable artifact when
+automated follow-up or an existing deployment contract requires it. JSON
 is recommended for deterministic review and follow-up automation. The artifact
 should record, where applicable:
 
 - a format version, UTC timestamp, phase and outcome;
 - the explicit authorization kind and bounded scope;
-- MCP transport errors, PHP execution errors and output truncation as separate
-  fields;
+- the actual MCP result contract, its errors, completeness and semantic verdicts
+  (legacy transport/PHP/truncation fields only for that channel);
 - package, source, configuration or activation hashes needed to identify the
   tested candidate;
 - whether mutation and device actions were attempted, including the exact

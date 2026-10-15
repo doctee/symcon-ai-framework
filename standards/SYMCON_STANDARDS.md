@@ -1573,6 +1573,12 @@ Changes to a live IP-Symcon installation shall use a staged verification gate
 with a private snapshot, deterministic rollback, explicit side-effect analysis
 and bounded operational observation.
 
+Choose the least complex sufficient route in
+`project/SYMCON_CHANGE_WORKFLOW.md`: direct bounded change, isolated
+development or planned high-impact change. This does not require custom
+deployment packaging for every change and does not weaken an installed
+managed-deployment contract. Classify effects and recoverability, not size.
+
 #### Rationale
 
 Offline correctness does not prove compatibility with an existing object tree,
@@ -1592,10 +1598,12 @@ than relying only on a successful script result.
 - Compare source identity, call distribution, object identity, values,
   metadata, tree structure, archive configuration, links and event progression
   as applicable.
-- Use direct bounded MCP result channels and evaluate transport errors,
-  execution errors and truncation separately.
+- Use direct bounded MCP tools and evaluate their actual result contract.
+  Legacy transport/execution/truncation checks and native content/error
+  verdicts are distinct; separately lint PHP writes and read back the result.
 - Create temporary live objects only with explicit authorization, then delete
-  them immediately and verify their absence.
+  them within the authorized cleanup scope and verify their absence. Preserve
+  explicitly retained test objects instead of inferring deletion authority.
 - Stop the cohort and use the prepared rollback when an invariant fails.
 
 #### Exceptions
@@ -1608,6 +1616,7 @@ handling appropriate to their scope.
 
 - `standards/TESTING_STANDARDS.md`
 - `project/SYMCON_MCP_SCRIPT_READBACK.md`
+- `project/SYMCON_CHANGE_WORKFLOW.md`
 - `knowledge/EK-005-idempotent-configuration.md`
 - `adr/ADR-0003-private-overlay.md`
 

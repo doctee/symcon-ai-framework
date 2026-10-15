@@ -4,6 +4,12 @@ Diese Anleitung verbindet die bestehenden SAEF-Schritte für Dateisatz, Veröffe
 und Installation. Sie ersetzt weder den Publikationsvertrag noch die Freigabe eines
 konkreten Live-Ziels.
 
+Zuerst den passenden [risikogestuften Änderungsweg](SYMCON_CHANGE_WORKFLOW.md)
+wählen. Veröffentlichung ist keine Voraussetzung für jeden privaten
+Entwicklungsschritt. Die folgenden Git-Publikationsschritte gelten, wenn eine
+Bibliothek veröffentlicht werden soll; direkte Pflege eigener Module ist
+weiter unten abgegrenzt.
+
 ## 1. Bibliothek reproduzierbar vorbereiten
 
 Kanonische Quellen liegen in der jeweiligen Case Study. Ein explizites Manifest unter
@@ -58,12 +64,38 @@ protokolliert werden. Er darf nicht als reine Leseprobe ausgegeben werden.
 Positive Ziel-ID, Instanztyp und GUID, unveränderter Ausgangszustand, genaue
 Repository-URL und Zielcommit vorher prüfen; Bibliotheksidentität, Commit,
 Gültigkeit und ausschließlich erwartete Änderungen danach unabhängig zurücklesen.
-Transportfehler, Ausführungsfehler und Truncation getrennt auswerten.
+Ergebnisse entsprechend dem konkreten MCP-Vertrag auswerten; beim
+Legacy-Codekanal Transportfehler, Ausführungsfehler und Truncation getrennt prüfen.
 Keine Geräteaktionen, manuellen Serverdateitransporte oder Neustarts ableiten.
 
 Erst wenn die erforderliche MCP-Bindung oder eine geeignete Modulfunktion
 tatsächlich fehlt, den Fehler melden und einen anderen Live-Kanal ausdrücklich
 freigeben lassen. Eine manuelle Installation über die Modulverwaltung bleibt möglich.
+
+## Direkte Pflege eigener Module
+
+Für eine begrenzte Änderung an einem eigenen, nicht transaktionsgebundenen
+Modul kann der native MCP-Weg genügen: vollständige Quellen lesen und privat
+sichern, Kandidat lokal prüfen, Ausgangsstand erneut vergleichen, gezielt
+schreiben, separat linten/validieren und unabhängig zurücklesen.
+Siehe [Werkzeugverträge und Fehlerauswertung](SYMCON_MCP_SCRIPT_READBACK.md).
+
+Neue oder größere Logik zuerst in einer nachweislich isolierten Testumgebung
+entwickeln. Eine Testinstanz derselben Bibliothek auf dem Produktivsystem
+isoliert weder Quellcode noch Reload-Effekte. Auch Änderungen ohne Reload
+können sofort beim nächsten Aufruf wirken. Reload, Aktivierung und reale
+Geräteaktionen deshalb nur im ausdrücklich genehmigten Umfang ausführen.
+
+Git bleibt bevorzugte Quellhistorie; Live-Abweichungen bewusst abgleichen.
+Kein automatisches Produktiv-Pullen einer frei beschreibbaren Entwicklungsbranch
+und keine automatische bidirektionale Synchronisation. Einen geprüften
+Kandidaten übernehmen, nicht einen später möglicherweise veränderten Branchstand.
+
+Store-Module nicht stillschweigend überschreiben oder forken. Ein Fork ändert
+die Update-Verantwortung und braucht eine eigene Entscheidung. Bei bereits
+SAEF-verwalteten Paketen und Laufzeitspiegeln gelten die installierten
+Eigentums-, Hash-, Sperr- und Rollback-Verträge unverändert. Native Werkzeuge
+ersetzen diese nicht ohne ausdrücklich geprüfte Migration.
 
 ## Abgrenzung zum Windows-Deployment
 

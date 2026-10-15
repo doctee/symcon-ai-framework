@@ -173,8 +173,15 @@ If the MCP binding is unavailable, stop and report it. Computer Use, browser,
 SSH, PowerShell and temporary Symcon objects are separate fallbacks and require
 their own explicit authorization.
 
-Transport success, PHP execution success and non-truncated output are separate
-acceptance conditions.
+Evaluate the actual result contract: legacy transport/PHP/truncation checks
+and native complete-content/tool verdicts are not interchangeable. Independent
+readback remains required for changes.
+
+Choose the risk-tiered route in `project/SYMCON_CHANGE_WORKFLOW.md` before
+adding deployment machinery. This coordination record is not a requirement to
+create a second live-change evidence package. A bounded isolated-development
+approval may cover repeated tests, but it never transfers production,
+publication or cleanup authority.
 
 ## Merge and Closure Gate
 

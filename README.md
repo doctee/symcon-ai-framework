@@ -63,6 +63,9 @@ Important current artifacts include:
 - `ARCHITECTURE.md`
 - `project/AI_PROJECT.md`
 - `project/SYMCON_MCP_SCRIPT_READBACK.md`
+- `project/SYMCON_CHANGE_WORKFLOW.md`
+- `adr/ADR-0012-use-risk-tiered-symcon-change-workflows.md`
+- `templates/CHANGE_RECORD.md`
 - `project/WORKSTREAM_COORDINATION.md`
 - `templates/README.md`
 - `templates/module/README.md`
@@ -160,6 +163,12 @@ Private data belongs only in:
 - `.env*`
 
 ## Development Status
+
+Current Symcon changes select a risk-tiered route: direct bounded changes,
+isolated development, or planned high-impact operations. Native MCP tools
+reduce routine transport overhead; backup, explicit scope, validation and
+independent readback remain required. Existing installed deployment contracts
+are unchanged. See [the workflow](project/SYMCON_CHANGE_WORKFLOW.md).
 
 SAEF is an operational pre-1.0 engineering platform under active development.
 

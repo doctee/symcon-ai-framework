@@ -15,6 +15,7 @@ $directories = [
     'tests/helpers',
     'tests/mqtt-discovery-exporter',
     'tests/schemas',
+    'tests/workflows',
     'deployments/symcon/windows',
     'case-studies/mqtt-discovery-exporter/candidate',
     'case-studies/control-light/candidate',

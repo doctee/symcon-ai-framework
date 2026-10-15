@@ -22,6 +22,7 @@
     <file>tests/helpers</file>
     <file>tests/mqtt-discovery-exporter</file>
     <file>tests/publication</file>
+    <file>tests/workflows</file>
     <file>deployments/symcon/windows/SaefRuntimeSourceMirror.php</file>
     <file>deployments/symcon/windows/SaefRuntimeHealthProbe.php</file>
     <file>case-studies/control-light/candidate</file>
