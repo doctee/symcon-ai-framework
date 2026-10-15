@@ -141,8 +141,23 @@ final class HeatingPlan
                 'enabled' => $enabled, 'reduced' => $reduced, 'fanPermitted' => $permission];
         }
         $warnings = ['fan_permission_is_not_runtime', 'warming_temperature_model_not_calibrated'];
-        if ($reset !== null && $v['arrival'] > 0 && $v['arrival'] <= $until) {
-            $warnings[] = 'reset_conditional_on_no_arrival';
+        if ($selected && $v['arrival'] <= $until) {
+            $warnings[] = 'arrival_not_observed';
+            if ($v['regulatorActive']) {
+                // Actual arrival may clear the selection and keep the regulator on.
+                // Bound both branches, rather than presenting absence-only hours as a maximum.
+                $arrival = max($from, $v['arrival']);
+                $arrivalHours = max(0, $until - $arrival) / 3600;
+                foreach ($segments as $segment) {
+                    if ($segment['fanPermitted']) {
+                        $arrivalHours += max(0, min($arrival, $segment['to']) - $segment['from']) / 3600;
+                    }
+                }
+                $hours = max($hours, $arrivalHours);
+            }
+            if ($reset !== null) {
+                $warnings[] = 'reset_conditional_on_no_arrival';
+            }
         }
         if ($selected && !$v['storageRequested'] && $storage === null) {
             $warnings[] = 'storage_start_missing_or_expired';
@@ -170,7 +185,10 @@ final class HeatingPlan
             $result['status'] = 'fan_effect_not_calibrated';
             return $result;
         }
-        if (in_array('reset_conditional_on_no_arrival', $projection['warnings'], true)) {
+        if (
+            in_array('arrival_not_observed', $projection['warnings'], true)
+            || in_array('reset_conditional_on_no_arrival', $projection['warnings'], true)
+        ) {
             $result['status'] = 'conditional_arrival';
             return $result;
         }

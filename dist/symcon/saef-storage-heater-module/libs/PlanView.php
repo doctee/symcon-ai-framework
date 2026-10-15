@@ -72,6 +72,7 @@ final class PlanView
             . 'Für Ventilator-Wärmeabgabe, Restenergie und Aufwärmtemperaturen fehlt noch eine belastbare Kalibrierung. '
             . 'Die ursprüngliche Nachtprognose bleibt als Vergleich erhalten.</p>';
         $labels = [
+            'arrival_not_observed' => 'Die vorgewählte Ankunft wurde noch nicht als Anwesenheit gemeldet; der weitere Betrieb ist bedingt.',
             'reset_conditional_on_no_arrival' => 'Rücksetzung ist hier unter der Annahme dargestellt, dass bis dahin keine Anwesenheit gemeldet wird.',
             'storage_start_missing_or_expired' => 'Kein gültiger zukünftiger Speicher-Starttimer gefunden.',
             'fan_start_missing_or_expired' => 'Kein gültiger zukünftiger Ventilator-Starttimer gefunden.',
