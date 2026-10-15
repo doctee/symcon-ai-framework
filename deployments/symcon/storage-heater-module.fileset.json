@@ -57,6 +57,22 @@
       "target": "libs/PlanView.php"
     },
     {
+      "source": "case-studies/storage-heater/distribution/libs/Warming.php",
+      "target": "libs/Warming.php"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/libs/WarmingObservation.php",
+      "target": "libs/WarmingObservation.php"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/libs/WarmingView.php",
+      "target": "libs/WarmingView.php"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/libs/WarmingWeather.php",
+      "target": "libs/WarmingWeather.php"
+    },
+    {
       "source": "helpers/common/Validation.php",
       "target": "libs/saef/common/Validation.php"
     },

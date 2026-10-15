@@ -57,6 +57,16 @@
       "type": "ValidationTextBox",
       "name": "PlanBindingsJSON",
       "caption": "Vorhandene Heizungsvorwahl (geprüfte Quellen als JSON; {} deaktiviert)"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "WarmingModelJSON",
+      "caption": "Privat kalibriertes Aufwärmmodell (JSON; {} deaktiviert)"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "WarmingOptionsJSON",
+      "caption": "Aufwärmoptionen: regulator, latitude, longitude, maxPowerKw, standbyKw (JSON)"
     }
   ],
   "actions": [
@@ -98,6 +108,11 @@
       "type": "Button",
       "caption": "Planjournal ausgeben (JSON)",
       "onClick": "echo SHF_GetPlanJournalJson($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Aufwärmjournal ausgeben (JSON)",
+      "onClick": "echo SHF_GetWarmingJournalJson($id);"
     }
   ],
   "status": [

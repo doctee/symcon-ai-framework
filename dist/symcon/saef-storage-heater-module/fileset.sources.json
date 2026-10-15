@@ -7,8 +7,8 @@
         {
             "source": "case-studies/storage-heater/distribution/StorageHeaterForecast/form.json",
             "target": "StorageHeaterForecast/form.json",
-            "sha256": "278cc363955d3a0862c3933f736d54fc67d534949c318c724f367f7c85b98981",
-            "bytes": 3065
+            "sha256": "fc24c197a831dfa088b5d13597f48d633d9800c6003bbfa0e6268693ab299515",
+            "bytes": 3551
         },
         {
             "source": "case-studies/storage-heater/distribution/StorageHeaterForecast/module.json",
@@ -19,13 +19,13 @@
         {
             "source": "case-studies/storage-heater/distribution/StorageHeaterForecast/module.php",
             "target": "StorageHeaterForecast/module.php",
-            "sha256": "4de0795759c6db9f559ced2dfe0950d7a50bc0a45560eaabf468972f1968afce",
-            "bytes": 26065
+            "sha256": "6f7540f9a1a413c057e70fa3125991062e953edde56bfdcc8db1106cff2f24b1",
+            "bytes": 26521
         },
         {
             "source": "case-studies/storage-heater/distribution/library.json",
             "target": "library.json",
-            "sha256": "db7f561ada247d5a2d606e59ad98a69db8c4b167290b9990a996c97c15b9dc17",
+            "sha256": "155811e766737a4bf5f339553e5b0a692b98330c02077c03b024f8bc84cb1f5d",
             "bytes": 369
         },
         {
@@ -73,14 +73,38 @@
         {
             "source": "case-studies/storage-heater/distribution/libs/PlanObservation.php",
             "target": "libs/PlanObservation.php",
-            "sha256": "6621a9bcb7a35bc7fb4031864c8d0dc540b93c27ea75ec4371ebf35b4d809da4",
-            "bytes": 12908
+            "sha256": "aee931e538aea0ab6554d2ab03976082a2f9261e1b7e2e718a57d015f8a29bd8",
+            "bytes": 13014
         },
         {
             "source": "case-studies/storage-heater/distribution/libs/PlanView.php",
             "target": "libs/PlanView.php",
-            "sha256": "469b3eebaee2c4d84eaae0b8001c446b053137d98a045fd024005ff2341be329",
-            "bytes": 5445
+            "sha256": "b340d24f1e8c1c2782e9bcfc06804a39b8559f8337bb025d9c39cf4ae30b7c00",
+            "bytes": 5536
+        },
+        {
+            "source": "case-studies/storage-heater/distribution/libs/Warming.php",
+            "target": "libs/Warming.php",
+            "sha256": "e5946a06f80d655827474beccd57bf6374ccda7940ecfc2a2d660982c32abb8e",
+            "bytes": 12230
+        },
+        {
+            "source": "case-studies/storage-heater/distribution/libs/WarmingObservation.php",
+            "target": "libs/WarmingObservation.php",
+            "sha256": "821987f621071448bcb51ada69200bcd87876c36fd254e9a465c424b3e32e23c",
+            "bytes": 20466
+        },
+        {
+            "source": "case-studies/storage-heater/distribution/libs/WarmingView.php",
+            "target": "libs/WarmingView.php",
+            "sha256": "796a444dfa96b5b524660b3b15d84eaf6641293be3999562a88dab342b01af53",
+            "bytes": 7190
+        },
+        {
+            "source": "case-studies/storage-heater/distribution/libs/WarmingWeather.php",
+            "target": "libs/WarmingWeather.php",
+            "sha256": "ac855a8cbfcb715b9a3e52d5ca29b911226c68ffcfaf165ebc324cf40205bd2f",
+            "bytes": 5426
         },
         {
             "source": "helpers/common/Validation.php",
@@ -119,7 +143,7 @@
             "bytes": 4358
         }
     ],
-    "filesetSha256": "54581410d9874662b78ea2eeee1e1cb05ff5a7782620c77f04a709426a435d60",
+    "filesetSha256": "c08b6c3b80b9f109c64b877ad62cdb4e374a0efbb6c655abb5b59bf12edf8241",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

@@ -144,3 +144,32 @@ Rücknahme: nur `PlanBindingsJSON` auf `{}` setzen und übernehmen. Das entfernt
 die Beobachtungsabonnements und stoppt den Zusatz-Timer, erhält aber das Journal.
 Deaktivieren der ganzen Instanz stoppt beide Beobachtungstimer. Keine Geräte,
 vorhandenen Ereignisse, Reglerparameter oder Archiveinstellungen werden geändert.
+
+## Version 0.6.0: experimentelle Aufwärmkurven
+
+Das optionale privat kalibrierte `WarmingModelJSON` ergänzt zwei Luft-/Massemodelle
+für Galerie und Wohnzimmer. `WarmingOptionsJSON` bindet den vorhandenen
+Zweipunktregler ein und enthält `regulator`, `latitude`, `longitude`, `maxPowerKw`
+und `standbyKw`. Die vorhandenen Vorwahl- und Temperaturbindungen werden verwendet.
+
+Bei zukünftiger Ankunft werden bis zu 48 Stunden vorausberechnet. Ventilatorlauf
+folgt der Vorwahl und einem simulierten Galerie-Thermostat. Für die Nachtladung
+wird eine **experimentelle frühe Schätzung** aus dem bisherigen Nachtmodell
+verwendet und gleichmäßig über 23–07 verteilt; Netzunterbrechungen sind unbekannt.
+Wetter/Sonnenwärme, Modell, Plan, Ausgangswerte und Annahmen werden mit der Kurve
+fest gespeichert. Änderungen erzeugen eigene Versionen. Die reguläre nächtliche
+kWh-Prognose bleibt davon getrennt.
+
+`WarmingComparison` zeigt zwei Diagramme, Messabdeckung, mittleren absoluten
+Fehler und vorzeichenbehaftete Abweichung je Planstand. `WarmingStatus` meldet den
+Zustand. Keine Nachberechnung wird als ursprüngliche Vorhersage ausgegeben.
+Messlücken und Batterieausfälle bleiben sichtbar; Kaminmeldungen und tatsächlicher
+Ventilatorbetrieb werden getrennt erfasst. Überlappende Versionen sind keine
+unabhängigen Tests. Die bisherige Archivgenauigkeit gilt nicht automatisch für
+diese Vorhersage mit geplantem Betrieb und prognostizierter Ladung.
+
+`SHF_GetWarmingJournalJson` exportiert das separate Journal (maximal 48 Stände,
+drei MiB; noch offene Vergleiche werden nicht still entfernt). Rücknahme:
+`WarmingModelJSON={}`; Historie bleibt erhalten. Die Heizungsregelung wird nie
+verändert. Keine gesicherte Aussage zu 48 Stunden, Wohnzimmertemperatur 18 °C oder
+physischem Speicherfüllstand.

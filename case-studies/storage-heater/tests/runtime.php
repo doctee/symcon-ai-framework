@@ -38,11 +38,18 @@ function check(bool $ok, string $message): void
 }
 function IPS_InstanceExists(int $id): bool
 {
-    return in_array($id, [11, 12], true);
+    return in_array($id, [11, 12, 55], true);
 }
 function IPS_GetInstance(int $id): array
 {
+    if ($id === 55) {
+        return ['ModuleInfo' => ['ModuleID' => '{FF7AF0F4-D616-4EF5-B73A-D49C56CF4C92}']];
+    }
     return ['ModuleInfo' => ['ModuleID' => $id === 11 ? '{43192F0B-135B-4CE7-A0A7-1475603F3060}' : '{B52FE951-7FBE-4882-B0E6-E143E5B5F31A}']];
+}
+function IPS_GetConfiguration(int $id): string
+{
+    return json_encode($GLOBALS['controller'] ?? [], JSON_THROW_ON_ERROR);
 }
 function IPS_ObjectExists(int $id): bool
 {
@@ -139,7 +146,16 @@ function OMWEATHER_GetHourlyForecastJson(int $id, int $from, int $to, string $fi
     if ($GLOBALS['badWeather']) {
         array_pop($points);
     }
-    return json_encode(['success' => true, 'data' => ['temperature_2m' => $points]], JSON_THROW_ON_ERROR);
+    $data = ['temperature_2m' => $points];
+    if (str_contains($fields, 'diffuse_radiation')) {
+        foreach (['direct_normal_irradiance', 'diffuse_radiation'] as $field) {
+            $data[$field] = [];
+            for ($t = $from; $t < $to; $t += 3600) {
+                $data[$field][] = ['validFrom' => $t, 'validTo' => $t + 3600, 'semantics' => 'preceding_interval', 'unit' => 'W/m²', 'value' => 0.0];
+            }
+        }
+    }
+    return json_encode(['success' => true, 'data' => $data], JSON_THROW_ON_ERROR);
 }
 class IPSModule
 {

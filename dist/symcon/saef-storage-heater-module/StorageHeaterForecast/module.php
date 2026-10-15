@@ -11,6 +11,10 @@ require_once __DIR__ . '/../libs/CoolingObservation.php';
 require_once __DIR__ . '/../libs/HeatingPlan.php';
 require_once __DIR__ . '/../libs/PlanObservation.php';
 require_once __DIR__ . '/../libs/PlanView.php';
+require_once __DIR__ . '/../libs/Warming.php';
+require_once __DIR__ . '/../libs/WarmingWeather.php';
+require_once __DIR__ . '/../libs/WarmingObservation.php';
+require_once __DIR__ . '/../libs/WarmingView.php';
 require_once __DIR__ . '/../libs/saef/diagnostics/Registry.php';
 require_once __DIR__ . '/../libs/saef/diagnostics/Statistics.php';
 require_once __DIR__ . '/../libs/saef/diagnostics/ErrorRingBuffer.php';
@@ -32,12 +36,14 @@ class StorageHeaterForecast extends IPSModule
 {
     use \SAEF\StorageHeater\CoolingObservation;
     use \SAEF\StorageHeater\PlanObservation;
+    use \SAEF\StorageHeater\WarmingObservation;
 
     public function Create(): void
     {
         parent::Create();
         $this->createCooling();
         $this->createPlan();
+        $this->createWarming();
         $this->RegisterPropertyBoolean('Enabled', false);
         $this->RegisterPropertyString('BindingsJSON', '{}');
         $this->RegisterPropertyString('ModelJSON', '{}');
@@ -94,6 +100,7 @@ class StorageHeaterForecast extends IPSModule
             $this->SetStatus(IS_INACTIVE);
             $this->SetValue('StatusText', 'Beobachtung deaktiviert');
             $this->coolingDisplay([], [], 'Beobachtung deaktiviert');
+            $this->warmingDisplay([], 'Beobachtung deaktiviert');
             return;
         }
         try {
@@ -102,9 +109,10 @@ class StorageHeaterForecast extends IPSModule
                 $this->RegisterReference($id);
             }
             SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'configurationHash', $config['hash']);
-            SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'version', '0.5.0');
+            SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'version', '0.6.0');
             $this->configureCooling($config);
             $this->configurePlan($config);
+            $this->configureWarming($config);
             $this->SetTimerInterval('Observe', 5 * 60 * 1000);
             $this->SetStatus(IS_ACTIVE);
             $this->SetValue('StatusText', 'Bereit – Prognose täglich zwischen 21:45 und 22:00 Uhr');
@@ -182,6 +190,7 @@ class StorageHeaterForecast extends IPSModule
         } finally {
             if (isset($config, $now)) {
                 $this->observePlan($config, $now);
+                $this->observeWarming($config, $now);
             }
             IPS_SemaphoreLeave($lock);
         }

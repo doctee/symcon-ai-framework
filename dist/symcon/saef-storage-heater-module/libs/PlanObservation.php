@@ -121,7 +121,10 @@ trait PlanObservation
             return;
         }
         try {
-            $this->observePlan($this->configuration(), $this->now());
+            $config = $this->configuration();
+            $now = $this->now();
+            $this->observePlan($config, $now);
+            $this->observeWarming($config, $now);
         } catch (Throwable $e) {
             $this->planError($e);
         } finally {
