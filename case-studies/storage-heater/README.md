@@ -1,8 +1,12 @@
-# Storage Heater Forecast – Version 0.4.0
+# Storage Heater Forecast – Version 0.5.0
 
 Beobachtendes IP-Symcon-Modul für die elektrische Nachtladung eines Nachtspeicherofens.
 Es liest Messwerte und Schaltzustände. Es besitzt keine Geräteaktionen, keine Relais-
 oder Regleränderungen und schreibt keine fremden Variablen oder Archive.
+
+Ab Version 0.5.0 kann die vorhandene Heizungsvorwahl beobachtet werden.
+[Planstände, Prognoseversionen und Modellgrenzen](04-heating-preselection.md)
+beschreibt die zusätzliche Einbindung; die ursprüngliche Nachtprognose bleibt erhalten.
 
 ## Funktionsumfang
 

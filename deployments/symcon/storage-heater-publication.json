@@ -15,8 +15,8 @@
     "pullRequest": {
       "repository": "doctee/saef-storage-heater",
       "base": "main",
-      "title": "feat: add passive cooling forecasts and temperature comparison",
-      "body": "Add an optional, privately calibrated passive cooling model with immutable nightly forecasts, bounded gap-aware measurements and a read-only visualization. Electrical charging forecasts, fireplace history and heater controls remain unchanged.\n\nValidated with command-free runtime tests, schemas, PHPStan, PSR-12 and deterministic package checks.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "title": "feat: observe heating preselection and preserve forecast revisions",
+      "body": "Observe existing preselection inputs and one-shot timers without changing heater control. Preserve timestamped plan snapshots and separate forecast revisions, with explicit limits for uncalibrated fan heat and mixed-night operation.\n\nValidated with command-free runtime tests, schemas, PHPStan, PSR-12 and deterministic package checks.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
       "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
     }
   },
@@ -52,6 +52,9 @@
     "libs/CoolingView.php",
     "libs/FireplaceLog.php",
     "libs/Forecast.php",
+    "libs/HeatingPlan.php",
+    "libs/PlanObservation.php",
+    "libs/PlanView.php",
     "libs/saef/common/Validation.php",
     "libs/saef/diagnostics/ConfigurationHash.php",
     "libs/saef/diagnostics/ErrorRingBuffer.php",

@@ -2,6 +2,16 @@
 
 declare(strict_types=1);
 
+const EVENTTYPE_CYCLIC = 1;
+const EVENTCYCLICDATETYPE_ONCE = 1;
+const EVENTCYCLICTIMETYPE_ONCE = 0;
+const EM_UPDATE = 10803;
+const EM_CHANGEACTIVE = 10804;
+const EM_CHANGECYCLIC = 10810;
+const EM_CHANGECYCLICDATEFROM = 10811;
+const EM_CHANGECYCLICTIMEFROM = 10813;
+const VM_UPDATE = 10603;
+
 // A deliberately isolated, command-free Symcon fake. All external writes fail.
 const VARIABLETYPE_BOOLEAN = 0;
 const VARIABLETYPE_INTEGER = 1;
@@ -34,6 +44,18 @@ function IPS_GetInstance(int $id): array
 {
     return ['ModuleInfo' => ['ModuleID' => $id === 11 ? '{43192F0B-135B-4CE7-A0A7-1475603F3060}' : '{B52FE951-7FBE-4882-B0E6-E143E5B5F31A}']];
 }
+function IPS_ObjectExists(int $id): bool
+{
+    return IPS_VariableExists($id) || IPS_EventExists($id);
+}
+function IPS_EventExists(int $id): bool
+{
+    return isset($GLOBALS['events'][$id]);
+}
+function IPS_GetEvent(int $id): array
+{
+    return $GLOBALS['events'][$id];
+}
 function IPS_VariableExists(int $id): bool
 {
     return isset($GLOBALS['types'][$id]);
@@ -44,7 +66,7 @@ function IPS_GetObject(int $id): array
 }
 function IPS_GetVariable(int $id): array
 {
-    return ['VariableType' => $GLOBALS['types'][$id], 'VariableUpdated' => $GLOBALS['sensorUpdates'][$id] ?? ($GLOBALS['now'] - ($GLOBALS['stale'] ? 12 * 3600 : 30))];
+    return ['VariableChanged' => $GLOBALS['changedAt'][$id] ?? 1, 'VariableType' => $GLOBALS['types'][$id], 'VariableUpdated' => $GLOBALS['sensorUpdates'][$id] ?? ($GLOBALS['now'] - ($GLOBALS['stale'] ? 12 * 3600 : 30))];
 }
 function IPS_GetChildrenIDs(int $id): array
 {
@@ -127,6 +149,8 @@ class IPSModule
     public array $ids = [];
     public array $references = [];
     public array $actions = [];
+    public array $messages = [];
+    public array $timers = [];
     public int $timer = 0;
     public int $status = 104;
     public function Create(): void
@@ -173,11 +197,17 @@ class IPSModule
     }
     public function RegisterTimer($k, $i, $s): void
     {
-        $this->timer = $i;
+        $this->timers[$k] = $i;
+        if ($k === 'Observe') {
+            $this->timer = $i;
+        }
     }
     public function SetTimerInterval($k, $i): void
     {
-        $this->timer = $i;
+        $this->timers[$k] = $i;
+        if ($k === 'Observe') {
+            $this->timer = $i;
+        }
     }
     public function RegisterVariableString($k, ...$args): void
     {
@@ -218,6 +248,23 @@ class IPSModule
     public function GetReferenceList(): array
     {
         return array_keys($this->references);
+    }
+    public function GetMessageList(): array
+    {
+        return $this->messages;
+    }
+    public function RegisterMessage($id, $message): bool
+    {
+        $this->messages[$id] = array_values(array_unique(array_merge($this->messages[$id] ?? [], [$message])));
+        return true;
+    }
+    public function UnregisterMessage($id, $message): bool
+    {
+        $this->messages[$id] = array_values(array_diff($this->messages[$id] ?? [], [$message]));
+        if ($this->messages[$id] === []) {
+            unset($this->messages[$id]);
+        }
+        return true;
     }
     public function RegisterReference($id): void
     {
