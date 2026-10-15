@@ -7,8 +7,8 @@
         {
             "source": "case-studies/storage-heater/distribution/StorageHeaterForecast/form.json",
             "target": "StorageHeaterForecast/form.json",
-            "sha256": "c8b541a98edf52bf5a2d0dfb60e279a4cee4942bbb7230cbb20a2db9634d0153",
-            "bytes": 2754
+            "sha256": "278cc363955d3a0862c3933f736d54fc67d534949c318c724f367f7c85b98981",
+            "bytes": 3065
         },
         {
             "source": "case-studies/storage-heater/distribution/StorageHeaterForecast/module.json",
@@ -19,13 +19,13 @@
         {
             "source": "case-studies/storage-heater/distribution/StorageHeaterForecast/module.php",
             "target": "StorageHeaterForecast/module.php",
-            "sha256": "6543fb7efe59afb2fdf8b8fea40aea1685ed79592b420e7b10d8a303ea439266",
-            "bytes": 25268
+            "sha256": "4de0795759c6db9f559ced2dfe0950d7a50bc0a45560eaabf468972f1968afce",
+            "bytes": 26065
         },
         {
             "source": "case-studies/storage-heater/distribution/library.json",
             "target": "library.json",
-            "sha256": "f480061cb966518e5edfc92c8d44ff5b2eafa4bcdcedcffa015d54d48cc4d723",
+            "sha256": "db7f561ada247d5a2d606e59ad98a69db8c4b167290b9990a996c97c15b9dc17",
             "bytes": 369
         },
         {
@@ -65,6 +65,24 @@
             "bytes": 8139
         },
         {
+            "source": "case-studies/storage-heater/distribution/libs/HeatingPlan.php",
+            "target": "libs/HeatingPlan.php",
+            "sha256": "9cb117f64f4015b3bb15fa3f93ad20a547f9fb0e1ec12ccbfe5010e351f7fda9",
+            "bytes": 9796
+        },
+        {
+            "source": "case-studies/storage-heater/distribution/libs/PlanObservation.php",
+            "target": "libs/PlanObservation.php",
+            "sha256": "6621a9bcb7a35bc7fb4031864c8d0dc540b93c27ea75ec4371ebf35b4d809da4",
+            "bytes": 12908
+        },
+        {
+            "source": "case-studies/storage-heater/distribution/libs/PlanView.php",
+            "target": "libs/PlanView.php",
+            "sha256": "469b3eebaee2c4d84eaae0b8001c446b053137d98a045fd024005ff2341be329",
+            "bytes": 5445
+        },
+        {
             "source": "helpers/common/Validation.php",
             "target": "libs/saef/common/Validation.php",
             "sha256": "370b4160f8cc7b24bef42c40fada9febe567b43a780b73150cc1997595f18885",
@@ -101,7 +119,7 @@
             "bytes": 4358
         }
     ],
-    "filesetSha256": "469ce368a1a8c4846aab2c2f4db583e47c4ce306f1d3f62ce29c726148b007ce",
+    "filesetSha256": "54581410d9874662b78ea2eeee1e1cb05ff5a7782620c77f04a709426a435d60",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

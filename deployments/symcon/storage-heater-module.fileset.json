@@ -45,6 +45,18 @@
       "target": "libs/Forecast.php"
     },
     {
+      "source": "case-studies/storage-heater/distribution/libs/HeatingPlan.php",
+      "target": "libs/HeatingPlan.php"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/libs/PlanObservation.php",
+      "target": "libs/PlanObservation.php"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/libs/PlanView.php",
+      "target": "libs/PlanView.php"
+    },
+    {
       "source": "helpers/common/Validation.php",
       "target": "libs/saef/common/Validation.php"
     },

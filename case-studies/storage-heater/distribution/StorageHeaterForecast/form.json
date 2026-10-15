@@ -52,6 +52,11 @@
       "type": "ValidationTextBox",
       "name": "CoolingBindingsJSON",
       "caption": "Optionale Auskühlquellen: sofaBattery, floor, supply (JSON)"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "PlanBindingsJSON",
+      "caption": "Vorhandene Heizungsvorwahl (geprüfte Quellen als JSON; {} deaktiviert)"
     }
   ],
   "actions": [
@@ -88,6 +93,11 @@
       "type": "Button",
       "caption": "Temperaturjournal ausgeben (JSON)",
       "onClick": "echo SHF_GetCoolingJournalJson($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Planjournal ausgeben (JSON)",
+      "onClick": "echo SHF_GetPlanJournalJson($id);"
     }
   ],
   "status": [

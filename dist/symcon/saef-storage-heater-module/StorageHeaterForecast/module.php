@@ -8,6 +8,9 @@ require_once __DIR__ . '/../libs/FireplaceLog.php';
 require_once __DIR__ . '/../libs/Cooling.php';
 require_once __DIR__ . '/../libs/CoolingView.php';
 require_once __DIR__ . '/../libs/CoolingObservation.php';
+require_once __DIR__ . '/../libs/HeatingPlan.php';
+require_once __DIR__ . '/../libs/PlanObservation.php';
+require_once __DIR__ . '/../libs/PlanView.php';
 require_once __DIR__ . '/../libs/saef/diagnostics/Registry.php';
 require_once __DIR__ . '/../libs/saef/diagnostics/Statistics.php';
 require_once __DIR__ . '/../libs/saef/diagnostics/ErrorRingBuffer.php';
@@ -17,15 +20,24 @@ use SAEF\StorageHeater\ArchiveReader;
 use SAEF\StorageHeater\Forecast;
 use SAEF\StorageHeater\FireplaceLog;
 
-/** Observational module. Only its own variables/attributes are writable. */
+/**
+ * Observational module. Only its own variables/attributes are writable.
+ * Native SDK methods below supplement this case study's incomplete analysis stubs.
+ * https://www.symcon.de/de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/module/getmessagelist/
+ *
+ * @method array<int, list<int>> GetMessageList()
+ * @method bool UnregisterMessage(int $senderId, int $messageId)
+ */
 class StorageHeaterForecast extends IPSModule
 {
     use \SAEF\StorageHeater\CoolingObservation;
+    use \SAEF\StorageHeater\PlanObservation;
 
     public function Create(): void
     {
         parent::Create();
         $this->createCooling();
+        $this->createPlan();
         $this->RegisterPropertyBoolean('Enabled', false);
         $this->RegisterPropertyString('BindingsJSON', '{}');
         $this->RegisterPropertyString('ModelJSON', '{}');
@@ -73,6 +85,7 @@ class StorageHeaterForecast extends IPSModule
     {
         parent::ApplyChanges();
         $this->SetTimerInterval('Observe', 0);
+        $this->stopPlan();
         $this->SetValue('ForecastValid', false);
         foreach ($this->GetReferenceList() as $id) {
             $this->UnregisterReference($id);
@@ -89,8 +102,9 @@ class StorageHeaterForecast extends IPSModule
                 $this->RegisterReference($id);
             }
             SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'configurationHash', $config['hash']);
-            SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'version', '0.4.0');
+            SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'version', '0.5.0');
             $this->configureCooling($config);
+            $this->configurePlan($config);
             $this->SetTimerInterval('Observe', 5 * 60 * 1000);
             $this->SetStatus(IS_ACTIVE);
             $this->SetValue('StatusText', 'Bereit – Prognose täglich zwischen 21:45 und 22:00 Uhr');
@@ -166,6 +180,9 @@ class StorageHeaterForecast extends IPSModule
             $this->SetValue('ForecastValid', false);
             $this->reportError($error);
         } finally {
+            if (isset($config, $now)) {
+                $this->observePlan($config, $now);
+            }
             IPS_SemaphoreLeave($lock);
         }
     }
@@ -324,13 +341,13 @@ class StorageHeaterForecast extends IPSModule
             'forecast' => null, 'forecastReason' => $reason, 'measurement' => null];
     }
 
-    private function makePrediction(array $record, array $config, ArchiveReader $archive, int $now): array
+    private function makePrediction(array $record, array $config, ArchiveReader $archive, int $now, array $assumptions = []): array
     {
         $b = $config['bindings'];
         $cycle = $record['cycle'];
         $cutoff = $cycle['cutoff'];
-        $enabled = GetValue($b['enabled']);
-        $reduced = GetValue($b['reduced']);
+        $enabled = $assumptions['enabled'] ?? GetValue($b['enabled']);
+        $reduced = $assumptions['reduced'] ?? GetValue($b['reduced']);
         $context = ['enabled' => $enabled, 'reduced' => $reduced, 'fan' => GetValue($b['fan'])];
         foreach (['presence', 'auxiliary'] as $key) {
             if (isset($b[$key])) {
