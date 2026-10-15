@@ -112,6 +112,10 @@ AI assistants working in this repository must follow these rules:
 15. Treat traces, permissions, roles, users and special switches according to
     their private-data, security and restart impact rather than as ordinary API
     calls.
+16. Select the risk-tiered change workflow in `SYMCON_CHANGE_WORKFLOW.md`.
+    Prefer native tools and focused tests over new wrappers for routine work.
+    Preserve existing managed ownership and independent production,
+    publication, device-action and cleanup gates.
 
 ## 5. Symcon Development Rules
 

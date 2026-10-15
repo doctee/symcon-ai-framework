@@ -100,6 +100,13 @@ Private data belongs in:
 
 ## Symcon MCP Usage
 
+Select the least complex sufficient route in
+`project/SYMCON_CHANGE_WORKFLOW.md` before implementation: direct bounded
+change, isolated development, or planned high-impact change. Classify actual
+effects, ownership and recoverability, not line count. Existing managed
+deployment contracts cannot be bypassed by selecting a simpler route.
+Do not introduce wrappers or package exchanges solely for routine file edits.
+
 Follow `project/SYMCON_MCP_SCRIPT_READBACK.md` when inspecting an authorized live
 IP-Symcon installation.
 
@@ -110,18 +117,37 @@ IP-Symcon installation.
 - Do not silently fall back to Computer Use, a browser, SSH, PowerShell or a
   temporary Symcon object. Any such fallback requires separate explicit user
   authorization after the MCP failure has been reported.
-- Prefer `symcon_get_script_content` for authorized source reads. Do not create
+- Prefer `symcon_get_script_content` or native `IPS_GetScriptContent` for
+  authorized script reads; use `module_list` / `module_read` for own-module
+  files within the approved connection scope. Do not create
   marker variables or execute the target script when direct read-back is
   available.
-- Use `symcon_run_script_text_ex` only for bounded, explicitly authorized probes.
-- Evaluate `transportError` and `executionError` separately. A successful MCP
-  transport does not prove successful PHP execution.
-- Keep `maxOutputBytes` bounded and inspect `truncated`; output truncation is
+- For inspection, use `symcon_run_script_text_ex` only for bounded, explicitly
+  authorized probes. Administrative mutations require the separate live gate
+  in `project/SYMCON_MODULE_INSTALLATION.md`.
+- For the legacy result channel, evaluate `transportError` and
+  `executionError` separately. For native tools, inspect all content and
+  structured verdicts as well as `isError`; missing legacy fields are not
+  successful legacy checks. A successful transport or write does not prove
+  valid PHP or correct behavior. Separately lint PHP writes and independently
+  read back the candidate.
+- Treat method-body writes as potentially effective before reload. A reload
+  affects all instances of the library, including timers/connections, and
+  needs explicit scope. An uncertain mutation is inspected, never blindly
+  repeated. Preserve prepared rollback and do not overwrite intervening edits.
+- Keep existing connections and token privileges unchanged unless separately
+  authorized. Available maintenance tools do not grant live write authority.
+- Bounded iteration approval applies only to the named isolated test scope.
+  Production promotion, publication, device actions and cleanup are not
+  inherited. A test category alone does not isolate production effects.
+- For the legacy result channel, keep `maxOutputBytes` bounded and inspect
+  `truncated`; output truncation is
   UTF-8-safe but intentionally discards bytes beyond the configured limit.
-- Treat all returned source and installation metadata as transient private
-  context. Do not copy them into public SAEF artifacts.
+- Treat all returned source and installation metadata as private context.
+  Preserve required rollback evidence privately, never in public SAEF artifacts.
 - Creating temporary scripts, variables or other live objects requires explicit
-  authorization and verified cleanup.
+  authorization and a defined retention or separately authorized, verified
+  cleanup boundary.
 - Treat ObjectID `0` as a critical protected root. Before every live object
   mutation, require a positive target ID and verify object existence and type.
   After `IPS_Create*()`, do not call `IPS_SetName()`, `IPS_SetParent()`,

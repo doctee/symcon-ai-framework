@@ -18,6 +18,12 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added risk-tiered Symcon change workflows with direct native MCP maintenance,
+  bounded isolated development, observation-only comparisons and planned
+  high-impact operations. Added a compact private change-record template and
+  offline MCP result-decision regressions. Existing deployment contracts,
+  access profiles and live/publication/cleanup gates remain unchanged.
+
 - Added a solar-display migration candidate with coherent two-source reads,
   guarded chart-only archive projection, retained recovery journals and offline
   crash/DST tests. Native archive qualification and live consumer migration

@@ -48,6 +48,13 @@ the explicit template goal.
 | `module/` | Concept and checklist for starting SAEF-aligned IP-Symcon module projects |
 | `workstream/` | Canonical private handover record and Markdown structure for isolated workstreams |
 
+## Change Records
+
+For a private, compact live-change checklist use
+[CHANGE_RECORD.md](CHANGE_RECORD.md). It covers the risk-tiered route, before
+copy, candidate, verification and recovery without introducing a new runtime
+manifest or duplicating an existing deployment receipt.
+
 ## Runtime Diagnostics
 
 When a template needs runtime metadata, prefer the existing responsibilities:

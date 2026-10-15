@@ -8,6 +8,13 @@ This document defines the engineering principles behind the Symcon AI Engineerin
 
 Automation code controls real systems. Reliability, predictability, and safe failure behavior are more important than short code or quick implementation.
 
+Safety mechanisms must be proportionate to actual effects and recoverability.
+Prefer the simplest workflow that proves the required properties; unnecessary
+deployment infrastructure adds its own failure modes. Separate isolated
+development from production adoption, and source rollback from recovery of
+persistent data or physical effects. See
+[the risk-tiered workflow](../project/SYMCON_CHANGE_WORKFLOW.md).
+
 ## 2. Prefer explicit structure
 
 Code and documentation should be structured so that both humans and AI assistants can understand intent, dependencies, and side effects.

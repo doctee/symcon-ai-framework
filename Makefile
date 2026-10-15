@@ -3,6 +3,10 @@
 check-primary:
 	tools/repository/check-primary-checkout.sh
 
+.PHONY: test-mcp-workflow
+test-mcp-workflow:
+	composer test:mcp-workflow
+
 sync-primary:
 	tools/repository/sync-primary-checkout.sh
 
