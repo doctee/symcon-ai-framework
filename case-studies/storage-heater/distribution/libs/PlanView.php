@@ -69,7 +69,7 @@ final class PlanView
             $html .= '<dt style="opacity:.7;margin-top:7px">' . self::escape($label) . '</dt><dd style="margin:0">' . self::escape($value) . '</dd>';
         }
         $html .= '</dl><p>Freigabe bedeutet keine Dauerlaufzeit: Der Galerieregler schaltet nach Temperatur. '
-            . 'Für Ventilator-Wärmeabgabe, Restenergie und Aufwärmtemperaturen fehlt noch eine belastbare Kalibrierung. '
+            . 'Die separate Aufwärmansicht kann ein experimentell kalibriertes Temperaturmodell anzeigen. Für die Energieänderung durch künftigen Ventilatorbetrieb fehlt weiterhin eine belastbare Kalibrierung. '
             . 'Die ursprüngliche Nachtprognose bleibt als Vergleich erhalten.</p>';
         $labels = [
             'arrival_not_observed' => 'Die vorgewählte Ankunft wurde noch nicht als Anwesenheit gemeldet; der weitere Betrieb ist bedingt.',

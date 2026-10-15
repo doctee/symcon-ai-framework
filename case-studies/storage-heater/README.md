@@ -221,3 +221,6 @@ Rücknahme der Zusatzfunktion: `CoolingModelJSON={}` setzen und Änderungen der
 Beobachterinstanz übernehmen; Ladeprognose und Temperaturjournal bleiben erhalten.
 Die neue Anzeige kann separat ausgeblendet werden. Keine Geräte-, Regler-,
 Archiv- oder Service-Neustartoperation ist Teil der Erweiterung.
+
+Die experimentelle, vorab gespeicherte Temperaturprognose mit Vorwahl ist in
+[Prospective warming](05-prospective-warming.md) beschrieben.

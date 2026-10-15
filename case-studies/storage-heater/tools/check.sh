@@ -10,10 +10,10 @@ php tools/publish-symcon-module.php --contract=deployments/symcon/storage-heater
 "$vendor_dir/bin/phpcs" --standard=phpcs.xml case-studies/storage-heater/distribution case-studies/storage-heater/tests
 php case-studies/storage-heater/tests/fireplace.php
 if [ "$#" -gt 0 ]; then
-    php case-studies/storage-heater/tests/plans.php "$1"
+    php case-studies/storage-heater/tests/warming.php "$1"
 else
     destination=private/test-artifacts/storage-heater
     python3 case-studies/storage-heater/tools/package.py --output "$destination/module.zip"
     python3 -m zipfile -e "$destination/module.zip" "$destination/package"
-    php case-studies/storage-heater/tests/plans.php "$destination/package"
+    php case-studies/storage-heater/tests/warming.php "$destination/package"
 fi

@@ -15,8 +15,8 @@
     "pullRequest": {
       "repository": "doctee/saef-storage-heater",
       "base": "main",
-      "title": "feat: observe heating preselection and preserve forecast revisions",
-      "body": "Observe existing preselection inputs and one-shot timers without changing heater control. Preserve timestamped plan snapshots and separate forecast revisions, with explicit limits for uncalibrated fan heat and mixed-night operation.\n\nValidated with command-free runtime tests, schemas, PHPStan, PSR-12 and deterministic package checks.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "title": "feat: preserve prospective warming forecasts from heating preselection",
+      "body": "Add an experimental air/mass temperature forecast driven by existing preselection and simulated thermostat operation. Persist immutable model, plan, weather and charging assumptions before measurement, then append bounded room-temperature comparisons. Existing heater controls and original nightly energy forecasts remain unchanged.\n\nValidation: command-free runtime tests, numerical parity, failure/restart/plan-revision tests, schemas, PHPStan, PSR-12 and deterministic package checks.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
       "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
     }
   },
@@ -55,6 +55,10 @@
     "libs/HeatingPlan.php",
     "libs/PlanObservation.php",
     "libs/PlanView.php",
+    "libs/Warming.php",
+    "libs/WarmingObservation.php",
+    "libs/WarmingView.php",
+    "libs/WarmingWeather.php",
     "libs/saef/common/Validation.php",
     "libs/saef/diagnostics/ConfigurationHash.php",
     "libs/saef/diagnostics/ErrorRingBuffer.php",
