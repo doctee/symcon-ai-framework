@@ -79,3 +79,6 @@ Test-Case 'candidate-self-reference' 'scripts/.saef-filesets/saef-staged/self.ph
 Test-Case 'apply-always-fails-closed' 'scripts/wrapper.php' '<?php // no visible dependency' 'Runtime retention apply is disabled' -Apply
 # Synthetic evidence is retained in the disposable runner temp directory.
 Write-Output "PASS: runtime retention safety; fixtures retained at $fixtureRoot"
+# Expected child rejections leave a nonzero native exit code in the caller.
+# Publish success only after every assertion, including immutability, passed.
+exit 0
