@@ -25,6 +25,9 @@ Use one record per independently reviewable change; link existing receipts.
 - Offline syntax/schema and behavior tests:
 - Isolation proof and synthetic test results, if applicable:
 - MCP tool/version, response contract and complete response reference:
+- Advertised versus behavior-tested capabilities; structured syntax verdict:
+- Required PHP paths, checked/skipped lint coverage and explicit path checks:
+- Diagnostic time/file coverage and any partial log counts:
 - Mutation attempted / confirmed / uncertain; separate lint/validation:
 - Reload need, explicit authority and all affected instance results:
 - Independent content/identity/configuration readback:

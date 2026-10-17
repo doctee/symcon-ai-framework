@@ -63,6 +63,7 @@ Important current artifacts include:
 - `ARCHITECTURE.md`
 - `project/AI_PROJECT.md`
 - `project/SYMCON_MCP_SCRIPT_READBACK.md`
+- `project/NATIVE_MCP_CAPABILITIES_20261017.md`
 - `project/SYMCON_CHANGE_WORKFLOW.md`
 - `adr/ADR-0012-use-risk-tiered-symcon-change-workflows.md`
 - `templates/CHANGE_RECORD.md`

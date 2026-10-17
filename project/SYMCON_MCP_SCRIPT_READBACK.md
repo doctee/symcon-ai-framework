@@ -108,17 +108,19 @@ an approved target/purpose and does not authorize its write tools.
 
 ## Native own-module workflow
 
-The following describes the exposed tool contracts reviewed on 2026-10-15,
+The following describes the exposed tool contracts reviewed on 2026-10-17,
 not a promise for every Symcon build. Before a live change, check the current
 schemas, installed version and scope. Keep existing read-only and legacy
 connections unchanged; mapping concrete aliases to roles is private.
+See the [dated capability review](NATIVE_MCP_CAPABILITIES_20261017.md) for
+announced fixes, observed contracts and still-open verification boundaries.
 
 | Tool | Use and boundary |
 | --- | --- |
 | `module_list`, `module_read` | Inventory own modules and read exact source; the list can provide file sizes/hashes. Distinguish own modules from Store installations and detect duplicate ownership. |
 | `module_write` | Creates/replaces complete UTF-8 files and can create directories. Preserve before-bytes; there is no built-in undo or expected-baseline-hash argument. |
 | `module_edit` | Prefer a unique exact replacement for a small edit. Keep `replace_all=false` unless the full replacement scope is explicitly reviewed. A unique match is not a whole-file concurrency guard. |
-| `module_lint` | Separate compile-only check of the changed PHP file; omit the path for all PHP files in the selected module folder before completion. It does not prove runtime behavior. |
+| `module_lint` | Separate compile-only check of each changed PHP file; omit the path for the library scan, which excludes test and hidden directories in the newer contract. Review checked/skipped coverage; explicitly lint required skipped files by path. It does not prove runtime behavior. |
 | `module_validate` | Checks library.json and module.json and reports the first problem. It does not replace all metadata schemas, form/locale checks or behavior tests. |
 | `module_reload` | Registers changed manifests/public methods; reconnects all instances of the library and restarts their timers/connections. Explicitly authorize this effect; inspect all registration and instance results. |
 | `module_delete` | Destructive; omission of path removes the entire module. Not an implicit rollback or test-cleanup operation. |
@@ -135,6 +137,28 @@ Separate file and folder lint correctly reported `isError=true`. This is a
 dated observation, not an immutable server specification or a test performed
 by the repository check. Apply the defensive workflow to edit as well, without
 claiming the same behavior was independently tested for that operation.
+
+Newer schemas add `structuredContent` to write, edit and lint responses.
+Prefer these typed verdicts over parsing warning prose, while still checking
+all content for failures and contradictions:
+
+- Write/edit report `bytes`, `created`, `module`, `path`, a **short** `sha256`
+  and `syntax`. The short hash is not a full backup-integrity hash or an
+  expected-baseline concurrency guard.
+- For PHP, require `syntax.checked === true` and `syntax.ok === true`.
+  Inspect `error`, `line` and `unavailable` when present. An unavailable check
+  is not successful lint, even if `ok` looks successful.
+- `syntax: null` is expected for non-PHP files only; their schema/content
+  validation remains separate. Missing or malformed expected structured
+  evidence is unverified. Do not downgrade silently to text-only success.
+- Lint reports integer `checked` and `skipped` counts and an `errors` list.
+  An empty list alone proves neither coverage nor successful checking.
+  Reconcile against the required PHP paths. A library result can exclude
+  `tests/` and hidden directories; do not move files into the runtime tree to
+  force coverage. Keep stub/test validation isolated where appropriate.
+- Older text-only builds still require explicit complete-content review and
+  separate validation. Record which contract is actually available; do not
+  invent structured success fields for them.
 
 Classify a confirmed saved file with failed lint as **written-invalid**. Stop
 promotion/reload and follow the authorized recovery path; do not report
@@ -161,6 +185,10 @@ The synthetic fixtures exercise success flags with semantic failures,
 independent lint/readback requirements and uncertain-result handling. They are
 not a live MCP client, natural-language error parser or native qualification.
 No production source is written to reproduce these cases.
+
+The tests also cover structured syntax failures, unavailable checking,
+non-PHP results, missing advertised fields and skipped-file coverage. They
+model SAEF decisions; they do not qualify a particular server build.
 
 Official documentation starts at [the index](https://www.symcon.de/de/llms.txt)
 and [function index](https://www.symcon.de/de/llms/function-index.md).

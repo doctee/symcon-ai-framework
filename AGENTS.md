@@ -131,6 +131,12 @@ IP-Symcon installation.
   successful legacy checks. A successful transport or write does not prove
   valid PHP or correct behavior. Separately lint PHP writes and independently
   read back the candidate.
+- Prefer advertised structured syntax results for native write/edit/lint;
+  require checking to have actually occurred. A saved write can still have
+  `isError=false` with invalid PHP. Review library lint's skipped test/hidden
+  paths and explicitly validate required files; partial logs are not a complete
+  audit. Use `symcon_documentation("Guide")` and exact SDK topics where available.
+  See `project/NATIVE_MCP_CAPABILITIES_20261017.md` for evidence boundaries.
 - Treat method-body writes as potentially effective before reload. A reload
   affects all instances of the library, including timers/connections, and
   needs explicit scope. An uncertain mutation is inspected, never blindly

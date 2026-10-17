@@ -27,6 +27,7 @@ function evaluateChangeExample(array $evidence): string
     }
     $response = $evidence['response'];
     $toolFailed = false;
+    $structuredSyntaxFailed = false;
     if ($evidence['channel'] === 'legacy') {
         foreach (['transportError', 'executionError', 'truncated'] as $field) {
             if (!array_key_exists($field, $response)) {
@@ -45,12 +46,21 @@ function evaluateChangeExample(array $evidence): string
             return 'uncertain';
         }
         $toolFailed = ($response['isError'] ?? false) === true;
+        if ($evidence['nativeContract'] === 'module-write-structured') {
+            $syntaxVerdict = evaluateStructuredSyntax($response, $evidence['requiresLint']);
+            if ($syntaxVerdict === 'unknown') {
+                return 'uncertain';
+            }
+            $structuredSyntaxFailed = $syntaxVerdict === 'fail';
+        } elseif ($evidence['nativeContract'] !== 'text-reviewed') {
+            return 'uncertain';
+        }
     } else {
         return 'uncertain';
     }
 
-    $lintFailed = $evidence['requiresLint'] === true
-        && ($evidence['fileLint'] === 'fail' || $evidence['folderLint'] === 'fail');
+    $lintFailed = $structuredSyntaxFailed || ($evidence['requiresLint'] === true
+        && ($evidence['fileLint'] === 'fail' || $evidence['folderLint'] === 'fail'));
     if ($evidence['savedConfirmed'] === true && $lintFailed) {
         return 'written-invalid';
     }
@@ -68,12 +78,60 @@ function evaluateChangeExample(array $evidence): string
         || $evidence['readback'] !== 'match'
         || $evidence['domainAcceptance'] !== 'pass'
         || ($evidence['requiresLint'] === true
-            && ($evidence['fileLint'] !== 'pass' || $evidence['folderLint'] !== 'pass'))
+            && ($evidence['fileLint'] !== 'pass' || $evidence['folderLint'] !== 'pass'
+                || $evidence['requiredFilesCovered'] !== true))
         || ($evidence['reloadRequired'] === true && $evidence['reloadVerdict'] !== 'pass')
     ) {
         return 'uncertain';
     }
     return 'verified';
+}
+
+// Synthetic write/edit syntax subset, not a live client or a write authorization.
+function evaluateStructuredSyntax(array $response, bool $requiresLint): string
+{
+    $structured = $response['structuredContent'] ?? null;
+    if (!is_array($structured) || !array_key_exists('syntax', $structured)) {
+        return 'unknown';
+    }
+    $syntax = $structured['syntax'];
+    if (!$requiresLint) {
+        return $syntax === null ? 'pass' : 'unknown';
+    }
+    if (
+        !is_array($syntax) || ($syntax['checked'] ?? null) !== true
+        || !is_bool($syntax['ok'] ?? null) || ($syntax['unavailable'] ?? null) !== null
+    ) {
+        return 'unknown';
+    }
+    if ($syntax['ok'] === false) {
+        return 'fail';
+    }
+    return ($syntax['error'] ?? null) === null && ($syntax['line'] ?? null) === null
+        ? 'pass' : 'unknown';
+}
+
+// Coverage is a separate review conclusion, not a field supplied by the server.
+function evaluateLintExample(array $response, bool $coverageVerified): string
+{
+    if (array_key_exists('isError', $response) && !is_bool($response['isError'])) {
+        return 'unknown';
+    }
+    if (($response['isError'] ?? false) === true) {
+        return 'fail';
+    }
+    $data = $response['structuredContent'] ?? null;
+    if (
+        !is_array($data) || !is_int($data['checked'] ?? null) || $data['checked'] < 1
+        || !is_int($data['skipped'] ?? null) || $data['skipped'] < 0
+        || !is_array($data['errors'] ?? null) || !array_is_list($data['errors'])
+    ) {
+        return 'unknown';
+    }
+    if ($data['errors'] !== []) {
+        return 'fail';
+    }
+    return $coverageVerified ? 'pass' : 'unknown';
 }
 
 $data = json_decode(
@@ -97,10 +155,22 @@ foreach ($data['cases'] as $case) {
     $checks++;
 }
 
+foreach ($data['lintCases'] as $case) {
+    if (isset($seen[$case['id']])) {
+        throw new RuntimeException('Duplicate fixture: ' . $case['id']);
+    }
+    $seen[$case['id']] = true;
+    $actual = evaluateLintExample($case['response'], $case['coverageVerified']);
+    if ($actual !== $case['expected']) {
+        throw new RuntimeException($case['id'] . ': expected ' . $case['expected'] . ', got ' . $actual);
+    }
+    $checks++;
+}
+
 // Missing independent evidence must never become success through PHP truthiness.
 foreach (
     ['dispatched', 'transportOk', 'complete', 'allContentReviewed', 'fileLint', 'folderLint',
-    'semanticVerdict', 'validation', 'readback', 'domainAcceptance'] as $field
+    'semanticVerdict', 'validation', 'readback', 'domainAcceptance', 'requiredFilesCovered'] as $field
 ) {
     foreach ([null, false, 0, '', [], 'unknown'] as $value) {
         $evidence = array_replace($data['baseline'], [$field => $value]);
@@ -127,6 +197,7 @@ foreach (
     [
     'project/SYMCON_CHANGE_WORKFLOW.md',
     'project/SYMCON_MCP_SCRIPT_READBACK.md',
+    'project/NATIVE_MCP_CAPABILITIES_20261017.md',
     'project/SYMCON_MODULE_INSTALLATION.md',
     'adr/ADR-0012-use-risk-tiered-symcon-change-workflows.md',
     'templates/CHANGE_RECORD.md',
