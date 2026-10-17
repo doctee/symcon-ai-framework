@@ -2,6 +2,7 @@
   "description": "Synthetic decision examples, not captured server receipts. Review fields are explicit human/agent interpretations, not native server fields.",
   "baseline": {
     "channel": "native",
+    "nativeContract": "text-reviewed",
     "phase": "change",
     "dispatched": true,
     "transportOk": true,
@@ -16,6 +17,7 @@
     "requiresLint": true,
     "fileLint": "pass",
     "folderLint": "pass",
+    "requiredFilesCovered": true,
     "validation": "pass",
     "readback": "match",
     "reloadRequired": false,
@@ -23,6 +25,23 @@
     "domainAcceptance": "pass"
   },
   "cases": [
+    {"id": "structured-write-pass", "changes": {"nativeContract": "module-write-structured", "response": {"isError": false, "structuredContent": {"syntax": {"checked": true, "ok": true}}}}, "expected": "verified"},
+    {"id": "structured-write-invalid-despite-is-error-false", "changes": {"nativeContract": "module-write-structured", "response": {"isError": false, "structuredContent": {"syntax": {"checked": true, "ok": false, "error": "Syntax error", "line": 3}}}}, "expected": "written-invalid"},
+    {"id": "structured-edit-invalid-rollback", "changes": {"phase": "rollback", "nativeContract": "module-write-structured", "response": {"isError": false, "structuredContent": {"syntax": {"checked": true, "ok": false}}}}, "expected": "recovery-required"},
+    {"id": "structured-check-unavailable", "changes": {"nativeContract": "module-write-structured", "response": {"structuredContent": {"syntax": {"checked": false, "ok": true, "unavailable": "No script engine"}}}}, "expected": "uncertain"},
+    {"id": "structured-unavailable-contradiction", "changes": {"nativeContract": "module-write-structured", "response": {"structuredContent": {"syntax": {"checked": true, "ok": true, "unavailable": "No script engine"}}}}, "expected": "uncertain"},
+    {"id": "structured-syntax-contradiction", "changes": {"nativeContract": "module-write-structured", "response": {"structuredContent": {"syntax": {"checked": true, "ok": true, "error": "Compile failure", "line": 2}}}}, "expected": "uncertain"},
+    {"id": "structured-string-boolean-rejected", "changes": {"nativeContract": "module-write-structured", "response": {"structuredContent": {"syntax": {"checked": true, "ok": "true"}}}}, "expected": "uncertain"},
+    {"id": "structured-checked-string-rejected", "changes": {"nativeContract": "module-write-structured", "response": {"structuredContent": {"syntax": {"checked": "true", "ok": true}}}}, "expected": "uncertain"},
+    {"id": "structured-missing-no-text-downgrade", "changes": {"nativeContract": "module-write-structured"}, "expected": "uncertain"},
+    {"id": "structured-missing-syntax", "changes": {"nativeContract": "module-write-structured", "response": {"structuredContent": {"bytes": 123}}}, "expected": "uncertain"},
+    {"id": "structured-php-null-rejected", "changes": {"nativeContract": "module-write-structured", "response": {"structuredContent": {"syntax": null}}}, "expected": "uncertain"},
+    {"id": "structured-non-php-null", "changes": {"nativeContract": "module-write-structured", "requiresLint": false, "response": {"structuredContent": {"syntax": null}}}, "expected": "verified"},
+    {"id": "structured-non-php-still-needs-validation", "changes": {"nativeContract": "module-write-structured", "requiresLint": false, "validation": "unknown", "response": {"structuredContent": {"syntax": null}}}, "expected": "uncertain"},
+    {"id": "structured-success-does-not-replace-lint", "changes": {"nativeContract": "module-write-structured", "fileLint": "unknown", "response": {"structuredContent": {"syntax": {"checked": true, "ok": true}}}}, "expected": "uncertain"},
+    {"id": "structured-success-does-not-replace-readback", "changes": {"nativeContract": "module-write-structured", "readback": "unknown", "response": {"structuredContent": {"syntax": {"checked": true, "ok": true}}}}, "expected": "uncertain"},
+    {"id": "structured-text-failure-not-overridden", "changes": {"nativeContract": "module-write-structured", "semanticVerdict": "fail", "response": {"content": [{"type": "text", "text": "Registration error"}], "structuredContent": {"syntax": {"checked": true, "ok": true}}}}, "expected": "failed"},
+    {"id": "skipped-runtime-path-not-covered", "changes": {"requiredFilesCovered": false}, "expected": "uncertain"},
     {"id": "native-independent-checks", "changes": {}, "expected": "verified"},
     {"id": "native-optional-is-error", "changes": {"response": {"content": [{"type": "text", "text": "File saved."}]}}, "expected": "verified"},
     {"id": "write-false-with-syntax-warning", "changes": {"response": {"isError": false, "content": [{"type": "text", "text": "File saved."}, {"type": "text", "text": "WARNING: PHP syntax error."}]}, "semanticVerdict": "fail", "fileLint": "fail"}, "expected": "written-invalid"},
@@ -59,5 +78,18 @@
     {"id": "legacy-execution-error", "changes": {"channel": "legacy", "response": {"transportError": null, "executionError": "Synthetic failure", "truncated": false}}, "expected": "failed"},
     {"id": "legacy-transport-error", "changes": {"channel": "legacy", "response": {"transportError": "Lost response", "executionError": null, "truncated": false}}, "expected": "uncertain"},
     {"id": "unknown-channel", "changes": {"channel": "unverified"}, "expected": "uncertain"}
+  ],
+  "lintCases": [
+    {"id": "lint-null-error-flag", "response": {"isError": null, "structuredContent": {"checked": 3, "skipped": 0, "errors": []}}, "coverageVerified": true, "expected": "unknown"},
+    {"id": "lint-typed-pass", "response": {"isError": false, "structuredContent": {"checked": 3, "skipped": 0, "errors": []}}, "coverageVerified": true, "expected": "pass"},
+    {"id": "lint-skipped-reviewed", "response": {"structuredContent": {"checked": 3, "skipped": 2, "errors": []}}, "coverageVerified": true, "expected": "pass"},
+    {"id": "lint-skipped-unreviewed", "response": {"structuredContent": {"checked": 3, "skipped": 2, "errors": []}}, "coverageVerified": false, "expected": "unknown"},
+    {"id": "lint-zero-not-success", "response": {"structuredContent": {"checked": 0, "skipped": 2, "errors": []}}, "coverageVerified": true, "expected": "unknown"},
+    {"id": "lint-errors-despite-ok", "response": {"isError": false, "content": [{"type": "text", "text": "OK"}], "structuredContent": {"checked": 3, "skipped": 0, "errors": [{"path": "Demo/module.php", "error": "Cannot redeclare", "line": 4}]}}, "coverageVerified": true, "expected": "fail"},
+    {"id": "lint-tool-error", "response": {"isError": true, "structuredContent": {"checked": 3, "skipped": 0, "errors": []}}, "coverageVerified": true, "expected": "fail"},
+    {"id": "lint-missing-count", "response": {"structuredContent": {"skipped": 0, "errors": []}}, "coverageVerified": true, "expected": "unknown"},
+    {"id": "lint-string-count", "response": {"structuredContent": {"checked": "3", "skipped": 0, "errors": []}}, "coverageVerified": true, "expected": "unknown"},
+    {"id": "lint-negative-skipped", "response": {"structuredContent": {"checked": 3, "skipped": -1, "errors": []}}, "coverageVerified": true, "expected": "unknown"},
+    {"id": "lint-missing-errors", "response": {"structuredContent": {"checked": 3, "skipped": 0}}, "coverageVerified": true, "expected": "unknown"}
   ]
 }
