@@ -73,6 +73,24 @@ foreach (
 }
 assertRetention(!str_contains($script, 'deleteFileset'), 'Deployment-only deletion must be unsupported.');
 assertRetention(
+    str_contains($script, 'Runtime retention apply is disabled:')
+    && str_contains($script, '$policy = Get-Content')
+    && strpos($script, 'Runtime retention apply is disabled:') < strpos($script, '$policy = Get-Content'),
+    'Apply interlock must precede configuration, backup and deletion.'
+);
+assertRetention(
+    str_contains($script, "-Outcome 'review_required' -ExitCode 10")
+    && str_contains($script, 'liveConsumerClosureVerified = $false')
+    && str_contains($script, 'deletionEligible = $false'),
+    'Static preflight must not certify deletion eligibility.'
+);
+assertRetention(!str_contains($script, 'SilentlyContinue'), 'Unreadable consumer sources must fail closed.');
+assertRetention(
+    str_contains($script, "'modules'")
+    && !str_contains($script, '-not $_.FullName.StartsWith($filesetRoot'),
+    'Module sources and retained-fileset dependencies must not be skipped.'
+);
+assertRetention(
     substr_count($script, 'Remove-Item -LiteralPath') === 2,
     'Cleanup must contain exactly one paired deletion block.'
 );

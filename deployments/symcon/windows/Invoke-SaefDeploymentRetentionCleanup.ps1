@@ -225,6 +225,14 @@ function Copy-VerifiedDirectory {
 }
 
 try {
+    # A disk-text scan is not a complete live consumer/dependency inventory.
+    # In particular, staged filesets can be loaded directly by script wrappers.
+    # Do not let an old plan or a successful structural preflight authorize deletion.
+    if ($Apply) {
+        throw [System.InvalidOperationException]::new(
+            'Runtime retention apply is disabled: a fresh complete live consumer closure and recoverable quarantine workflow are required.'
+        )
+    }
     foreach ($requiredPath in @($PolicyPath, $PlanPath)) {
         if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
             throw [System.IO.FileNotFoundException]::new("Required configuration is missing: $requiredPath")
@@ -292,15 +300,41 @@ try {
     }
     Assert-SimulatedInventory -Inventory $inventory -Candidates @($plan.candidates)
 
+    $referenceRoots = @($scriptsRoot, (Join-Path (Split-Path -Parent $scriptsRoot) 'modules'))
     $runtimeFiles = @(
-        Get-ChildItem -LiteralPath $scriptsRoot -File -Recurse -Force |
+        foreach ($referenceRoot in $referenceRoots) {
+        Assert-PlainDirectory -Path $referenceRoot
+        Get-ChildItem -LiteralPath $referenceRoot -File -Recurse -Force -ErrorAction Stop |
             Where-Object {
-                -not $_.FullName.StartsWith($filesetRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) -and
                 -not $_.FullName.StartsWith($stateRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)
             }
+        }
     )
+    # Include retained filesets: one runtime can import another runtime's helper.
+    # Candidate self references do not prove an external consumer. All other
+    # hits (including comments/backups) conservatively protect the candidate.
+    if ($runtimeFiles.Count -gt 5000) {
+        throw [System.InvalidOperationException]::new('Reference inventory exceeds its file bound.')
+    }
+    $referenceBytes = 0L
     foreach ($runtimeFile in $runtimeFiles) {
-        $content = Get-Content -LiteralPath $runtimeFile.FullName -Raw -ErrorAction SilentlyContinue
+        $insideCandidate = $false
+        foreach ($fileset in $candidateFilesets) {
+            $candidateRoot = (Get-ChildPath -Root $filesetRoot -Name $fileset) + [IO.Path]::DirectorySeparatorChar
+            if ($runtimeFile.FullName.StartsWith($candidateRoot, [StringComparison]::OrdinalIgnoreCase)) {
+                $insideCandidate = $true
+            }
+        }
+        if ($insideCandidate) { continue }
+        $referenceBytes += $runtimeFile.Length
+        if ($referenceBytes -gt 67108864) {
+            throw [System.InvalidOperationException]::new('Reference inventory exceeds its byte bound.')
+        }
+        if (($runtimeFile.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+            $runtimeFile.Length -gt 16777216) {
+            throw [System.InvalidOperationException]::new('Reference inventory is incomplete: link or oversized file.')
+        }
+        $content = Get-Content -LiteralPath $runtimeFile.FullName -Raw -ErrorAction Stop
         foreach ($fileset in $candidateFilesets) {
             if ($null -ne $content -and $content -like "*$fileset*") {
                 throw [System.InvalidOperationException]::new(
@@ -311,13 +345,16 @@ try {
     }
 
     if (-not $Apply) {
-        Write-Status -Phase 'preflight' -Outcome 'passed' -ExitCode 0 -Details @{
+        Write-Status -Phase 'preflight' -Outcome 'review_required' -ExitCode 10 -Details @{
+            liveConsumerClosureVerified = $false
+            deletionEligible = $false
+            reason = 'Static absence of references is not proof of non-use; dynamic dependencies and live sources require review.'
             deploymentCount = $inventory.deploymentCount
             filesetCount = $inventory.filesetCount
             candidatePairCount = $candidateDeployments.Count
             postCleanupPairCount = $inventory.deploymentCount - $candidateDeployments.Count
         }
-        exit 0
+        exit 10
     }
 
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()

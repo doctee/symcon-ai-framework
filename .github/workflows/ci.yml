@@ -5,6 +5,15 @@ on:
   pull_request:
 
 jobs:
+  runtime-retention-safety-windows:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Reject unsafe runtime retention using synthetic files only
+        shell: powershell
+        run: ./tests/deployments/runtime-retention-safety.ps1
+
   standalone-cross-root-retention-windows:
     runs-on: windows-latest
     timeout-minutes: 15

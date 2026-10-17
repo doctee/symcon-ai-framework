@@ -217,6 +217,21 @@ deployment state and its target fileset:
 Failed preflight or superseded activation state is not sufficient reason to
 delete a deployment record when its target fileset is still referenced.
 
+Do not substitute a hash comparison of selected bootstrap/adapter/state files
+for a live consumer inventory. Include script wrappers, variable actions,
+event adapters, module code and dependencies from retained filesets; follow
+resolved paths transitively and retain unresolved dependencies. A `staged`
+package may already be used directly without global activation. Mirror source
+copies are diagnostic evidence, not replacement executable dependencies.
+
+Ad-hoc pasted cleanup blocks have the same gates as repository tools and must
+not bypass a tool's safety hold. A negative string search must report review
+required, not safe-to-delete. Preserve byte-verified backups, quarantine first,
+and verify consumer paths/hashes after the move. Quarantine purge is a separate
+authorization after an explicit observation interval. Runtime retention apply
+is currently disabled in the legacy tool pending a qualified live-closure and
+quarantine workflow; updating this repository does not update installed copies.
+
 ## Recommended Sequence
 
 1. Run `make sync-primary`, followed by `make check-primary`.
