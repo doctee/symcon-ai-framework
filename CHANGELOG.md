@@ -9,6 +9,12 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+- Disable runtime-retention apply pending a verified live consumer closure and
+  recoverable quarantine workflow. Static preflight now includes retained
+  filesets and module sources, rejects incomplete reads, and returns review
+  required rather than deletion eligibility. Add synthetic Windows regression
+  coverage; installed copies and ad-hoc cleanup blocks remain separate gates.
+
 - Fixed OwnTracks startup ordering by deferring location dependency reads until
   kernel readiness and scheduling one bounded initialization callback. Regression
   tests and a separately authorized full service restart verified recovery.

@@ -350,20 +350,41 @@ configuration/state preservation, targeted Module Control reload and either
 successful postflight or rollback. The framework never guesses a state
 conversion.
 
+**Runtime retention safety hold:** `Invoke-SaefDeploymentRetentionCleanup.ps1`
+now rejects every `-Apply` request before backup or deletion. This is deliberate
+containment, not a completed replacement retention engine. Existing installed
+copies are not changed by a repository update; retire old approved hashes and
+do not execute old plans or ad-hoc deletion blocks. Native regression tests are
+in `tests/deployments/runtime-retention-safety.ps1`.
+
 Retention cleanup must preserve the one-deployment-to-one-fileset invariant.
 Create a private plan from `deployment-retention-plan.example.json` and run the
 cleanup script without `-Apply` first. The preflight reads every retained
 `deployment.json`, rejects missing, duplicate or cross-paired mappings, scans
 runtime files for candidate-fileset references, simulates removal of the exact
-pairs and writes a machine-readable status. A later, separately authorized
-`-Apply` run requires a local administrator, creates and SHA-256-verifies a
-private backup, removes only the declared pairs and revalidates the complete
-mapping. Deployment-only or fileset-only cleanup is intentionally unsupported.
+pairs and writes a machine-readable status. It includes module sources and
+retained filesets and rejects unreadable sources. A negative text search still
+returns `review_required` with exit10 and `deletionEligible=false`: dynamic
+paths, external callers and live source state are not proved by a disk scan.
+Neither `staged`, failed activation, nor unchanged bootstrap/adapter metadata
+proves that a fileset is unused. Script wrappers can load it directly.
+Deployment-only or fileset-only cleanup is intentionally unsupported.
 Standalone-module candidates are also rejected here. Their three-root state is
 handled only by the separately hash-pinned
 `Invoke-SaefStandaloneModuleCrossRootRetention.ps1` consumer described below.
 That consumer is not a new gateway verb and receives no authority from this
 generic cleanup command.
+
+Before lifting this hold, require a fresh installation-bound live consumer
+inventory (including non-ControlLight adapters), dependency closure with no
+unresolved paths, exact protected deployment/fileset pairs, and writer exclusion.
+Recheck source hashes and closure immediately before moving anything. Preserve
+verified complete backups, quarantine rather than immediately delete, then
+independently verify every protected consumer path and hash. Only a separately
+approved later gate may purge quarantine after an agreed observation period.
+Missing scope, stale evidence or unreadable inputs block the operation.
+This applies equally to manually pasted cleanup commands; a successful
+`relationsVerifiedAfter` metadata comparison is not a consumer postflight.
 
 ### Standalone-module cross-root retention
 
