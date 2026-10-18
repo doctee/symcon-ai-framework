@@ -9,6 +9,14 @@ use RuntimeException;
 /** Separate one-pass charge comparison, driven only by frozen prospective fan hours. */
 final class FanComparison
 {
+    /** First charging night affected by the phase, using local calendar days across DST. */
+    public static function issueWindow(int $phaseStart): array
+    {
+        $cycle = Forecast::cycle(Warming::chargeCycle($phaseStart)['date'], 'Europe/Berlin');
+        return ['cycle' => $cycle, 'earliest' => $cycle['end'] - 48 * 3600,
+            'deadline' => min($phaseStart, $cycle['start'])];
+    }
+
     public static function models(array $models): void
     {
         if (($models['schema'] ?? null) !== 1) {
@@ -71,9 +79,14 @@ final class FanComparison
         }
         $outside = array_column($f['weather']['points'], 'temperature', 'time');
         $fan = array_column($f['points'], 'fanHours', 'time');
+        $first = self::issueWindow($f['phaseStart'])['cycle'];
         $nights = $excluded = [];
         foreach ($f['chargeNights'] as $date => $scenarios) {
             $cycle = Forecast::cycle($date, 'Europe/Berlin');
+            if ($cycle['start'] < $first['start']) {
+                $excluded[$date] = 'Ladenacht vor der ersten Aufwärmnacht.';
+                continue;
+            }
             if ($cycle['start'] <= $issuedAt || $cycle['end'] > $f['end']) {
                 $excluded[$date] = 'Nur vollständige zukünftige Ladefenster 22–07 Uhr werden verglichen.';
                 continue;
@@ -116,10 +129,10 @@ final class FanComparison
                 'fanSource' => 'frozen_baseline_thermal_simulation',
                 'expectedReduced' => $plan['mixed'] ? null : ($plan['reducedHours'] > 0), 'chargePlan' => $plan];
         }
-        if ($nights === []) {
-            throw new RuntimeException('Keine vollständige, stabile zukünftige Ladenacht im Aufwärmhorizont.');
+        if (!isset($nights[$first['date']])) {
+            throw new RuntimeException('Erste Aufwärmnacht nicht vollständig oder Ladefreigabe unterbrochen; kein Vorabvergleich.');
         }
-        return ['models' => $models, 'nights' => $nights, 'excluded' => $excluded,
+        return ['models' => $models, 'nights' => $nights, 'excluded' => $excluded, 'firstWarmingNight' => $first,
             'method' => 'one_pass_charge_time_weighted_reduction_v2', 'windowHeatLossEnabled' => false,
             'assumptions' => ['issue_time_features_held', 'future_runtime_simulated_not_permission',
                 'baseline_charge_drives_fan_simulation', 'no_candidate_charge_feedback',

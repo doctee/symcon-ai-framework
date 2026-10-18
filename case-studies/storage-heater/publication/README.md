@@ -223,3 +223,5 @@ Optional enthält `FanComparisonModelJSON` zwei privat kalibrierte Lademodelle: 
 `FanComparisonModelJSON={}` stoppt neue Ausgaben und erhält offene Auswertungen und Historie. Weitere natürliche Aufwärmphasen sind nötig, bevor eine Verbesserung behauptet oder das Hauptmodell ersetzt werden kann.
 
 Version 0.8.1 also compares first warming nights with a scheduled reduction change. Both models use the reduced share of available charging time (23–07); the frozen timeline and provisional approximation are shown in the comparison. Controller settings and switch times remain unchanged.
+
+Version 0.8.2 waits on early preselection until the complete first affected 22–07 night fits the 48-hour forecast horizon. The existing observer then stores it automatically before warming/night start. Waiting status shows the earliest issue time. Earlier ordinary nights cannot suppress this forecast; restart and plan revisions preserve existing evidence. Arrival before night end or a missed pre-issue deadline is reported explicitly. No controller or scheduled switch time changes.

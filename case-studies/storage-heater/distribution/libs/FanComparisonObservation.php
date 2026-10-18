@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SAEF\StorageHeater;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use RuntimeException;
 use Throwable;
 
@@ -46,7 +48,7 @@ trait FanComparisonObservation
             throw new RuntimeException('Ventilator-Vergleich benötigt das Aufwärmmodell.');
         }
         $c['comparisonModels'] = $models;
-        $c['comparisonMethodVersion'] = 2;
+        $c['comparisonMethodVersion'] = 3;
         $c['hash'] = SAEF_CreateConfigurationHash($c);
         return $c;
     }
@@ -80,9 +82,31 @@ trait FanComparisonObservation
                 $this->fanComparisonDisplay($j, 'Aufwärmstart bereits erfolgt oder unbekannt; keine rückwirkende Vergleichsprognose');
                 return;
             }
+            $phaseStart = min(array_filter([$projection['storageStart'], $projection['fanStart']], static fn(?int $t): bool => $t !== null));
+            $window = FanComparison::issueWindow($phaseStart);
+            $first = $window['cycle'];
             $last = $j['records'] === [] ? null : end($j['records']);
-            if ($last !== null && $last['configurationHash'] === $c['hash'] && $last['forecast']['plan']['hash'] === $plan['hash'] && $last['forecast']['end'] > $now) {
+            if (
+                $last !== null && $last['configurationHash'] === $c['hash']
+                && $last['forecast']['plan']['hash'] === $plan['hash']
+                && $last['forecast']['phaseStart'] === $phaseStart
+                && $last['forecast']['issuedAt'] < $window['deadline']
+                && ($last['forecast']['fanComparison']['nights'][$first['date']]['cycle'] ?? null) === $first
+            ) {
                 $this->fanComparisonDisplay($j, 'Vorabvergleich gespeichert; Nachtmessungen werden automatisch ergänzt');
+                return;
+            }
+            if ($now >= $window['deadline']) {
+                $this->fanComparisonDisplay($j, 'Vorabfrist der ersten Aufwärmnacht verpasst; keine rückwirkende Vergleichsprognose');
+                return;
+            }
+            if ($v['arrival'] < $first['end']) {
+                $this->fanComparisonDisplay($j, 'Erste Aufwärmnacht reicht über die Ankunft hinaus; kein vollständiger Nachtvergleich');
+                return;
+            }
+            if ($now < $window['earliest']) {
+                $when = (new DateTimeImmutable('@' . $window['earliest']))->setTimezone(new DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i');
+                $this->fanComparisonDisplay($j, 'Vorwahl erkannt – wartet bis ' . $when . ' auf vollständige erste Aufwärmnacht ' . $first['date']);
                 return;
             }
             // Fresh inputs at this issue, not an old warming curve re-labelled as new.
