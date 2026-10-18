@@ -213,3 +213,11 @@ Wetterkorrektur automatisch aktiviert; diese benötigt eine zeitlich getrennte
 Prüfung mit ausschließlich früher verfügbaren Daten. Frühere Journale bleiben
 lesbar. Rücknahme der Fenstereinbindung: nur `windowRaw` und `windowContact` aus
 `WarmingOptionsJSON` entfernen und übernehmen; keine Historie löschen.
+
+## Zusätzlicher Ventilator-Vorvergleich (0.8)
+
+Optional enthält `FanComparisonModelJSON` zwei privat kalibrierte Lademodelle: eine Referenz und einen Kandidaten mit zusätzlicher nächtlicher Ventilatorlaufzeit. Der Vergleich wird ausschließlich vor dem ersten Aufwärmstart gespeichert. Die Laufzeit stammt aus der vorhandenen Aufwärmsimulation mit Vorwahl und Thermostat, nicht aus späteren Messwerten. Vollständige Nächte von 22 bis 7 Uhr werden mit dem separaten Energiezähler und der tatsächlichen Laufzeit verglichen. Gemischte Ladefreigaben, unvollständige Nächte und fehlende Daten werden sichtbar ausgeschlossen.
+
+`FanComparisonStatus` und `FanComparison` zeigen Ausgabezeit, Referenz, Kandidat, Messung und Fehler. `SHF_GetFanComparisonJournalJson` exportiert die unveränderlichen Vorhersagen und getrennt ergänzten Messergebnisse. Planrevisionen sind keine unabhängigen Testphasen. Die reguläre Nachtprognose und ihre Fehlerwerte bleiben unverändert. Kein Fenster-Energiezuschlag und keine Geräteaktion. Der Vergleich ist experimentell: frühe Temperatur-/Historienwerte werden festgehalten; die Vergleichsladung wird nicht in die Laufzeitsimulation zurückgekoppelt.
+
+`FanComparisonModelJSON={}` stoppt neue Ausgaben und erhält offene Auswertungen und Historie. Weitere natürliche Aufwärmphasen sind nötig, bevor eine Verbesserung behauptet oder das Hauptmodell ersetzt werden kann.
