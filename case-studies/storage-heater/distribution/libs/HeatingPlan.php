@@ -140,7 +140,7 @@ final class HeatingPlan
             $segments[] = ['from' => $t, 'to' => $boundaries[$i + 1],
                 'enabled' => $enabled, 'reduced' => $reduced, 'fanPermitted' => $permission];
         }
-        $warnings = ['fan_permission_is_not_runtime', 'warming_temperature_model_not_calibrated'];
+        $warnings = ['fan_permission_is_not_runtime', 'future_fan_charge_feedback_not_calibrated'];
         if ($selected && $v['arrival'] <= $until) {
             $warnings[] = 'arrival_not_observed';
             if ($v['regulatorActive']) {
