@@ -15,8 +15,8 @@
     "pullRequest": {
       "repository": "doctee/saef-storage-heater",
       "base": "main",
-      "title": "feat: include scheduled reduction changes in fan comparison",
-      "body": "Include the first warming night when storage reduction changes at its scheduled time. Freeze its timeline, weight reduced/normal regression inputs by available 23\u201307 charging time, and compare actual transition timing afterward. Label mixed nights as provisional; preserve older records and all heater controls.\n\nValidation: analytic weights, DST, first-night observer integration, immutable forecasts, shifted transitions, and complete module checks.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "title": "fix: wait for the first warming night before freezing comparison",
+      "body": "Early preselection now waits until the complete first affected 22\u201307 night fits the 48-hour horizon. The existing timer retries automatically; deduplication requires that night, and earlier ordinary nights cannot suppress it. Preserve immutable forecasts, controls and scheduled switching times.\n\nValidation: early selection, timer retry, restart, changed/cancelled plans, legacy coverage, deadlines and DST, plus complete module checks.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
       "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
     }
   },
