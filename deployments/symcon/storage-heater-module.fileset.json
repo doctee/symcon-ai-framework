@@ -37,6 +37,18 @@
       "target": "libs/CoolingView.php"
     },
     {
+      "source": "case-studies/storage-heater/distribution/libs/FanComparison.php",
+      "target": "libs/FanComparison.php"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/libs/FanComparisonObservation.php",
+      "target": "libs/FanComparisonObservation.php"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/libs/FanComparisonView.php",
+      "target": "libs/FanComparisonView.php"
+    },
+    {
       "source": "case-studies/storage-heater/distribution/libs/FireplaceLog.php",
       "target": "libs/FireplaceLog.php"
     },

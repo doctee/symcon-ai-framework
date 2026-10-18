@@ -1,0 +1,17 @@
+# Prospective fan comparison
+
+Version 0.8 adds a separate optional FanComparisonJournal. Existing electrical forecasts, warming curves and controls remain unchanged. The existing observer timer and semaphore are reused.
+
+FanComparisonModelJSON schema 1 contains reference and candidate models. Both follow the night-regression contract and have the same positive trainedThrough timestamp. Reference has the eight existing features; candidate adds exactly night_fan_hours. No window-loss feature is accepted. The train-fan.py tool fits both models jointly with standardized ridge penalty 10 from prequalified private nightly rows, recording the source hash. Calibration and sensor screening are offline; private data and coefficients are never distributed.
+
+New forecasts require a genuine future preselection and issue strictly before the first warming stage. They freeze fresh inputs, both models, plan, thermal simulation, weather, features and actual issue time with a checked configuration hash. Only complete future 22–07 nights within the at-most-48-hour warming horizon qualify. Planned charging enable and storage reduction must remain constant through the night. Partial windows and mixed charging modes are excluded explicitly. No backfill after warming starts.
+
+The existing thermal simulation supplies cumulative fan-hour differences at 22 and 07. Those represent prospective thermostat runtime, not permission hours or future measured duty. Both regressions receive the same issue-time temperature/history features and forecast weather integrated over precisely 22–07. Maximum charging power over 23–07 bounds predictions, including elapsed DST duration. The candidate is one pass: its charging estimate does not feed back into the thermal simulation. Direct window heat loss and automatic weather correction remain disabled. Early features held across the horizon and this missing feedback remain explicit assumptions.
+
+Plan or model changes before the phase append a revision. Revisions and several nights in one warming phase are not independent test phases. Restart, cancellation or optional model disabling retain all evidence. The purpose-built ledger reuses Warming retention and ConfigurationHash; diagnostics helpers are not bulk historical stores.
+
+At most two pending records are checked each run. One hour after night end, the reliable energy counter and total kW archive are read over the identical 22–07 window. Incomplete data, invalid carry-in or material meter/power disagreement fail closed and retry. After seven days missing comparisons expire. Actual fan/enable/reduction/auxiliary/presence duty, fireplace classification at settlement, signed and absolute model errors, and runtime error are stored separately. Percentage error is omitted below one measured kWh. Mode changes are flagged without revising predictions.
+
+FanComparisonStatus and FanComparison are module-owned read-only outputs. The static HTML table shows issue time, revisions, paired energy estimates, measurement, errors and forecast/actual runtime. SHF_GetFanComparisonJournalJson exports the retained evidence. The paired reference is not relabelled as the separately issued official 21:45 forecast.
+
+Setting FanComparisonModelJSON to {} stops new issues while retaining and completing pending comparisons. No archive writes, controller changes or device calls occur. Use the existing module publication/install workflow for deployment and preserve rollback evidence.

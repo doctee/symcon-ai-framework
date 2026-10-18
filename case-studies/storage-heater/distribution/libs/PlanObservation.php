@@ -125,6 +125,7 @@ trait PlanObservation
             $now = $this->now();
             $this->observePlan($config, $now);
             $this->observeWarming($config, $now);
+            $this->observeFanComparison($config, $now);
         } catch (Throwable $e) {
             $this->planError($e);
         } finally {

@@ -15,8 +15,8 @@
     "pullRequest": {
       "repository": "doctee/saef-storage-heater",
       "base": "main",
-      "title": "feat: observe window setback and staged warming plans",
-      "body": "Include window/contact states and the existing thermostat setback in frozen warming forecasts. Keep storage charging reduction and later fan permission separate; compare actual window exposure and save nightly weather residuals. Heater controls remain unchanged. No unvalidated ventilation-loss or weather correction is applied.\n\nValidation: command-free runtime tests for staged warming, five-Kelvin setback, contact OR logic, stale/inconsistent inputs and immutable revisions; schemas, PHPStan, PSR-12 and deterministic package checks.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "title": "feat: freeze prospective fan charge comparisons",
+      "body": "Store a separate pre-warming comparison of calibrated charging models with and without simulated overnight fan runtime. Freeze both models, the plan and inputs before phase start, then compare complete 22\u201307 windows with meter energy and actual runtime. Preserve existing forecasts and heater controls; apply no window heat-loss surcharge.\n\nValidation: isolated tests cover immutable issue times, restart, plan revisions, partial/mixed nights, missing measurements and command-free observation.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
       "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
     }
   },
@@ -50,6 +50,9 @@
     "libs/Cooling.php",
     "libs/CoolingObservation.php",
     "libs/CoolingView.php",
+    "libs/FanComparison.php",
+    "libs/FanComparisonObservation.php",
+    "libs/FanComparisonView.php",
     "libs/FireplaceLog.php",
     "libs/Forecast.php",
     "libs/HeatingPlan.php",

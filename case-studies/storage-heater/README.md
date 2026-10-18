@@ -224,3 +224,5 @@ Archiv- oder Service-Neustartoperation ist Teil der Erweiterung.
 
 Die experimentelle, vorab gespeicherte Temperaturprognose mit Vorwahl ist in
 [Prospective warming](05-prospective-warming.md) beschrieben.
+
+Der optionale separate Ventilatorvergleich ist in [Prospective fan comparison](06-fan-comparison.md) beschrieben.
