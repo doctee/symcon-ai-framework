@@ -30,6 +30,17 @@ final class FanComparisonView
                     . '</td><td>' . $n($night['predictions']['candidate']['kwh']) . '</td><td>' . $n($a['kwh'] ?? null)
                     . '</td><td>' . $n($a['errors']['reference']['signedKwh'] ?? null) . ' / ' . $n($a['errors']['candidate']['signedKwh'] ?? null)
                     . '</td><td>' . $n($night['features']['night_fan_hours']) . ' / ' . $n($a['states']['fan']['hours'] ?? null) . '</td></tr>';
+                if ($night['chargePlan']['mixed'] ?? false) {
+                    $parts = [];
+                    foreach ($night['chargePlan']['segments'] as $s) {
+                        $parts[] = self::time($s['from']) . '–' . self::time($s['to']) . ': ' . ($s['reduced'] ? 'abgesenkt' : 'normal');
+                    }
+                    $html .= '<tr><td colspan="6">Absenkungswechsel – vorläufige zeitgewichtete Näherung: '
+                        . $e(implode('; ', $parts)) . '. Anteil abgesenkt in der Ladezeit 23–07 Uhr: '
+                        . $n(100 * $night['chargePlan']['reducedChargeFraction']) . '%.'
+                        . (isset($a['reductionPlan']) ? ' Abweichung vom geplanten Zustand: ' . $n($a['reductionPlan']['mismatchSeconds'] / 60) . ' min.' : '')
+                        . '</td></tr>';
+                }
                 $warnings = array_merge($night['predictions']['reference']['warnings'], $night['predictions']['candidate']['warnings'], $a['warnings'] ?? []);
                 $message = $r['measurementErrors'][$date] ?? ($a['status'] ?? 'Messung steht aus');
                 $html .= '<tr><td colspan="6">' . $e($message . ($warnings === [] ? '' : ' · ' . implode(', ', array_unique($warnings)))) . '</td></tr>';

@@ -25,7 +25,7 @@
         {
             "source": "case-studies/storage-heater/distribution/library.json",
             "target": "library.json",
-            "sha256": "e83e8e66068b8813119da3f379c3e9c07c2b9654e0eb595743d5e15d6e6cefd2",
+            "sha256": "b0f5c18329cb5b970a68ff25151adcbe0e785828fe13f4a0d6454233db5590e1",
             "bytes": 369
         },
         {
@@ -55,20 +55,20 @@
         {
             "source": "case-studies/storage-heater/distribution/libs/FanComparison.php",
             "target": "libs/FanComparison.php",
-            "sha256": "853af8a49493fd0077ee2016d6be9395a989a95c74ee29d84b4b3be0c9ce73d8",
-            "bytes": 7894
+            "sha256": "513ef4d9997f78b1769054f05a4035cb6744c1e7a9cfc3a066de607d3493a597",
+            "bytes": 9965
         },
         {
             "source": "case-studies/storage-heater/distribution/libs/FanComparisonObservation.php",
             "target": "libs/FanComparisonObservation.php",
-            "sha256": "cee0b9bd4080fc80044000e440c04554a10de9bb004bfc7af804800da758cde4",
-            "bytes": 9688
+            "sha256": "336d57bf6fcf6a399efc2315c295c0c4e6779087dbb8bbee1b9d1f1474e75a25",
+            "bytes": 10870
         },
         {
             "source": "case-studies/storage-heater/distribution/libs/FanComparisonView.php",
             "target": "libs/FanComparisonView.php",
-            "sha256": "08bac0601c114a64c3c4bd8dc49a96ccd76e11b1aa24d81aed4c41aa6e76ca93",
-            "bytes": 3498
+            "sha256": "9abf5a8df03d22ab517723add6881ab4a7e38e7b8ba55efc06428f1c7f35c61b",
+            "bytes": 4350
         },
         {
             "source": "case-studies/storage-heater/distribution/libs/FireplaceLog.php",
@@ -161,7 +161,7 @@
             "bytes": 4358
         }
     ],
-    "filesetSha256": "dd4f281da61b51b643749ec5ddb1d42fd3a22b42413f0f5d260e9feea3de1942",
+    "filesetSha256": "80d7db261bebd488b6f170626210564b80a424c9bfc288f389de5d65c668d666",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",

@@ -221,3 +221,5 @@ Optional enthält `FanComparisonModelJSON` zwei privat kalibrierte Lademodelle: 
 `FanComparisonStatus` und `FanComparison` zeigen Ausgabezeit, Referenz, Kandidat, Messung und Fehler. `SHF_GetFanComparisonJournalJson` exportiert die unveränderlichen Vorhersagen und getrennt ergänzten Messergebnisse. Planrevisionen sind keine unabhängigen Testphasen. Die reguläre Nachtprognose und ihre Fehlerwerte bleiben unverändert. Kein Fenster-Energiezuschlag und keine Geräteaktion. Der Vergleich ist experimentell: frühe Temperatur-/Historienwerte werden festgehalten; die Vergleichsladung wird nicht in die Laufzeitsimulation zurückgekoppelt.
 
 `FanComparisonModelJSON={}` stoppt neue Ausgaben und erhält offene Auswertungen und Historie. Weitere natürliche Aufwärmphasen sind nötig, bevor eine Verbesserung behauptet oder das Hauptmodell ersetzt werden kann.
+
+Version 0.8.1 also compares first warming nights with a scheduled reduction change. Both models use the reduced share of available charging time (23–07); the frozen timeline and provisional approximation are shown in the comparison. Controller settings and switch times remain unchanged.
