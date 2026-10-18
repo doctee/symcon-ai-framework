@@ -29,8 +29,11 @@ trait FanComparisonObservation
     {
         try {
             $c = $this->fanComparisonConfiguration($config);
+            $b = $this->planConfiguration($config);
+            $now = $this->now();
+            $context = $c === null || $b === null ? [] : ['plan' => $this->readPlan($b, $config, $now), 'now' => $now, 'configurationHash' => $c['hash']];
             $this->fanComparisonDisplay(FanComparison::journal($this->ReadAttributeString('FanComparisonJournal')), $c === null
-                ? 'Vergleich nicht konfiguriert' : 'Bereit – wartet auf zukünftige Aufwärmvorwahl');
+                ? 'Vergleich nicht konfiguriert' : 'Anzeige aktualisiert; automatische Prüfung des Vorabvergleichs folgt', $context);
         } catch (Throwable $e) {
             $this->fanComparisonDisplay([], 'Ventilator-Vergleich prüfen: ' . substr($e->getMessage(), 0, 220));
         }
@@ -56,6 +59,7 @@ trait FanComparisonObservation
     private function observeFanComparison(array $config, int $now): void
     {
         $j = [];
+        $context = [];
         try {
             $j = FanComparison::journal($this->ReadAttributeString('FanComparisonJournal'));
             $pending = array_keys(array_filter($j['records'], static fn(array $r): bool => $r['settledAt'] === null));
@@ -67,19 +71,20 @@ trait FanComparisonObservation
             $c = $this->fanComparisonConfiguration($config);
             $b = $this->planConfiguration($config);
             if ($c === null || $b === null) {
-                $this->fanComparisonDisplay($j, 'Nicht konfiguriert; gespeicherte Vergleiche bleiben erhalten');
+                $this->fanComparisonDisplay($j, 'Nicht konfiguriert; gespeicherte Vergleiche bleiben erhalten', $context);
                 return;
             }
             $plan = $this->readPlan($b, $config, $now);
+            $context = ['plan' => $plan, 'now' => $now, 'configurationHash' => $c['hash']];
             $v = $plan['inputs']['values'];
             if ($v['arrival'] <= $now || !$v['winter'] || $v['presence']) {
-                $this->fanComparisonDisplay($j, 'Bereit – wartet auf zukünftige Aufwärmvorwahl');
+                $this->fanComparisonDisplay($j, 'Bereit – wartet auf zukünftige Aufwärmvorwahl', $context);
                 return;
             }
             // Never claim a fresh pre-phase forecast after either warming stage started.
             $projection = HeatingPlan::project($plan, ['start' => $now, 'end' => min($v['arrival'], $now + 48 * 3600)], $now);
             if ($v['storageRequested'] || $v['fanRequested'] || $projection['storageStart'] === null) {
-                $this->fanComparisonDisplay($j, 'Aufwärmstart bereits erfolgt oder unbekannt; keine rückwirkende Vergleichsprognose');
+                $this->fanComparisonDisplay($j, 'Aufwärmstart bereits erfolgt oder unbekannt; keine rückwirkende Vergleichsprognose', $context);
                 return;
             }
             $phaseStart = min(array_filter([$projection['storageStart'], $projection['fanStart']], static fn(?int $t): bool => $t !== null));
@@ -93,20 +98,20 @@ trait FanComparisonObservation
                 && $last['forecast']['issuedAt'] < $window['deadline']
                 && ($last['forecast']['fanComparison']['nights'][$first['date']]['cycle'] ?? null) === $first
             ) {
-                $this->fanComparisonDisplay($j, 'Vorabvergleich gespeichert; Nachtmessungen werden automatisch ergänzt');
+                $this->fanComparisonDisplay($j, 'Vorabvergleich gespeichert; Nachtmessungen werden automatisch ergänzt', $context);
                 return;
             }
             if ($now >= $window['deadline']) {
-                $this->fanComparisonDisplay($j, 'Vorabfrist der ersten Aufwärmnacht verpasst; keine rückwirkende Vergleichsprognose');
+                $this->fanComparisonDisplay($j, 'Vorabfrist der ersten Aufwärmnacht verpasst; keine rückwirkende Vergleichsprognose', $context);
                 return;
             }
             if ($v['arrival'] < $first['end']) {
-                $this->fanComparisonDisplay($j, 'Erste Aufwärmnacht reicht über die Ankunft hinaus; kein vollständiger Nachtvergleich');
+                $this->fanComparisonDisplay($j, 'Erste Aufwärmnacht reicht über die Ankunft hinaus; kein vollständiger Nachtvergleich', $context);
                 return;
             }
             if ($now < $window['earliest']) {
                 $when = (new DateTimeImmutable('@' . $window['earliest']))->setTimezone(new DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i');
-                $this->fanComparisonDisplay($j, 'Vorwahl erkannt – wartet bis ' . $when . ' auf vollständige erste Aufwärmnacht ' . $first['date']);
+                $this->fanComparisonDisplay($j, 'Vorwahl erkannt – wartet bis ' . $when . ' auf vollständige erste Aufwärmnacht ' . $first['date'], $context);
                 return;
             }
             // Fresh inputs at this issue, not an old warming curve re-labelled as new.
@@ -138,11 +143,12 @@ trait FanComparisonObservation
             $j['records'][] = $r;
             $j = Warming::retain($j);
             $this->saveFanComparison($j);
-            $this->fanComparisonDisplay($j, 'Neue Vergleichsprognose vor Aufwärmbeginn fest gespeichert');
+            $this->fanComparisonDisplay($j, 'Neue Vergleichsprognose vor Aufwärmbeginn fest gespeichert', $context);
         } catch (Throwable $e) {
-            $this->fanComparisonDisplay($j, 'Ventilator-Vergleich: ' . substr($e->getMessage(), 0, 220));
+            $this->fanComparisonDisplay($j, 'Ventilator-Vergleich: ' . substr($e->getMessage(), 0, 220), $context);
         }
     }
+
 
     private function measureFanComparison(array $r, int $now): array
     {
@@ -235,9 +241,9 @@ trait FanComparisonObservation
         }
     }
 
-    private function fanComparisonDisplay(array $j, string $status): void
+    private function fanComparisonDisplay(array $j, string $status, array $context = []): void
     {
         $this->SetValue('FanComparisonStatus', $status);
-        $this->SetValue('FanComparison', FanComparisonView::render($j, $status));
+        $this->SetValue('FanComparison', FanComparisonView::render($j, $status, $context));
     }
 }
