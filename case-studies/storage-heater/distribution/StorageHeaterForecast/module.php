@@ -23,6 +23,7 @@ require_once __DIR__ . '/../libs/saef/diagnostics/ConfigurationHash.php';
 use SAEF\StorageHeater\ArchiveReader;
 use SAEF\StorageHeater\Forecast;
 use SAEF\StorageHeater\FireplaceLog;
+use SAEF\StorageHeater\HeatingPlan;
 
 /**
  * Observational module. Only its own variables/attributes are writable.
@@ -109,7 +110,7 @@ class StorageHeaterForecast extends IPSModule
                 $this->RegisterReference($id);
             }
             SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'configurationHash', $config['hash']);
-            SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'version', '0.6.0');
+            SAEF_UpdateRegistryEntry($this->GetIDForIdent('Registry'), 'version', '0.7.0');
             $this->configureCooling($config);
             $this->configurePlan($config);
             $this->configureWarming($config);
@@ -403,13 +404,26 @@ class StorageHeaterForecast extends IPSModule
             'fan_hours' => $archive->duty($b['fan'], $cutoff - 24 * 3600, $cutoff)['hours'],
             'outside_previous' => array_sum($outside) / count($outside),
         ];
+        $operatingPlan = null;
+        $planBindings = $this->planConfiguration($config);
+        if ($planBindings !== null) {
+            $plan = $this->readPlan($planBindings, $config, $now);
+            $operatingPlan = ['plan' => $plan, 'projection' => HeatingPlan::project($plan, $cycle, $now),
+                'energyEffect' => 'future_fan_and_window_heat_loss_not_calibrated'];
+        }
         $issuedAt = $this->now();
         if ($issuedAt >= $cycle['start']) {
             throw new RuntimeException('Issue window ended during calculation; no forecast saved.');
         }
         $result = Forecast::predict($config['model'], $features, $issuedAt);
+        if (
+            $operatingPlan !== null && ($operatingPlan['projection']['fanRuntimeHours']['max'] > 0
+            || ($operatingPlan['plan']['inputs']['window']['open'] ?? false))
+        ) {
+            $result['warnings'][] = 'future_fan_and_window_energy_effect_not_calibrated';
+        }
         $record['forecast'] = $result + ['issuedAt' => $issuedAt, 'contextReadAt' => $now, 'features' => $features, 'weather' => $weather,
-            'weatherFetchedAt' => $weatherLast, 'freshness' => $freshness, 'model' => $config['model']];
+            'operatingPlan' => $operatingPlan, 'weatherFetchedAt' => $weatherLast, 'freshness' => $freshness, 'model' => $config['model']];
         $record['forecast']['fireplaceKnownAtIssue'] = FireplaceLog::classify(FireplaceLog::read($this->ReadAttributeString('FireplaceLog')), $cycle, $issuedAt);
         $record['forecastReason'] = 'forecast_saved';
         return $record;
@@ -435,7 +449,29 @@ class StorageHeaterForecast extends IPSModule
         }
         $charge = array_sum($energy);
         $difference = abs($charge - array_sum($power));
-        return ['status' => 'complete', 'settledAt' => $now, 'kwh' => $charge,
+        $diagnostics = [];
+        if ($record['forecast'] !== null) {
+            try {
+                $outside = $archive->hours($b['outside'], $cycle['start'], $cycle['end']);
+                $actualMean = array_sum($outside) / count($outside);
+                $diagnostics['weather'] = ['measuredMean' => $actualMean,
+                    'forecastMean' => $record['forecast']['weather']['mean'],
+                    'errorKelvin' => $record['forecast']['weather']['mean'] - $actualMean,
+                    'source' => $b['outside'], 'from' => $cycle['start'], 'until' => $cycle['end'],
+                    'measuredAt' => $now, 'correctionApplied' => false];
+            } catch (Throwable $e) {
+                $diagnostics['weatherError'] = substr($e->getMessage(), 0, 160);
+            }
+            $window = $record['forecast']['operatingPlan']['plan']['inputs']['window'] ?? null;
+            if ($window !== null) {
+                try {
+                    $diagnostics['window'] = $this->measureWindow($archive, $window, $cycle['start'], $cycle['end']);
+                } catch (Throwable $e) {
+                    $diagnostics['windowError'] = substr($e->getMessage(), 0, 160);
+                }
+            }
+        }
+        return ['status' => 'complete', 'settledAt' => $now, 'kwh' => $charge, 'diagnostics' => $diagnostics,
             'warnings' => $difference > max(0.5, $charge * 0.05) ? ['energy_power_mismatch'] : [],
             'powerIntegralKwh' => array_sum($power), 'energyHours' => $energy, 'powerHoursKw' => $power,
             'states' => $states, 'controlChangesAfterIssue' => $changes,

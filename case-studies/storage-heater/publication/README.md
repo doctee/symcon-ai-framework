@@ -173,3 +173,43 @@ drei MiB; noch offene Vergleiche werden nicht still entfernt). Rücknahme:
 `WarmingModelJSON={}`; Historie bleibt erhalten. Die Heizungsregelung wird nie
 verändert. Keine gesicherte Aussage zu 48 Stunden, Wohnzimmertemperatur 18 °C oder
 physischem Speicherfüllstand.
+
+## Version 0.7.0: Fenster und getrennte Aufwärmstufen
+
+Optional in `WarmingOptionsJSON`: `windowRaw` (Ganzzahl 0 geschlossen, 1 gekippt,
+2 offen) und `windowContact` (boolescher Offen-Kontakt desselben Fensters).
+Beide müssen gemeinsam gesetzt werden. Der boolesche Kontakt muss eine nicht
+invertierte Absenkquelle des konfigurierten Heating-Control-Reglers sein.
+Alle tatsächlichen `SetBackVariables` werden lesend eingebunden (maximal 16);
+Absenkbetrag und Kontaktinversion werden aus der Reglerkonfiguration übernommen.
+Die vorhandene Reglerkonfiguration wird nicht geschrieben.
+
+Die Vorhersage trennt Speicher-Absenkung, Ventilatorfreigabe und Raumregler-
+Absenkung. Erst Speicherladung ohne Absenkung und ohne Ventilator, später
+Ventilatorregelung nach Vorwahl. Bei beispielsweise 20,5 °C und 5 K aktiver
+Regler-Absenkung simuliert sie den Thermostat um 15,5 °C. Die Speicher-Absenkung
+bleibt davon unabhängig. Weitere Absenkkontakte werden als ODER berücksichtigt.
+
+Fensterzustände und Kontaktwechsel sind Bestandteil des Planstands. Ein
+Zustandswechsel erzeugt nach Beruhigung eine neue Aufwärmkurve, soweit eine
+zukünftige Aufwärmvorwahl besteht. Reine Sensor-Heartbeatmeldungen erzeugen
+keine neuen Stände. Veraltete Rohwerte und widersprüchliche Fenster-/Reglerstände
+verhindern neue Kurven. Gespeicherte Kurven bleiben unverändert.
+
+**Zukunftsannahme:** Alle aktuellen Fenster-/Türkontakte bleiben bis zum Horizont
+unverändert. Ein übliches nächtliches Kippen wird nicht als sicherer zukünftiger
+Schaltzeitpunkt erfunden. Die Ansicht nennt diese Annahme, den wirksamen Sollwert,
+beide Aufwärmstufen sowie später tatsächlich gekippte/offene Stunden und
+Abweichungen von der Annahme. Zusätzliche Lüftungswärmeverluste sind noch nicht
+kalibriert; die Kurve berücksichtigt den bekannten Thermostateffekt, keinen
+frei erfundenen Wärmeverlustfaktor. Der Energieeinfluss künftigen Ventilatorbetriebs
+ist weiterhin unkalibriert und wird nicht aus der historischen Laufzeit abgeleitet.
+
+Auch die ursprüngliche Nachtprognose speichert den bei Ausgabe bekannten Plan
+mit Fensterkontext. Nach der Nacht werden Fensterexposition und Wetterabweichung
+gegen die gebundene Außentemperatur getrennt vom Energievergleich protokolliert.
+Fehlende Zusatzdaten verhindern den Energievergleich nicht. Es wird keine
+Wetterkorrektur automatisch aktiviert; diese benötigt eine zeitlich getrennte
+Prüfung mit ausschließlich früher verfügbaren Daten. Frühere Journale bleiben
+lesbar. Rücknahme der Fenstereinbindung: nur `windowRaw` und `windowContact` aus
+`WarmingOptionsJSON` entfernen und übernehmen; keine Historie löschen.

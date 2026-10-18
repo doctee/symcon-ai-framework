@@ -55,6 +55,12 @@ final class PlanView
             'Restliches Modellfenster' => self::time($p['from']) . ' – ' . self::time($p['to']),
             'Mögliche Ventilatorlaufzeit darin' => '0 – ' . number_format($p['fanRuntimeHours']['max'], 1, ',', '') . ' Stunden',
         ];
+        if (isset($r['plan']['inputs']['window'])) {
+            $w = $r['plan']['inputs']['window'];
+            $rows['Fensterannahme'] = ['geschlossen', 'gekippt', 'offen'][$w['raw']] . ' · unverändert bis zum Horizont';
+            $target = $p['setpoint'] - ($w['setback'] ? $w['setbackKelvin'] : 0);
+            $rows['Wirksamer Galerie-Sollwert'] = number_format($target, 1, ',', '') . ' °C · Absenkung ' . number_format($w['setbackKelvin'], 1, ',', '') . ' K';
+        }
         if (($e['baselineKwh'] ?? null) !== null) {
             $rows['Vergleichsbasis ohne zukünftigen Ventilatoreffekt'] = number_format($e['baselineKwh'], 2, ',', '') . ' kWh · erstellt ' . self::time($e['baselineIssuedAt']);
         }
@@ -68,7 +74,7 @@ final class PlanView
         foreach ($rows as $label => $value) {
             $html .= '<dt style="opacity:.7;margin-top:7px">' . self::escape($label) . '</dt><dd style="margin:0">' . self::escape($value) . '</dd>';
         }
-        $html .= '</dl><p>Freigabe bedeutet keine Dauerlaufzeit: Der Galerieregler schaltet nach Temperatur. '
+        $html .= '</dl><p>Zunächst wird die Speicher-Absenkung aufgehoben, später die Ventilatorregelung freigegeben. Die Fenster-Absenkung des Raumreglers ist davon unabhängig. Freigabe bedeutet keine Dauerlaufzeit: Der Galerieregler schaltet nach Temperatur. '
             . 'Die separate Aufwärmansicht kann ein experimentell kalibriertes Temperaturmodell anzeigen. Für die Energieänderung durch künftigen Ventilatorbetrieb fehlt weiterhin eine belastbare Kalibrierung. '
             . 'Die ursprüngliche Nachtprognose bleibt als Vergleich erhalten.</p>';
         $labels = [

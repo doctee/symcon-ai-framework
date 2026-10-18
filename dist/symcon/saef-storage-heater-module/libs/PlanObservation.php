@@ -149,6 +149,10 @@ trait PlanObservation
         ) {
             throw new RuntimeException('Preselection time or thermostat target outside supported range.');
         }
+        $window = $this->readWindow();
+        if ($window !== null) {
+            $input['window'] = $window;
+        }
         return ['observedAt' => $now, 'hash' => SAEF_CreateConfigurationHash($input), 'inputs' => $input];
     }
 

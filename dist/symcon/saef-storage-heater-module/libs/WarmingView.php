@@ -44,6 +44,23 @@ final class WarmingView
                 $html .= '.</p>';
             }
             $html .= '<p>Bis zum Horizont: Galerie <b>' . number_format($last['gallery'], 1, ',', '') . ' °C</b>, Wohnzimmer <b>' . number_format($last['sofa'], 1, ',', '') . ' °C</b>. Simulierter Ventilatorlauf ' . number_format($last['fanHours'], 1, ',', '') . ' h; angenommene weitere Ladung ' . number_format($last['chargeKwh'], 1, ',', '') . ' kWh.</p>';
+            $v = $f['plan']['inputs']['values'];
+            $storage = $v['storageRequested'] ? 'bereits aktiviert' : ($f['projection']['storageStart'] === null ? 'kein Start geplant' : self::time($f['projection']['storageStart']));
+            $fan = $v['fanRequested'] ? 'bereits aktiviert' : ($f['projection']['fanStart'] === null ? 'kein Start geplant' : self::time($f['projection']['fanStart']));
+            $html .= '<p>Stufe 1 – Speicher-Absenkung aus: ' . $storage . '. Stufe 2 – Ventilatorregelung frei: ' . $fan . '.</p>';
+            $window = $f['window'] ?? null;
+            if ($window !== null) {
+                $state = ['geschlossen', 'gekippt', 'offen'][$window['raw']];
+                $target = $f['projection']['setpoint'] - ($window['setback'] ? $window['setbackKelvin'] : 0);
+                $html .= '<p>Fenster bei Ausgabe: <b>' . $state . '</b>. Alle Fenster-/Türkontakte werden bis zum Horizont unverändert angenommen. '
+                    . 'Regler-Absenkung ' . number_format($window['setbackKelvin'], 1, ',', '') . ' K; wirksamer Galerie-Sollwert <b>' . number_format($target, 1, ',', '') . ' °C</b>. '
+                    . 'Dies beeinflusst die simulierte Ventilatorlaufzeit. Zusätzliche Lüftungswärmeverluste sind noch nicht kalibriert.</p>';
+            }
+            if (isset($r['operationActual']['window'])) {
+                $w = $r['operationActual']['window'];
+                $html .= '<p>Fenster tatsächlich: ' . number_format($w['tiltedHours'], 1, ',', '') . ' h gekippt, ' . number_format($w['openHours'], 1, ',', '') . ' h offen; '
+                    . number_format($w['differentFromAssumptionHours'], 1, ',', '') . ' h anders als angenommen. Regler-Absenkung aus Kontaktverläufen: ' . number_format($w['setbackHours'], 1, ',', '') . ' h.</p>';
+            }
             foreach (['gallery' => 'Galerie', 'sofa' => 'Wohnzimmer'] as $room => $label) {
                 $score = Warming::metrics($r, $room);
                 $html .= '<h4>' . $label . '</h4>' . self::chart($r, $room, $label);

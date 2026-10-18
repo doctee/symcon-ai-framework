@@ -163,4 +163,80 @@ try {
     $threw = true;
 }
 check($threw, 'Tampered frozen curve rejected before display or scoring');
+// Window-aware operation remains an observer; raw tilt/open changes are separate plan revisions.
+$now = $frozen['start'];
+$stale = $gap = $badWeather = false;
+$sensorUpdates = [];
+foreach ($frozen['plan']['inputs']['bindings'] as $key => $id) {
+    if (str_ends_with($key, 'Event')) {
+        $events[$id] = $frozen['plan']['inputs']['events'][$key];
+    } else {
+        $values[$id] = $frozen['plan']['inputs']['values'][$key];
+    }
+}
+foreach ([56 => 0, 57 => false, 58 => false] as $id => $value) {
+    $values[$id] = $value;
+    $types[$id] = is_bool($value) ? VARIABLETYPE_BOOLEAN : VARIABLETYPE_INTEGER;
+    $rawFixtures[$id] = [['TimeStamp' => $now - 86400, 'Value' => $value]];
+}
+$rawFixtures[14] = [['TimeStamp' => $now - 7200, 'Value' => .001], ['TimeStamp' => $now - 60, 'Value' => .001]];
+$values[16] = 18.0;
+$values[17] = 17.0;
+$controller['SetBackVariables'] = '[{"VariableID":57,"Invert":false},{"VariableID":58,"Invert":false}]';
+$m->properties['Enabled'] = true;
+$o = Forecast::decode($m->properties['WarmingOptionsJSON']);
+$o['windowRaw'] = 56;
+$o['windowContact'] = 57;
+$m->properties['WarmingOptionsJSON'] = Forecast::encode($o);
+$m->ApplyChanges();
+check(isset($m->messages[56], $m->messages[57], $m->messages[58]), 'Raw window and every setback contact subscribed');
+$m->RefreshPlan();
+$wj = Warming::journal($m->GetWarmingJournalJson());
+$closed = end($wj['records'])['forecast'];
+check($closed['window']['raw'] === 0 && !$closed['window']['setback'], 'Closed window stored with current OR contacts');
+$n = count($wj['records']);
+$sensorUpdates[56] = $now;
+$m->RefreshPlan();
+check(count(Warming::journal($m->GetWarmingJournalJson())['records']) === $n, 'Heartbeat update alone does not duplicate plan');
+$values[56] = 1;
+$values[57] = $values[46] = true;
+$m->MessageSink(1, 56, VM_UPDATE, []);
+check($m->timers['PlanRefresh'] === 5000, 'Window change refreshes forecast after settling');
+$m->RefreshPlan();
+$wj = Warming::journal($m->GetWarmingJournalJson());
+$tilted = end($wj['records'])['forecast'];
+check(count($wj['records']) === $n + 1 && $wj['records'][$n - 1]['forecast'] === $closed, 'Tilt appends and preserves original forecast');
+check($tilted['window']['setbackKelvin'] == 5.0 && $tilted['projection']['setpoint'] - $tilted['window']['setbackKelvin'] == 15.5, 'Existing five-Kelvin setback uses real regulator parameter');
+check(end($tilted['points'])['fanHours'] < end($closed['points'])['fanHours'], 'Window setback reduces simulated fan demand');
+check($tilted['projection']['segments'] === $closed['projection']['segments'], 'Window cannot change storage or fan permission schedule');
+$values[56] = 2;
+$m->RefreshPlan();
+check(count(Warming::journal($m->GetWarmingJournalJson())['records']) === $n + 2, 'Tilt-to-open is retained even when thermostat setback stays true');
+$values[56] = 0;
+$values[57] = false;
+$values[58] = true;
+$m->RefreshPlan();
+$wj = Warming::journal($m->GetWarmingJournalJson());
+check(end($wj['records'])['forecast']['window']['setback'], 'Second door still causes setback while selected window is closed');
+$n = count($wj['records']);
+$values[46] = false;
+$m->RefreshPlan();
+check(count(Warming::journal($m->GetWarmingJournalJson())['records']) === $n, 'Torn contact/regulator state rejects new warming curve');
+$values[58] = false;
+$sensorUpdates[56] = $now - 86400;
+$m->RefreshPlan();
+check(count(Warming::journal($m->GetWarmingJournalJson())['records']) === $n, 'Stale raw window sensor rejects new curve');
+$actual = Warming::windowOutcome(
+    [['TimeStamp' => 1, 'Value' => 0], ['TimeStamp' => 3600, 'Value' => 1], ['TimeStamp' => 7200, 'Value' => 2]],
+    [['Invert' => false, 'rows' => [['TimeStamp' => 1, 'Value' => false], ['TimeStamp' => 3600, 'Value' => true]]],
+    ['Invert' => false, 'rows' => [['TimeStamp' => 1, 'Value' => true], ['TimeStamp' => 7200, 'Value' => false]]]],
+    1800,
+    9000,
+    0
+);
+check($actual['closedHours'] == .5 && $actual['tiltedHours'] == 1 && $actual['openHours'] == .5, 'Window intervals use carry-in and exact half-open boundaries');
+check($actual['setbackHours'] == 2 && $actual['differentFromAssumptionHours'] == 1.5, 'Overlapping setback contacts are ORed, never double-counted');
+$html = WarmingView::render($wj, 'Window fixture');
+check(str_contains($html, 'Stufe 1') && str_contains($html, 'Lüftungswärmeverluste'), 'View distinguishes stages and uncalibrated window loss');
+check($commands === 0, 'Window integration never commands a heater');
 echo $checks . " total assertions including prospective warming passed; no external writes or device actions\n";

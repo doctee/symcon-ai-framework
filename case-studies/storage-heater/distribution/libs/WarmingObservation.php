@@ -73,12 +73,96 @@ trait WarmingObservation
         return $c;
     }
 
+    /** Optional window inputs; existing thermostat contacts remain the authoritative OR group. */
+    private function windowConfiguration(): ?array
+    {
+        $o = Forecast::decode($this->ReadPropertyString('WarmingOptionsJSON'));
+        if (!isset($o['windowRaw']) && !isset($o['windowContact'])) {
+            return null;
+        }
+        foreach (['windowRaw' => VARIABLETYPE_INTEGER, 'windowContact' => VARIABLETYPE_BOOLEAN] as $key => $type) {
+            $id = $o[$key] ?? null;
+            if (
+                !is_int($id) || $id <= 0 || !IPS_VariableExists($id)
+                || IPS_GetVariable($id)['VariableType'] !== $type || IPS_GetObject($id)['ParentID'] === $this->InstanceID
+            ) {
+                throw new RuntimeException('Invalid external window binding: ' . $key);
+            }
+        }
+        $id = $o['regulator'] ?? null;
+        if (
+            !is_int($id) || $id <= 0 || !IPS_InstanceExists($id)
+            || IPS_GetInstance($id)['ModuleInfo']['ModuleID'] !== '{FF7AF0F4-D616-4EF5-B73A-D49C56CF4C92}'
+        ) {
+            throw new RuntimeException('Invalid window thermostat source.');
+        }
+        $controller = Forecast::decode(IPS_GetConfiguration($id));
+        $contacts = Forecast::decode($controller['SetBackVariables'] ?? '[]');
+        if (!array_is_list($contacts) || count($contacts) < 1 || count($contacts) > 16) {
+            throw new RuntimeException('Expected bounded thermostat setback contacts.');
+        }
+        $found = false;
+        $ids = [];
+        foreach ($contacts as $contact) {
+            $source = $contact['VariableID'] ?? null;
+            if (
+                !is_int($source) || $source <= 0 || !IPS_VariableExists($source)
+                || IPS_GetVariable($source)['VariableType'] !== VARIABLETYPE_BOOLEAN
+                || IPS_GetObject($source)['ParentID'] === $this->InstanceID || !is_bool($contact['Invert'] ?? null)
+                || in_array($source, $ids, true)
+            ) {
+                throw new RuntimeException('Invalid thermostat setback contact.');
+            }
+            $ids[] = $source;
+            $found = $found || ($source === $o['windowContact'] && !$contact['Invert']);
+        }
+        if (!$found) {
+            throw new RuntimeException('Window contact is not a non-inverted thermostat setback source.');
+        }
+        $delta = Forecast::number($controller['SetBack'] ?? null, 'SetBack');
+        if ($delta < 0 || $delta > 15) {
+            throw new RuntimeException('Invalid thermostat setback delta.');
+        }
+        return ['raw' => $o['windowRaw'], 'contact' => $o['windowContact'], 'contacts' => $contacts, 'setbackKelvin' => $delta];
+    }
+
+    private function readWindow(): ?array
+    {
+        $c = $this->windowConfiguration();
+        if ($c === null) {
+            return null;
+        }
+        $raw = GetValue($c['raw']);
+        if (!is_int($raw) || !in_array($raw, [0, 1, 2], true)) {
+            throw new RuntimeException('Window state must be 0 closed, 1 tilted or 2 open.');
+        }
+        $contacts = [];
+        $setback = false;
+        foreach ($c['contacts'] as $source) {
+            $id = $source['VariableID'];
+            $active = (bool) GetValue($id) !== $source['Invert'];
+            $setback = $setback || $active;
+            $contacts[] = $source + ['active' => $active, 'changedAt' => IPS_GetVariable($id)['VariableChanged']];
+        }
+        return ['bindings' => $c, 'raw' => $raw, 'open' => (bool) GetValue($c['contact']),
+            'changedAt' => IPS_GetVariable($c['raw'])['VariableChanged'], 'contacts' => $contacts,
+            'setback' => $setback, 'setbackKelvin' => $c['setbackKelvin'],
+            'assumption' => 'current_contacts_held_until_horizon', 'heatLoss' => 'not_calibrated'];
+    }
+
     private function configureWarming(array $config): void
     {
         try {
             $c = $this->warmingConfiguration($config);
             if ($c !== null) {
                 $this->RegisterReference($c['options']['regulator']);
+                $window = $this->windowConfiguration();
+                if ($window !== null) {
+                    foreach (array_unique(array_merge([$window['raw']], array_column($window['contacts'], 'VariableID'))) as $id) {
+                        $this->RegisterReference($id);
+                        $this->RegisterMessage($id, VM_UPDATE);
+                    }
+                }
             }
             $this->warmingDisplay(Warming::journal($this->ReadAttributeString('WarmingJournal')), $c === null
                 ? 'Aufwärmmodell nicht konfiguriert' : 'Bereit – wartet auf Heizungsvorwahl');
@@ -212,6 +296,18 @@ trait WarmingObservation
     private function issueWarming(array $c, array $config, array $plan, int $now): array
     {
         $b = $c['bindings'];
+        $window = $plan['inputs']['window'] ?? null;
+        if ($window !== null) {
+            $updated = IPS_GetVariable($window['bindings']['raw'])['VariableUpdated'];
+            if (
+                $updated > $now || $now - $updated > $c['sensorMaxAgeSeconds']
+                || ($window['raw'] !== 0) !== $window['open']
+                || $window['setback'] !== $plan['inputs']['values']['setback']
+            ) {
+                throw new RuntimeException('Fensterdaten veraltet oder Fenster/Regler-Absenkung noch widersprüchlich.');
+            }
+            $window['updatedAt'] = $updated;
+        }
         $a = new ArchiveReader($b['archive'], $c['historyStart']);
         $current = $this->coolingSensors($c, $now);
         if (in_array(null, array_column($current, 'value'), true) || (isset($b['auxiliary']) && GetValue($b['auxiliary']))) {
@@ -281,7 +377,7 @@ trait WarmingObservation
             }
         }
         $f = ['issuedAt' => $now, 'start' => $now, 'end' => $end, 'phaseStart' => min($phase), 'beforePhase' => false,
-            'model' => $c['model'], 'plan' => $plan, 'projection' => $projection, 'controller' => $c['controller'],
+            'model' => $c['model'], 'window' => $window, 'plan' => $plan, 'projection' => $projection, 'controller' => $c['controller'],
             'initial' => $current, 'store' => $history['store'], 'history' => $history,
             'weather' => $weather, 'weatherFetchedAt' => $fetched, 'radiationSource' => $response['data'], 'solar' => $solar,
             'location' => array_intersect_key($c['options'], array_flip(['latitude', 'longitude'])),
@@ -291,10 +387,21 @@ trait WarmingObservation
             'warnings' => ['experimental_prospective', 'charge_regression_uses_issue_time_features_not_21h_features',
                 'charge_uniform_23_07_no_grid_interruptions', 'mass_initialized_equal_to_air', 'effective_store_not_SOC',
                 'solar_DNI_DHI_horizontal_approximation', 'floor_duty_last_24h_held', 'future_door_states_unknown',
-                'living_fan_coefficient_not_identifiable', '48h_and_living_18C_not_validated']];
+                'window_ventilation_heat_loss_not_calibrated', 'future_fan_charge_feedback_not_calibrated', 'living_fan_coefficient_not_identifiable', '48h_and_living_18C_not_validated']];
         $f['points'] = Warming::predict($f);
         return ['configurationHash' => $c['hash'], 'bindings' => $b, 'historyStart' => $c['historyStart'],
             'forecast' => $f, 'actual' => [], 'measurementErrors' => [], 'settledAt' => null, 'checkedAt' => 0];
+    }
+
+    private function measureWindow(ArchiveReader $a, array $window, int $from, int $until): array
+    {
+        $w = $window['bindings'];
+        $raw = $this->warmingRows($a, $w['raw'], $from, $until, true);
+        $contacts = [];
+        foreach ($w['contacts'] as $source) {
+            $contacts[] = $source + ['rows' => $this->warmingRows($a, $source['VariableID'], $from, $until, true)];
+        }
+        return Warming::windowOutcome($raw, $contacts, $from, $until, $window['raw']);
     }
 
     private function measureWarming(array $r, int $now): array
@@ -350,6 +457,9 @@ trait WarmingObservation
                     if (isset($r['bindings'][$key])) {
                         $r['operationActual'][$key . 'Hours'] = $a->duty($r['bindings'][$key], $f['start'], $until)['hours'];
                     }
+                }
+                if (isset($f['window']['bindings'])) {
+                    $r['operationActual']['window'] = $this->measureWindow($a, $f['window'], $f['start'], $until);
                 }
                 $energyFrom = (int) (ceil($f['start'] / 3600) * 3600);
                 $energyUntil = intdiv($until, 3600) * 3600 - 3600;

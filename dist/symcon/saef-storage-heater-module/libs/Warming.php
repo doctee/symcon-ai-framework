@@ -194,7 +194,9 @@ final class Warming
         $fan = $f['fanInitially'];
         $fanHours = $charge = 0.0;
         $points = [['time' => $start, 'gallery' => $air['gallery'], 'sofa' => $air['sofa'], 'fanHours' => 0.0, 'chargeKwh' => 0.0]];
-        $target = $f['projection']['setpoint'] - ($f['plan']['inputs']['values']['setback'] ? $f['controller']['SetBack'] : 0);
+        // Storage charging reduction is independent of the thermostat/window setback.
+        $setback = $f['window']['setback'] ?? $f['plan']['inputs']['values']['setback'];
+        $target = $f['projection']['setpoint'] - ($setback ? $f['controller']['SetBack'] : 0);
         for ($t = $start; $t < $end; $t = $next) {
             $segment = self::segment($f['projection'], $t);
             $next = min($end, (intdiv($t, 900) + 1) * 900, $segment['to']);
@@ -236,6 +238,53 @@ final class Warming
             }
         }
         return $points;
+    }
+
+    /** Actual contact exposure, separate from the immutable held-state assumption. */
+    public static function windowOutcome(array $raw, array $contacts, int $from, int $until, int $assumed): array
+    {
+        if ($until <= $from || $until - $from > 48 * 3600 || count($contacts) > 16) {
+            throw new RuntimeException('Window comparison outside bounded horizon.');
+        }
+        $times = [$from, $until];
+        $changes = [];
+        $states = [];
+        foreach (array_merge([$raw], array_column($contacts, 'rows')) as $channel => $rows) {
+            $states[$channel] = self::stateAt($rows, $from);
+            foreach ($rows as $p) {
+                if ($p['TimeStamp'] > $from && $p['TimeStamp'] < $until) {
+                    $times[] = $p['TimeStamp'];
+                    $changes[$p['TimeStamp']][$channel] = $p['Value'];
+                }
+            }
+        }
+        sort($times);
+        $times = array_values(array_unique($times));
+        $r = ['closedHours' => 0.0, 'tiltedHours' => 0.0, 'openHours' => 0.0,
+            'setbackHours' => 0.0, 'differentFromAssumptionHours' => 0.0];
+        for ($i = 0; $i < count($times) - 1; ++$i) {
+            $t = $times[$i];
+            foreach ($changes[$t] ?? [] as $channel => $value) {
+                $states[$channel] = is_bool($value) ? (float) $value : Forecast::number($value, 'contact state');
+            }
+            $value = $states[0];
+            if (!in_array($value, [0.0, 1.0, 2.0], true)) {
+                throw new RuntimeException('Invalid archived window state.');
+            }
+            $hours = ($times[$i + 1] - $t) / 3600;
+            $r[['closedHours', 'tiltedHours', 'openHours'][(int) $value]] += $hours;
+            $r['differentFromAssumptionHours'] += (int) $value !== $assumed ? $hours : 0;
+            $active = false;
+            foreach ($contacts as $channel => $c) {
+                $v = $states[$channel + 1];
+                if (!in_array($v, [0.0, 1.0], true)) {
+                    throw new RuntimeException('Invalid archived setback contact.');
+                }
+                $active = $active || ((bool) $v !== $c['Invert']);
+            }
+            $r['setbackHours'] += $active ? $hours : 0;
+        }
+        return $r;
     }
 
     /** Conservative zero-battery intervals include six hours after recovery. */
