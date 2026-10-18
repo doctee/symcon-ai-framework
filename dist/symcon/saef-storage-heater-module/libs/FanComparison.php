@@ -78,11 +78,9 @@ final class FanComparison
                 $excluded[$date] = 'Nur vollständige zukünftige Ladefenster 22–07 Uhr werden verglichen.';
                 continue;
             }
-            $segments = array_values(array_filter($f['projection']['segments'], static fn(array $s): bool => $s['from'] < $cycle['end'] && $s['to'] > $cycle['start']));
-            $enabled = array_unique(array_column($segments, 'enabled'));
-            $reduced = array_unique(array_column($segments, 'reduced'));
-            if (count($enabled) !== 1 || reset($enabled) !== true || count($reduced) !== 1) {
-                $excluded[$date] = 'Wechselnde Ladefreigabe oder Speicher-Absenkung: nicht kalibriert.';
+            $plan = self::nightPlan($f['projection']['segments'], $cycle);
+            if (!$plan['enabled']) {
+                $excluded[$date] = 'Unterbrochene geplante Ladefreigabe: nicht kalibriert.';
                 continue;
             }
             $temperatures = [];
@@ -95,15 +93,19 @@ final class FanComparison
             if (!isset($fan[$cycle['start']], $fan[$cycle['end']])) {
                 throw new RuntimeException('Simulierte Ventilatorlaufzeit deckt die Nacht nicht ab.');
             }
-            $red = (bool) reset($reduced);
-            $features = $scenarios[$red ? 'reduced' : 'normal']['features'];
+            $red = $plan['reducedChargeFraction'];
+            $features = $scenarios['normal']['features'];
+            $features['reduced'] = $red;
             $features['hdd_night'] = max(0, 15 - array_sum($temperatures) / count($temperatures));
             $features['hdd_reduced'] = $features['hdd_night'] * (float) $red;
             $features['night_fan_hours'] = $fan[$cycle['end']] - $fan[$cycle['start']];
-            $cap = $f['maxPowerKw'] * (($cycle['end'] - Warming::chargeCycle($cycle['start'] + 3600)['start']) / 3600);
+            $cap = $f['maxPowerKw'] * $plan['chargeHours'];
             $predictions = [];
             foreach (['reference', 'candidate'] as $name) {
                 $p = self::predict($models[$name], $features, $issuedAt);
+                if ($plan['mixed']) {
+                    $p['warnings'][] = 'mixed_reduction_time_weighted_unvalidated';
+                }
                 if ($p['kwh'] > $cap) {
                     $p['warnings'][] = 'physical_charge_cap';
                     $p['kwh'] = $cap;
@@ -111,16 +113,55 @@ final class FanComparison
                 $predictions[$name] = $p;
             }
             $nights[$date] = ['cycle' => $cycle, 'features' => $features, 'predictions' => $predictions,
-                'fanSource' => 'frozen_baseline_thermal_simulation', 'expectedReduced' => $red];
+                'fanSource' => 'frozen_baseline_thermal_simulation',
+                'expectedReduced' => $plan['mixed'] ? null : ($plan['reducedHours'] > 0), 'chargePlan' => $plan];
         }
         if ($nights === []) {
             throw new RuntimeException('Keine vollständige, stabile zukünftige Ladenacht im Aufwärmhorizont.');
         }
         return ['models' => $models, 'nights' => $nights, 'excluded' => $excluded,
-            'method' => 'one_pass_no_feedback', 'windowHeatLossEnabled' => false,
+            'method' => 'one_pass_charge_time_weighted_reduction_v2', 'windowHeatLossEnabled' => false,
             'assumptions' => ['issue_time_features_held', 'future_runtime_simulated_not_permission',
                 'baseline_charge_drives_fan_simulation', 'no_candidate_charge_feedback',
                 'no_future_actual_inputs', 'no_window_energy_surcharge']];
+    }
+
+    /** Interpolate whole-night regressions by available charging time, not measured future energy. */
+    private static function nightPlan(array $segments, array $cycle): array
+    {
+        $segments = array_values(array_filter($segments, static fn(array $s): bool => $s['from'] < $cycle['end'] && $s['to'] > $cycle['start']));
+        usort($segments, static fn(array $a, array $b): int => $a['from'] <=> $b['from']);
+        if ($segments === [] || count($segments) > 8) {
+            throw new RuntimeException('Ungültige oder zu viele Nacht-Planabschnitte.');
+        }
+        $chargeStart = Warming::chargeCycle($cycle['start'] + 3600)['start'];
+        $cursor = $cycle['start'];
+        $reducedSeconds = $reducedChargeSeconds = 0;
+        $enabled = true;
+        $plan = [];
+        foreach ($segments as $s) {
+            $from = max($cycle['start'], $s['from']);
+            $to = min($cycle['end'], $s['to']);
+            if ($from !== $cursor || $to <= $from || !is_bool($s['reduced']) || !is_bool($s['enabled'])) {
+                throw new RuntimeException('Nachtplan hat eine Lücke, Überlappung oder ungültige Zustände.');
+            }
+            $cursor = $to;
+            $enabled = $enabled && $s['enabled'];
+            if ($s['reduced']) {
+                $reducedSeconds += $to - $from;
+                $reducedChargeSeconds += max(0, $to - max($from, $chargeStart));
+            }
+            $plan[] = ['from' => $from, 'to' => $to, 'enabled' => $s['enabled'], 'reduced' => $s['reduced']];
+        }
+        if ($cursor !== $cycle['end']) {
+            throw new RuntimeException('Nachtplan reicht nicht bis zum Ende des Messfensters.');
+        }
+        return ['segments' => $plan, 'enabled' => $enabled,
+            'mixed' => $reducedSeconds > 0 && $reducedSeconds < $cycle['end'] - $cycle['start'],
+            'reducedHours' => $reducedSeconds / 3600, 'chargeStart' => $chargeStart,
+            'chargeHours' => ($cycle['end'] - $chargeStart) / 3600,
+            'reducedChargeFraction' => $reducedChargeSeconds / ($cycle['end'] - $chargeStart),
+            'weighting' => 'elapsed_available_charge_time_23_07'];
     }
 
     public static function journal(string $json): array

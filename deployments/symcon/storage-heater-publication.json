@@ -15,8 +15,8 @@
     "pullRequest": {
       "repository": "doctee/saef-storage-heater",
       "base": "main",
-      "title": "feat: freeze prospective fan charge comparisons",
-      "body": "Store a separate pre-warming comparison of calibrated charging models with and without simulated overnight fan runtime. Freeze both models, the plan and inputs before phase start, then compare complete 22\u201307 windows with meter energy and actual runtime. Preserve existing forecasts and heater controls; apply no window heat-loss surcharge.\n\nValidation: isolated tests cover immutable issue times, restart, plan revisions, partial/mixed nights, missing measurements and command-free observation.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "title": "feat: include scheduled reduction changes in fan comparison",
+      "body": "Include the first warming night when storage reduction changes at its scheduled time. Freeze its timeline, weight reduced/normal regression inputs by available 23\u201307 charging time, and compare actual transition timing afterward. Label mixed nights as provisional; preserve older records and all heater controls.\n\nValidation: analytic weights, DST, first-night observer integration, immutable forecasts, shifted transitions, and complete module checks.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
       "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
     }
   },

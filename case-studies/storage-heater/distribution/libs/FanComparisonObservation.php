@@ -46,6 +46,7 @@ trait FanComparisonObservation
             throw new RuntimeException('Ventilator-Vergleich benötigt das Aufwärmmodell.');
         }
         $c['comparisonModels'] = $models;
+        $c['comparisonMethodVersion'] = 2;
         $c['hash'] = SAEF_CreateConfigurationHash($c);
         return $c;
     }
@@ -153,7 +154,8 @@ trait FanComparisonObservation
                 }
                 $warnings = [];
                 $hours = ($cycle['end'] - $cycle['start']) / 3600;
-                if ($states['enabled']['hours'] != $hours || $states['reduced']['hours'] != ($night['expectedReduced'] ? $hours : 0)) {
+                $reductionPlan = $this->measureReductionPlan($a, $r['bindings']['reduced'], $night);
+                if ($states['enabled']['hours'] != $hours || $reductionPlan['mismatchSeconds'] > 60) {
                     $warnings[] = 'actual_charge_plan_deviated';
                 }
                 if (($states['auxiliary']['hours'] ?? 0) > 0) {
@@ -165,6 +167,7 @@ trait FanComparisonObservation
                 $r['nightActual'][$date] = ['status' => 'complete', 'settledAt' => $now,
                     'from' => $cycle['start'], 'until' => $cycle['end'], 'kwh' => $kwh,
                     'powerIntegralKwh' => $integral, 'energyHours' => $energy, 'states' => $states,
+                    'reductionPlan' => $reductionPlan,
                     'fanHoursError' => $night['features']['night_fan_hours'] - $states['fan']['hours'],
                     'errors' => FanComparison::errors($night, $kwh), 'warnings' => $warnings,
                     'fireplaceAtComparison' => FireplaceLog::classify(FireplaceLog::read($this->ReadAttributeString('FireplaceLog')), $cycle, $now)];
@@ -178,6 +181,25 @@ trait FanComparisonObservation
             $r['settledAt'] = $now;
         }
         return $r;
+    }
+
+    /** Compare transition timing as well as duration; old frozen records retain their constant plan. */
+    private function measureReductionPlan(ArchiveReader $a, int $id, array $night): array
+    {
+        $segments = $night['chargePlan']['segments'] ?? [[
+            'from' => $night['cycle']['start'], 'to' => $night['cycle']['end'], 'reduced' => $night['expectedReduced'],
+        ]];
+        $measured = [];
+        $mismatch = 0.0;
+        foreach ($segments as $s) {
+            $actual = $a->duty($id, $s['from'], $s['to'])['hours'];
+            $expected = $s['reduced'] ? ($s['to'] - $s['from']) / 3600 : 0.0;
+            $seconds = abs($actual - $expected) * 3600;
+            $mismatch += $seconds;
+            $measured[] = ['from' => $s['from'], 'to' => $s['to'], 'expectedReducedHours' => $expected,
+                'actualReducedHours' => $actual, 'mismatchSeconds' => $seconds];
+        }
+        return ['segments' => $measured, 'mismatchSeconds' => $mismatch, 'toleranceSeconds' => 60];
     }
 
     private function saveFanComparison(array $j): void
