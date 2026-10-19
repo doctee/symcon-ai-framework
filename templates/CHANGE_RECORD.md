@@ -39,6 +39,8 @@ Use one record per independently reviewable change; link existing receipts.
 - Recovery attempted, restored-state verification and unresolved effects:
 - Production/device/publication actions performed (or explicitly none):
 - Remaining gates and retained artifacts; no implicit cleanup:
+- Artifact roles/locations, producer revision, originals versus copies, holds
+  and next review; use [the closure checklist](artifacts/CLOSURE_CHECKLIST.md).
 
 See [the workflow](../project/SYMCON_CHANGE_WORKFLOW.md). This record does not
 replace the stronger evidence contract of an already managed deployment.

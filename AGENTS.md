@@ -163,6 +163,14 @@ IP-Symcon installation.
 
 ## Workstream Isolation
 
+Before creating operational artifacts, follow
+`standards/ARTIFACT_STORAGE_STANDARDS.md`: use configured role-specific roots,
+one identifiable run, existing authoritative records and explicit retention
+holds. Do not scatter new scratch/backup files across drive or runtime roots.
+Existing pinned paths and manifests are not migrated by the naming standard.
+Close retained artifacts with `templates/artifacts/CLOSURE_CHECKLIST.md`;
+names, age and completed status never grant cleanup authority.
+
 Follow `project/WORKSTREAM_COORDINATION.md` for concurrent or cross-cutting
 repository work.
 

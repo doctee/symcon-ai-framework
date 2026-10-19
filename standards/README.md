@@ -12,3 +12,5 @@ Initial standards:
 - `PHP_STANDARDS.md`
 - `DOCUMENTATION_STANDARDS.md`
 - `TESTING_STANDARDS.md`
+- [Artifact Storage and Lifecycle](ARTIFACT_STORAGE_STANDARDS.md): configured
+  storage roles, naming, private metadata and closure without implicit cleanup.

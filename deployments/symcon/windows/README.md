@@ -1,5 +1,10 @@
 # State-based IP-Symcon restart coordinator for Windows
 
+For the optional, extraction-tested storage layout of the existing
+MediaCarousel package starter, see
+[bounded Windows producer adoption](../../../templates/artifacts/WINDOWS_PRODUCER_ADOPTION.md).
+This does not change installed paths or authorize an operation.
+
 `Invoke-SaefSymconRestart.ps1` performs the restart portion of a supervised
 SAEF activation transaction. It must run from an elevated PowerShell process
 outside the `IPSServer` service. Do not start it through an IP-Symcon script.
@@ -264,7 +269,11 @@ The initializer never invents Symcon object creation logic.
 
 ### Package contract
 
-Create a private plan from `deployment-package-plan.example.json`. The plan
+For new POSIX-local builds, prefer the version 2
+[private storage plan](../../../templates/artifacts/RUNTIME_PACKAGE_PLAN_V2.example.json)
+and [its storage contract](../../../templates/artifacts/README.md#local-package-builders).
+Existing `deployment-package-plan.example.json` is the version 1 compatibility
+shape, not a migration instruction. The plan
 references:
 
 - one reviewed generated fileset;
@@ -274,7 +283,8 @@ references:
   `.saef-filesets/<targetDirectoryName>/bootstrap.php` relative to the Symcon
   scripts root;
 - a non-empty `requiredRuntimeFunctions` compatibility contract; and
-- a private ZIP output path.
+- a private configured storage root/owner/workstream (version 2), or an exact
+  private ZIP output path (version 1).
 
 Build the package from the repository root:
 
@@ -286,6 +296,11 @@ The builder rejects symlinks, unsafe paths, ambiguous token replacement and an
 existing output. It records every file size and SHA-256 value, stores archive
 entries in sorted order with fixed metadata and prints only the deployment ID,
 package hash, file count and package size.
+
+Version 2 additionally returns the private run/record paths, retains an input
+plan and lifecycle receipts outside the ZIP, and rejects an additional
+`outputPath`. It never changes the deployment manifest version or archive bytes
+for the same candidate. No existing Windows paths or policies are changed.
 
 The gateway independently checks:
 
@@ -321,6 +336,10 @@ Channel version 8 also accepts deterministic packages built with
 `tools/build-symcon-module-deployment-package.php`. This reuses the same
 `stage`, `preflight`, `activate` and `status` protocol; the SSH client and
 forced-command grammar do not gain a module-specific command.
+
+New POSIX-local plans can use the same version 2 storage mode through the
+[module package plan](../../../templates/artifacts/MODULE_PACKAGE_PLAN_V2.example.json).
+The Windows channel still receives only the unchanged deterministic ZIP.
 
 The generic gateway verifies the module `library.json` identity, canonical
 package hash, complete `module/` inventory and the exact

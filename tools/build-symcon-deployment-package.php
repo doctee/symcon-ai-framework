@@ -5,6 +5,9 @@ declare(strict_types=1);
 const SAEF_DEPLOYMENT_PACKAGE_FORMAT = 1;
 const SAEF_DEPLOYMENT_PACKAGE_MTIME = 315532800;
 
+require_once __DIR__ . '/deployment/PackageArtifacts.php';
+$artifactRun = null;
+
 try {
     if ($argc !== 2) {
         throw new InvalidArgumentException(
@@ -16,10 +19,12 @@ try {
     if ($planPath === false || !is_file($planPath)) {
         throw new RuntimeException('Deployment package plan is missing.');
     }
-    $plan = json_decode((string) file_get_contents($planPath), true, flags: JSON_THROW_ON_ERROR);
-    if (!is_array($plan) || ($plan['formatVersion'] ?? null) !== SAEF_DEPLOYMENT_PACKAGE_FORMAT) {
+    $planBytes = (string) file_get_contents($planPath);
+    $plan = json_decode($planBytes, true, flags: JSON_THROW_ON_ERROR);
+    if (!is_array($plan) || !in_array($plan['formatVersion'] ?? null, [1, 2], true)) {
         throw new RuntimeException('Unsupported deployment package plan format.');
     }
+    $storage = packageArtifactStorage($plan);
 
     foreach (
         [
@@ -29,7 +34,7 @@ try {
             'bootstrapSnapshotPath',
             'oldToken',
             'newToken',
-            'outputPath',
+            ...($storage === null ? ['outputPath'] : []),
         ] as $key
     ) {
         if (!isset($plan[$key]) || !is_string($plan[$key]) || $plan[$key] === '') {
@@ -46,7 +51,7 @@ try {
 
     $filesetPath = realpath(resolvePlanPath($planPath, $plan['filesetPath']));
     $bootstrapPath = realpath(resolvePlanPath($planPath, $plan['bootstrapSnapshotPath']));
-    $outputPath = resolvePlanPath($planPath, $plan['outputPath']);
+    $outputPath = $storage === null ? resolvePlanPath($planPath, $plan['outputPath']) : '';
     if ($filesetPath === false || !is_dir($filesetPath)) {
         throw new RuntimeException('Fileset directory is missing.');
     }
@@ -103,11 +108,22 @@ try {
         JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
     ) . "\n";
 
+    if ($storage !== null) {
+        $artifactRun = beginPackageArtifactRun(
+            $storage,
+            gmdate('Ymd\THis\Z') . '-' . bin2hex(random_bytes(6)),
+            $filesetPath,
+            $planPath,
+            __FILE__,
+            $planBytes
+        );
+        $outputPath = $artifactRun['package'];
+    }
     $outputDirectory = dirname($outputPath);
     if (!is_dir($outputDirectory)) {
         throw new RuntimeException('Deployment package output directory is missing.');
     }
-    $temporaryPath = $outputPath . '.tmp-' . bin2hex(random_bytes(8));
+    $temporaryPath = $artifactRun === null ? $outputPath . '.tmp-' . bin2hex(random_bytes(8)) : $outputPath;
     $archive = new ZipArchive();
     if ($archive->open($temporaryPath, ZipArchive::CREATE | ZipArchive::EXCL) !== true) {
         throw new RuntimeException('Cannot create deployment package archive.');
@@ -122,12 +138,15 @@ try {
             setStoredArchiveMetadata($archive, $archiveName);
         }
     } finally {
-        $archive->close();
+        if (!$archive->close()) {
+            throw new RuntimeException('Cannot close deployment package archive.');
+        }
     }
-    if (!rename($temporaryPath, $outputPath)) {
+    if ($artifactRun === null && !rename($temporaryPath, $outputPath)) {
         @unlink($temporaryPath);
         throw new RuntimeException('Cannot finalize deployment package archive.');
     }
+    $artifactResult = $artifactRun === null ? [] : completePackageArtifactRun($artifactRun, $manifestJson);
 
     fwrite(
         STDOUT,
@@ -138,11 +157,13 @@ try {
                 'packageSha256' => hash_file('sha256', $outputPath),
                 'fileCount' => count($files),
                 'packageBytes' => filesize($outputPath),
+                ...$artifactResult,
             ],
             JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
         ) . "\n"
     );
 } catch (Throwable $throwable) {
+    failPackageArtifactRun($artifactRun, $throwable);
     fwrite(STDERR, 'Deployment package build failed: ' . $throwable->getMessage() . "\n");
     exit(1);
 }

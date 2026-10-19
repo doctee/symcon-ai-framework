@@ -231,6 +231,12 @@
         "test:symcon-schemas": [
             "@php tests/schemas/symcon-json.php"
         ],
+        "test:artifact-record": [
+            "@php tests/schemas/artifact-record.php"
+        ],
+        "test:package-artifact-storage": [
+            "@php tests/deployments/package-artifact-storage.php"
+        ],
         "lint": [
             "@php tools/lint.php"
         ],
@@ -251,6 +257,8 @@
             "@lint",
             "@symcon-schema:check",
             "@test:symcon-schemas",
+            "@test:artifact-record",
+            "@test:package-artifact-storage",
             "@bundle:check",
             "@fileset:check",
             "@control-light:fileset-check",
