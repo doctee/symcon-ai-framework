@@ -50,6 +50,48 @@ renamed by this standard.
 served assets. Keep credentials, backups and diagnostic payloads outside
 served content. Location alone does not prove access protection.
 
+## Transfer destination and new package plans
+
+Keep the installation-specific exchange designation in
+`private/TRANSFER.local.md` in the canonical primary checkout. This is a small
+operator record, not another inventory, executable resolver or permission grant.
+It identifies the approved local absolute root, owner, any remote-desktop share
+name and corresponding redirected path, evidence date and protected exceptions.
+Public plans and examples must not embed the operator's personal paths.
+
+For new handovers, use that designation and refer to it from the private
+workstream record. Missing, conflicting or inaccessible configuration stops
+preparation; there is no automatic fallback to a previous Documents folder,
+current directory, system temporary directory or drive root. A share mapping
+is not proof that a remote session can currently access it. Reading the record
+does not authorize connecting, exporting, copying or changing permissions.
+
+Keep these three locations distinct:
+
+1. Local build output: an existing private, non-shared root outside the input
+   fileset, usually in the worktree's ignored private area.
+2. Exchange copy: an exclusive destination beneath the designated Transfer root,
+   identified by source hash and workstream/run. It is not a build or execution
+   root, even if a remote-desktop client exposes it under a filesystem path.
+3. Retained backup: its approved location and lifecycle, not disposable merely
+   because it resides beneath Transfer. Existing exceptions stay in place and
+   are recorded in the canonical private workstream; no relocation is implied.
+
+For a new POSIX-private exchange, require owner-controlled, symlink-free paths,
+directories 0700 and files 0600, with extended ACLs checked for additional access.
+Mode bits alone do not prove privacy, nor exclude access through an authorized
+remote-desktop client. Do not reset existing ACLs or recursively chmod a shared
+parent. A Windows producer retains its existing Windows path/ACL contract;
+POSIX modes and redirected shares do not qualify a Windows extraction root.
+
+Use the existing version-2 package plans for new local package preparation.
+Their `storage.root` is the build root, never the Transfer designation. Record
+the intended exchange copy separately in the workstream handover; do not add
+unsupported transfer fields to the builder plan. Resolve illustrative inputs
+and approve the new scope before execution. Preserve version-1 plans and all
+already pinned paths, names, IDs and hashes byte-for-byte. Do not build or copy
+another package solely to adopt these documentation rules.
+
 ## Naming
 
 - New workstream slugs use lowercase ASCII letters, digits and internal hyphens.

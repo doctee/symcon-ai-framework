@@ -61,6 +61,15 @@ candidate identity fields keep their existing contract. Replace illustrative
 values before use. Never reinterpret a plan approved for version 1 as a new
 version 2 run without approval for the new local output scope.
 
+The example `storage.root` is deliberately a worktree-local private build path,
+not the operator's Transfer directory. For new private plans, bind the actual
+reviewed fileset/contract inputs and select an already existing non-shared build
+root. Missing inputs or root mean preparation is incomplete, not permission to
+create a root, rebuild an old package or reuse its approval. Record the exchange
+destination by reference to the primary checkout's `private/TRANSFER.local.md`
+in the existing handover, outside the package-plan JSON. Copying/exporting is a
+separate action with exclusive destination creation and full hash readback.
+
 The root must already exist, be canonical and symlink-free, owned by the local
 user and have no group/other POSIX mode permissions. No root is provisioned or
 repermissioned automatically. The producer creates only new workstream/run

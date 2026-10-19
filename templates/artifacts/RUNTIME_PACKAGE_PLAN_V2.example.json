@@ -8,7 +8,7 @@
   "newToken": ".saef-filesets/saef-example-fileset/bootstrap.php",
   "requiredRuntimeFunctions": ["ExampleRequiredFunction"],
   "storage": {
-    "root": "/absolute/private/operations",
+    "root": "/absolute/worktree/private/package-artifacts",
     "workstream": "example-workstream",
     "owner": "example-maintainer",
     "purpose": "Reviewed candidate package; deployment and cleanup separately authorized"

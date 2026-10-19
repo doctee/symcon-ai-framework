@@ -98,6 +98,15 @@ Private data belongs in:
 - `*.local.*`
 - `.env*`
 
+For new artifacts and handovers, follow `standards/ARTIFACT_STORAGE_STANDARDS.md`.
+Before preparing a transfer, read `private/TRANSFER.local.md` in the canonical
+primary checkout, not an empty private overlay in a nested worktree. It records
+the installation-specific exchange destination, not execution authority.
+If that designation is missing, conflicting or unavailable, stop the transfer
+preparation rather than guessing a path from old chats or packages. Keep build
+outputs separate from exchange copies; never rewrite pinned plans to adopt a
+new destination.
+
 ## Symcon MCP Usage
 
 Select the least complex sufficient route in
