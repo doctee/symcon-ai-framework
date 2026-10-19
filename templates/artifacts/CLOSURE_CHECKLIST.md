@@ -8,6 +8,10 @@ with a reason rather than silently omitting a safety decision.
 - [ ] Identify producer/source revision, accountable owner and canonical record.
 - [ ] Assign each produced logical unit a role and exact configured location;
       record justified path exceptions. Separate originals from transfer copies.
+- [ ] For a new handover, reference the primary checkout's private Transfer
+      designation and distinguish build, exchange and retained backup locations.
+      Record the actual copy destination/hash only after the authorized copy and
+      readback; a prepared path or old share screenshot is not transfer proof.
 - [ ] Bind existing manifest/receipt/source hashes where available; do not
       modify immutable files or create a replacement identity.
 - [ ] Mark evidence basis/date, incomplete inventories and unresolved references.

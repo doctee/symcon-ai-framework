@@ -11,8 +11,12 @@ Windows execution evidence. This change updates the repository source only,
 not historical operator copies or their pinned ZIPs.
 
 The optional `ArtifactRoot` parameter selects an **already existing**, canonical,
-local, non-drive-root directory. The operator must select an approved operational
-or private Transfer root, not a Symcon runtime/module/user directory. The starter
+local, non-drive-root directory. For new operations, select an approved local
+operational root, not the designated exchange root, a redirected share or a
+Symcon runtime/module/user directory. Earlier approved layouts using a private
+local Transfer directory remain retained path exceptions; do not relocate them
+or reinterpret their approval. Root-role selection is an operator gate, not a
+new automatic share detector in the unchanged starter. The starter
 does not provision `%ProgramData%\SAEF\operations` or change an existing root's
 permissions. The longest extracted path is bounded to 240 characters before
 creating a workstream/run; no OS long-path setting is changed. Omitting the
