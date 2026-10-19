@@ -5,6 +5,9 @@ declare(strict_types=1);
 const SAEF_MODULE_DEPLOYMENT_PACKAGE_FORMAT = 1;
 const SAEF_MODULE_DEPLOYMENT_PACKAGE_MTIME = 315532800;
 
+require_once __DIR__ . '/deployment/PackageArtifacts.php';
+$artifactRun = null;
+
 try {
     if ($argc !== 2) {
         throw new InvalidArgumentException(
@@ -16,10 +19,12 @@ try {
     if ($planPath === false || !is_file($planPath)) {
         throw new RuntimeException('Module deployment package plan is missing.');
     }
-    $plan = json_decode((string) file_get_contents($planPath), true, flags: JSON_THROW_ON_ERROR);
-    if (!is_array($plan) || ($plan['formatVersion'] ?? null) !== SAEF_MODULE_DEPLOYMENT_PACKAGE_FORMAT) {
+    $planBytes = (string) file_get_contents($planPath);
+    $plan = json_decode($planBytes, true, flags: JSON_THROW_ON_ERROR);
+    if (!is_array($plan) || !in_array($plan['formatVersion'] ?? null, [1, 2], true)) {
         throw new RuntimeException('Unsupported module deployment package plan format.');
     }
+    $storage = packageArtifactStorage($plan);
     $requiredFields = [
         'deploymentId',
         'targetDirectoryName',
@@ -27,7 +32,7 @@ try {
         'moduleTargetId',
         'libraryGuid',
         'transactionContractPath',
-        'outputPath',
+        ...($storage === null ? ['outputPath'] : []),
     ];
     foreach ($requiredFields as $field) {
         if (!isset($plan[$field]) || !is_string($plan[$field]) || $plan[$field] === '') {
@@ -42,7 +47,7 @@ try {
 
     $modulePath = realpath(resolveModuleDeploymentPlanPath($planPath, $plan['modulePath']));
     $contractPath = realpath(resolveModuleDeploymentPlanPath($planPath, $plan['transactionContractPath']));
-    $outputPath = resolveModuleDeploymentPlanPath($planPath, $plan['outputPath']);
+    $outputPath = $storage === null ? resolveModuleDeploymentPlanPath($planPath, $plan['outputPath']) : '';
     if ($modulePath === false || !is_dir($modulePath)) {
         throw new RuntimeException('Module directory is missing.');
     }
@@ -112,11 +117,22 @@ try {
         JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
     ) . "\n";
 
+    if ($storage !== null) {
+        $artifactRun = beginPackageArtifactRun(
+            $storage,
+            gmdate('Ymd\THis\Z') . '-' . bin2hex(random_bytes(6)),
+            $modulePath,
+            $planPath,
+            __FILE__,
+            $planBytes
+        );
+        $outputPath = $artifactRun['package'];
+    }
     $outputDirectory = dirname($outputPath);
     if (!is_dir($outputDirectory)) {
         throw new RuntimeException('Module deployment package output directory is missing.');
     }
-    $temporaryPath = $outputPath . '.tmp-' . bin2hex(random_bytes(8));
+    $temporaryPath = $artifactRun === null ? $outputPath . '.tmp-' . bin2hex(random_bytes(8)) : $outputPath;
     $archive = new ZipArchive();
     if ($archive->open($temporaryPath, ZipArchive::CREATE | ZipArchive::EXCL) !== true) {
         throw new RuntimeException('Cannot create module deployment package archive.');
@@ -132,12 +148,15 @@ try {
             setStoredModuleDeploymentMetadata($archive, $archiveName);
         }
     } finally {
-        $archive->close();
+        if (!$archive->close()) {
+            throw new RuntimeException('Cannot close module deployment package archive.');
+        }
     }
-    if (!rename($temporaryPath, $outputPath)) {
+    if ($artifactRun === null && !rename($temporaryPath, $outputPath)) {
         @unlink($temporaryPath);
         throw new RuntimeException('Cannot finalize module deployment package archive.');
     }
+    $artifactResult = $artifactRun === null ? [] : completePackageArtifactRun($artifactRun, $manifestJson);
 
     fwrite(
         STDOUT,
@@ -151,11 +170,13 @@ try {
                 'packageSha256' => hash_file('sha256', $outputPath),
                 'fileCount' => count($files),
                 'packageBytes' => filesize($outputPath),
+                ...$artifactResult,
             ],
             JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
         ) . "\n"
     );
 } catch (Throwable $throwable) {
+    failPackageArtifactRun($artifactRun, $throwable);
     fwrite(STDERR, 'Module deployment package build failed: ' . $throwable->getMessage() . "\n");
     exit(1);
 }

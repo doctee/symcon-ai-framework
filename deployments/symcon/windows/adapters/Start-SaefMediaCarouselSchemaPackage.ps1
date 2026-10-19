@@ -2,7 +2,8 @@
 param(
     [Parameter()][string] $ZipPath = '',
     [Parameter(Mandatory = $true)][ValidatePattern('^[a-f0-9]{64}$')][string] $ExpectedZipSha256,
-    [Parameter()][ValidateSet('schema', 'binding', 'settings', 'repeatable')][string] $PackageKind = 'schema'
+    [Parameter()][ValidateSet('schema', 'binding', 'settings', 'repeatable')][string] $PackageKind = 'schema',
+    [Parameter()][string] $ArtifactRoot = ''
 )
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
@@ -11,7 +12,8 @@ $DefaultZipName = 'MediaCarousel-SchemaQualification.zip'
 # Package-local bootstrap, not a new general archive extraction API. The entire
 # archive is hash-bound before parsing; only these fixed regular files may exist.
 function Expand-SchemaPackage { param([string] $Path, [string] $Hash,
-    [ValidateSet('schema', 'binding', 'settings', 'repeatable')][string] $Kind = 'schema')
+    [ValidateSet('schema', 'binding', 'settings', 'repeatable')][string] $Kind = 'schema',
+    [string] $ArtifactRoot = '', [string] $ProducerSha256 = '')
     $allowed = @('schema-plan.local.json', 'windows/Initialize-SaefDeploymentChannel.ps1',
         'windows/SaefChildProcess.ps1', 'windows/adapters/Invoke-SaefMediaCarouselModuleAdapter.ps1',
         'windows/adapters/Invoke-SaefMediaCarouselModuleOwnershipMigration.ps1',
@@ -38,7 +40,7 @@ function Expand-SchemaPackage { param([string] $Path, [string] $Hash,
         (Get-Item -LiteralPath $Path).Length -gt 4194304) { throw 'Missing or oversized schema archive.' }
     $bytes = [IO.File]::ReadAllBytes($Path)
     $sha = [Security.Cryptography.SHA256]::Create()
-    $archive = $null; $memory = $null
+    $archive = $null; $memory = $null; $destination = ''
     try {
         if ($bytes.Length -gt 4194304 -or
             ([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-', '').ToLowerInvariant() -cne $Hash) {
@@ -83,9 +85,74 @@ function Expand-SchemaPackage { param([string] $Path, [string] $Hash,
         Assert-AdditionProtectedPath $Path
         $parent = Split-Path -Parent $Path
         Assert-AdditionProtectedPath $parent
+        $runId = ''
+        if ($ArtifactRoot -cne '') {
+            # Reuse the bound initializer's ACL/path contract, never repair ACLs.
+            Assert-AdditionProtectedPath $ArtifactRoot
+            if (-not (Test-Path -LiteralPath $ArtifactRoot -PathType Container) -or
+                [IO.Path]::GetFullPath($ArtifactRoot).TrimEnd('\') -cne $ArtifactRoot -or
+                $ArtifactRoot.TrimEnd('\') -ceq [IO.Path]::GetPathRoot($ArtifactRoot).TrimEnd('\') -or
+                $ProducerSha256 -cnotmatch '\A[a-f0-9]{64}\z') {
+                throw 'Artifact root must be an existing canonical non-drive-root directory; producer hash required.'
+            }
+            $longestEntry = 0
+            foreach ($entryName in $allowed) { $longestEntry = [Math]::Max($longestEntry, $entryName.Length) }
+            if (($ArtifactRoot.Length + 1 + 'media-carousel-package'.Length + 1 + 29 + 1 + $longestEntry) -gt 240) {
+                throw 'Artifact root is too long for the bounded Windows extraction layout.'
+            }
+            $parent = Join-Path $ArtifactRoot 'media-carousel-package'
+            Assert-AdditionPlainPath $parent
+            if (-not (Test-Path -LiteralPath $parent)) {
+                $null = New-Item -ItemType Directory -Path $parent -ErrorAction Stop
+            }
+            if (-not (Test-Path -LiteralPath $parent -PathType Container)) { throw 'Artifact workstream is not a directory.' }
+            Assert-AdditionProtectedPath $parent
+            $runId = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ', [Globalization.CultureInfo]::InvariantCulture) +
+                '-' + [guid]::NewGuid().ToString('N').Substring(0, 12)
+        }
         $destination = Join-Path $parent ('MediaCarousel-Schema-' + [guid]::NewGuid().ToString('N'))
+        if ($ArtifactRoot -cne '') { $destination = Join-Path $parent $runId }
         $null = New-Item -ItemType Directory -Path $destination -ErrorAction Stop
         Assert-AdditionProtectedPath $destination
+        if ($ArtifactRoot -cne '') {
+            # Written before extraction/dispatch. This is provenance, not a success receipt.
+            $record = [ordered]@{
+                formatVersion = 1; artifactId = $runId; workstream = 'media-carousel-package'
+                owner = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+                purpose = ('Retained extraction of a hash-bound MediaCarousel ' + $Kind + ' package')
+                producer = @{ name = 'Start-SaefMediaCarouselSchemaPackage.ps1'; revision = $ProducerSha256 }
+                role = 'package'; location = @{ path = $destination; basis = 'absolute' }; state = 'review-required'
+                identity = @{ manifestRef = $null; sha256 = $null }
+                evidence = @{
+                    basis = 'local-observation'; checkedAtUtc = [DateTime]::UtcNow.ToString('o')
+                    references = @(('source-zip: ' + $Path), ('source-zip-sha256: ' + $Hash))
+                }
+                retention = @{
+                    decision = 'retain'; minimumUntilUtc = $null; reviewAfterUtc = $null
+                    holds = @('Extraction and child outcome require separate closure; no automatic cleanup')
+                    dependencies = @('Package plan and child-produced backup/evidence paths remain authoritative')
+                }
+                copyOf = $Path
+            }
+            $notes = [ordered]@{
+                'artifact-record.local.json' = ($record | ConvertTo-Json -Depth 8)
+                'summary.local.txt' = (@(
+                    ('Run: ' + $destination), ('Kind: ' + $Kind), ('Source ZIP: ' + $Path),
+                    ('Source SHA-256: ' + $Hash), ('Producer SHA-256: ' + $ProducerSha256),
+                    'State: review-required. Created before extraction and child dispatch; NOT proof of success.',
+                    'Retain this run and original ZIP. Do not automatically retry or clean up.',
+                    'The package plan still owns target, backup, scratch and result paths. No paths were migrated.',
+                    'Use child output and independent postflight for closure; this record grants no live authority.'
+                ) -join "`r`n")
+            }
+            foreach ($note in $notes.Keys) {
+                $notePath = Join-Path $destination $note
+                $noteBytes = [Text.UTF8Encoding]::new($false).GetBytes($notes[$note])
+                $noteStream = [IO.File]::Open($notePath, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+                try { $noteStream.Write($noteBytes, 0, $noteBytes.Length) } finally { $noteStream.Dispose() }
+                Assert-AdditionProtectedPath $notePath
+            }
+        }
         foreach ($name in $allowed) {
             $file = Join-Path $destination $name
             $null = [IO.Directory]::CreateDirectory((Split-Path -Parent $file))
@@ -94,6 +161,11 @@ function Expand-SchemaPackage { param([string] $Path, [string] $Hash,
             Assert-AdditionProtectedPath $file
         }
         return @{ root = $destination; hashes = $hashes }
+    } catch {
+        if ($ArtifactRoot -cne '' -and $destination -cne '') {
+            throw [IO.IOException]::new(('Artifact extraction failed; inspect and retain run path: ' + $destination), $_.Exception)
+        }
+        throw
     } finally {
         if ($null -ne $archive) { $archive.Dispose() }
         if ($null -ne $memory) { $memory.Dispose() }
@@ -105,7 +177,11 @@ try {
         throw 'Elevated Windows PowerShell 5.1 required.'
     }
     if ([string]::IsNullOrWhiteSpace($ZipPath)) { $ZipPath = Join-Path $PSScriptRoot $DefaultZipName }
-    $package = Expand-SchemaPackage ([IO.Path]::GetFullPath($ZipPath)) $ExpectedZipSha256 $PackageKind
+    $producerHash = ''
+    if ($ArtifactRoot -cne '') { $producerHash = (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant() }
+    $package = Expand-SchemaPackage ([IO.Path]::GetFullPath($ZipPath)) $ExpectedZipSha256 $PackageKind `
+        -ArtifactRoot $ArtifactRoot -ProducerSha256 $producerHash
+    if ($ArtifactRoot -cne '') { Write-Verbose ('Retained artifact run: ' + $package.root) }
     $launcher = Join-Path $package.root 'windows/SaefChildProcess.ps1'
     if ((Get-FileHash -LiteralPath $launcher -Algorithm SHA256).Hash.ToLowerInvariant() -cne
         $package.hashes['windows/SaefChildProcess.ps1']) { throw 'Extracted child-process helper changed.' }

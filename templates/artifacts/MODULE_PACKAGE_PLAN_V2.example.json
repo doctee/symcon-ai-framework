@@ -1,0 +1,15 @@
+{
+  "formatVersion": 2,
+  "deploymentId": "saef-example-module-release",
+  "targetDirectoryName": "saef-example-module-package",
+  "modulePath": "<private-path-to-reviewed-module-fileset>",
+  "moduleTargetId": "saef-example-module",
+  "libraryGuid": "{00000000-0000-0000-0000-000000000000}",
+  "transactionContractPath": "<private-path-to-reviewed-transaction-contract>",
+  "storage": {
+    "root": "/absolute/private/operations",
+    "workstream": "example-workstream",
+    "owner": "example-maintainer",
+    "purpose": "Reviewed module package; deployment and cleanup separately authorized"
+  }
+}

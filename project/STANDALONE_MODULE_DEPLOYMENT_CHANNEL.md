@@ -35,6 +35,12 @@ channel changes.
 
 ## Package contract
 
+For new POSIX-local preparation, prefer the
+[version 2 storage plan](../templates/artifacts/MODULE_PACKAGE_PLAN_V2.example.json)
+and [private lifecycle contract](../templates/artifacts/README.md#local-package-builders).
+The following version 1 plan remains supported for existing consumers; neither
+mode changes the Windows deployment archive contract or installed paths.
+
 Create a private plan from
 `deployments/symcon/windows/standalone-module-deployment-plan.example.json` and
 an adapter-owned transaction contract from

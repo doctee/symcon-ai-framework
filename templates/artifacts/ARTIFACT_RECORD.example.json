@@ -1,0 +1,25 @@
+{
+  "formatVersion": 1,
+  "artifactId": "example-review-evidence",
+  "workstream": "example-workstream",
+  "owner": "example-workstream-maintainer",
+  "purpose": "Synthetic example of retained review evidence, not a live inventory",
+  "producer": {"name": "example-existing-producer", "revision": "example-revision"},
+  "role": "evidence",
+  "location": {"path": "private/workstreams/example-workstream/evidence", "basis": "repository-relative"},
+  "state": "retained",
+  "identity": {"manifestRef": null, "sha256": null},
+  "evidence": {
+    "basis": "unverified",
+    "checkedAtUtc": "2026-01-01T00:00:00Z",
+    "references": ["example-change-record"]
+  },
+  "retention": {
+    "decision": "retain",
+    "minimumUntilUtc": null,
+    "reviewAfterUtc": null,
+    "holds": ["Illustrative unit; no live ownership or dependency verification"],
+    "dependencies": ["unknown"]
+  },
+  "copyOf": null
+}

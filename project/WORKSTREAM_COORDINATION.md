@@ -185,6 +185,11 @@ publication or cleanup authority.
 
 ## Merge and Closure Gate
 
+Use [Artifact Storage and Lifecycle](../standards/ARTIFACT_STORAGE_STANDARDS.md)
+and its [closure checklist](../templates/artifacts/CLOSURE_CHECKLIST.md) for
+produced files. Keep lifecycle annotations in the existing canonical private
+record or a referenced sidecar; do not rewrite hash-pinned deployment evidence.
+
 A workstream is not complete merely because its code is merged. Before it is
 removed or used as the basis for destructive cleanup, close:
 

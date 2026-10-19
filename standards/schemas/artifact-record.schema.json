@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Descriptive private SAEF artifact lifecycle record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["formatVersion", "artifactId", "workstream", "owner", "purpose", "producer", "role", "location", "state", "identity", "evidence", "retention", "copyOf"],
+  "properties": {
+    "formatVersion": {"const": 1},
+    "artifactId": {"$ref": "#/$defs/text"},
+    "workstream": {"type": "string", "maxLength": 128, "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "owner": {"$ref": "#/$defs/text"},
+    "purpose": {"$ref": "#/$defs/text"},
+    "producer": {
+      "type": "object", "additionalProperties": false, "required": ["name", "revision"],
+      "properties": {"name": {"$ref": "#/$defs/text"}, "revision": {"$ref": "#/$defs/text"}}
+    },
+    "role": {"enum": ["source", "package", "runtime", "deployment-state", "backup", "evidence", "transfer", "scratch", "quarantine"]},
+    "location": {
+      "type": "object", "additionalProperties": false, "required": ["path", "basis"],
+      "properties": {
+        "path": {"$ref": "#/$defs/text"},
+        "basis": {"enum": ["absolute", "repository-relative"]}
+      }
+    },
+    "state": {"enum": ["active", "retained", "review-required", "completed", "removed-reported"]},
+    "identity": {
+      "type": "object", "additionalProperties": false, "required": ["manifestRef", "sha256"],
+      "properties": {
+        "manifestRef": {"anyOf": [{"$ref": "#/$defs/text"}, {"type": "null"}]},
+        "sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "evidence": {
+      "type": "object", "additionalProperties": false, "required": ["basis", "checkedAtUtc", "references"],
+      "properties": {
+        "basis": {"enum": ["local-observation", "historical-report", "unverified"]},
+        "checkedAtUtc": {"$ref": "#/$defs/utc"},
+        "references": {"$ref": "#/$defs/references"}
+      }
+    },
+    "retention": {
+      "type": "object", "additionalProperties": false,
+      "required": ["decision", "minimumUntilUtc", "reviewAfterUtc", "holds", "dependencies"],
+      "properties": {
+        "decision": {"enum": ["retain", "review"]},
+        "minimumUntilUtc": {"anyOf": [{"$ref": "#/$defs/utc"}, {"type": "null"}]},
+        "reviewAfterUtc": {"anyOf": [{"$ref": "#/$defs/utc"}, {"type": "null"}]},
+        "holds": {"$ref": "#/$defs/list"},
+        "dependencies": {"$ref": "#/$defs/list"}
+      }
+    },
+    "copyOf": {"anyOf": [{"$ref": "#/$defs/text"}, {"type": "null"}]}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"role": {"const": "transfer"}}},
+      "then": {"properties": {"copyOf": {"$ref": "#/$defs/text"}}}
+    },
+    {
+      "if": {"properties": {"state": {"const": "removed-reported"}}},
+      "then": {"properties": {"evidence": {"properties": {"basis": {"const": "historical-report"}}}}}
+    },
+    {
+      "if": {"properties": {"evidence": {"properties": {"basis": {"const": "unverified"}}}}},
+      "then": {"properties": {"retention": {"properties": {"holds": {"minItems": 1}}}}}
+    }
+  ],
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 4096, "pattern": "\\S"},
+    "utc": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "list": {"type": "array", "maxItems": 256, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+    "references": {"allOf": [{"$ref": "#/$defs/list"}, {"minItems": 1}]}
+  }
+}
