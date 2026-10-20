@@ -819,6 +819,13 @@ global bootstrap replacement and no service restart.
 
 ## Offline Verification
 
+RGB-to-HS normalization uses floating-point divisors, including at exact black
+and white endpoints. This preserves the strict zero guards and avoids division
+by zero for achromatic requests. HS carries hue and saturation only; brightness
+remains governed by the independent DIMMER contract. Regression coverage includes
+all 256 gray levels and white requests from both on and off, including retained
+arbitrary hue at zero saturation and command-free repeats.
+
 Run:
 
 ```console

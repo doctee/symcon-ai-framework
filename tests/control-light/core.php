@@ -66,6 +66,21 @@ function controlLightFixtureConfiguration(array $fixture): array
 
 $tests = [];
 
+$tests['HS conversion accepts every achromatic byte including white and black'] = static function (): void {
+    $configuration = ControlLightCore::normalizeConfiguration(['preset' => 'MATTER', 'brightnessSemantics' => 'reported']);
+    for ($channel = 0; $channel <= 255; $channel++) {
+        $rgb = ($channel << 16) | ($channel << 8) | $channel;
+        $hs = ControlLightCore::localToTarget('color', $rgb, $configuration);
+        assertControlLightSame('[0,0]', $hs, 'Achromatic HS conversion failed.');
+        assertControlLightSame(true, ControlLightCore::targetValueMatches('color', $hs, '[240,0]', $configuration), 'Hue matters at zero saturation.');
+    }
+    foreach ([0xFF0000 => '[0,100]', 0x00FF00 => '[120,100]', 0x0000FF => '[240,100]'] as $rgb => $hs) {
+        assertControlLightSame($hs, ControlLightCore::localToTarget('color', $rgb, $configuration), 'Primary color changed.');
+    }
+    $z2m = ControlLightCore::normalizeConfiguration(['preset' => 'Z2M', 'brightnessSemantics' => 'reported']);
+    assertControlLightSame(0xFFFFFF, ControlLightCore::localToTarget('color', 0xFFFFFF, $z2m), 'Integer RGB white changed.');
+};
+
 $tests['direct dim start is explicit and validated without default hash drift'] = static function (): void {
     $base = ['preset' => 'Z2M', 'brightnessSemantics' => 'reported'];
     $normalized = ControlLightCore::normalizeConfiguration($base);
