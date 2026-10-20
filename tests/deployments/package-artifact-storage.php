@@ -139,6 +139,29 @@ foreach ($plans as $name => $plan) {
         );
         $archive->close();
     }
+    $input = $plan['filesetPath'] ?? $plan['modulePath'];
+    $bad = $plan;
+    $bad['storage']['root'] = $root;
+    $bad['storage']['workstream'] = basename($input);
+    $beforeInput = scandir($input);
+    $overlapPath = $root . '/' . $name . '.overlap.plan.local.json';
+    file_put_contents($overlapPath, json_encode($bad));
+    [$exit, , $stderr] = $runBuilder($builder, $overlapPath);
+    $assert($exit !== 0 && str_contains($stderr, 'outside the input'), 'CLI workstream overlap rejected: ' . $name);
+    $assert(scandir($input) === $beforeInput, 'CLI overlap creates no input child: ' . $name);
+
+    $sibling = $bad;
+    $sibling['storage']['workstream'] .= '-output';
+    $siblingPath = $root . '/' . $name . '.sibling.plan.local.json';
+    file_put_contents($siblingPath, json_encode($sibling));
+    [$exit, $stdout, $stderr] = $runBuilder($builder, $siblingPath);
+    $assert($exit === 0, 'common-prefix sibling allowed: ' . $stderr);
+    $siblingResult = json_decode($stdout, true, 64, JSON_THROW_ON_ERROR);
+    $assert(
+        file_get_contents($siblingResult['runDirectory'] . '/package.local.zip') === $legacyBytes,
+        'common-prefix sibling keeps package bytes'
+    );
+
     $bad = $plan;
     $bad['outputPath'] = $root . '/must-not-exist.zip';
     file_put_contents($root . '/conflict.local.json', json_encode($bad));
@@ -202,6 +225,33 @@ $reject(static fn () => $begin($bad, '20260101T000000Z-000000000004'), 'canonica
 $bad = $storage;
 $bad['root'] = $source;
 $reject(static fn () => $begin($bad, '20260101T000000Z-000000000001'), 'outside the input');
+$fixedId = '20260101T000000Z-000000000005';
+$nested = $storage;
+$nested['workstream'] = 'run-overlap';
+$nestedParent = $nested['root'] . '/' . $nested['workstream'];
+$nestedSource = $nestedParent . '/' . $fixedId;
+$reject(static fn () => beginPackageArtifactRun(
+    $nested,
+    $fixedId,
+    $nestedSource,
+    $planPath,
+    $producer,
+    $planBytes
+), 'outside the input');
+$assert(!file_exists($nestedParent), 'run overlap rejected before creating missing parent');
+mkdir($nestedParent, 0700);
+mkdir($nestedSource, 0700);
+writePackageArtifactFile($nestedSource . '/sentinel.local.txt', 'protected source');
+$reject(static fn () => beginPackageArtifactRun(
+    $nested,
+    $fixedId,
+    $nestedSource,
+    $planPath,
+    $producer,
+    $planBytes
+), 'outside the input');
+$assert(scandir($nestedSource) === ['.', '..', 'sentinel.local.txt'], 'existing run/source untouched');
+$assert(file_get_contents($nestedSource . '/sentinel.local.txt') === 'protected source', 'source sentinel unchanged');
 $reject(static fn () => $begin($storage, '../escape'), 'run ID');
 $run = $begin($storage, '20260101T000000Z-000000000002');
 $startedHash = hash_file('sha256', $run['directory'] . '/started.local.json');
