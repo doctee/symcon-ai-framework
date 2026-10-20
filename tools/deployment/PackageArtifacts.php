@@ -80,8 +80,12 @@ function beginPackageArtifactRun(
         throw new RuntimeException('Package artifact run ID is invalid.');
     }
     assertPackageArtifactDirectory($storage['root']);
-    if ($storage['root'] === $sourceRoot || str_starts_with($storage['root'], $sourceRoot . '/')) {
-        throw new RuntimeException('Package storage must be outside the input fileset.');
+    $parent = $storage['root'] . '/' . $storage['workstream'];
+    $directory = $parent . '/' . $runId;
+    foreach ([$storage['root'], $parent, $directory] as $output) {
+        if ($output === $sourceRoot || str_starts_with($output, $sourceRoot . '/')) {
+            throw new RuntimeException('Package storage must be outside the input fileset.');
+        }
     }
     $producerHash = hash_file('sha256', $producerPath);
     $supportHash = hash_file('sha256', __FILE__);
@@ -92,12 +96,10 @@ function beginPackageArtifactRun(
     ) {
         throw new RuntimeException('Cannot bind package producer or bounded unchanged plan.');
     }
-    $parent = $storage['root'] . '/' . $storage['workstream'];
     if (!file_exists($parent) && !is_link($parent) && !mkdir($parent, 0700)) {
         throw new RuntimeException('Cannot create package workstream directory.');
     }
     assertPackageArtifactDirectory($parent);
-    $directory = $parent . '/' . $runId;
     if (file_exists($directory) || is_link($directory) || !mkdir($directory, 0700)) {
         throw new RuntimeException('Package run already exists or cannot be created.');
     }
