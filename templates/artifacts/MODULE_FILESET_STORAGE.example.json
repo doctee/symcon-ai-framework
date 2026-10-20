@@ -1,0 +1,9 @@
+{
+  "formatVersion": 2,
+  "storage": {
+    "root": "/absolute/worktree/private/fileset-artifacts",
+    "workstream": "example-module-preparation",
+    "owner": "example-maintainer",
+    "purpose": "Retained private module fileset candidate"
+  }
+}

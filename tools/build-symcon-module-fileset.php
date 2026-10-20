@@ -287,7 +287,7 @@ final class SaefSymconModuleFilesetBuilder
 /**
  * @param list<string> $arguments
  *
- * @return array{manifest: string, check: bool, outputRoot: string}
+ * @return array{manifest: string, check: bool, outputRoot: string, privatePlan: ?string}
  */
 function parseModuleFilesetArguments(array $arguments, string $projectRoot): array
 {
@@ -295,11 +295,19 @@ function parseModuleFilesetArguments(array $arguments, string $projectRoot): arr
     $manifest = '';
     $check = false;
     $outputRoot = $projectRoot;
+    $privatePlan = null;
+    $explicitOutput = false;
     foreach ($arguments as $argument) {
         if ($argument === '--check') {
             $check = true;
         } elseif (str_starts_with($argument, '--output-root=')) {
+            $explicitOutput = true;
             $outputRoot = substr($argument, strlen('--output-root='));
+        } elseif (str_starts_with($argument, '--private-output-plan=')) {
+            if ($privatePlan !== null) {
+                throw new InvalidArgumentException('Duplicate private output plan.');
+            }
+            $privatePlan = substr($argument, strlen('--private-output-plan='));
         } elseif (str_starts_with($argument, '--')) {
             throw new InvalidArgumentException('Unknown module fileset option.');
         } elseif ($manifest === '') {
@@ -311,7 +319,13 @@ function parseModuleFilesetArguments(array $arguments, string $projectRoot): arr
     if ($manifest === '' || $outputRoot === '' || !str_starts_with($outputRoot, '/')) {
         throw new InvalidArgumentException('Module fileset arguments are incomplete.');
     }
-    return ['manifest' => $manifest, 'check' => $check, 'outputRoot' => rtrim($outputRoot, '/')];
+    if ($privatePlan !== null && ($privatePlan === '' || $check || $explicitOutput)) {
+        throw new InvalidArgumentException('Private output plan conflicts with check/output-root or is empty.');
+    }
+    return [
+        'manifest' => $manifest, 'check' => $check,
+        'outputRoot' => rtrim($outputRoot, '/'), 'privatePlan' => $privatePlan,
+    ];
 }
 
 /** @param array<string, string> $outputs */
@@ -391,8 +405,22 @@ function checkModuleFilesetOutputs(array $outputs, string $projectRoot): void
 try {
     $projectRoot = str_replace('\\', '/', dirname(__DIR__));
     $options = parseModuleFilesetArguments($argv, $projectRoot);
+    $manifestHash = $options['privatePlan'] === null ? null : hash_file('sha256', $options['manifest']);
     $outputs = (new SaefSymconModuleFilesetBuilder($projectRoot))->build($options['manifest']);
-    if ($options['check']) {
+    if ($options['privatePlan'] !== null) {
+        require_once __DIR__ . '/deployment/ModuleFilesetArtifacts.php';
+        if (!is_string($manifestHash)) {
+            throw new RuntimeException('Cannot bind fileset manifest.');
+        }
+        $result = writePrivateModuleFileset(
+            $outputs,
+            $options['privatePlan'],
+            $options['manifest'],
+            $manifestHash,
+            __FILE__
+        );
+        fwrite(STDOUT, packageArtifactJson($result));
+    } elseif ($options['check']) {
         checkModuleFilesetOutputs($outputs, $options['outputRoot']);
         fwrite(STDOUT, "Symcon module fileset artifacts are current.\n");
     } else {

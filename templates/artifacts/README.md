@@ -46,10 +46,8 @@ Use the existing Composer `opis/json-schema` dependency for offline validation;
 `composer test:artifact-record` tests the example and rejection cases without
 reading or changing any referenced path.
 
-Review with [CLOSURE_CHECKLIST.md](CLOSURE_CHECKLIST.md). Future producer
-integration beyond the two package builders and the selected Windows extraction
-starter, live policy enforcement and cleanup
-remain separate work.
+Review with [CLOSURE_CHECKLIST.md](CLOSURE_CHECKLIST.md). Other producer
+integration, live policy enforcement and cleanup remain separate work.
 
 ## Local package builders
 
@@ -98,3 +96,41 @@ starting point for future approved local preparation; this does not migrate any
 existing plan, package or producer installation. Test with
 `composer test:package-artifact-storage`; fixtures stay below the calling
 worktree's ignored `private/package-artifact-tests/` and are not cleaned up.
+
+## Private module fileset output
+
+The existing `tools/build-symcon-module-fileset.php` accepts an opt-in
+`--private-output-plan=/absolute/path/plan.local.json` with
+[MODULE_FILESET_STORAGE.example.json](MODULE_FILESET_STORAGE.example.json).
+This separate storage plan uses the existing version-2 storage fields. It is
+not a new fileset manifest format: manifest, builder version, source-map bytes,
+fileset identity and ordinary `dist/` builds remain unchanged. The new option
+cannot be combined with `--check`, `--output-root` or another private plan.
+
+Select an existing private local POSIX build root, not a Transfer/shared/runtime
+root. The same owner, canonical-path, trusted-ancestor and separately reviewed
+ACL prerequisites as the package builders above apply. The tool checks POSIX
+mode/ownership and symlink components, not extended ACLs or share configuration;
+these remain operator gates, not inferred privacy guarantees. It never changes
+existing rights. This mode rejects storage inside source/manifest directories or
+the generated fileset, and rejects unsafe or case-colliding output names. Its
+portable output names are ASCII; existing Unicode-capable legacy paths are not
+reinterpreted. No Windows support is claimed for this private mode.
+
+Each invocation exclusively creates `<root>/<workstream>/<UTC>-<12-hex>/` with
+new directories 0700 and files 0600. `fileset/` holds the unchanged relative
+`dist/symcon/<name>/` tree. Exact input plan/manifest copies, initial receipt,
+summary and completed lifecycle record sit outside that tree. The JSON result
+names `runDirectory`, `outputRoot` and `artifactRecordPath`; it contains private
+paths. Use the existing `--check --output-root=<returned-outputRoot>` with the
+original manifest for a later read-only check, not another private build.
+
+Every output is reopened and byte-compared before completion. The record binds
+the existing source map; it does not invent a directory hash. A failed run stays
+in place, its initial receipt is not success, and the error names the retained
+run. There is no retry, transfer, publication, deployment or cleanup operation.
+New output placement is not a reason to rebuild or migrate historical artifacts.
+
+`composer test:module-fileset-storage` exercises this boundary and legacy
+equivalence locally. Fixtures remain under the calling worktree's ignored
+`private/module-fileset-storage-tests/`; there is no cleanup path.

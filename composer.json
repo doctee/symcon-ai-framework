@@ -237,6 +237,9 @@
         "test:package-artifact-storage": [
             "@php tests/deployments/package-artifact-storage.php"
         ],
+        "test:module-fileset-storage": [
+            "@php tests/deployments/module-fileset-storage.php"
+        ],
         "lint": [
             "@php tools/lint.php"
         ],
@@ -259,6 +262,7 @@
             "@test:symcon-schemas",
             "@test:artifact-record",
             "@test:package-artifact-storage",
+            "@test:module-fileset-storage",
             "@bundle:check",
             "@fileset:check",
             "@control-light:fileset-check",
