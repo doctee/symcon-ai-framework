@@ -84,7 +84,7 @@ trait FanComparisonObservation
             // Never claim a fresh pre-phase forecast after either warming stage started.
             $projection = HeatingPlan::project($plan, ['start' => $now, 'end' => min($v['arrival'], $now + 48 * 3600)], $now);
             if ($v['storageRequested'] || $v['fanRequested'] || $projection['storageStart'] === null) {
-                $this->fanComparisonDisplay($j, 'Aufwärmstart bereits erfolgt oder unbekannt; keine rückwirkende Vergleichsprognose', $context);
+                $this->fanComparisonDisplay($j, FanComparisonView::phaseStatus($j, $v), $context);
                 return;
             }
             $phaseStart = min(array_filter([$projection['storageStart'], $projection['fanStart']], static fn(?int $t): bool => $t !== null));

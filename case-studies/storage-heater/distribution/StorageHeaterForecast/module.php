@@ -62,7 +62,7 @@ class StorageHeaterForecast extends IPSModule
         $this->RegisterVariableString('StatusText', 'Status', '', 10);
         $this->RegisterVariableBoolean('ForecastValid', 'Prognose gültig', '', 20);
         $this->RegisterVariableFloat('ForecastKWh', 'Erwartete Nachtladung (kWh)', '', 30);
-        $this->RegisterVariableString('ForecastDate', 'Nacht der Prognose', '', 40);
+        $this->RegisterVariableString('ForecastDate', 'Prognose ab Abend', '', 40);
         $this->RegisterVariableFloat('LastChargeKWh', 'Letzte gemessene Nachtladung (kWh)', '', 50);
         $this->RegisterVariableString('LastChargeDate', 'Nacht der Messung', '', 60);
         $this->RegisterVariableFloat('MeanAbsoluteErrorKWh', 'Mittlerer Prognosefehler (kWh)', '', 70);

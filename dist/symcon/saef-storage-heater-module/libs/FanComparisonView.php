@@ -78,7 +78,7 @@ final class FanComparisonView
         }
         $projection = HeatingPlan::project($plan, ['start' => $now, 'end' => min($v['arrival'], $now + 48 * 3600)], $now);
         if ($v['storageRequested'] || $v['fanRequested'] || $projection['storageStart'] === null) {
-            return $heading . '<p>Aufwärmstart bereits erfolgt oder nicht bekannt. Vorab gespeicherte Planstände und deren Speicherzeitpunkte stehen unten.</p></section>';
+            return $heading . '<p>' . htmlspecialchars(self::phaseStatus($j, $v), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p></section>';
         }
         $phase = min(array_filter([$projection['storageStart'], $projection['fanStart']], static fn(?int $t): bool => $t !== null));
         $window = FanComparison::issueWindow($phase);
@@ -103,6 +103,16 @@ final class FanComparisonView
         }
         return $heading . self::schedule($window, $state)
             . '<p>Automatische Prüfung alle fünf Minuten; frische und vollständige Eingangsdaten erforderlich. Alle Zeiten: Europe/Berlin.</p></section>';
+    }
+
+    /** Wording only: no issuance decision or saved forecast is changed. */
+    public static function phaseStatus(array $j, array $values): string
+    {
+        $started = $values['storageRequested'] || $values['fanRequested'];
+        $message = $started ? 'Aufwärmphase gestartet.' : 'Aufwärmstart unbekannt – kein zukünftiger Speicherstart im Zeitplan.';
+        return $message . (($j['records'] ?? []) === []
+            ? ' Keine Vorabprognose gespeichert.'
+            : ' Gespeicherte Vorabprognosen werden weiter mit Messwerten verglichen; Planstände siehe unten.');
     }
 
     private static function schedule(array $window, string $state): string
