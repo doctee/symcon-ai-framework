@@ -15,8 +15,8 @@
     "pullRequest": {
       "repository": "doctee/saef-storage-heater",
       "base": "main",
-      "title": "feat: show first warming night storage eligibility and status",
-      "body": "Show the first warming-night measurement window, earliest storage time, pre-issue deadline and actual saved timestamp in the existing comparison visualization. Distinguish the current selection from older frozen plan records, including waiting, missing data, changed plans and absent preselection. Forecast issuance and heater schedules remain unchanged.\n\nValidation: presentation states, stale-plan/model checks and immutable evidence, plus complete module checks.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "title": "fix: clarify forecast date and warming phase status",
+      "body": "Rename the nightly forecast date to \"Prognose ab Abend\". Distinguish a started warming phase from an unknown future start and explicitly explain that retained forecasts continue to be compared with measurements. Forecast issuance, stored predictions and heating controls are unchanged.\n\nValidation: existing packaged module suite and display state checks.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
       "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
     }
   },

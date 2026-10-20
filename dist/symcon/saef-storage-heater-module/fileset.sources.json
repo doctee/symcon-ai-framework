@@ -19,13 +19,13 @@
         {
             "source": "case-studies/storage-heater/distribution/StorageHeaterForecast/module.php",
             "target": "StorageHeaterForecast/module.php",
-            "sha256": "804c2e0ad642c3e06de2ceb80cdb6e1f7ce81f76bef2de148e92fce223116e1e",
-            "bytes": 29007
+            "sha256": "f27ca9a82fdb4b1cc3179211190dff2ee821155429993405cf4d5997612d29a4",
+            "bytes": 29006
         },
         {
             "source": "case-studies/storage-heater/distribution/library.json",
             "target": "library.json",
-            "sha256": "5c83adbbb5933f9ea596215d2a23a1d93ddb8e8b0a39d1038616cbddb3e3c8ee",
+            "sha256": "b719674d896e7f7aaa7cccc948cfc0e647f4a904e2147290046dddd5b6cf1c42",
             "bytes": 369
         },
         {
@@ -61,14 +61,14 @@
         {
             "source": "case-studies/storage-heater/distribution/libs/FanComparisonObservation.php",
             "target": "libs/FanComparisonObservation.php",
-            "sha256": "56ea19ed2f650828246092075b154efb18c6f8e92547ec04a3efafefa34729d2",
-            "bytes": 12752
+            "sha256": "ca89700a21d470bd99847c3719d84c5be6bebd4523349e196f66853627704a12",
+            "bytes": 12704
         },
         {
             "source": "case-studies/storage-heater/distribution/libs/FanComparisonView.php",
             "target": "libs/FanComparisonView.php",
-            "sha256": "d3b9e296b1ab36b0598ee119b1253e694021088392de4c29dd06ac99d3bf33c2",
-            "bytes": 8253
+            "sha256": "ee4cc61f9cfce35eb7e8160fecfc2638e9e97f579e5c0ee1a1001d43ec7c8639",
+            "bytes": 8809
         },
         {
             "source": "case-studies/storage-heater/distribution/libs/FireplaceLog.php",
@@ -161,7 +161,7 @@
             "bytes": 4358
         }
     ],
-    "filesetSha256": "c05ed4ee42e8cd9f136531f407db8f3a3c764419bd0b60127302a01c8a77f05a",
+    "filesetSha256": "188bfeb495331f4178f2ab54ffac01b6ef3bd501c67f065515a07b0652203968",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",
