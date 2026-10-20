@@ -1687,7 +1687,7 @@ $tests['already confirmed state remains idempotent with absent color'] = static 
 };
 
 foreach ([false, true] as $initialOn) {
-    foreach ([0xFF0000 => '[0,100]', 0x00FF00 => '[119.055,100]', 0x0000FF => '[239.528,100]'] as $rgb => $feedback) {
+    foreach ([0xFFFFFF => '[239.528,0]', 0xFF0000 => '[0,100]', 0x00FF00 => '[119.055,100]', 0x0000FF => '[239.528,100]'] as $rgb => $feedback) {
         $tests['quantized RGB confirms and repeats without a command ' . (int)$initialOn . '/' . $rgb] = static function () use ($initialOn, $rgb, $feedback): void {
             $fixture = controlLightColorTransitionFixture();
             $fixture['configuration']['colorFeedbackQuantization'] = 'ha-matter-hs-254-truncate';

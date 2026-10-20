@@ -910,9 +910,10 @@ final class ControlLightCore
 
     private static function rgbToHueSaturation(int $red, int $green, int $blue): string
     {
-        $r = $red / 255;
-        $g = $green / 255;
-        $b = $blue / 255;
+        // Keep exact endpoints floating-point for the strict zero guards below.
+        $r = $red / 255.0;
+        $g = $green / 255.0;
+        $b = $blue / 255.0;
         $max = max($r, $g, $b);
         $min = min($r, $g, $b);
         $delta = $max - $min;
