@@ -1,28 +1,46 @@
-# Navimow Native IP-Symcon Module Case Study
+# Navimow – Referenzprojekt und Entwicklungsnachweis
 
-**Status:** Private pilot `pilot-0.1.0.4`; the bounded privacy-safe task ledger
-is published, installed and disabled by default after a successful natural
-Zone 1 correlation and credential-first cleanup; equivalent Zone 2 and Zone 3
-evidence remains pending
+**Produkt:** Navimow-Modul für IP-Symcon
+
+This directory contains the engineering record for the standalone Navimow
+module. The established `case-studies/navimow/` path remains stable for links,
+tests and publication contracts. "Reference project" describes its role as a
+concrete SAEF development project, not promotion to a generic implementation
+under `references/`. Dated reports remain historical evidence, not a statement
+of the current state of any installation.
+
+**Status:** Standalone module with an ongoing engineering and verification record.
 **Scope:** Native IP-Symcon module for Segway Navimow robotic mowers
-**Implementation state:** The canonical case-study distribution implements
-OAuth, discovery, adaptive read-only status polling and bounded Dock, Pause and
-Resume commands. The optional receive-only MQTT Receiver, symmetric Account
-pairing, private shadow ingestion, automatic closure, targeted REST
-confirmation and task-observation ledger are published and installed on
-standalone `main`, but remain disabled by default and credential-free after
-testing. REST remains the only source that updates public Device variables.
+
+The canonical module sources are in `distribution/`. The numbered reports below
+record implementation, publication and live verification for specific revisions.
+An installed version or enabled feature must be checked in the target system;
+this overview does not assert its current runtime state.
+
+### Historical Pilot Snapshot
+
+At `pilot-0.1.0.4`, the bounded privacy-safe task ledger had been published and
+tested with a natural Zone 1 correlation followed by credential-first cleanup.
+Equivalent Zone 2 and Zone 3 evidence was pending at that checkpoint. The
+implementation then included OAuth, discovery, adaptive REST status polling,
+bounded Dock, Pause and Resume commands, and optional receive-only MQTT with
+Account pairing, shadow ingestion, automatic closure and REST confirmation.
+The test transport was disabled and credential-free after that cleanup.
+
+These statements describe that historical checkpoint only. Later reports
+document subsequent MQTT operation, map and statistics work; the pilot tag
+and cleanup state above are not the current release or installation status.
 
 ## Purpose
 
-This case study documents the first SAEF-guided development of a native
+This project documents the first SAEF-guided development of a native
 IP-Symcon module that integrates Segway Navimow robotic mowers.
 
 It records analysis, architecture decisions, fixtures, implementation gates,
 test evidence, risks and follow-up questions. It is not a reusable module
 template or a general SAEF reference implementation.
 
-## Case Study Files
+## Entwicklungsnachweise
 
 | File | Purpose |
 | --- | --- |

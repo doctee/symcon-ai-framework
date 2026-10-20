@@ -39,6 +39,11 @@ Exporter, Navimow, Open-Meteo and OwnTracks. Irrigation, HomeConnect or other
 domains should receive their own case study only when the material documents
 engineering experience rather than a private object tree.
 
+[Navimow – Referenzprojekt und Entwicklungsnachweis](navimow/README.md)
+documents the standalone Navimow-Modul für IP-Symcon. Its established directory
+remains a case-study artifact; the project title does not change publication
+paths or promote the module into the generic `references/` layer.
+
 ## Recommended Structure
 
 1. Title, date and status.
