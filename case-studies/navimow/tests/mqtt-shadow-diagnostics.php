@@ -156,6 +156,12 @@ setDiagnosticShadow($account, [
 $beforeAvailableRead = $account->testSnapshotPersistentState();
 $availableJson = $account->GetMqttDiagnostics();
 $available = decodeShadowDiagnostics($availableJson);
+$fieldAges = $available['shadow']['observation']['fieldAgeSeconds'] ?? [];
+assertShadowDiagnostics(
+    count($fieldAges) === 16 && array_filter($fieldAges) === [],
+    'Legacy shadow fields without timestamps must have unknown age.'
+);
+unset($available['shadow']['observation']['fieldAgeSeconds']);
 assertShadowDiagnostics(
     (
         $available['shadow']['observation']

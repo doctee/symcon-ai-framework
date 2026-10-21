@@ -423,6 +423,7 @@ assertLifecycle(
         'featureEnabled',
         'configurationStatus',
         'operation',
+        'dataFlow',
         'lifecycle',
         'statistics',
         'errors',

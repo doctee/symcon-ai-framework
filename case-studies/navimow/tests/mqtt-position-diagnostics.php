@@ -81,10 +81,10 @@ $state = MqttPositionDiagnostic::reduce(
 );
 assertPositionDiagnostic(
     $state['sampleSequence'] === 3
-        && count($state['track']) === 2
+        && count($state['track']) === 1
         && $state['outOfOrderTimestampCount'] === 1
-        && $state['track'][1]['vehicleStateCode'] === 5,
-    'State-change retention or source-time regression accounting failed.'
+        && $state['latest']['localX'] === 13.0,
+    'Regressing source time changed the current position.'
 );
 
 $state = MqttPositionDiagnostic::reduce(
@@ -93,29 +93,29 @@ $state = MqttPositionDiagnostic::reduce(
     1700000008
 );
 assertPositionDiagnostic(
-    count($state['track']) === 3
-        && $state['outOfOrderTimestampCount'] === 1,
-    'Equal source timestamps were incorrectly classified as regressions.'
+    count($state['track']) === 1
+        && $state['outOfOrderTimestampCount'] === 2,
+    'Repeated older source timestamp advanced the high-water mark.'
 );
 
 $projection = MqttPositionDiagnostic::project($state, 1700000010);
 assertPositionDiagnostic(
     $projection['availability'] === 'available'
-        && $projection['latest']['ageSeconds'] === 2
+        && $projection['latest']['ageSeconds'] === 8
         && $projection['counters']['receivedSampleCount'] === 4
-        && $projection['counters']['retainedSampleCount'] === 3
-        && $projection['counters']['droppedSampleCount'] === 1
+        && $projection['counters']['retainedSampleCount'] === 1
+        && $projection['counters']['droppedSampleCount'] === 3
         && $projection['trackSummary']['firstReceivedAt'] === 1700000000
-        && $projection['trackSummary']['lastReceivedAt'] === 1700000008
-        && $projection['trackSummary']['coordinateChangeCount'] === 3
-        && $projection['trackSummary']['pathLengthLocal'] > 1.9
-        && $projection['trackSummary']['pathLengthLocal'] < 2.0
-        && $projection['trackSummary']['maximumStepDistanceLocal'] > 0.7
+        && $projection['trackSummary']['lastReceivedAt'] === 1700000002
+        && $projection['trackSummary']['coordinateChangeCount'] === 1
+        && $projection['trackSummary']['pathLengthLocal'] > 0.5
+        && $projection['trackSummary']['pathLengthLocal'] < 0.6
+        && $projection['trackSummary']['maximumStepDistanceLocal'] > 0.5
         && $projection['trackSummary']['bounds'] === [
             'minimumX' => 12.5,
-            'maximumX' => 14.0,
+            'maximumX' => 13.0,
             'minimumY' => -8.25,
-            'maximumY' => -7.0,
+            'maximumY' => -8.0,
         ]
         && $projection['trackSummary']
             ['maximumPositiveSourceGapMilliseconds'] === 2000,

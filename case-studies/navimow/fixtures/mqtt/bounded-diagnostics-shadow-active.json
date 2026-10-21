@@ -31,6 +31,14 @@
       "lastAcceptedMessageAt": 1700000000,
       "lastAcceptedPositionAt": 0
     },
+    "dataFlow": {
+      "status": "disabled",
+      "transportHealthy": true,
+      "restEvidenceFresh": false,
+      "positionExpected": false,
+      "positionAgeSeconds": null,
+      "automaticRecoveryEnabled": false
+    },
     "lifecycle": {
       "state": "ShadowActive",
       "stateChangedAt": 1700000000,
@@ -97,6 +105,10 @@
       "observation": {
         "status": "available",
         "authority": "mqtt-hint",
+        "fieldAgeSeconds": {
+          "batteryLevel": 0,
+          "vehicleState": 0
+        },
         "lastSourceTimestamp": 1700000000000,
         "lastReceivedAt": 1700000000,
         "ageSeconds": 0,

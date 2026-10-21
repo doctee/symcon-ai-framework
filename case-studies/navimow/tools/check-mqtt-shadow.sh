@@ -41,10 +41,12 @@ php case-studies/navimow/tests/local-map-distribution-fileset.php
 php case-studies/navimow/tests/mqtt-shadow-diagnostics.php
 php case-studies/navimow/tests/mqtt-pilot-checkpoints.php
 php case-studies/navimow/tests/mqtt-shadow-reconciliation.php
+php case-studies/navimow/tests/mqtt-freshness-hardening.php
 php case-studies/navimow/tests/mqtt-transport-lifecycle.php
 php case-studies/navimow/tools/validate-distribution.php
 
 "$vendor_dir/bin/phpcs" \
+    case-studies/navimow/tests/mqtt-freshness-hardening.php \
     case-studies/navimow/distribution/NavimowAccount/module.php \
     case-studies/navimow/distribution/NavimowDevice/module.php \
     case-studies/navimow/distribution/NavimowMqttReceiver/module.php \
@@ -104,6 +106,7 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/libs/Navimow/MqttContinuousOperationReducer.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPayloadParser.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPathSegmenter.php \
+    case-studies/navimow/distribution/libs/Navimow/MqttPartialStateAccumulator.php \
     case-studies/navimow/distribution/libs/Navimow/MqttPositionDiagnostic.php \
     case-studies/navimow/distribution/libs/Navimow/MqttTaskObservationLedger.php \
     case-studies/navimow/distribution/libs/Navimow/MqttTransportConfiguration.php \
