@@ -17,6 +17,11 @@ record implementation, publication and live verification for specific revisions.
 An installed version or enabled feature must be checked in the target system;
 this overview does not assert its current runtime state.
 
+Latest local engineering step:
+[414: MQTT freshness hardening and data-flow diagnostics](414-mqtt-freshness-hardening-and-data-flow-diagnostics.md).
+It includes a planning-only boundary for automatic recovery from data silence;
+publication and live adoption remain separate gates.
+
 ### Historical Pilot Snapshot
 
 At `pilot-0.1.0.4`, the bounded privacy-safe task ledger had been published and
