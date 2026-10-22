@@ -269,8 +269,10 @@ assertShadow(
 );
 $restored = MqttPartialStateAccumulator::restoreAfterRestart($serialized);
 assertShadow(
-    $restored === MqttPartialStateAccumulator::initialState(),
-    'Semantic MQTT state survived restart restoration.'
+    $restored['fields'] === []
+        && $restored['fieldReceivedAt'] === []
+        && $restored['lastSourceTimestamp'] === $secondLocation['state']['lastSourceTimestamp'],
+    'Restart must clear observations but retain timestamp boundaries.'
 );
 
 assertShadowThrows(

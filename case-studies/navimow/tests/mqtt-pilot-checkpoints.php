@@ -847,7 +847,7 @@ assertPilotCheckpoint(
             (string) $malformedCleanupAccount->testReadAttribute(
                 'MqttPositionDiagnostic'
             ),
-            hash('sha256', 'SYNTHETIC_DEVICE')
+            'localX'
         ),
     'Malformed pilot registry blocked ephemeral position cleanup.'
 );

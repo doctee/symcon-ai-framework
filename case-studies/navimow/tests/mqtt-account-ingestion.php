@@ -483,10 +483,9 @@ $retainedTaskLedger = decodeMqttAccount(
     $account->GetMqttTaskObservationDiagnostics()
 );
 assertMqttAccount(
-    $clearedShadow['devices'] === []
+    array_filter($clearedShadow['devices'], static fn (array $device): bool => $device['state']['fields'] !== []) === []
         && $clearedPending['entries'] === []
-        && $clearedPosition['status'] === 'unavailable'
-        && $clearedPosition['trackedDeviceCount'] === 0
+        && $clearedPosition['observation']['latest'] === null
         && $retainedTaskLedger['status'] === 'available'
         && $retainedTaskLedger['retainedPassCount'] === 1,
     'ApplyChanges did not clear ephemeral MQTT state.'
