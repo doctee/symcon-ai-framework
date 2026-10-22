@@ -462,6 +462,8 @@ template or a general SAEF reference implementation.
 | `411-html-sdk-compact-controls-statistics-and-exact-preview.md` | Compacts the map controls at the empirically measured host boundary, bounds zone-statistics text and adds exact synthetic and private-scene browser previews without publication or live mutation. |
 | `412-compact-map-controls-publication-and-live-rollout.md` | Records canonical SAEF and standalone publication, pointer-specific 46/48-pixel boundaries, the one-shot live module update and immediate and delayed verification. |
 | `413-legacy-root-scaffold-retirement.md` | Retires the obsolete root Navimow module tree after migrating its useful sanitized REST fixture contracts to the canonical distribution test. |
+| `414-mqtt-freshness-hardening-and-data-flow-diagnostics.md` | Introduces reducer ordering and field freshness plus diagnostic-only data-flow classification. |
+| `415-mqtt-ordering-boundaries-and-reset-diagnostics.md` | Preserves ordering boundaries across actual account lifecycle clears and separates segment resets from cumulative diagnostic counters. |
 | `distribution/` | Canonical installable snapshot for the dedicated public Symcon module repository. |
 | `tools/validate-distribution.php` | Repeatable validation of the Symcon distribution root. |
 | `fixtures/README.md` | Fixture workspace rules before sanitized payload files are added. |

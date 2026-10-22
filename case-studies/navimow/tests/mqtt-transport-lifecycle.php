@@ -424,6 +424,7 @@ assertLifecycle(
         'configurationStatus',
         'operation',
         'dataFlow',
+        'observationResets',
         'lifecycle',
         'statistics',
         'errors',
@@ -626,6 +627,13 @@ assertLifecycle(
     'Active MQTT diagnostics are incomplete, mutable or private.'
 );
 
+$orderingPose = [
+    'localX' => 12.0, 'localY' => 6.0, 'orientation' => 0.0,
+    'sourceTimestamp' => 1700000000000, 'vehicleStateCode' => 4,
+];
+$orderingIngest = new ReflectionMethod(NavimowAccount::class, 'reduceMqttPositionDiagnostic');
+$orderingIngest->invoke($account, hash('sha256', 'DEVICE_001'), $orderingPose, $clock->now());
+$orderingReceipt = $account->testReadVariable('MqttLastPositionAt');
 $lifecycleOperations = [];
 assertLifecycle(
     $account->RefreshAuthentication() === 'Token refresh succeeded.'
@@ -639,6 +647,15 @@ assertLifecycle(
     'OAuth refresh did not schedule a credential-safe MQTT rotation.'
 );
 $rotationDiagnostics = decodeLifecycle($account->GetMqttDiagnostics());
+assertLifecycle(
+    $rotationDiagnostics['observationResets']['lastResetReason'] === 'credential-rotation'
+        && $rotationDiagnostics['observationResets']['lastResetAt'] === $clock->now()
+        && $rotationDiagnostics['observationResets']['cumulativeCounters']['sampleSequence'] === 1
+        && $rotationDiagnostics['observationResets']['segmentCounters']['sampleSequence'] === 0
+        && !$orderingIngest->invoke($account, hash('sha256', 'DEVICE_001'), $orderingPose, $clock->now() + 1)
+        && $account->testReadVariable('MqttLastPositionAt') === $orderingReceipt,
+    'Actual credential rotation lost ordering or reset accounting.'
+);
 assertLifecycle(
     ($rotationDiagnostics['lifecycle']['state'] ?? null)
         === 'ReconnectScheduled'
@@ -1617,6 +1634,9 @@ assertLifecycle(
 );
 
 $lifecycleOperations = [];
+// Corrupt diagnostic storage must not prevent the independent credential cleanup.
+$orderingBeforeCorruption = $account->testReadAttribute('MqttPositionDiagnostic');
+$account->testSetAttribute('MqttPositionDiagnostic', '{');
 assertLifecycle(
     $account->DisconnectMqttShadow()
         === 'MQTT transport disconnected.',
@@ -1640,6 +1660,12 @@ assertLifecycle(
         && $account->testTimerInterval('MqttPilotCheckpoint') === 0,
     'Disconnect did not deactivate and clear private credentials.'
 );
+assertLifecycle(
+    $account->testReadAttribute('MqttPositionDiagnostic') === '{'
+        && decodeLifecycle($account->GetMqttDiagnostics())['errors']['latestReason'] === 'ordering-state-invalid',
+    'Cleanup silently replaced invalid ordering storage.'
+);
+$account->testSetAttribute('MqttPositionDiagnostic', $orderingBeforeCorruption);
 
 $variablesBeforeDisable =
     $account->testSnapshotPersistentState()['variables'];
@@ -2739,7 +2765,7 @@ assertLifecycle(
             $malformedDiagnostics['shadow']['observation']['status']
                 ?? null
         ) === 'invalid'
-        && strlen($malformedDiagnosticsJson) < 4096
+        && strlen($malformedDiagnosticsJson) < 6144
         && !str_contains($malformedDiagnosticsJson, 'SECRET')
         && !str_contains($malformedDiagnosticsJson, '/downlink/')
         && !str_contains($malformedDiagnosticsJson, 'Bearer ')

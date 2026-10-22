@@ -318,7 +318,7 @@ setDiagnosticShadow($account, [
 $account->ApplyChanges();
 $cleaned = decodeShadowDiagnostics($account->GetMqttDiagnostics());
 assertShadowDiagnostics(
-    ($cleaned['shadow']['trackedDeviceCount'] ?? null) === 0
+    ($cleaned['shadow']['trackedDeviceCount'] ?? null) === 1
         && (
             $cleaned['shadow']['pendingReconciliationCount']
                 ?? null

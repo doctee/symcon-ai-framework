@@ -39,6 +39,22 @@
       "positionAgeSeconds": null,
       "automaticRecoveryEnabled": false
     },
+    "observationResets": {
+      "segmentSequence": 0,
+      "lastResetAt": 0,
+      "lastResetReason": "none",
+      "accountingStartedAt": 0,
+      "segmentCounters": {
+        "sampleSequence": 0,
+        "outOfOrderTimestampCount": 0,
+        "rejectedTimestampCount": 0
+      },
+      "cumulativeCounters": {
+        "sampleSequence": 0,
+        "outOfOrderTimestampCount": 0,
+        "rejectedTimestampCount": 0
+      }
+    },
     "lifecycle": {
       "state": "ShadowActive",
       "stateChangedAt": 1700000000,

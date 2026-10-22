@@ -19,6 +19,10 @@ archive settings, credentials, timers and recovery budgets are preserved.
 
 ## Position ordering
 
+Follow-up correction: [step 415](415-mqtt-ordering-boundaries-and-reset-diagnostics.md)
+closes the account-level reset gap. The guarantees below originally covered
+reducer/session restore, not the full credential-rotation/ApplyChanges path.
+
 Only a strictly increasing source timestamp may replace the latest position,
 extend the track, update distance/bounds or advance MqttLastPositionAt.
 An equal timestamp is treated conservatively as a duplicate/conflicting replay.
