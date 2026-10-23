@@ -9,6 +9,11 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+- Clarify bounded native MCP reads: reuse typed value/timestamp metadata,
+  preserve literal text values, distinguish stored state from device freshness,
+  and avoid redundant calls or PHP wrappers. Add synthetic direct-read decision
+  regressions; existing live, retry and legacy-retirement gates are unchanged.
+
 - Disable runtime-retention apply pending a verified live consumer closure and
   recoverable quarantine workflow. Static preflight now includes retained
   filesets and module sources, rejects incomplete reads, and returns review

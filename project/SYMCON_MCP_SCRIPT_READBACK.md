@@ -32,15 +32,66 @@ script content or installation metadata in public artifacts.
 7. Do not execute or modify the target merely to read it.
 8. Do not reproduce source or installation metadata in public SAEF artifacts.
 
-For small authorized probes that require captured output or a structured return
-value, use `symcon_run_script_text_ex` only after reviewing the supplied PHP for
-side effects. Keep output bounded and inspect `transportError` and
+For small authorized probes that cannot use direct read tools, select an
+explicitly reviewed execution/result contract. Native text execution is not a
+drop-in replacement for a legacy structured return. When using the legacy
+`symcon_run_script_text_ex`, review the supplied PHP for side effects, keep
+output bounded and inspect `transportError` and
 `executionError` separately. A successful MCP transport may still contain a PHP
 execution error.
 
-Set `maxOutputBytes` according to the expected result size and always inspect
-`truncated`. Truncation is UTF-8-safe, but bytes beyond the configured limit are
-intentionally discarded.
+For that legacy operation, set `maxOutputBytes` according to the expected result
+size and always inspect `truncated`. Truncation is UTF-8-safe, but bytes beyond
+the configured limit are intentionally discarded.
+
+## Small native reads
+
+Prefer direct native read tools for a fixed, authorized set of values or
+metadata. Do not execute PHP, create temporary objects or build a new wrapper
+when an existing read tool supplies the required evidence. Match the available
+tool contract and current target identity; a stored ID alone is not ownership
+proof. Tool availability does not expand the approved targets or call budget.
+
+When both value and timestamps are needed, prefer one `IPS_GetVariable` call
+per target if the current response supplies `VariableID`, `VariableType`,
+`VariableValue`, `VariableUpdated` and `VariableChanged`. Check identity, required
+fields and type consistency without truthiness coercion. A separate `GetValue`
+is unnecessary unless independent value comparison is part of the actual task.
+When only a value is required, `GetValue` can suffice. Missing required metadata
+stops acceptance; do not silently add calls, retries or another channel.
+The field definitions are in the official
+[IPS_GetVariable reference](https://www.symcon.de/en/service/documentation/command-reference/management-variables/ips-getvariable/).
+Check availability in the current server contract rather than assuming every
+installed version exposes the same fields.
+
+The MCP content representation and the PHP return type are different layers:
+
+- A text block containing `[]`, `false` or `0` may be a string variable's
+  literal value. Do not infer its type from JSON-looking text or parse it
+  recursively. Use verified type evidence and the operation's serialization
+  contract; if type fidelity matters and those are unknown, stop.
+- An empty text block can be a valid empty string under that known contract;
+  it is not interchangeable with missing content, an empty content list or
+  a failed/uncertain call. Preserve false, zero and empty values distinctly.
+- Parse JSON only where that operation's contract specifies JSON, and parse
+  the whole payload. Do not extract a plausible fragment from warning/error
+  text. Inspect all content and structured evidence as required below; neither
+  `isError=false` nor a missing optional `isError` is sufficient alone.
+
+Record stored values, update/change times and observation time separately.
+Old timestamps do not prove present physical health; a recent timestamp alone
+does not prove a fresh device response either. Zero timestamps need explicit
+interpretation, not a claim of recent feedback. A pending flag is observation,
+not authority to apply configuration, start an update or actively poll a device.
+Do not infer an atomic snapshot from several calls or from metadata co-location
+without a documented consistency guarantee.
+
+Use this verified pattern at real diagnostic need, not as an endless series of
+live tests for further subsets. Migration of existing automation callers,
+retirement of a legacy connection, retries and cleanup retain their own gates.
+Successful small reads do not qualify server timeout, output-limit or
+truncation behavior. Keep complex archive/file/recovery checks on their reviewed
+contracts until equivalent evidence and scope have been established.
 
 ## Safety constraints
 
@@ -189,6 +240,11 @@ No production source is written to reproduce these cases.
 The tests also cover structured syntax failures, unavailable checking,
 non-PHP results, missing advertised fields and skipped-file coverage. They
 model SAEF decisions; they do not qualify a particular server build.
+
+Synthetic direct-read cases additionally cover type-preserving values, missing
+metadata, mismatched identities, whole-response rejection and stored timestamps
+without a device-health verdict. Their test-only decision model neither calls
+Symcon nor implements a reusable MCP parser, retry policy or client.
 
 Official documentation starts at [the index](https://www.symcon.de/de/llms.txt)
 and [function index](https://www.symcon.de/de/llms/function-index.md).
