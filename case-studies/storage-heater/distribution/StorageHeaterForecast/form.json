@@ -72,6 +72,11 @@
       "type": "ValidationTextBox",
       "name": "FanComparisonModelJSON",
       "caption": "Zusätzlicher Ventilator-Vorvergleich: privat kalibrierte Referenz und Kandidat (JSON; {} deaktiviert)"
+    },
+    {
+      "type": "ValidationTextBox",
+      "name": "ChargeProfileJSON",
+      "caption": "Zusätzlicher Ladeprofil-Vorvergleich (JSON; {} deaktiviert)"
     }
   ],
   "actions": [
@@ -123,6 +128,11 @@
       "type": "Button",
       "caption": "Ventilator-Vergleichsjournal ausgeben (JSON)",
       "onClick": "echo SHF_GetFanComparisonJournalJson($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Ladeprofil-Vergleichsjournal ausgeben (JSON)",
+      "onClick": "echo SHF_GetProfileComparisonJournalJson($id);"
     }
   ],
   "status": [

@@ -227,3 +227,15 @@ Version 0.8.1 also compares first warming nights with a scheduled reduction chan
 Version 0.8.2 waits on early preselection until the complete first affected 22–07 night fits the 48-hour forecast horizon. The existing observer then stores it automatically before warming/night start. Waiting status shows the earliest issue time. Earlier ordinary nights cannot suppress this forecast; restart and plan revisions preserve existing evidence. Arrival before night end or a missed pre-issue deadline is reported explicitly. No controller or scheduled switch time changes.
 
 Version 0.8.3 adds a first-night overview to the existing comparison HTML: full measurement window, earliest issue time, strict pre-issue deadline and actual saved timestamp. The current selection is confirmed only by a matching plan/model snapshot covering that first night. Older records keep their own labeled timing overview after plan changes, cancellation or phase start. Waiting, eligible-but-unsaved, missed deadlines and absent selections remain explicit. Times use Europe/Berlin. This is derived presentation, with no new persisted state, forecast calculation, control or schedule changes.
+
+## Additional prospective charge-profile comparison (0.9.0)
+
+`ChargeProfileJSON` optionally enables a separate temperature comparison before
+warming starts. The reference and candidate share inputs and planned energy;
+only charging time distribution changes. The calibrated profile stays private.
+`ProfileComparisonStatus`, `ProfileComparison` and
+`SHF_GetProfileComparisonJournalJson` expose status, paired curves and immutable
+records. Existing warming/fan forecasts and heating controls remain unchanged.
+New issues wait for the complete first warming night to fit the 48-hour horizon.
+Results are measured on the same gallery/living-room points, with missing
+sensor data preserved as gaps. Retrospective phases are never backfilled.

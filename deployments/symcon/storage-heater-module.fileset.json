@@ -25,6 +25,10 @@
       "target": "libs/ArchiveReader.php"
     },
     {
+      "source": "case-studies/storage-heater/distribution/libs/ChargeProfile.php",
+      "target": "libs/ChargeProfile.php"
+    },
+    {
       "source": "case-studies/storage-heater/distribution/libs/Cooling.php",
       "target": "libs/Cooling.php"
     },
@@ -67,6 +71,10 @@
     {
       "source": "case-studies/storage-heater/distribution/libs/PlanView.php",
       "target": "libs/PlanView.php"
+    },
+    {
+      "source": "case-studies/storage-heater/distribution/libs/ProfileComparisonObservation.php",
+      "target": "libs/ProfileComparisonObservation.php"
     },
     {
       "source": "case-studies/storage-heater/distribution/libs/Warming.php",
