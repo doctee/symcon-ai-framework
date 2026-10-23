@@ -15,8 +15,8 @@
     "pullRequest": {
       "repository": "doctee/saef-storage-heater",
       "base": "main",
-      "title": "fix: clarify forecast date and warming phase status",
-      "body": "Rename the nightly forecast date to \"Prognose ab Abend\". Distinguish a started warming phase from an unknown future start and explicitly explain that retained forecasts continue to be compared with measurements. Forecast issuance, stored predictions and heating controls are unchanged.\n\nValidation: existing packaged module suite and display state checks.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "title": "feat: add prospective charge-profile temperature comparison",
+      "body": "Add a separate immutable pre-phase comparison using a calibrated charging-time profile. Paired curves share all inputs and total planned energy. Existing forecasts, fan-energy comparison and heating controls remain unchanged.\n\nValidation: packaged lifecycle, deadline, DST, energy conservation, journal integrity and measurement tests.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
       "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
     }
   },
@@ -47,6 +47,7 @@
     "fileset.sources.json",
     "library.json",
     "libs/ArchiveReader.php",
+    "libs/ChargeProfile.php",
     "libs/Cooling.php",
     "libs/CoolingObservation.php",
     "libs/CoolingView.php",
@@ -58,6 +59,7 @@
     "libs/HeatingPlan.php",
     "libs/PlanObservation.php",
     "libs/PlanView.php",
+    "libs/ProfileComparisonObservation.php",
     "libs/Warming.php",
     "libs/WarmingObservation.php",
     "libs/WarmingView.php",

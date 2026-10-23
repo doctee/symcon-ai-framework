@@ -180,7 +180,7 @@ final class Warming
         return $c;
     }
 
-    public static function predict(array $f): array
+    public static function predict(array $f, ?array $chargeSchedule = null): array
     {
         self::model($f['model']);
         $start = $f['start'];
@@ -222,6 +222,9 @@ final class Warming
                 }
                 $key = $segment['reduced'] ? 'reduced' : 'normal';
                 $power = min($f['maxPowerKw'], $night[$key]['kwh'] / (($cycle['end'] - $cycle['start']) / 3600));
+            }
+            if ($chargeSchedule !== null) {
+                $power = ChargeProfile::energy($chargeSchedule, $t, $next) / $hours;
             }
             foreach (['gallery', 'sofa'] as $room) {
                 $p = $f['model']['rooms'][$room];

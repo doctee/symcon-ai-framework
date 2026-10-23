@@ -16,6 +16,8 @@ require_once __DIR__ . '/../libs/WarmingWeather.php';
 require_once __DIR__ . '/../libs/WarmingObservation.php';
 require_once __DIR__ . '/../libs/WarmingView.php';
 require_once __DIR__ . '/../libs/FanComparison.php';
+require_once __DIR__ . '/../libs/ChargeProfile.php';
+require_once __DIR__ . '/../libs/ProfileComparisonObservation.php';
 require_once __DIR__ . '/../libs/FanComparisonObservation.php';
 require_once __DIR__ . '/../libs/FanComparisonView.php';
 require_once __DIR__ . '/../libs/saef/diagnostics/Registry.php';
@@ -42,6 +44,7 @@ class StorageHeaterForecast extends IPSModule
     use \SAEF\StorageHeater\PlanObservation;
     use \SAEF\StorageHeater\WarmingObservation;
     use \SAEF\StorageHeater\FanComparisonObservation;
+    use \SAEF\StorageHeater\ProfileComparisonObservation;
 
     public function Create(): void
     {
@@ -50,6 +53,7 @@ class StorageHeaterForecast extends IPSModule
         $this->createPlan();
         $this->createWarming();
         $this->createFanComparison();
+        $this->createProfileComparison();
         $this->RegisterPropertyBoolean('Enabled', false);
         $this->RegisterPropertyString('BindingsJSON', '{}');
         $this->RegisterPropertyString('ModelJSON', '{}');
@@ -121,6 +125,7 @@ class StorageHeaterForecast extends IPSModule
             $this->configurePlan($config);
             $this->configureWarming($config);
             $this->configureFanComparison($config);
+            $this->configureProfileComparison($config);
             $this->SetTimerInterval('Observe', 5 * 60 * 1000);
             $this->SetStatus(IS_ACTIVE);
             $this->SetValue('StatusText', 'Bereit – Prognose täglich zwischen 21:45 und 22:00 Uhr');
@@ -200,6 +205,7 @@ class StorageHeaterForecast extends IPSModule
                 $this->observePlan($config, $now);
                 $this->observeWarming($config, $now);
                 $this->observeFanComparison($config, $now);
+                $this->observeProfileComparison($config, $now);
             }
             IPS_SemaphoreLeave($lock);
         }
