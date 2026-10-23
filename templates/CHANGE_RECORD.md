@@ -32,6 +32,10 @@ Use one record per independently reviewable change; link existing receipts.
 - Reload need, explicit authority and all affected instance results:
 - Independent content/identity/configuration readback:
 - Domain observation window, metrics, baseline comparison and abort criteria:
+- Recurring checks, if applicable: short visible prompt, authoritative plan
+  reference, no-finding output (one sentence / agreed supported silence),
+  failure/escalation and final-report policy; follow
+  [Testing Standards](../standards/TESTING_STANDARDS.md#13-quiet-recurring-checks):
 
 ## Closure
 
