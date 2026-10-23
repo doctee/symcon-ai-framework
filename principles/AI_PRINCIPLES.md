@@ -30,3 +30,12 @@ Use `https://www.symcon.de/de/llms.txt` as the entry point for current official
 Symcon documentation. When working with IP-Symcon PHP functions, load
 `https://www.symcon.de/de/llms/function-index.md` first and follow the linked
 detail page before relying on memory, stubs or community sources.
+
+## 7. Keep recurring checks quiet
+
+Repeated automated tests and observations should preserve attention for
+meaningful results. Use short visible prompts, reference existing authoritative
+instructions and keep successful no-finding replies to at most one short
+sentence, or remain silent where supported and agreed. Brevity must not hide
+failures or incomplete verification. Follow the
+[recurring-check contract](../standards/TESTING_STANDARDS.md#13-quiet-recurring-checks).

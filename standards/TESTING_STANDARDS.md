@@ -296,3 +296,55 @@ One explicit authorization may cover the internal subprocesses of one fixed,
 hash-pinned publisher invocation. Platform sandbox approval is independent of
 that SAEF phase authorization. Merge, live installation and destructive cleanup
 remain separate gates.
+
+## 13. Quiet recurring checks
+
+Scheduled agent tests, recurring observations and automatic follow-up checks
+shall minimize visible chat prompts and routine output. Repeating full plans
+and successful logs obscures findings without improving verification.
+
+### Visible prompt
+
+- Default to one to three short sentences naming the check, its authoritative
+  plan or record, the effect boundary and the reporting rule.
+- Keep detailed targets, checks, acceptance criteria, resource/iteration
+  bounds, stop conditions and end time in the existing authoritative record.
+  Read it before execution and preserve any required revision/hash binding.
+  A reference is not permission: missing, conflicting or unavailable
+  instructions block execution and require a concise report.
+- Do not paste full handovers, previous results, logs or repeated safety
+  catalogues into each scheduled chat message. Do not create a new wrapper or
+  evidence package solely to shorten a prompt.
+
+Example, after the referenced plan and scope have been authorized:
+
+> Run the scheduled read-only check under the approved plan at
+> `<authoritative-record>`, including its bounds and stop conditions. Without
+> findings, reply in at most one short sentence; report failures or agreed
+> completion briefly.
+
+### Result and evidence
+
+- A fully completed run without findings needs at most one short sentence,
+  for example: "Check complete; no findings." Omit routine progress narration,
+  repeated tables, raw JSON and full logs.
+- If silence was agreed and the interface supports it, emit no routine chat
+  message or notification. Do not claim invisible delivery where it cannot be
+  guaranteed; disclose the limitation when arranging the check. Literal
+  markers such as `DONT_NOTIFY` are not a guarantee of silence.
+- Report errors, material changes, required user decisions and agreed final
+  completion concisely, normally in one to three sentences: finding, impact
+  and next step. Link existing evidence when needed; provide additional detail
+  on request or when necessary to explain a safety-critical issue.
+- An unexecuted, partial, timed-out or unverifiable check is not a successful
+  no-finding run and must be identified as such. Do not suppress the first
+  failure or a changed risk. Deduplicate unchanged known findings only under
+  an agreed reporting/escalation policy; never imply that they are resolved.
+- Keep required full evidence in the existing authorized private record or
+  artifact location, not in repeated chat output. This rule grants no file
+  write, additional collection or retention/cleanup authority.
+
+Use these defaults when creating or explicitly revising recurring checks.
+Existing schedules, active observation windows, exact approval limits and
+mandatory completion reports remain binding. Shorter output does not reduce
+test coverage or authorize retries, repairs, live actions or cleanup.

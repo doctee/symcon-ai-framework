@@ -170,6 +170,17 @@ IP-Symcon installation.
   Failed lookups, missing array entries and false-like results must stop the
   operation; they must never be coerced into an ObjectID.
 
+## Recurring Automated Checks
+
+Follow the quiet recurring-check contract in
+[Testing Standards](standards/TESTING_STANDARDS.md#13-quiet-recurring-checks).
+Keep visible scheduled prompts short and reference the existing authoritative
+plan instead of replaying it. Successful runs without findings need at most
+one short sentence; remain silent where supported and agreed. Report failures,
+incomplete checks, required decisions and agreed completion concisely.
+Do not change existing schedules, permissions or evidence requirements merely
+to reduce chat noise.
+
 ## Workstream Isolation
 
 Before creating operational artifacts, follow

@@ -9,6 +9,11 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+- Define quiet recurring agent checks: compact visible prompts referencing
+  existing plans, at most one sentence for successful no-finding runs, and
+  concise failure/completion reporting without weakening evidence or approval
+  boundaries. Existing automations are not changed by this documentation.
+
 - Clarify bounded native MCP reads: reuse typed value/timestamp metadata,
   preserve literal text values, distinguish stored state from device freshness,
   and avoid redundant calls or PHP wrappers. Add synthetic direct-read decision
