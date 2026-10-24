@@ -157,6 +157,83 @@ ambiguous mutation, independently inspect state within authority; never blindly
 retry. Read-only access through a maintenance-capable connection still requires
 an approved target/purpose and does not authorize its write tools.
 
+## Archive, utility and Store tools
+
+An operator may enable additional tool groups without changing SAEF's approval
+boundaries. Record the connection's current catalog privately, with observation
+date and evidence level: **advertised**, **contract-reviewed**, or
+**behavior-qualified for a named scope**. An enabled group is not a successful
+live test. Historical missing-tool findings remain dated evidence, not current
+capability claims. Do not automatically amend active plans, increase budgets,
+retry a consumed run or retire a legacy connection because more tools appear.
+
+| Group | Simpler read route | Separate effects and gates |
+| --- | --- | --- |
+| Archive (`AC_*`) | Direct logging/aggregation metadata and bounded logged/aggregated value queries can replace custom PHP when they supply the required evidence. | Add/delete values, change variable IDs, reaggregate and setters change archive state or initiate work. They retain archive migration, backup and mutation approval gates. |
+| Util Control (`UC_*`) | Documented reference, log and statistics queries can support an authorized investigation. | Delete, duplicate, replace and reset operations are not reads. Availability does not authorize object creation, cleanup, source edits or loss of diagnostic history. |
+| Module Store (`store_*`) | `store_search` and `store_details` can support package discovery and installed/release comparisons. | `store_install`, `store_fork` and `store_uninstall` change installed code or ownership and use the existing installation/change gates. |
+
+### Archive reads
+
+Use the current [Archive Control reference](https://www.symcon.de/de/service/dokumentation/modulreferenz/kern-instanzen/archive-control/)
+and the exact MCP schema. Native wrappers may supply the Archive Control
+instance automatically; do not copy a PHP signature blindly into MCP arguments.
+Fix the approved variables, time interval, aggregation level where applicable,
+record limit, call budget and response budget before querying. The documented
+maximum of 10,000 records for logged/aggregated reads is a ceiling, not a default
+workload. Reaching a limit is not completeness proof; pagination or a larger
+window needs to fit the existing authorization. No automatic continuation.
+Keep existing archive ordering, consistency and recovery requirements from
+[archive processing](../knowledge/EK-003-archive-processing.md).
+
+### Utility evidence
+
+The official [Util Control reference](https://www.symcon.de/de/service/dokumentation/modulreferenz/kern-instanzen/util-control/)
+documents public UC functions; do not classify the entire prefix as internal.
+Conversely, exposure alone does not establish a public API contract. Verify the
+exact function and version. A tool absent from that reference remains
+contract-unverified until authoritative documentation resolves it; absence does
+not itself prove that it is internal. Specifically internal APIs remain excluded
+from reusable runtime dependencies under the existing internal-API rule.
+
+`UC_FindReferences` scans system references and script text, not merely the
+requested object. Authorize that broader read scope and account for scan cost
+before calling it. Its text matches can include false positives and miss
+dynamically constructed IDs; results can repeat an object. **An empty reference
+result is not deletion clearance.** It does not replace ownership, filesystem
+consumer or retained-evidence checks. Validate the positive target ID and its
+existence independently. Do not send ObjectID `0`.
+
+Log buffers and counters are observations, not a complete audit. In
+`UC_GetLogMessageStatistics`, `MessageTimeStamp` is a sequence number, not Unix
+time. Preserve reset boundaries when comparing counters. Do not reset buffers
+or statistics as part of a read-only check or ongoing observation.
+
+For tools whose exposed descriptions include broader effects, review those
+effects explicitly before proposing use: empty file selections in
+`UC_FindInFiles` / `UC_ReplaceInFiles` can select all scripts; replacement is a
+write without built-in undo. `UC_DeleteObjects` can include descendants, and
+`UC_DuplicateObject` can apply copied instance configuration. These descriptions
+are catalog evidence, not behavioral qualification or a substitute for a
+verified public contract. Never use them to bypass exact-target cleanup gates.
+
+### Store ownership and rollback
+
+Review the current exposed Store schemas and installed ownership before use.
+The reviewed catalog advertises that `store_install` installs or updates from
+a channel and runs module code; its channel selector is not an exact-version
+pin. `store_fork` removes the Store installation, loads an own-module copy and
+redirects existing instances to it. **A Store fork is not an inert backup.**
+`store_uninstall` can leave instances without their implementation.
+
+Before an authorized Store mutation, preserve recoverable source/configuration
+and state as needed, identify affected instances/timers/connections, specify
+rollback and independently read back the outcome. Do not assume the Store can
+reinstall the prior exact release. Do not mix Store and own-module writers or
+bypass an existing managed deployment. Search/details results do not authorize
+installation, update, fork or uninstall. No Store mutation was exercised by
+this catalog review.
+
 ## Native own-module workflow
 
 The following describes the exposed tool contracts reviewed on 2026-10-17,
@@ -245,6 +322,10 @@ Synthetic direct-read cases additionally cover type-preserving values, missing
 metadata, mismatched identities, whole-response rejection and stored timestamps
 without a device-health verdict. Their test-only decision model neither calls
 Symcon nor implements a reusable MCP parser, retry policy or client.
+
+Documentation regressions additionally guard the archive/utility/Store scope
+and approval boundaries. They check this guidance, not server behavior or the
+permissions of any connection.
 
 Official documentation starts at [the index](https://www.symcon.de/de/llms.txt)
 and [function index](https://www.symcon.de/de/llms/function-index.md).

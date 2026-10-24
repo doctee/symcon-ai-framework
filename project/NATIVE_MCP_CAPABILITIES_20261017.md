@@ -26,6 +26,25 @@ make a missing capability appear.
 
 ## Reconciliation
 
+### Dated supplement: 2026-10-24 catalog review
+
+A later operator-managed permission expansion exposed Archive (`AC_*`),
+Util Control (`UC_*`) and Module Store (`store_*`) tools in a maintenance
+catalog. This is connection-specific advertised capability, not a minimum
+server version, behavioral qualification or a change to the original review.
+No live Symcon operation was called for this supplement. Concrete access
+aliases, counts and installation evidence remain private.
+
+Use the [archive, utility and Store guidance](SYMCON_MCP_SCRIPT_READBACK.md#archive-utility-and-store-tools)
+for scoped direct reads and separate mutation gates. Official Util Control
+documentation includes public functions; the prefix is not uniformly internal.
+Some advertised utility operations still require exact public-contract review
+before use. Historical missing-tool reports do not establish current absence;
+refresh catalog evidence at the next authorized task. Existing pinned plans,
+test results, live approvals and legacy-retirement decisions remain unchanged.
+
+### Original 2026-10-17 reconciliation
+
 | Previous limitation | Maintainer update / current evidence | SAEF consequence |
 | --- | --- | --- |
 | PHP write warnings required text interpretation | Write/edit/lint now advertise structured results; a saved invalid write still has `isError=false` | Structured syntax handling is available at the contract level. Separate lint, readback and recovery remain required; negative write behavior was not retested. |

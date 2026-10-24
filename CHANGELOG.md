@@ -9,6 +9,11 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+- Clarify native Archive, Util Control and Module Store tool boundaries:
+  distinguish advertised access from qualified behavior, prefer scoped direct
+  reads, and retain separate archive, cleanup and installation approval gates.
+  Add documentation regressions without changing connections or active plans.
+
 - Define quiet recurring agent checks: compact visible prompts referencing
   existing plans, at most one sentence for successful no-finding runs, and
   concise failure/completion reporting without weakening evidence or approval
