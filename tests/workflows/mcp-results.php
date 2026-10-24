@@ -393,4 +393,30 @@ foreach (
     }
 }
 
+// These are documentation guards, not simulated qualification of native tools.
+$guidance = file_get_contents($root . '/project/SYMCON_MCP_SCRIPT_READBACK.md');
+$guidance = preg_replace('/\s+/', ' ', $guidance);
+foreach (
+    [
+    '## Archive, utility and Store tools',
+    'An enabled group is not a successful live test.',
+    'Do not automatically amend active plans',
+    'No automatic continuation.',
+    'An empty reference result is not deletion clearance.',
+    'Do not send ObjectID `0`.',
+    'do not classify the entire prefix as internal.',
+    'MessageTimeStamp` is a sequence number, not Unix time.',
+    'Do not reset buffers or statistics as part of a read-only check',
+    'A Store fork is not an inert backup.',
+    'Do not assume the Store can reinstall the prior exact release.',
+    'Never use them to bypass exact-target cleanup gates.',
+    'No Store mutation was exercised',
+    ] as $boundary
+) {
+    if (!str_contains($guidance, $boundary)) {
+        throw new RuntimeException('Missing extended MCP documentation boundary: ' . $boundary);
+    }
+    $checks++;
+}
+
 printf("MCP workflow: %d offline checks passed; no live calls or mutations.\n", $checks);
