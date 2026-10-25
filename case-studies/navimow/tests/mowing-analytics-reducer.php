@@ -201,6 +201,42 @@ $projection = MowingAnalyticsReducer::project(
     $options
 );
 $zone = $projection['zones'][0];
+$incrementalTrack = RevisionBoundedTrackStore::initialState();
+$incrementalAnalytics = MowingAnalyticsReducer::initialState();
+$sourceScene = $scene;
+$sourcePoints = $sourceScene['path']['segments'][0]['points'];
+foreach (array_keys($sourcePoints) as $index) {
+    $partial = $sourceScene;
+    $partial['path']['segments'][0]['points'] = array_slice(
+        $sourcePoints,
+        0,
+        $index + 1
+    );
+    $incrementalTrack = RevisionBoundedTrackStore::ingestScene(
+        $incrementalTrack,
+        $partial
+    );
+    $partial['path'] = RevisionBoundedTrackStore::scenePath(
+        $incrementalTrack,
+        $geometryKey
+    );
+    $incrementalAnalytics = MowingAnalyticsReducer::update(
+        $incrementalAnalytics,
+        $partial,
+        $start + 400,
+        $options
+    );
+}
+$incrementalProjection = MowingAnalyticsReducer::project(
+    $incrementalAnalytics,
+    $geometryKey,
+    $start + 400,
+    $options
+);
+assertMowingAnalytics(
+    $incrementalProjection['zones'] === $projection['zones'],
+    'Incremental retained points differ from batch mowing analytics.'
+);
 assertMowingAnalytics(
     $projection['state'] === 'available'
         && $projection['contracts']['restRemainsStateAuthority'] === true

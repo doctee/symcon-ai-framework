@@ -198,4 +198,73 @@ assertRevisionBoundedTrackRejected(
     'Malformed retained-track state was restored.'
 );
 
+$incremental = RevisionBoundedTrackStore::initialState();
+$continuousPoints = [
+    revisionBoundedTrackPoint(2000),
+    revisionBoundedTrackPoint(2005, 1.0),
+    revisionBoundedTrackPoint(2010, 2.0),
+];
+foreach ([1, 2, 3] as $count) {
+    $incremental = RevisionBoundedTrackStore::ingestScene(
+        RevisionBoundedTrackStore::restoreState(
+            RevisionBoundedTrackStore::serializeState($incremental)
+        ),
+        revisionBoundedTrackScene($firstKey, array_slice($continuousPoints, 0, $count))
+    );
+}
+$batch = RevisionBoundedTrackStore::ingestScene(
+    RevisionBoundedTrackStore::initialState(),
+    revisionBoundedTrackScene($firstKey, $continuousPoints)
+);
+assertRevisionBoundedTrack(
+    $incremental['segments'] === $batch['segments']
+        && $incremental['counters']['ingestedPointCount'] === 3,
+    'Incremental ingestion fragmented a continuous source segment.'
+);
+$rolling = revisionBoundedTrackScene($firstKey, [
+    $continuousPoints[2], revisionBoundedTrackPoint(2015, 3.0),
+]);
+$rolling['path']['segments'][0]['sequence'] = 2;
+$continued = RevisionBoundedTrackStore::ingestScene($incremental, $rolling);
+assertRevisionBoundedTrack(
+    count($continued['segments']) === 1
+        && count($continued['segments'][0]['points']) === 4,
+    'Rolling-window sequence renumbering lost a proven connecting edge.'
+);
+foreach (
+    [
+        'sessionSequence' => 4,
+        'passSequence' => 8,
+        'vehicleStateCode' => 2,
+        'taskZoneKey' => hash('sha256', 'different-zone'),
+    ] as $field => $value
+) {
+    $changed = $rolling;
+    $changed['path']['segments'][0][$field] = $value;
+    $separate = RevisionBoundedTrackStore::ingestScene($incremental, $changed);
+    assertRevisionBoundedTrack(
+        count($separate['segments']) === 2,
+        'Retention bridged changed segment metadata: ' . $field
+    );
+}
+$noOverlap = revisionBoundedTrackScene($firstKey, [
+    revisionBoundedTrackPoint(2015, 3.0),
+]);
+$separate = RevisionBoundedTrackStore::ingestScene($incremental, $noOverlap);
+assertRevisionBoundedTrack(
+    count($separate['segments']) === 2,
+    'Retention inferred continuity without a source overlap.'
+);
+$broken = $rolling;
+$broken['path']['segments'] = [
+    revisionBoundedTrackScene($firstKey, [$continuousPoints[2]])['path']['segments'][0],
+    $noOverlap['path']['segments'][0],
+];
+$broken['path']['segments'][1]['breakReason'] = 'time-gap';
+$separate = RevisionBoundedTrackStore::ingestScene($incremental, $broken);
+assertRevisionBoundedTrack(
+    count($separate['segments']) === 2,
+    'Retention joined explicitly separate source segments.'
+);
+
 echo "revision-bounded track store tests passed\n";

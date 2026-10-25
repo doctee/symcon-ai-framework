@@ -85,7 +85,8 @@ function sceneStatistics(scenePath)
     if (!scenePath) {
         return [
             {zoneId: 101, label: 'Zone A', recencyDays: 0, recencyState: 1,
-                latestRunCoveragePercent: 47.0, weekEstimatedArea: 120.5},
+                latestRunCoveragePercent: 0.0, latestRunEndedAt: 1725192240,
+                weekEstimatedArea: 120.5},
             {zoneId: 102, label: 'Zone B', recencyDays: 8, recencyState: 2,
                 passProgressPercent: 33.1, observedArea: 192.1},
             {zoneId: 103, label: 'Zone C', recencyDays: 15, recencyState: 3},
@@ -215,6 +216,7 @@ const viewports = [
                             overflowX: style.overflowX,
                             textOverflow: style.textOverflow,
                             whiteSpace: style.whiteSpace,
+                            fits: child.scrollWidth <= child.clientWidth + 1,
                         };
                     });
                     return {
@@ -228,9 +230,10 @@ const viewports = [
                             && rect.bottom <= rowRect.bottom + 0.5
                         )),
                         ellipsisBounded: children.every((rect) => (
-                            rect.overflowX === 'hidden'
-                            && rect.textOverflow === 'ellipsis'
-                            && rect.whiteSpace === 'nowrap'
+                            (rect.overflowX === 'hidden'
+                                && rect.textOverflow === 'ellipsis'
+                                && rect.whiteSpace === 'nowrap')
+                            || (rect.whiteSpace === 'normal' && rect.fits)
                         )),
                     };
                 });

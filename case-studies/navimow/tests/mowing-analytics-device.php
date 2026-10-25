@@ -126,6 +126,8 @@ assertMowingAnalyticsDevice(
         && $latestMessage['statistics'][0]['zoneId'] === 101
         && $latestMessage['statistics'][0]['passProgressPercent'] === 100.0
         && $latestMessage['statistics'][0]['observedArea'] === 90.0
+        && $latestMessage['statistics'][0]['latestRunEndedAt']
+            === $latestMessage['analytics']['zones'][0]['latestRun']['endedAt']
         && str_contains($latestMessage['svg'], 'data-zone-id="101"')
         && str_contains($latestMessage['svg'], 'rotate(-7)'),
     'HTML SDK visualization message or station rotation differs.'
@@ -160,8 +162,10 @@ assertMowingAnalyticsDevice(
         && str_contains($tile, 'ageSeconds <= 60')
         && str_contains($tile, "root.style.setProperty('--nav-statistics-height'")
         && str_contains($tile, "Array.isArray(payload.statistics)")
-        && str_contains($tile, "'Lauf '")
-        && str_contains($tile, "'Fläche '")
+        && str_contains($tile, "'Letzter Lauf '")
+        && str_contains($tile, "'Letzter Pass '")
+        && str_contains($tile, "'Passfläche '")
+        && str_contains($tile, 'zone.latestRunEndedAt')
         && str_contains($tile, "'Stand '")
         && str_contains($tile, 'function zonePresentation')
         && str_contains($tile, 'box.x + box.width / 2')
