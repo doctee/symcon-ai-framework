@@ -201,6 +201,34 @@ $projection = MowingAnalyticsReducer::project(
     $options
 );
 $zone = $projection['zones'][0];
+$legacyZeroState = $state;
+foreach ($legacyZeroState['revisions'][0]['runs'] as &$legacyRun) {
+    $legacyRun['estimatedArea'] = 0.0;
+    $legacyRun['areaPerformanceSquareMetersPerHour'] = 0.0;
+}
+unset($legacyRun);
+foreach ($legacyZeroState['revisions'][0]['days'] as &$legacyDay) {
+    foreach ($legacyDay['zones'] as &$legacyZone) {
+        $legacyZone['estimatedArea'] = 0.0;
+    }
+    unset($legacyZone);
+}
+unset($legacyDay);
+$unknownProjection = MowingAnalyticsReducer::project(
+    $legacyZeroState,
+    $geometryKey,
+    $start + 400,
+    $options
+);
+assertMowingAnalytics(
+    $unknownProjection['zones'][0]['latestRunCoveragePercent'] === null
+        && $unknownProjection['zones'][0]['weekEstimatedArea'] === null
+        && $unknownProjection['latestRun']['estimatedArea'] === null
+        && $unknownProjection['latestRun']['areaPerformanceSquareMetersPerHour'] === null
+        && $unknownProjection['latestRun']['endedAt'] === $projection['latestRun']['endedAt']
+        && $legacyZeroState['revisions'][0]['runs'][0]['estimatedArea'] === 0.0,
+    'Legacy empty coverage must project as unknown without rewriting history.'
+);
 $incrementalTrack = RevisionBoundedTrackStore::initialState();
 $incrementalAnalytics = MowingAnalyticsReducer::initialState();
 $sourceScene = $scene;
