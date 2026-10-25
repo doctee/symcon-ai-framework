@@ -85,8 +85,8 @@ function sceneStatistics(scenePath)
     if (!scenePath) {
         return [
             {zoneId: 101, label: 'Zone A', recencyDays: 0, recencyState: 1,
-                latestRunCoveragePercent: 0.0, latestRunEndedAt: 1725192240,
-                weekEstimatedArea: 120.5},
+                latestRunCoveragePercent: null, latestRunEndedAt: 1725192240,
+                passProgressPercent: 98.1, weekEstimatedArea: null},
             {zoneId: 102, label: 'Zone B', recencyDays: 8, recencyState: 2,
                 passProgressPercent: 33.1, observedArea: 192.1},
             {zoneId: 103, label: 'Zone C', recencyDays: 15, recencyState: 3},
@@ -221,6 +221,7 @@ const viewports = [
                     });
                     return {
                         zoneId: row.dataset.zoneId,
+                        text: row.textContent,
                         title: row.querySelector('strong').textContent,
                         zoneColor: row.style.getPropertyValue('--nav-zone-color'),
                         inside: children.every((rect) => (
@@ -308,6 +309,13 @@ const viewports = [
                     activatedAtBoundary && deactivatedAtBoundary,
                 compactWidth: measurement.navigation.width <= 160,
                 statisticsInsideCards: measurement.rows.every((row) => row.inside),
+                unknownCoverageExplicit: preparedScenePath !== null
+                    || measurement.rows.some((row) => (
+                        row.zoneId === '101'
+                        && row.text.includes('Letzter Lauf: nicht ermittelbar')
+                        && row.text.includes('Woche: nicht ermittelbar')
+                        && !row.text.includes('Letzter Pass')
+                    )),
                 statisticsOverflowBounded: measurement.rows.every(
                     (row) => row.ellipsisBounded
                 ),
