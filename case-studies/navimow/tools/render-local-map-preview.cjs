@@ -90,7 +90,9 @@ function sceneStatistics(scenePath)
                 passIsCurrent: true, passObservedAt: 1725278640,
                 weekEstimatedArea: null},
             {zoneId: 102, label: 'Zone B', recencyDays: 8, recencyState: 2,
-                passProgressPercent: 33.1, observedArea: 192.1},
+                passProgressPercent: 38, passCoveragePercent: 26.8,
+                observedArea: 532.8, passObservedAt: 1793033995,
+                weekEstimatedArea: 746.6},
             {zoneId: 103, label: 'Zone C', recencyDays: 15, recencyState: 3},
         ];
     }
@@ -226,6 +228,13 @@ const viewports = [
                         text: row.textContent,
                         title: row.querySelector('strong').textContent,
                         zoneColor: row.style.getPropertyValue('--nav-zone-color'),
+                        singleStatusLines: row.querySelectorAll('.nav-map__status-line').length === 2
+                            && Array.from(row.querySelectorAll('.nav-map__status-line')).every(
+                                (line) => getComputedStyle(line).whiteSpace === 'nowrap'
+                                    && line.scrollWidth <= line.clientWidth + 1
+                                    && line.getBoundingClientRect().height
+                                        <= parseFloat(getComputedStyle(line).lineHeight) + 1
+                            ),
                         inside: children.every((rect) => (
                             rect.left >= rowRect.left - 0.5
                             && rect.right <= rowRect.right + 0.5
@@ -236,7 +245,7 @@ const viewports = [
                             (rect.overflowX === 'hidden'
                                 && rect.textOverflow === 'ellipsis'
                                 && rect.whiteSpace === 'nowrap')
-                            || (rect.whiteSpace === 'normal' && rect.fits)
+                            || (rect.whiteSpace === 'nowrap' && rect.fits)
                         )),
                     };
                 });
@@ -314,11 +323,17 @@ const viewports = [
                 unknownCoverageExplicit: preparedScenePath !== null
                     || measurement.rows.some((row) => (
                         row.zoneId === '101'
-                        && row.text.includes('Letzter Lauf: nicht ermittelbar')
-                        && row.text.includes('Woche: nicht ermittelbar')
-                        && row.text.includes('Aktueller Durchgang: 21')
-                        && row.text.includes('Passfläche')
+                        && row.text.includes('Mähfläche Woche –')
+                        && row.text.includes('aktuell 21')
+                        && !row.text.includes('(≈')
                     )),
+                twoSingleStatusLines: measurement.rows.every((row) => row.singleStatusLines),
+                completedPassWithCoverage: preparedScenePath !== null
+                    || measurement.rows.some((row) => row.zoneId === '102'
+                        && row.text.includes('zuletzt 38')
+                        && row.text.includes('(≈ 26,8')
+                        && row.text.includes('532,8')
+                        && row.text.includes('746,6')),
                 statisticsOverflowBounded: measurement.rows.every(
                     (row) => row.ellipsisBounded
                 ),

@@ -162,11 +162,10 @@ assertMowingAnalyticsDevice(
         && str_contains($tile, 'ageSeconds <= 60')
         && str_contains($tile, "root.style.setProperty('--nav-statistics-height'")
         && str_contains($tile, "Array.isArray(payload.statistics)")
-        && str_contains($tile, "'Letzter Lauf '")
-        && str_contains($tile, "'Aktueller Durchgang: '")
-        && str_contains($tile, "'Letzter Durchgang: '")
-        && str_contains($tile, "'Passfläche '")
-        && str_contains($tile, 'zone.latestRunEndedAt')
+        && str_contains($tile, "'aktuell '")
+        && str_contains($tile, "'zuletzt '")
+        && str_contains($tile, "'Mähfläche Woche '")
+        && str_contains($tile, 'zone.passCoveragePercent')
         && str_contains($tile, "'Stand '")
         && str_contains($tile, 'function zonePresentation')
         && str_contains($tile, 'box.x + box.width / 2')
@@ -216,6 +215,28 @@ $oldAnalytics = ['zones' => [[
     'weekEstimatedArea' => null,
 ]]];
 $passRows = $statisticsMethod->invoke($device, $passScene, $oldAnalytics);
+assertMowingAnalyticsDevice(
+    $passRows[0]['passCoveragePercent'] === null,
+    'Unmatched coverage must not appear beside pass progress.'
+);
+$matchingScene = $passScene;
+$matchingScene['zones'][0]['statistics']['latestPass']['passSequence'] = 7;
+$matchingScene['zones'][0]['statistics']['latestPass']['startedAt'] = $device->now - 120;
+$matchingAnalytics = $oldAnalytics;
+$matchingAnalytics['zones'][0]['latestRunCoveragePercent'] = 26.8;
+$matchingAnalytics['zones'][0]['latestRun'] = [
+    'passSequence' => 7, 'startedAt' => $device->now - 100,
+    'endedAt' => $device->now - 10,
+];
+$matchedRows = $statisticsMethod->invoke($device, $matchingScene, $matchingAnalytics);
+assertMowingAnalyticsDevice($matchedRows[0]['passCoveragePercent'] === 26.8, 'Same pass coverage lost.');
+$matchingAnalytics['zones'][0]['latestRun']['passSequence'] = 6;
+$matchedRows = $statisticsMethod->invoke($device, $matchingScene, $matchingAnalytics);
+assertMowingAnalyticsDevice($matchedRows[0]['passCoveragePercent'] === null, 'Previous pass coverage leaked.');
+$matchingAnalytics['zones'][0]['latestRun']['passSequence'] = 7;
+$matchingAnalytics['zones'][0]['latestRun']['startedAt'] = $device->now - 86400;
+$matchedRows = $statisticsMethod->invoke($device, $matchingScene, $matchingAnalytics);
+assertMowingAnalyticsDevice($matchedRows[0]['passCoveragePercent'] === null, 'Reused sequence coverage leaked.');
 assertMowingAnalyticsDevice(
     $passRows[0]['passIsCurrent'] === true
         && $passRows[0]['passProgressPercent'] === 21.0
