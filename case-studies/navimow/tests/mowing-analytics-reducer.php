@@ -231,7 +231,7 @@ $projection = MowingAnalyticsReducer::project(
     $options
 );
 $zone = $projection['zones'][0];
-// Reconstruct the exact version-1 contract to exercise retained-state upgrade.
+// Reconstruct prior contracts to exercise retained-state upgrades.
 $policyMethod = new ReflectionMethod(MowingAnalyticsReducer::class, 'policy');
 $oldPolicy = $policyMethod->invoke(null, $options);
 $oldSubareas = array_map(static fn (array $subarea): array => [
@@ -240,49 +240,51 @@ $oldSubareas = array_map(static fn (array $subarea): array => [
     'ring' => $subarea['ring'],
 ], $oldPolicy['subareas']);
 usort($oldSubareas, static fn (array $a, array $b): int => $a['key'] <=> $b['key']);
-$oldContractKey = hash('sha256', json_encode([
-    'algorithmVersion' => 1,
-    'geometryKey' => $geometryKey,
-    'timeZone' => $oldPolicy['timeZone'],
-    'metersPerLocalUnit' => $oldPolicy['metersPerLocalUnit'],
-    'cuttingWidthMeters' => $oldPolicy['cuttingWidthMeters'],
-    'coverageCellSizeMeters' => $oldPolicy['coverageCellSizeMeters'],
-    'zoneBindings' => $oldPolicy['zoneBindings'],
-    'subareas' => $oldSubareas,
-], JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION));
-$oldState = $state;
-$oldState['revisions'][0]['contractKey'] = $oldContractKey;
-$oldRevision = $oldState['revisions'][0];
-$beforeUpgrade = MowingAnalyticsReducer::project(
-    $oldState,
-    $geometryKey,
-    $start + 400,
-    $options
-);
-assertMowingAnalytics(
-    $beforeUpgrade['latestRun'] === null,
-    'Version-1 aggregates leaked into the corrected projection.'
-);
-$upgradedState = MowingAnalyticsReducer::update(
-    MowingAnalyticsReducer::restoreState(
-        MowingAnalyticsReducer::serializeState($oldState)
-    ),
-    $scene,
-    $start + 500,
-    $options
-);
-$upgradedProjection = MowingAnalyticsReducer::project(
-    $upgradedState,
-    $geometryKey,
-    $start + 500,
-    $options
-);
-assertMowingAnalytics(
-    count($upgradedState['revisions']) === 2
-        && $upgradedState['revisions'][0] === $oldRevision
-        && $upgradedProjection['latestRun'] === $projection['latestRun'],
-    'Upgrade must preserve old evidence and recalculate only retained points.'
-);
+foreach ([1, 2] as $oldAlgorithmVersion) {
+    $oldContractKey = hash('sha256', json_encode([
+        'algorithmVersion' => $oldAlgorithmVersion,
+        'geometryKey' => $geometryKey,
+        'timeZone' => $oldPolicy['timeZone'],
+        'metersPerLocalUnit' => $oldPolicy['metersPerLocalUnit'],
+        'cuttingWidthMeters' => $oldPolicy['cuttingWidthMeters'],
+        'coverageCellSizeMeters' => $oldPolicy['coverageCellSizeMeters'],
+        'zoneBindings' => $oldPolicy['zoneBindings'],
+        'subareas' => $oldSubareas,
+    ], JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION));
+    $oldState = $state;
+    $oldState['revisions'][0]['contractKey'] = $oldContractKey;
+    $oldRevision = $oldState['revisions'][0];
+    $beforeUpgrade = MowingAnalyticsReducer::project(
+        $oldState,
+        $geometryKey,
+        $start + 400,
+        $options
+    );
+    assertMowingAnalytics(
+        $beforeUpgrade['latestRun'] === null,
+        'Prior-version aggregates leaked into the corrected projection.'
+    );
+    $upgradedState = MowingAnalyticsReducer::update(
+        MowingAnalyticsReducer::restoreState(
+            MowingAnalyticsReducer::serializeState($oldState)
+        ),
+        $scene,
+        $start + 500,
+        $options
+    );
+    $upgradedProjection = MowingAnalyticsReducer::project(
+        $upgradedState,
+        $geometryKey,
+        $start + 500,
+        $options
+    );
+    assertMowingAnalytics(
+        count($upgradedState['revisions']) === 2
+            && $upgradedState['revisions'][0] === $oldRevision
+            && $upgradedProjection['latestRun'] === $projection['latestRun'],
+        'Upgrade must preserve old evidence and recalculate only retained points.'
+    );
+}
 $legacyZeroState = $state;
 foreach ($legacyZeroState['revisions'][0]['runs'] as &$legacyRun) {
     $legacyRun['estimatedArea'] = 0.0;
@@ -513,5 +515,129 @@ assertMowingAnalyticsRejected(
     ),
     'A corrupted retained subarea timestamp was accepted.'
 );
+
+// A multi-kilometre retained pass must not exhaust the budget by resampling.
+$longScene = $scene;
+$longSegment = $scene['path']['segments'][0];
+$longSegment['points'] = [];
+for ($index = 0; $index < 600; ++$index) {
+    $longSegment['points'][] = array_replace(
+        $scene['path']['segments'][0]['points'][0],
+        [
+            'localX' => $index % 2 === 0 ? 1.0 : 9.0,
+            'receivedAt' => $start + $index * 6,
+            'sourceTimestamp' => $start + $index * 6,
+        ]
+    );
+}
+$longScene['path']['segments'] = [$longSegment];
+$fineOptions = array_replace($options, [
+    'cuttingWidthMeters' => 0.43,
+    'coverageCellSizeMeters' => 0.1,
+]);
+$longState = MowingAnalyticsReducer::update(
+    MowingAnalyticsReducer::initialState(),
+    $longScene,
+    $start + 3600,
+    $fineOptions
+);
+$longProjection = MowingAnalyticsReducer::project(
+    $longState,
+    $geometryKey,
+    $start + 3600,
+    $fineOptions
+);
+assertMowingAnalytics(
+    $longProjection['latestRun']['coverageTruncated'] === false
+        && abs($longProjection['latestRun']['estimatedArea'] - 3.2) < 0.00001
+        && $longProjection['latestRun']['distanceMeters'] === 4792.0,
+    'Long retained pass exhausted the budget or counted overlapping cells twice.'
+);
+$tinyOptions = array_replace($fineOptions, ['coverageCellSizeMeters' => 0.05]);
+$limitedState = MowingAnalyticsReducer::update(
+    MowingAnalyticsReducer::initialState(),
+    $scene,
+    $start + 400,
+    $tinyOptions
+);
+$limitedState = MowingAnalyticsReducer::update(
+    $limitedState,
+    $longScene,
+    $start + 3600,
+    $tinyOptions
+);
+$limited = MowingAnalyticsReducer::project(
+    $limitedState,
+    $geometryKey,
+    $start + 3600,
+    $tinyOptions
+);
+assertMowingAnalytics(
+    $limited['latestRun']['coverageTruncated'] === true
+        && $limited['latestRun']['estimatedArea'] === null
+        && $limited['zones'][0]['todayEstimatedArea'] === null
+        && $limited['zones'][0]['weekEstimatedArea'] === null
+        && $limited['zones'][0]['monthEstimatedArea'] === null
+        && $limited['subareas'][0]['weekEstimatedArea'] === null,
+    'An incomplete snapshot retained a misleading complete area.'
+);
+assertMowingAnalytics(
+    MowingAnalyticsReducer::restoreState(
+        MowingAnalyticsReducer::serializeState($limitedState)
+    ) === $limitedState,
+    'Incomplete coverage evidence did not survive serialization.'
+);
+
+// Compare scanline rasterization against an independent cell-center oracle.
+$coverageMethod = new ReflectionMethod(MowingAnalyticsReducer::class, 'coverageCells');
+$rasterPolicy = [
+    'metersPerLocalUnit' => 1.0,
+    'cuttingWidthMeters' => 0.8,
+    'coverageCellSizeMeters' => 0.2,
+];
+$rasterZone = [
+    'ring' => [[-10.0, -10.0], [10.0, -10.0], [10.0, 10.0], [-10.0, 10.0]],
+    'obstacleIndexes' => [1],
+];
+$rasterObstacles = [['ring' => [
+    [-0.4, -0.4], [0.4, -0.4], [0.4, 0.4], [-0.4, 0.4],
+]]];
+foreach ([[3.0, 0.0], [0.0, 3.0], [3.0, 2.0], [-3.0, 2.0]] as $end) {
+    $left = ['localX' => -1.03, 'localY' => -1.07];
+    $right = ['localX' => $end[0], 'localY' => $end[1]];
+    $count = 0;
+    $truncated = false;
+    $actual = $coverageMethod->invokeArgs(null, [
+        $left, $right, $rasterZone, $rasterObstacles, $rasterPolicy,
+        &$count, &$truncated,
+    ]);
+    $expected = [];
+    $dx = $right['localX'] - $left['localX'];
+    $dy = $right['localY'] - $left['localY'];
+    $length = hypot($dx, $dy);
+    for ($ix = -25; $ix < 25; ++$ix) {
+        for ($iy = -25; $iy < 25; ++$iy) {
+            $x = ($ix + 0.5) * 0.2;
+            $y = ($iy + 0.5) * 0.2;
+            $along = (($x - $left['localX']) * $dx
+                + ($y - $left['localY']) * $dy) / $length;
+            $across = abs(($x - $left['localX']) * $dy
+                - ($y - $left['localY']) * $dx) / $length;
+            if (
+                $along >= 0.0 && $along <= $length && $across <= 0.4
+                && !(abs($x) < 0.4 && abs($y) < 0.4)
+            ) {
+                $expected[] = $ix . ':' . $iy;
+            }
+        }
+    }
+    $keys = array_keys($actual);
+    sort($keys);
+    sort($expected);
+    assertMowingAnalytics(
+        !$truncated && $keys === $expected,
+        'Raster cells differ from swept-strip oracle (direction/obstacle/negative coordinates).'
+    );
+}
 
 echo "Navimow mowing analytics reducer checks passed.\n";
