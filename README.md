@@ -69,6 +69,8 @@ Important current artifacts include:
 - `templates/CHANGE_RECORD.md`
 - `project/WORKSTREAM_COORDINATION.md`
 - `templates/README.md`
+- `standards/HTML_PRESENTATION_STANDARDS.md`
+- `templates/html-presentation/README.md`
 - `templates/module/README.md`
 - `templates/workstream/README.md`
 - `case-studies/README.md`

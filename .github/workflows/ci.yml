@@ -117,6 +117,8 @@ jobs:
 
       - run: node --test case-studies/media-carousel/tests/client-state.test.cjs
 
+      - run: node --check templates/html-presentation/examples.js
+
       - run: composer install
 
       - run: composer check

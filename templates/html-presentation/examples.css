@@ -1,0 +1,51 @@
+/* Gallery and domain fixture styles; never install these as the shared base. */
+:root { color-scheme: light dark; font: 14px/1.5 system-ui, sans-serif; }
+body { margin: 0; padding: 20px; background: Canvas; color: CanvasText; }
+.preview-header { max-width: 1100px; margin: 0 auto 20px; }
+.preview-header h1 { font-size: 22px; margin: 0 0 6px; }
+.preview-header p { margin: 0 0 16px; }
+.preview-controls { display: flex; flex-wrap: wrap; gap: 12px; }
+.preview-controls label { display: grid; gap: 4px; }
+.preview-controls select { min-height: 44px; max-width: 100%; padding: 8px; font: inherit; }
+#preview {
+    --card-color: #fff;
+    --content-color: #28282b;
+    --accent-color: #138c79;
+    --example-page: #eaeaec;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 16px;
+    max-width: 1140px;
+    padding: 16px;
+    margin: auto;
+    background: var(--example-page);
+    color: var(--content-color);
+    color-scheme: light;
+}
+#preview[data-theme="dark"] {
+    --card-color: #303136;
+    --content-color: #eeeef0;
+    --accent-color: #65d3ba;
+    --example-page: #121214;
+    color-scheme: dark;
+}
+#preview[data-theme="custom"] {
+    --card-color: #fff;
+    --content-color: #28282b;
+    --accent-color: #7442c8;
+    --example-page: #efedf3;
+}
+.preview-tile { flex: 1 1 320px; width: 320px; min-width: 0; max-width: 100%; background: var(--card-color); border-radius: 6px; }
+.preview-host-title { margin: 0; padding: 12px; font-size: 14px; font-weight: 500; }
+#preview[data-width="320"] .preview-tile { flex: 0 1 320px; }
+#preview[data-width="480"] .preview-tile { flex: 0 1 480px; width: 480px; }
+#preview[data-width="736"] .preview-tile { flex: 0 1 736px; width: 736px; }
+.preview-footer { max-width: 1100px; margin: 16px auto; }
+.saef-html .example-light-name { flex: 1 1 100px; min-width: 0; }
+.saef-html .example-light-name > span { display: block; }
+.saef-html .example-light-action { flex: 0 1 auto; }
+.saef-html .example-rain-bars { display: grid; grid-template-columns: repeat(60, minmax(0, 1fr)); gap: 1px; height: 20px; margin-bottom: 6px; }
+.saef-html .example-rain-bar { min-width: 0; background: var(--saef-line); }
+.saef-html .example-rain-bar[data-missing] { background: repeating-linear-gradient(135deg, var(--saef-text) 0 1px, var(--saef-surface) 1px 4px); }
+@media (max-width: 500px) { body { padding: 8px; } #preview { padding: 8px; } }

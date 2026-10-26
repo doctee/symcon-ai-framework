@@ -34,6 +34,10 @@ example when:
 The [Profile Monitor case study](profile-monitor/README.md) documents an offline
 presentation-aware monitoring candidate and its upstream permission boundary.
 
+The [HTML presentation pilot](html-presentation/README.md) records a small
+skin-aware design baseline, populated iPad acceptance and exact restoration of
+the original production display.
+
 Current examples include ControlLight, MediaCarousel, the MQTT Discovery
 Exporter, Navimow, Open-Meteo and OwnTracks. Irrigation, HomeConnect or other
 domains should receive their own case study only when the material documents

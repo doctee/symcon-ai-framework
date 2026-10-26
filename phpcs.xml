@@ -42,6 +42,8 @@
     </rule>
 
     <exclude-pattern>vendor/*</exclude-pattern>
+    <!-- JavaScript syntax is checked with Node.js in CI; PSR-12 applies to PHP. -->
+    <exclude-pattern>templates/html-presentation/examples.js</exclude-pattern>
     <exclude-pattern>case-studies/media-carousel/distribution/MediaCarousel/carousel.js</exclude-pattern>
     <exclude-pattern>case-studies/owntracks-position-map/candidate/renderer/renderer.js</exclude-pattern>
     <exclude-pattern>case-studies/owntracks-position-map/candidate/openlayers/*</exclude-pattern>
