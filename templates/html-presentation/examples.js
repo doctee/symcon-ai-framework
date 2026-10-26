@@ -67,6 +67,7 @@
             const known = scenario === 'normal' && value !== null;
             const status = element('span', 'saef-html__status', known ? (value ? 'Ein' : 'Aus') : (scenario === 'stale' ? 'Letzter Stand veraltet' : 'Unbekannt'));
             status.dataset.tone = known ? 'normal' : 'unknown';
+            status.dataset.observedState = known ? (value ? 'on' : 'off') : 'unknown';
             text.append(status);
             const button = element('button', 'saef-html__button example-light-action', value ? 'Ausschalten' : 'Einschalten');
             button.type = 'button';
@@ -119,6 +120,7 @@
     }));
     document.getElementById('preview-theme').addEventListener('change', event => { preview.dataset.theme = event.target.value; });
     document.getElementById('preview-width').addEventListener('change', event => { preview.dataset.width = event.target.value; });
+    document.getElementById('preview-color-source').addEventListener('change', event => { preview.dataset.colorSource = event.target.value; });
     scenarioSelect.addEventListener('change', () => {
         lights = [true, false, null];
         document.getElementById('light-result').textContent = scenarioSelect.value === 'stale' ? 'Beispieldaten · letzter Stand vor 2 Tagen' : scenarioSelect.value === 'empty' ? 'Beispieldaten · kein Status vorhanden' : 'Beispieldaten · Stand vor 2 Minuten';

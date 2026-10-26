@@ -36,6 +36,13 @@ body { margin: 0; padding: 20px; background: Canvas; color: CanvasText; }
     --accent-color: #7442c8;
     --example-page: #efedf3;
 }
+/* Simulated explicit color handoff, independent of the chosen skin. */
+#preview[data-color-source="override"] {
+    --saef-source-light-on: #005cc5;
+    --saef-source-warning: #8a4b00;
+    --saef-source-error: #a02150;
+}
+#preview[data-color-source="black"] { --saef-source-light-on: #000000; }
 .preview-tile { flex: 1 1 320px; width: 320px; min-width: 0; max-width: 100%; background: var(--card-color); border-radius: 6px; }
 .preview-host-title { margin: 0; padding: 12px; font-size: 14px; font-weight: 500; }
 #preview[data-width="320"] .preview-tile { flex: 0 1 320px; }
@@ -44,6 +51,16 @@ body { margin: 0; padding: 20px; background: Canvas; color: CanvasText; }
 .preview-footer { max-width: 1100px; margin: 16px auto; }
 .saef-html .example-light-name { flex: 1 1 100px; min-width: 0; }
 .saef-html .example-light-name > span { display: block; }
+.saef-html .example-light-name .saef-html__status[data-observed-state="on"]::before {
+    content: "";
+    display: inline-block;
+    width: .65em;
+    height: .65em;
+    margin-right: .4em;
+    border: 1px solid var(--saef-text);
+    border-radius: 50%;
+    background: var(--saef-light-on);
+}
 .saef-html .example-light-action { flex: 0 1 auto; }
 .saef-html .example-rain-bars { display: grid; grid-template-columns: repeat(60, minmax(0, 1fr)); gap: 1px; height: 20px; margin-bottom: 6px; }
 .saef-html .example-rain-bar { min-width: 0; background: var(--saef-line); }

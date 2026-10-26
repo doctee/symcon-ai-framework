@@ -35,9 +35,16 @@
                     <option value="stale">Veraltet</option>
                 </select>
             </label>
+            <label>Farbquelle (Beispiel)
+                <select id="preview-color-source">
+                    <option value="fallback">SAEF-Ersatzwerte</option>
+                    <option value="override">Übergebene Farbwerte</option>
+                    <option value="black">Schwarz als Gerätefarbe</option>
+                </select>
+            </label>
         </div>
     </header>
-    <main id="preview" data-theme="light" data-width="fluid">
+    <main id="preview" data-theme="light" data-width="fluid" data-color-source="fallback">
         <article class="preview-tile" aria-labelledby="battery-title">
             <h2 id="battery-title" class="preview-host-title">Batterien</h2>
             <section class="saef-html saef-html__stack" aria-label="Batterieübersicht">
