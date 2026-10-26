@@ -174,6 +174,7 @@ const viewports = [
     {name: 'ipad-observed', width: 590, height: 490, scale: 2, touch: true},
     {name: 'iphone-portrait', width: 390, height: 844, scale: 3, touch: true},
     {name: 'iphone-narrow', width: 375, height: 667, scale: 2, touch: true},
+    {name: 'phone-compact', width: 320, height: 568, scale: 2, touch: true},
 ];
 
 (async () => {
@@ -235,6 +236,10 @@ const viewports = [
                                     && line.getBoundingClientRect().height
                                         <= parseFloat(getComputedStyle(line).lineHeight) + 1
                             ),
+                        statusFontSizes: Array.from(row.querySelectorAll('.nav-map__status-line'))
+                            .map((line) => parseFloat(getComputedStyle(line).fontSize)),
+                        visible: rowRect.left >= statistics.getBoundingClientRect().left
+                            && rowRect.right <= statistics.getBoundingClientRect().right + 0.5,
                         inside: children.every((rect) => (
                             rect.left >= rowRect.left - 0.5
                             && rect.right <= rowRect.right + 0.5
@@ -323,17 +328,24 @@ const viewports = [
                 unknownCoverageExplicit: preparedScenePath !== null
                     || measurement.rows.some((row) => (
                         row.zoneId === '101'
-                        && row.text.includes('Mähfläche Woche –')
-                        && row.text.includes('aktuell 21')
+                        && row.text.includes('Woche –')
+                        && row.text.includes('aktuell')
+                        && row.text.includes('21 %')
                         && !row.text.includes('(≈')
                     )),
                 twoSingleStatusLines: measurement.rows.every((row) => row.singleStatusLines),
+                allZonesVisible: measurement.rows.length === 3
+                    && measurement.rows.every((row) => row.visible)
+                    && !measurement.statisticsScrolls,
                 completedPassWithCoverage: preparedScenePath !== null
                     || measurement.rows.some((row) => row.zoneId === '102'
-                        && row.text.includes('zuletzt 38')
-                        && row.text.includes('(≈ 26,8')
-                        && row.text.includes('532,8')
-                        && row.text.includes('746,6')),
+                        && row.text.includes('26.10.')
+                        && row.text.includes('38 %')
+                        && !row.text.includes('26,8')
+                        && row.text.includes('533 m²')
+                        && row.text.includes('747 m²')),
+                readableStatusFont: measurement.rows.every((row) =>
+                    row.statusFontSizes.every((size) => size >= 12)),
                 statisticsOverflowBounded: measurement.rows.every(
                     (row) => row.ellipsisBounded
                 ),
@@ -350,6 +362,77 @@ const viewports = [
                 path: path.join(outputRoot, viewport.name + '.png'),
                 fullPage: true,
             });
+            await page.locator('[data-statistics]').screenshot({
+                path: path.join(outputRoot, viewport.name + '-footer.png'),
+            });
+            const selected = page.locator('.nav-map__zone-stat[data-zone-id="102"]');
+            if (viewport.touch) {
+                await selected.tap();
+            } else {
+                await selected.focus();
+                await page.keyboard.press('Enter');
+            }
+            checks.detailsOpen = await page.locator('dialog').evaluate((dialog) => dialog.open);
+            const detailsText = await page.locator('[data-details-values]').textContent();
+            checks.exactDetails = preparedScenePath !== null
+                || (detailsText.includes('532,8 m²') && detailsText.includes('26,8 %')
+                    && detailsText.includes('746,6 m²'));
+            checks.dialogFits = await page.locator('dialog').evaluate((dialog) => {
+                const rect = dialog.getBoundingClientRect();
+                return rect.left >= 0 && rect.right <= window.innerWidth
+                    && rect.top >= 0 && rect.bottom <= window.innerHeight
+                    && dialog.scrollWidth <= dialog.clientWidth;
+            });
+            await page.screenshot({
+                path: path.join(outputRoot, viewport.name + '-details.png'), fullPage: true,
+            });
+            await page.keyboard.press('Escape');
+            checks.escapeCloses = await page.locator('dialog').evaluate((dialog) => !dialog.open);
+            checks.focusRestored = await selected.evaluate((button) => document.activeElement === button);
+            await selected.click();
+            const updated = statistics.map((zone) => ({
+                ...zone, observedArea: 12345.67, weekEstimatedArea: 123456.78,
+                passProgressPercent: 100,
+            }));
+            await page.evaluate(({svg, statistics}) => {
+                window.handleMessage({action: 'render', svg, theme: 'light', status: 'fresh',
+                    statistics, analytics: {geometryKey: 'offline-preview', zones: statistics}});
+            }, {svg, statistics: updated});
+            checks.openDetailsRefresh = await page.locator('[data-details-values]')
+                .textContent().then((value) => value.includes('12.345,67 m²')
+                    && value.includes('123.456,78 m²'));
+            await page.locator('[data-details-close]').click();
+            await page.waitForFunction(() =>
+                document.activeElement.dataset.zoneId === '102');
+            checks.closeButtonWorks = await page.locator('dialog').evaluate((dialog) => !dialog.open);
+            checks.focusAfterRefresh = await page.locator(
+                '.nav-map__zone-stat[data-zone-id="102"]'
+            ).evaluate((button) => document.activeElement === button);
+            for (const width of [320, 1280, viewport.width]) {
+                await page.setViewportSize({width, height: viewport.height});
+                await page.evaluate(() => new Promise((resolve) => {
+                    requestAnimationFrame(() => requestAnimationFrame(resolve));
+                }));
+                checks['largeValuesFitAt' + width] = await page.locator('[data-statistics]')
+                    .evaluate((panel) => panel.scrollWidth <= panel.clientWidth
+                        && Array.from(panel.querySelectorAll('.nav-map__status-line'))
+                            .every((line) => {
+                                const range = document.createRange();
+                                range.selectNodeContents(line);
+                                return range.getBoundingClientRect().width <= line.clientWidth
+                                    && getComputedStyle(line).whiteSpace === 'nowrap'
+                                    && parseFloat(getComputedStyle(line).fontSize) >= 12;
+                            }));
+            }
+            await page.locator('.nav-map__zone-stat[data-zone-id="103"]').click();
+            checks.unknownIsNotZero = preparedScenePath !== null
+                || (await page.locator('[data-details-values]').textContent())
+                    .includes('Abdeckung · geschätztNicht ermittelbar');
+            await page.mouse.click(1, 1);
+            checks.backdropCloses = await page.locator('dialog').evaluate((dialog) => !dialog.open);
+            await page.locator('.nav-map__zone-stat[data-zone-id="103"]').click();
+            await page.evaluate(() => window.handleMessage({action: 'configurationError'}));
+            checks.errorClosesDetails = await page.locator('dialog').evaluate((dialog) => !dialog.open);
             results.push({
                 viewport,
                 pass: Object.values(checks).every(Boolean),
@@ -362,6 +445,7 @@ const viewports = [
                     buttonTops: measurement.buttonTops.map(rounded),
                     statisticsHeight: rounded(measurement.statisticsHeight),
                     statisticsScrolls: measurement.statisticsScrolls,
+                    statusFontSizes: measurement.rows.map((row) => row.statusFontSizes),
                 },
             });
             await context.close();
