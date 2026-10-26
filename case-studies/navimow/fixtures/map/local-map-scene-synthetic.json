@@ -65,12 +65,12 @@
     {"zoneId": 104, "zoneKey": null, "label": "Unassigned Area"}
   ],
   "points": [
-    {"localX": 1.0, "localY": 1.0, "orientation": 0.0, "sourceTimestamp": 1000000, "receivedAt": 1000, "vehicleStateCode": 1, "sessionSequence": 1},
-    {"localX": 9.0, "localY": 5.0, "orientation": 0.1, "sourceTimestamp": 1010000, "receivedAt": 1010, "vehicleStateCode": 1, "sessionSequence": 1},
-    {"localX": 9.0, "localY": 5.0, "orientation": 0.2, "sourceTimestamp": 1500000, "receivedAt": 1500, "vehicleStateCode": 1, "sessionSequence": 1},
-    {"localX": 15.0, "localY": 5.0, "orientation": 0.3, "sourceTimestamp": 2000000, "receivedAt": 2000, "vehicleStateCode": 1, "sessionSequence": 1},
-    {"localX": 25.0, "localY": 5.0, "orientation": 0.4, "sourceTimestamp": 3000000, "receivedAt": 3000, "vehicleStateCode": 1, "sessionSequence": 1},
-    {"localX": 40.0, "localY": 40.0, "orientation": 0.5, "sourceTimestamp": 4000000, "receivedAt": 4000, "vehicleStateCode": 1, "sessionSequence": 1}
+    {"localX": 1.0, "localY": 1.0, "orientation": 0.0, "sourceTimestamp": 1000000, "receivedAt": 1000, "vehicleStateCode": 4, "sessionSequence": 1},
+    {"localX": 9.0, "localY": 5.0, "orientation": 0.1, "sourceTimestamp": 1010000, "receivedAt": 1010, "vehicleStateCode": 4, "sessionSequence": 1},
+    {"localX": 9.0, "localY": 5.0, "orientation": 0.2, "sourceTimestamp": 1500000, "receivedAt": 1500, "vehicleStateCode": 4, "sessionSequence": 1},
+    {"localX": 15.0, "localY": 5.0, "orientation": 0.3, "sourceTimestamp": 2000000, "receivedAt": 2000, "vehicleStateCode": 4, "sessionSequence": 1},
+    {"localX": 25.0, "localY": 5.0, "orientation": 0.4, "sourceTimestamp": 3000000, "receivedAt": 3000, "vehicleStateCode": 4, "sessionSequence": 1},
+    {"localX": 40.0, "localY": 40.0, "orientation": 0.5, "sourceTimestamp": 4000000, "receivedAt": 4000, "vehicleStateCode": 4, "sessionSequence": 1}
   ],
   "ledgerProjection": {
     "passes": [

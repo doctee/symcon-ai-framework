@@ -71,7 +71,7 @@ foreach ([1.0, 3.0, 5.0, 7.0, 9.0] as $index => $x) {
         'orientation' => 0.0,
         'sourceTimestamp' => $timestamp,
         'receivedAt' => $timestamp,
-        'vehicleStateCode' => 1,
+        'vehicleStateCode' => 4,
     ];
 }
 $path = [
@@ -85,7 +85,7 @@ $path = [
             'passSequence' => 7,
             'areaKey' => $zoneKey,
             'sessionSequence' => 3,
-            'vehicleStateCode' => 1,
+            'vehicleStateCode' => 4,
             'startedAt' => $start,
             'endedAt' => $start + 240,
             'breakReason' => 'first-point',
@@ -97,22 +97,22 @@ $path = [
             'passSequence' => 7,
             'areaKey' => $zoneKey,
             'sessionSequence' => 3,
-            'vehicleStateCode' => 4,
+            'vehicleStateCode' => 5,
             'startedAt' => $start + 300,
             'endedAt' => $start + 360,
             'breakReason' => 'vehicle-state-change',
             'pathLengthLocal' => 8.0,
             'points' => [
-                $runningPoints[0] + [
+                array_replace($runningPoints[0], [
                     'receivedAt' => $start + 300,
                     'sourceTimestamp' => $start + 300,
-                    'vehicleStateCode' => 4,
-                ],
-                $runningPoints[4] + [
+                    'vehicleStateCode' => 5,
+                ]),
+                array_replace($runningPoints[4], [
                     'receivedAt' => $start + 360,
                     'sourceTimestamp' => $start + 360,
-                    'vehicleStateCode' => 4,
-                ],
+                    'vehicleStateCode' => 5,
+                ]),
             ],
         ],
     ],
@@ -158,7 +158,7 @@ $scene['path'] = RevisionBoundedTrackStore::scenePath(
 assertMowingAnalytics(
     $scene['path']['segments'][0]['passSequence'] === 7
         && $scene['path']['segments'][0]['sessionSequence'] === 3
-        && $scene['path']['segments'][0]['vehicleStateCode'] === 1
+        && $scene['path']['segments'][0]['vehicleStateCode'] === 4
         && $scene['path']['segments'][0]['points'][0]
             ['sourceTimestamp'] === $start,
     'Retained path lost analytics metadata.'
@@ -194,6 +194,36 @@ $state = MowingAnalyticsReducer::update(
     $start + 400,
     $options
 );
+// Neither REST's numeric Running value nor dock/travel/unknown MQTT codes
+// qualify a position segment for geometric mowing estimates.
+foreach ([0, 1, 2, 3, 5, 6, 99] as $excludedCode) {
+    $wireCodeScene = $scene;
+    foreach ($wireCodeScene['path']['segments'] as &$wireSegment) {
+        $wireSegment['vehicleStateCode'] = $excludedCode;
+        foreach ($wireSegment['points'] as &$wirePoint) {
+            $wirePoint['vehicleStateCode'] = $excludedCode;
+        }
+        unset($wirePoint);
+    }
+    unset($wireSegment);
+    $wireState = MowingAnalyticsReducer::update(
+        MowingAnalyticsReducer::initialState(),
+        $wireCodeScene,
+        $start + 400,
+        $options
+    );
+    $wireProjection = MowingAnalyticsReducer::project(
+        $wireState,
+        $geometryKey,
+        $start + 400,
+        $options
+    );
+    assertMowingAnalytics(
+        $wireProjection['latestRun'] === null
+        && $wireProjection['zones'][0]['todayEstimatedArea'] === null,
+        'Excluded MQTT code unexpectedly contributed mowing area: ' . $excludedCode
+    );
+}
 $projection = MowingAnalyticsReducer::project(
     $state,
     $geometryKey,
@@ -201,6 +231,58 @@ $projection = MowingAnalyticsReducer::project(
     $options
 );
 $zone = $projection['zones'][0];
+// Reconstruct the exact version-1 contract to exercise retained-state upgrade.
+$policyMethod = new ReflectionMethod(MowingAnalyticsReducer::class, 'policy');
+$oldPolicy = $policyMethod->invoke(null, $options);
+$oldSubareas = array_map(static fn (array $subarea): array => [
+    'key' => $subarea['key'],
+    'zoneKey' => $subarea['zoneKey'],
+    'ring' => $subarea['ring'],
+], $oldPolicy['subareas']);
+usort($oldSubareas, static fn (array $a, array $b): int => $a['key'] <=> $b['key']);
+$oldContractKey = hash('sha256', json_encode([
+    'algorithmVersion' => 1,
+    'geometryKey' => $geometryKey,
+    'timeZone' => $oldPolicy['timeZone'],
+    'metersPerLocalUnit' => $oldPolicy['metersPerLocalUnit'],
+    'cuttingWidthMeters' => $oldPolicy['cuttingWidthMeters'],
+    'coverageCellSizeMeters' => $oldPolicy['coverageCellSizeMeters'],
+    'zoneBindings' => $oldPolicy['zoneBindings'],
+    'subareas' => $oldSubareas,
+], JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION));
+$oldState = $state;
+$oldState['revisions'][0]['contractKey'] = $oldContractKey;
+$oldRevision = $oldState['revisions'][0];
+$beforeUpgrade = MowingAnalyticsReducer::project(
+    $oldState,
+    $geometryKey,
+    $start + 400,
+    $options
+);
+assertMowingAnalytics(
+    $beforeUpgrade['latestRun'] === null,
+    'Version-1 aggregates leaked into the corrected projection.'
+);
+$upgradedState = MowingAnalyticsReducer::update(
+    MowingAnalyticsReducer::restoreState(
+        MowingAnalyticsReducer::serializeState($oldState)
+    ),
+    $scene,
+    $start + 500,
+    $options
+);
+$upgradedProjection = MowingAnalyticsReducer::project(
+    $upgradedState,
+    $geometryKey,
+    $start + 500,
+    $options
+);
+assertMowingAnalytics(
+    count($upgradedState['revisions']) === 2
+        && $upgradedState['revisions'][0] === $oldRevision
+        && $upgradedProjection['latestRun'] === $projection['latestRun'],
+    'Upgrade must preserve old evidence and recalculate only retained points.'
+);
 $legacyZeroState = $state;
 foreach ($legacyZeroState['revisions'][0]['runs'] as &$legacyRun) {
     $legacyRun['estimatedArea'] = 0.0;
@@ -235,6 +317,7 @@ $sourceScene = $scene;
 $sourcePoints = $sourceScene['path']['segments'][0]['points'];
 foreach (array_keys($sourcePoints) as $index) {
     $partial = $sourceScene;
+    $partial['path']['segments'] = [$sourceScene['path']['segments'][0]];
     $partial['path']['segments'][0]['points'] = array_slice(
         $sourcePoints,
         0,

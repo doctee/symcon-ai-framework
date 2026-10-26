@@ -86,7 +86,9 @@ function sceneStatistics(scenePath)
         return [
             {zoneId: 101, label: 'Zone A', recencyDays: 0, recencyState: 1,
                 latestRunCoveragePercent: null, latestRunEndedAt: 1725192240,
-                passProgressPercent: 98.1, weekEstimatedArea: null},
+                passProgressPercent: 21, observedArea: 294.89,
+                passIsCurrent: true, passObservedAt: 1725278640,
+                weekEstimatedArea: null},
             {zoneId: 102, label: 'Zone B', recencyDays: 8, recencyState: 2,
                 passProgressPercent: 33.1, observedArea: 192.1},
             {zoneId: 103, label: 'Zone C', recencyDays: 15, recencyState: 3},
@@ -314,7 +316,8 @@ const viewports = [
                         row.zoneId === '101'
                         && row.text.includes('Letzter Lauf: nicht ermittelbar')
                         && row.text.includes('Woche: nicht ermittelbar')
-                        && !row.text.includes('Letzter Pass')
+                        && row.text.includes('Aktueller Durchgang: 21')
+                        && row.text.includes('Passfläche')
                     )),
                 statisticsOverflowBounded: measurement.rows.every(
                     (row) => row.ellipsisBounded
