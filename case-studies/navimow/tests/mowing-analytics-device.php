@@ -163,7 +163,8 @@ assertMowingAnalyticsDevice(
         && str_contains($tile, "root.style.setProperty('--nav-statistics-height'")
         && str_contains($tile, "Array.isArray(payload.statistics)")
         && str_contains($tile, "'Letzter Lauf '")
-        && str_contains($tile, "'Letzter Pass '")
+        && str_contains($tile, "'Aktueller Durchgang: '")
+        && str_contains($tile, "'Letzter Durchgang: '")
         && str_contains($tile, "'Passfläche '")
         && str_contains($tile, 'zone.latestRunEndedAt')
         && str_contains($tile, "'Stand '")
@@ -195,6 +196,52 @@ assertMowingAnalyticsDevice(
 );
 
 $beforeDisable = $device->testVariableDefinitions();
+// Historical analytics must never hide an independently observed task pass.
+$statisticsMethod = new ReflectionMethod(NavimowDevice::class, 'localMapVisualizationStatistics');
+$passScene = ['zones' => [[
+    'zoneId' => 101,
+    'zoneKey' => 'synthetic-zone',
+    'label' => 'Synthetic Zone',
+    'statistics' => ['latestPass' => [
+        'lastObservedAt' => $device->now - 10,
+        'completionObserved' => false,
+        'passProgressPercent' => 21.0,
+        'observedAreaDelta' => 294.89,
+    ]],
+]]];
+$oldAnalytics = ['zones' => [[
+    'zoneKey' => 'synthetic-zone',
+    'latestRunCoveragePercent' => null,
+    'latestRun' => ['endedAt' => $device->now - 86400],
+    'weekEstimatedArea' => null,
+]]];
+$passRows = $statisticsMethod->invoke($device, $passScene, $oldAnalytics);
+assertMowingAnalyticsDevice(
+    $passRows[0]['passIsCurrent'] === true
+        && $passRows[0]['passProgressPercent'] === 21.0
+        && $passRows[0]['observedArea'] === 294.89
+        && $passRows[0]['latestRunCoveragePercent'] === null
+        && $passRows[0]['latestRunEndedAt'] === $device->now - 86400,
+    'Current pass was lost beside historical unknown coverage.'
+);
+foreach ([-301, 1] as $offset) {
+    $datedScene = $passScene;
+    $datedScene['zones'][0]['statistics']['latestPass']['lastObservedAt'] = $device->now + $offset;
+    $rows = $statisticsMethod->invoke($device, $datedScene, $oldAnalytics);
+    assertMowingAnalyticsDevice(!$rows[0]['passIsCurrent'], 'Stale/future pass marked current.');
+}
+$completedScene = $passScene;
+$completedScene['zones'][0]['statistics']['latestPass']['completionObserved'] = true;
+$rows = $statisticsMethod->invoke($device, $completedScene, $oldAnalytics);
+assertMowingAnalyticsDevice(!$rows[0]['passIsCurrent'], 'Completed pass marked current.');
+$device->testSetVariable('LastStatusUpdate', $device->now - 301);
+$rows = $statisticsMethod->invoke($device, $passScene, $oldAnalytics);
+assertMowingAnalyticsDevice(!$rows[0]['passIsCurrent'], 'Stale REST marked pass current.');
+$device->testSetVariable('LastStatusUpdate', $device->now);
+$device->testSetVariable('VehicleState', 2);
+$rows = $statisticsMethod->invoke($device, $passScene, $oldAnalytics);
+assertMowingAnalyticsDevice(!$rows[0]['passIsCurrent'], 'Docked mower marked pass current.');
+$device->testSetVariable('VehicleState', 1);
 $device->testSetProperty('EnableMowingAnalytics', false);
 $device->testSetProperty('StatisticsTimeZone', 'Invalid/Zone');
 $device->testSetProperty('StatisticsSubareas', '{invalid');
