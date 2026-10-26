@@ -276,7 +276,7 @@
     function detailsArea(value)
     {
         return Number.isFinite(value)
-            ? new Intl.NumberFormat('de-DE', {maximumFractionDigits: 2})
+            ? new Intl.NumberFormat('de-DE', {maximumFractionDigits : 2})
                 .format(value) + ' m²'
             : 'Nicht ermittelbar';
     }
@@ -334,7 +334,8 @@
                 }
                 const date = Number.isFinite(zone.passObservedAt)
                     ? new Date(zone.passObservedAt * 1000).toLocaleDateString(
-                        'de-DE', {day: '2-digit', month: '2-digit'}
+                        'de-DE',
+                        {day: '2-digit', month: '2-digit'}
                     ) : '–';
                 const title = document.createElement('strong');
                 title.textContent = entry.label + ' · '
@@ -436,6 +437,7 @@
                 return;
             }
             if (payload.action === 'configurationError') {
+                details.close();
                 stage.replaceChildren();
                 statistics.replaceChildren();
                 scheduleStatisticsLayout();
@@ -443,6 +445,7 @@
                 return;
             }
         } catch (error) {
+            details.close();
             status.textContent = error instanceof Error
                 ? error.message
                 : 'Karte nicht verfügbar';

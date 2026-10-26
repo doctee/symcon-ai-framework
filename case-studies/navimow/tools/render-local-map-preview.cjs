@@ -430,6 +430,9 @@ const viewports = [
                     .includes('Abdeckung · geschätztNicht ermittelbar');
             await page.mouse.click(1, 1);
             checks.backdropCloses = await page.locator('dialog').evaluate((dialog) => !dialog.open);
+            await page.locator('.nav-map__zone-stat[data-zone-id="103"]').click();
+            await page.evaluate(() => window.handleMessage({action: 'configurationError'}));
+            checks.errorClosesDetails = await page.locator('dialog').evaluate((dialog) => !dialog.open);
             results.push({
                 viewport,
                 pass: Object.values(checks).every(Boolean),
