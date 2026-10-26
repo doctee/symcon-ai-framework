@@ -60,6 +60,9 @@
         "navimow:publication-check": [
             "@php tools/publish-symcon-module.php --contract=deployments/symcon/navimow-publication.json --check"
         ],
+        "test:counter-continuity": [
+            "@php case-studies/counter-continuity/tests/run.php"
+        ],
         "test:bundles": [
             "@php tests/bundles/ensure-variable-bundle.php"
         ],
@@ -281,6 +284,7 @@
             "@test:runtime-source-mirror",
             "@test:runtime-health-probe",
             "@test:helpers",
+            "@test:counter-continuity",
             "@test:mcp-workflow",
             "@test:mqtt-exporter-core",
             "@test:mqtt-exporter-runtime",

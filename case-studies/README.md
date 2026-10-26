@@ -85,6 +85,10 @@ Do not include credentials, tokens, private IP addresses, hostnames, personal
 ObjectIDs, private MQTT topics, exact local object trees or unique household
 descriptions. Keep such evidence under `private/` or in ignored local overlays.
 
+The [counter continuity case study](counter-continuity/README.md) explains
+transient-read deferral, timestamp ambiguity and counter-reset boundaries with
+command-free synthetic decision tests. It is not a deployable runtime.
+
 ## Promotion Path
 
 - Repeated setup structure may become a template.
