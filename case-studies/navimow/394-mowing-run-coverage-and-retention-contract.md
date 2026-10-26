@@ -67,8 +67,8 @@ Coverage requires an explicit positive cutting width. With width zero, the
 contract fails closed as `disabled-missing-cutting-width` and every area or
 coverage result is `null`.
 
-With calibration present, each accepted path pair is sampled into a bounded
-raster corridor:
+With calibration present, each accepted path pair is rasterized as a swept
+rectangle using cell centers:
 
 - sample cells are clipped to the attributed zone polygon;
 - obstacle polygons are excluded;
@@ -77,8 +77,24 @@ raster corridor:
   denominator; and
 - the result is always labelled an estimate, never a measurement.
 
-`CoverageCellSizeMeters` controls resolution. The implementation stops after
-250,000 samples and exposes truncation instead of silently under-reporting.
+`CoverageCellSizeMeters` controls resolution. Scanlines enumerate grid cells
+inside the strip directly, avoiding repeated half-cell sampling. The strip has
+flat ends at the accepted positions; it does not infer movement beyond them.
+Cells are included by their center, not fractional polygon overlap.
+
+The unchanged 250,000-work-unit budget counts row visits (including empty rows)
+and cell evaluations. Both loops are bounded, including very fine grids.
+The diagnostic `coverageSampleCount` now counts these work units.
+On exhaustion, all coverage estimates in that snapshot are conservatively
+incomplete, while distance and duration remain available. Run, day and subarea
+areas are null; week/month totals containing an incomplete day are null too.
+The incomplete marker survives merging and serialization, so an earlier
+partial result cannot masquerade as a complete total.
+
+Algorithm contract version 3 isolates this center-raster calculation from
+versions 1 and 2. Old revisions remain subject to the existing retention policy,
+but are not mixed into the new projection. Only retained points can be
+recalculated; evicted historical movement cannot be recovered.
 
 ## 6. Period Statistics
 
