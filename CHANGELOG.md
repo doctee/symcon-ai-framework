@@ -39,6 +39,10 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added explicit HTML color roles and provenance with centralized, overridable
+  light-state, warning and error fallbacks. Synthetic examples distinguish
+  skin accents, supplied device colors and valid black without live adoption.
+
 - Added a shared HTML presentation baseline with skin-aware scoped CSS, five
   small building blocks and complete synthetic battery, light and nowcast
   examples. Documented populated iPad design acceptance and original-display

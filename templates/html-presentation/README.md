@@ -37,6 +37,35 @@ An embedded stylesheet copy is owned by that target's source/fileset. Editing
 this template does not update installed copies. A later adoption compares the
 candidate and target sources under the existing change workflow.
 
+## Color roles and provenance
+
+Follow the standard's [color-source rules](../../standards/HTML_PRESENTATION_STANDARDS.md#color-roles-and-provenance).
+The active skin owns the surface, text and general accent. A device-state color
+comes from its effective presentation/profile, not from the accent by default.
+The shared stylesheet keeps these optional inputs and fallback roles central:
+
+| Optional source input | Effective role | Absent-input fallback |
+| --- | --- | --- |
+| `--saef-source-light-on` | `--saef-light-on` | `#ffeb3b`, native Switch default verified in Symcon 9.1 |
+| `--saef-source-warning` | `--saef-warning` | `#b96e00`, SAEF warning choice |
+| `--saef-source-error` | `--saef-error` | `#ce4454`, SAEF error choice |
+
+These are SAEF bridge inputs, not automatic Symcon theme variables. Set a
+validated input on the owned `.saef-html` root or its ancestor. For different
+device colors within one root, the target may override the effective role on
+the owned device element. Normalize numeric RGB colors before CSS use; black
+(`0`, represented as `#000000`) is a valid override. Do not insert unvalidated
+configuration strings into a style attribute. Blank/invalid bridge values
+must be omitted by the producer: CSS `var()` handles absent inputs, not color
+validation. Filled state controls need a separately verified foreground;
+ordinary text must not become yellow merely because a light is ON.
+
+The gallery's independent color-source selector demonstrates absent inputs,
+explicit handoff and valid black across all sample skins. Warning/error input
+mapping is simulated; it does not claim additional documented native theme
+variables. The outlined light marker uses `--saef-light-on`, while action
+buttons retain their skin styling. The gallery still has no live connection.
+
 ## Five blocks
 
 | Block | Main classes |
@@ -57,10 +86,12 @@ It is not a general instruction to remove tile padding.
 The battery table demonstrates current, weak, unknown and stale data. A missing
 percentage is an em dash; filtering changes only the view.
 
-The light overview separates status from action. Its local buttons simulate a
-change immediately. Real integrations retain the owner's existing command and
+The light overview separates status from action and uses the central color
+role only for an observed ON marker. Its local buttons simulate a change
+immediately. Real integrations retain the owner's existing command and
 feedback contract; the example does not prescribe optimistic confirmation or
-an availability interlock.
+an availability interlock. Pending/error annotations must retain the observed
+state's color until feedback confirms a different state.
 
 The nowcast is a fixed 60-segment fixture, not another forecast algorithm. Its
 rain color samples follow the existing

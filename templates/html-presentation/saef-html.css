@@ -7,8 +7,12 @@
     --saef-line: color-mix(in srgb, var(--saef-text) 24%, var(--saef-surface));
     --saef-soft: color-mix(in srgb, var(--saef-text) 5%, var(--saef-surface));
     --saef-selected: color-mix(in srgb, var(--saef-accent) 12%, var(--saef-surface));
-    --saef-warning: #b96e00;
-    --saef-error: #ce4454;
+    /* SAEF source inputs are explicit bridges, not built-in Symcon skin variables.
+       Light fallback: native Switch GLOW_COLOR default, verified in Symcon 9.1.
+       Warning/error fallbacks are SAEF choices, not claimed native defaults. */
+    --saef-light-on: var(--saef-source-light-on, #ffeb3b);
+    --saef-warning: var(--saef-source-warning, #b96e00);
+    --saef-error: var(--saef-source-error, #ce4454);
     --saef-radius: 6px;
     box-sizing: border-box;
     container-type: inline-size;
