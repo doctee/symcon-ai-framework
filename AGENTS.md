@@ -79,6 +79,10 @@ offline schema check.
   Special-switch changes may require a service restart and never inherit
   authority from an ordinary script or module change.
 - Explain engineering decisions when changing standards, knowledge, templates, helpers, or references.
+- For new custom HTML content or HTML-SDK tiles, follow
+  `standards/HTML_PRESENTATION_STANDARDS.md` and reuse
+  `templates/html-presentation/`. Adopt existing displays individually without
+  changing their data, action or source-ownership contracts.
 
 ## Private Data
 

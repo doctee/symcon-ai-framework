@@ -39,6 +39,11 @@ This project adheres to Semantic Versioning.
 
 ### Added
 
+- Added a shared HTML presentation baseline with skin-aware scoped CSS, five
+  small building blocks and complete synthetic battery, light and nowcast
+  examples. Documented populated iPad design acceptance and original-display
+  restoration separately; existing live displays are not migrated by adoption.
+
 - Added risk-tiered Symcon change workflows with direct native MCP maintenance,
   bounded isolated development, observation-only comparisons and planned
   high-impact operations. Added a compact private change-record template and

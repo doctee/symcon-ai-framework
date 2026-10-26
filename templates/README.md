@@ -48,6 +48,7 @@ the explicit template goal.
 | `module/` | Concept and checklist for starting SAEF-aligned IP-Symcon module projects |
 | `workstream/` | Canonical private handover record and Markdown structure for isolated workstreams |
 | `artifacts/` | Descriptive lifecycle metadata and closure checklist; no cleanup authority |
+| [`html-presentation/`](html-presentation/README.md) | Scoped, skin-aware HTML/CSS baseline with complete battery, light and nowcast examples |
 
 ## Change Records
 

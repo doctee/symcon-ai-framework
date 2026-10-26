@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SAEF · HTML-Muster</title>
+    <link rel="stylesheet" href="saef-html.css">
+    <link rel="stylesheet" href="examples.css">
+    <script src="examples.js" defer></script>
+</head>
+<body>
+    <header class="preview-header">
+        <h1>Gemeinsame HTML-Bausteine</h1>
+        <p>SAEF-Muster · Beispieldaten · Alle Bedienelemente wirken nur auf diese Vorschau.</p>
+        <div class="preview-controls">
+            <label>Skin
+                <select id="preview-theme">
+                    <option value="light">Hell</option>
+                    <option value="dark">Dunkel</option>
+                    <option value="custom">Eigene Akzentfarbe</option>
+                </select>
+            </label>
+            <label>Breite je Kachel
+                <select id="preview-width">
+                    <option value="fluid">Flexibel</option>
+                    <option value="320">320 px</option>
+                    <option value="480">480 px</option>
+                    <option value="736">736 px</option>
+                </select>
+            </label>
+            <label>Datenlage
+                <select id="preview-scenario">
+                    <option value="normal">Normal</option>
+                    <option value="empty">Keine Daten</option>
+                    <option value="stale">Veraltet</option>
+                </select>
+            </label>
+        </div>
+    </header>
+    <main id="preview" data-theme="light" data-width="fluid">
+        <article class="preview-tile" aria-labelledby="battery-title">
+            <h2 id="battery-title" class="preview-host-title">Batterien</h2>
+            <section class="saef-html saef-html__stack" aria-label="Batterieübersicht">
+                <div class="saef-html__controls" role="group" aria-label="Batteriefilter">
+                    <button type="button" class="saef-html__button" data-filter="all" aria-pressed="true">Alle</button>
+                    <button type="button" class="saef-html__button" data-filter="attention" aria-pressed="false">Handlungsbedarf</button>
+                </div>
+                <p class="saef-html__notice" data-tone="warning" id="battery-notice">! Ein Gerät braucht eine neue Batterie.</p>
+                <table class="saef-html__table" aria-label="Batteriestand und Datenqualität">
+                    <thead><tr><th scope="col">Gerät</th><th scope="col" class="saef-html__number">Stand</th><th scope="col">Status</th></tr></thead>
+                    <tbody id="battery-rows"></tbody>
+                </table>
+                <p id="battery-empty" class="saef-html__meta" hidden>Keine Batteriedaten vorhanden.</p>
+                <p class="saef-html__meta" id="battery-stamp">Beispieldaten · Stand vor 2 Minuten</p>
+            </section>
+        </article>
+        <article class="preview-tile" aria-labelledby="lights-title">
+            <h2 id="lights-title" class="preview-host-title">Lichtübersicht</h2>
+            <section class="saef-html saef-html__stack" aria-label="Lichtstatus und getrennte Aktionen">
+                <p class="saef-html__meta">Status links · gewünschte Aktion rechts</p>
+                <div id="light-rows"></div>
+                <p class="saef-html__notice" id="light-notice" hidden></p>
+                <p class="saef-html__meta" id="light-result" aria-live="polite">Beispieldaten · Stand vor 2 Minuten</p>
+            </section>
+        </article>
+        <article class="preview-tile" aria-labelledby="rain-title">
+            <h2 id="rain-title" class="preview-host-title">Niederschlag · nächste Stunde</h2>
+            <section class="saef-html saef-html__stack" aria-label="Nowcast mit unveränderter absoluter Regenfarbskala">
+                <div class="saef-html__row">
+                    <p class="saef-html__value" id="rain-headline">Regen ab +15 min</p>
+                    <span class="saef-html__meta" id="rain-product-time">Produktzeit 12:00</span>
+                </div>
+                <div id="rain-chart" class="saef-html__chart">
+                    <div id="rain-bars" class="example-rain-bars" role="img" aria-label="60 Minutenwerte. Regen ab Minute 15; eine fehlende Minute ist schraffiert."></div>
+                    <div class="saef-html__chart-axis"><span>jetzt</span><span>+30 min</span><span>+60 min</span></div>
+                </div>
+                <p class="saef-html__notice" id="rain-notice" hidden></p>
+                <label class="saef-html__field" id="rain-detail-field"><span>Minutenwert</span>
+                    <select id="rain-minute" class="saef-html__select"></select>
+                </label>
+                <p class="saef-html__meta" id="rain-detail" aria-live="polite"></p>
+                <p class="saef-html__meta" id="rain-stamp">Beispieldaten · Ein Segment je Minute · Intensität in mm/h</p>
+            </section>
+        </article>
+    </main>
+    <p class="preview-footer">Die Kachelüberschriften gehören in diesem Beispiel zum simulierten Symcon-Rahmen. Die gemeinsame CSS-Basis gestaltet nur den Inhalt.</p>
+</body>
+</html>
