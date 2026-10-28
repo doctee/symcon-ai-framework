@@ -71,11 +71,11 @@
         },
         {
             "path": "case-studies/control-light/candidate/ManualOnPulseOffCore.php",
-            "sha256": "5b62c98a4d60750f3afcb2d4f66ee17ae194ab27727b0c4f2959f88cad1a44cd"
+            "sha256": "b37b6154c795e5c6596bcf5bdbfb15f0c7801718ce47bc52768045fa23e8d15b"
         },
         {
             "path": "case-studies/control-light/candidate/ManualOnPulseOffRuntime.php",
-            "sha256": "bac40454d00f7807685fd9e71cac008f49d5803075cd3cfbd46750d6fec1dd1f"
+            "sha256": "df792a04667f6f9056397cc79deb9edabd9ab08bd245eabcece90df675206d93"
         },
         {
             "path": "helpers/object/EnsureProfile.php",
@@ -91,7 +91,7 @@
         }
     ],
     "bootstrapSha256": "6566331029338904d9e0a04cae178b28b9b92c83e4e51de8ed0d4def3de21096",
-    "filesetSha256": "18b2c20bca99ce1a5d2ffdc41386e69602f9043b1cfa33edd3f2b56b2f850962",
+    "filesetSha256": "b3eeb611183d82b0b74616d708f62612edc00503f0981326d85ba995b484830e",
     "functionExports": [
         "SAEF_AppendErrorRingBufferEntry",
         "SAEF_ClearErrorRingBuffer",
