@@ -9,6 +9,10 @@ same brightness semantics are safe for every existing consumer.
 
 ## Candidate Files
 
+Additional bounded acceptance: [device-timed pulse-off adapter](device-timed-pulse-off-acceptance.md)
+records the optional transport contract, compatibility tests and supervised
+manual-on / remote-off appliance acceptance.
+
 Additional bounded acceptance: [CWWW target integration](cwww-adapter-preparation.md)
 records two switch-only and two CWWW adoptions, scene release and the remaining
 mirror gate. Historical cohort totals above are not a current fleet census.

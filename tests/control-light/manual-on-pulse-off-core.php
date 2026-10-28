@@ -38,4 +38,15 @@ assertPulseCoreSame(
     'Stale-off observation plan differs.'
 );
 
+assertPulseCoreSame(false, ManualOnPulseOffCore::isLampOn(5.99, 6.0, true), 'Below inclusive threshold.');
+assertPulseCoreSame(true, ManualOnPulseOffCore::isLampOn(6.0, 6.0, true), 'Exact inclusive threshold.');
+assertPulseCoreSame(true, ManualOnPulseOffCore::isLampOn(6.01, 6.0, true), 'Above inclusive threshold.');
+assertPulseCoreSame(false, array_key_exists('powerOnThresholdInclusive', $configuration), 'Legacy shape drift.');
+try {
+    ManualOnPulseOffCore::normalizeConfiguration([
+        'powerVariableID' => 10, 'relayVariableID' => 11, 'powerOnThresholdInclusive' => 'true',
+    ]);
+    throw new LogicException('Expected invalid inclusive option rejection.');
+} catch (InvalidArgumentException $expected) {
+}
 echo "PASS: Manual-on pulse-off core contract.\n";

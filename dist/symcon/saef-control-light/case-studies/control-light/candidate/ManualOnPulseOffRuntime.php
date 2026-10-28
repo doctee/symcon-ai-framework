@@ -24,13 +24,15 @@ final class ManualOnPulseOffRuntime
     /**
      * @param array<string, mixed> $sourceIPS
      * @param array<string, mixed> $configuration
+     * @param null|callable(): void $sendOffPulse Trusted installation adapter; sends one device-timed off pulse.
      *
      * @return array<string, mixed>
      */
     public static function run(
         int $ownerScriptID,
         array $sourceIPS,
-        array $configuration
+        array $configuration,
+        ?callable $sendOffPulse = null
     ): array {
         $normalized = ManualOnPulseOffCore::normalizeConfiguration($configuration);
         $resources = self::reconcileResources($ownerScriptID, $normalized);
@@ -67,7 +69,8 @@ final class ManualOnPulseOffRuntime
                     (bool)($sourceIPS['VALUE'] ?? false),
                     $resources,
                     $normalized,
-                    $diagnostics
+                    $diagnostics,
+                    $sendOffPulse
                 );
                 self::recordOutcome($diagnostics, (string)$result['status']);
 
@@ -92,6 +95,7 @@ final class ManualOnPulseOffRuntime
      * @param array<string, mixed> $resources
      * @param array<string, mixed> $configuration
      * @param array<string, mixed> $diagnostics
+     * @param null|callable(): void $sendOffPulse Must throw on dispatch failure; return is not confirmation.
      *
      * @return array<string, mixed>
      */
@@ -100,7 +104,8 @@ final class ManualOnPulseOffRuntime
         bool $requestedState,
         array $resources,
         array $configuration,
-        array $diagnostics
+        array $diagnostics,
+        ?callable $sendOffPulse = null
     ): array {
         $semaphore = 'SAEF_MANUAL_ON_PULSE_OFF_' . $ownerScriptID;
         if (!\IPS_SemaphoreEnter($semaphore, $configuration['semaphoreTimeoutMilliseconds'])) {
@@ -137,13 +142,27 @@ final class ManualOnPulseOffRuntime
                 }
             }
 
-            if (!\RequestAction($configuration['relayVariableID'], false)) {
+            if ($sendOffPulse !== null) {
+                // An already interrupted supply may have an in-flight device timer.
+                // Never extend or replace that pulse using stale/ambiguous state.
+                if (\GetValue($configuration['relayVariableID']) !== true) {
+                    throw new RuntimeException('Supply is not confirmed on before the timed pulse.');
+                }
+                $sendOffPulse();
+            } elseif (!\RequestAction($configuration['relayVariableID'], false)) {
                 throw new RuntimeException('Relay rejected the pulse-off request.');
             }
             \SAEF_IncrementStatistic($diagnostics['statistics']['PULSE_COMMANDS']);
 
             $deadline = microtime(true)
                 + ($configuration['confirmationTimeoutMilliseconds'] / 1000);
+            if (
+                $sendOffPulse !== null
+                && !self::waitForRelayState(false, self::remainingMilliseconds($deadline), $configuration)
+            ) {
+                \SAEF_IncrementStatistic($diagnostics['statistics']['CONFIRMATION_TIMEOUTS']);
+                throw new RuntimeException('Supply relay did not confirm the off pulse.');
+            }
             $powerOff = self::waitForPowerState(
                 false,
                 self::remainingMilliseconds($deadline),
@@ -155,13 +174,18 @@ final class ManualOnPulseOffRuntime
                 throw new RuntimeException('Lamp power did not confirm the off state.');
             }
 
-            $relayRestored = self::waitForRelayRestored(
+            $relayRestored = self::waitForRelayState(
+                true,
                 self::remainingMilliseconds($deadline),
                 $configuration
             );
             if (!$relayRestored) {
                 \SAEF_IncrementStatistic($diagnostics['statistics']['CONFIRMATION_TIMEOUTS']);
                 throw new RuntimeException('Supply relay was not restored after the off pulse.');
+            }
+            if ($sendOffPulse !== null && self::readObservedState($configuration)) {
+                self::syncState($resources, $configuration);
+                throw new RuntimeException('Load became active again during supply restoration.');
             }
 
             \SAEF_SetStatisticTimestamp($diagnostics['statistics']['LAST_FEEDBACK']);
@@ -239,7 +263,8 @@ final class ManualOnPulseOffRuntime
     {
         return ManualOnPulseOffCore::isLampOn(
             \GetValue($configuration['powerVariableID']),
-            $configuration['powerOnThreshold']
+            $configuration['powerOnThreshold'],
+            $configuration['powerOnThresholdInclusive'] ?? false
         );
     }
 
@@ -265,17 +290,19 @@ final class ManualOnPulseOffRuntime
             0,
             static fn(mixed $value): bool => ManualOnPulseOffCore::isLampOn(
                 $value,
-                $configuration['powerOnThreshold']
+                $configuration['powerOnThreshold'],
+                $configuration['powerOnThresholdInclusive'] ?? false
             ) === $expectedState
         );
     }
 
     /** @param array<string, mixed> $configuration */
-    private static function waitForRelayRestored(
+    private static function waitForRelayState(
+        bool $expectedState,
         int $timeoutMilliseconds,
         array $configuration
     ): bool {
-        if ((bool)\GetValue($configuration['relayVariableID']) === true) {
+        if (\GetValue($configuration['relayVariableID']) === $expectedState) {
             return true;
         }
         if ($timeoutMilliseconds <= 0) {
@@ -286,7 +313,7 @@ final class ManualOnPulseOffRuntime
             $configuration['relayVariableID'],
             $timeoutMilliseconds,
             min($configuration['pollIntervalMilliseconds'], $timeoutMilliseconds),
-            true,
+            $expectedState,
             \SAEF_WAIT_UPDATED
         );
     }

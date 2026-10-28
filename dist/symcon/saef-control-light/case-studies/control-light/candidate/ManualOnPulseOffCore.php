@@ -66,10 +66,17 @@ final class ManualOnPulseOffCore
             );
         }
 
+        if (array_key_exists('powerOnThresholdInclusive', $configuration)) {
+            if (!is_bool($configuration['powerOnThresholdInclusive'])) {
+                throw new InvalidArgumentException('powerOnThresholdInclusive must be Boolean.');
+            }
+            $normalized['powerOnThresholdInclusive'] = $configuration['powerOnThresholdInclusive'];
+        }
+
         return $normalized;
     }
 
-    public static function isLampOn(mixed $power, float $threshold): bool
+    public static function isLampOn(mixed $power, float $threshold, bool $inclusive = false): bool
     {
         if (!is_int($power) && !is_float($power)) {
             throw new InvalidArgumentException('Power feedback must be numeric.');
@@ -78,7 +85,7 @@ final class ManualOnPulseOffCore
             throw new InvalidArgumentException('Power feedback must be finite.');
         }
 
-        return (float)$power > $threshold;
+        return $inclusive ? (float)$power >= $threshold : (float)$power > $threshold;
     }
 
     public static function plan(bool $requestedState, bool $observedState): string
