@@ -175,6 +175,24 @@ final class ControlLightRuntime
     public static function reconcileResources(int $ownerScriptID, array $configuration): array
     {
         self::validateOwnerScript($ownerScriptID);
+        // Profile provisioning is an explicit installation operation, not runtime repair.
+        $temperatureControl = $configuration['colorTemperatureControl'] ?? null;
+        if ($temperatureControl !== null) {
+            $profileName = $temperatureControl['profile'];
+            if (!\IPS_VariableProfileExists($profileName)) {
+                throw new RuntimeException('Configured Kelvin profile is missing.');
+            }
+            $profile = \IPS_GetVariableProfile($profileName);
+            if (
+                $profile['ProfileType'] !== 1
+                || (float)$profile['MinValue'] !== (float)$temperatureControl['minimumKelvin']
+                || (float)$profile['MaxValue'] !== (float)$temperatureControl['maximumKelvin']
+                || (float)$profile['StepSize'] !== 1.0
+                || $profile['Associations'] !== [] || $profile['Prefix'] !== '' || $profile['Suffix'] !== ' K'
+            ) {
+                throw new RuntimeException('Configured Kelvin profile contract has changed.');
+            }
+        }
         $parentID = \IPS_GetParent($ownerScriptID);
         $targetRootID = self::resolveTargetRoot($parentID);
         $resources = [

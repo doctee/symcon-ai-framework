@@ -132,7 +132,9 @@
             "@php tests/mqtt-discovery-exporter/supersession-claim-root-windows.php"
         ],
         "test:control-light-core": [
-            "@php tests/control-light/core.php"
+            "@php tests/control-light/core.php",
+            "@php tests/control-light/cwww-adapter.php",
+            "@php tests/control-light/cwww-integration.php"
         ],
         "test:control-light-color-analysis": [
             "@php tests/control-light/color-conversion-analysis.php"
