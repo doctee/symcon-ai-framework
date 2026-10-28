@@ -17,6 +17,8 @@ final class ControlLightTopologyFake
     public static array $links = [];
     /** @var array<string, true> */
     public static array $profiles = [];
+    /** @var array<string, array<string, mixed>> */
+    public static array $profileDefinitions = [];
     /** @var array<int, mixed> */
     public static array $values = [];
     public static int $valueWrites = 0;
@@ -101,6 +103,7 @@ final class ControlLightTopologyFake
             1 => 0,
             2 => 0.0,
             3 => '',
+            default => throw new InvalidArgumentException('Unsupported fixture variable type.'),
         };
     }
 
@@ -149,6 +152,11 @@ function IPS_EventExists(int $id): bool
 function IPS_VariableProfileExists(string $name): bool
 {
     return isset(ControlLightTopologyFake::$profiles[$name]);
+}
+
+function IPS_GetVariableProfile(string $name): array
+{
+    return ControlLightTopologyFake::$profileDefinitions[$name];
 }
 
 function IPS_GetParent(int $id): int
@@ -437,4 +445,35 @@ foreach (['EV_MEMBER_00_STATE', 'EV_MEMBER_00_DIM', 'EV_MEMBER_01_STATE', 'EV_ME
     assertTopologySame(false, ControlLightTopologyFake::$events[$eventID]['EventActive'], $ident . ' remained active.');
 }
 
-fwrite(STDOUT, 'PASS: ControlLight topology ownership, presentation and idempotency contract.' . PHP_EOL);
+ControlLightTopologyFake::reset();
+$kelvinConfiguration = ControlLightCore::normalizeConfiguration([
+    'preset' => 'Z2M', 'brightnessSemantics' => 'reported', 'identColor' => '',
+    'colorTemperatureControl' => ['minimumKelvin' => 2650, 'maximumKelvin' => 4800, 'profile' => 'SAEF.Test.Kelvin'],
+]);
+$expectedProfile = ['ProfileType' => 1, 'MinValue' => 2650.0, 'MaxValue' => 4800.0,
+    'StepSize' => 1.0, 'Associations' => [], 'Prefix' => '', 'Suffix' => ' K'];
+foreach ([null, array_replace($expectedProfile, ['MinValue' => 1000.0]), array_replace($expectedProfile, ['ProfileType' => 2])] as $bad) {
+    unset(ControlLightTopologyFake::$profiles['SAEF.Test.Kelvin']);
+    if ($bad !== null) {
+        ControlLightTopologyFake::$profiles['SAEF.Test.Kelvin'] = true;
+        ControlLightTopologyFake::$profileDefinitions['SAEF.Test.Kelvin'] = $bad;
+    }
+    $beforeObjects = ControlLightTopologyFake::$objects;
+    $failed = false;
+    try {
+        ControlLightRuntime::reconcileResources(101, $kelvinConfiguration);
+    } catch (RuntimeException) {
+        $failed = true;
+    }
+    assertTopologySame(true, $failed, 'Missing/drifted Kelvin profile was accepted.');
+    assertTopologySame($beforeObjects, ControlLightTopologyFake::$objects, 'Profile failure mutated topology.');
+}
+ControlLightTopologyFake::$profiles['SAEF.Test.Kelvin'] = true;
+ControlLightTopologyFake::$profileDefinitions['SAEF.Test.Kelvin'] = $expectedProfile;
+$firstKelvin = ControlLightRuntime::reconcileResources(101, $kelvinConfiguration);
+$secondKelvin = ControlLightRuntime::reconcileResources(101, $kelvinConfiguration);
+assertTopologySame($firstKelvin, $secondKelvin, 'Kelvin profile changed stable resources.');
+assertTopologySame('SAEF.Test.Kelvin', IPS_GetVariable($firstKelvin['localVariableIDs']['colorTemperature'])['VariableCustomProfile'], 'Kelvin profile reset.');
+assertTopologySame($expectedProfile, ControlLightTopologyFake::$profileDefinitions['SAEF.Test.Kelvin'], 'Runtime mutated profile.');
+
+fwrite(STDOUT, 'PASS: ControlLight topology ownership, presentation, Kelvin profile and idempotency contract.' . PHP_EOL);

@@ -210,5 +210,6 @@ function OMSOLAR_GetPowerForecastJson(int $instanceId, int $from, int $to, strin
 function OMSOLAR_GetDailyEnergyForecastJson(int $instanceId, int $from, int $to, string $scope): string {}
 
 function GetValue(int $id): mixed {}
-function SetValue(int $id, mixed $value): void {}
+// Kernel SetValue returns bool; official API verified 2026-10-27 (not the module method).
+function SetValue(int $id, mixed $value): bool { return true; }
 function RequestAction(int $variableID, mixed $value): bool {}

@@ -33,7 +33,7 @@ try {
         512,
         JSON_THROW_ON_ERROR
     );
-    assertControlLightFilesetSame(18, count($sourceMap['orderedSources'] ?? []), 'Source closure differs.');
+    assertControlLightFilesetSame(21, count($sourceMap['orderedSources'] ?? []), 'Source closure differs.');
     assertControlLightFilesetSame(
         true,
         in_array('SAEF_EnsureLink', $sourceMap['functionExports'] ?? [], true),
@@ -49,6 +49,8 @@ try {
             'SAEF\\CaseStudy\\ControlLight\\ControlLightCommandException',
             'SAEF\\CaseStudy\\ControlLight\\ControlLightCore',
             'SAEF\\CaseStudy\\ControlLight\\ControlLightRuntime',
+            'SAEF\\CaseStudy\\ControlLight\\CwwwLightAdapter',
+            'SAEF\\CaseStudy\\ControlLight\\CwwwLightTargetRuntime',
             'SAEF\\CaseStudy\\ControlLight\\HueWallSwitchCore',
             'SAEF\\CaseStudy\\ControlLight\\HueWallSwitchRuntime',
             'SAEF\\CaseStudy\\ControlLight\\ManualOnPulseOffCore',
@@ -59,6 +61,18 @@ try {
     );
 
     $bootstrap = (string)file_get_contents($temporaryRoots[0] . '/' . $relativeRoot . '/bootstrap.php');
+    runControlLightFilesetCommand([
+        PHP_BINARY,
+        '-r',
+        'require_once $argv[1]; require_once $argv[1];'
+        . 'foreach (["SAEF_EnsureProfile", "SAEF_EnsureScript", "SAEF_EnsureVariable",'
+        . '"SAEF_EnsureTriggeredScriptEvent"] as $function) {'
+        . 'if (!function_exists($function)) { throw new RuntimeException("Provisioning helper missing"); }}'
+        . 'foreach (["CwwwLightAdapter", "CwwwLightTargetRuntime"] as $class) {'
+        . 'if (!class_exists("SAEF\\\\CaseStudy\\\\ControlLight\\\\" . $class, false)) {'
+        . 'throw new RuntimeException("Packaged CWWW class missing"); }}',
+        $temporaryRoots[0] . '/' . $relativeRoot . '/bootstrap.php',
+    ]);
     if (str_contains($bootstrap, '/Users/') || str_contains($bootstrap, 'ObjectID')) {
         throw new RuntimeException('Generated ControlLight bootstrap contains private deployment data.');
     }

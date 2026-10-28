@@ -11,7 +11,7 @@
         },
         {
             "path": "case-studies/control-light/candidate/ControlLightCore.php",
-            "sha256": "0b786d1993d36da0759f0c78a5f0b952e6d0002a74bf9110cf47076f4e0af49b"
+            "sha256": "235a761b7627431c75a04d59374bd83cac3375056f34ef9f797d41e0066a5032"
         },
         {
             "path": "helpers/diagnostics/ConfigurationHash.php",
@@ -51,7 +51,15 @@
         },
         {
             "path": "case-studies/control-light/candidate/ControlLightRuntime.php",
-            "sha256": "a09b9370c2ef410c6db1bba65f9c9b6376e3f4248b5947c2e09143278e946aaa"
+            "sha256": "5d00f0f051f0690f779e58ce2c51c70174c94372a233a46762259d39ecda43d1"
+        },
+        {
+            "path": "case-studies/control-light/candidate/CwwwLightAdapter.php",
+            "sha256": "cc4c02c2ceea6a056430bba09308fa35becc4290526a36eb7b958c80ca561f25"
+        },
+        {
+            "path": "case-studies/control-light/candidate/CwwwLightTargetRuntime.php",
+            "sha256": "e1c88c0023290719289d0d23a8a439f9b3b281797a4182fa00558eac52e6bf01"
         },
         {
             "path": "case-studies/control-light/candidate/HueWallSwitchCore.php",
@@ -70,16 +78,20 @@
             "sha256": "bac40454d00f7807685fd9e71cac008f49d5803075cd3cfbd46750d6fec1dd1f"
         },
         {
+            "path": "helpers/object/EnsureProfile.php",
+            "sha256": "4f32bad34b5102e08810f28eddb1bd6b9579b1fe1b5c1c46173dbb0708f33672"
+        },
+        {
             "path": "helpers/object/EnsureScript.php",
             "sha256": "26ff9087f162e588c5b3a26aef13af625157c4e325dcb840a5f247b822d649b1"
         },
         {
             "path": "case-studies/control-light/candidate/ControlLightFileset.php",
-            "sha256": "3f26cae8b90da5c0611e86d2921fcf27063c4ff215bcc9aa2eadac300648eb6c"
+            "sha256": "08802bc39298649bcfe185d5a65b4e8f44af3dec41247a1d3ed0f0a8588a30f5"
         }
     ],
-    "bootstrapSha256": "deca67e7f408f05c7a46be6495b3f165f80b7143d096eb3ea23964ad411b0b66",
-    "filesetSha256": "13d4fc611584031eb18585f5d37abe0215edc9440075b82517393ab6d25ded7f",
+    "bootstrapSha256": "6566331029338904d9e0a04cae178b28b9b92c83e4e51de8ed0d4def3de21096",
+    "filesetSha256": "18b2c20bca99ce1a5d2ffdc41386e69602f9043b1cfa33edd3f2b56b2f850962",
     "functionExports": [
         "SAEF_AppendErrorRingBufferEntry",
         "SAEF_ClearErrorRingBuffer",
@@ -88,6 +100,7 @@
         "SAEF_EnsureCyclicScriptEvent",
         "SAEF_EnsureErrorRingBufferVariable",
         "SAEF_EnsureLink",
+        "SAEF_EnsureProfile",
         "SAEF_EnsureRegistryVariable",
         "SAEF_EnsureScript",
         "SAEF_EnsureStatisticsVariables",
@@ -122,6 +135,8 @@
         "SAEF\\CaseStudy\\ControlLight\\ControlLightCommandException",
         "SAEF\\CaseStudy\\ControlLight\\ControlLightCore",
         "SAEF\\CaseStudy\\ControlLight\\ControlLightRuntime",
+        "SAEF\\CaseStudy\\ControlLight\\CwwwLightAdapter",
+        "SAEF\\CaseStudy\\ControlLight\\CwwwLightTargetRuntime",
         "SAEF\\CaseStudy\\ControlLight\\HueWallSwitchCore",
         "SAEF\\CaseStudy\\ControlLight\\HueWallSwitchRuntime",
         "SAEF\\CaseStudy\\ControlLight\\ManualOnPulseOffCore",
@@ -132,6 +147,7 @@
         "SAEF_HELPER_CONFIGURATION_HASH",
         "SAEF_HELPER_ENSURE_EVENT",
         "SAEF_HELPER_ENSURE_LINK",
+        "SAEF_HELPER_ENSURE_PROFILE",
         "SAEF_HELPER_ENSURE_SCRIPT",
         "SAEF_HELPER_ENSURE_VARIABLE",
         "SAEF_HELPER_ERROR_RING_BUFFER",

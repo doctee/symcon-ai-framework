@@ -9,6 +9,12 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+- Add an opt-in ControlLight CWWW transport adapter and per-lamp Kelvin profile
+  contract, reusing existing lifecycle and diagnostics helpers. Cover coherent
+  feedback, command/receive separation, readiness, bounded confirmation and
+  unchanged default contracts with offline regressions. Record bounded live
+  acceptance and guarded scene adoption separately from mirror/publication gates.
+
 - Clarify native Archive, Util Control and Module Store tool boundaries:
   distinguish advertised access from qualified behavior, prefer scoped direct
   reads, and retain separate archive, cleanup and installation approval gates.

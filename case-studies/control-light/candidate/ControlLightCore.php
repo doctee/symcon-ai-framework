@@ -311,6 +311,28 @@ final class ControlLightCore
             throw new InvalidArgumentException('HS feedback quantization requires an enabled HS color capability.');
         }
 
+        // Opt-in only: do not change existing normalized contracts or hashes.
+        if (array_key_exists('colorTemperatureControl', $configuration)) {
+            $control = $configuration['colorTemperatureControl'];
+            if (
+                !is_array($control) || count($control) !== 3
+                || !$normalized['capabilities']['colorTemperature']['enabled']
+                || !$normalized['tempInputIsKelvin']
+            ) {
+                throw new InvalidArgumentException('Kelvin control requires an enabled Kelvin capability.');
+            }
+            $minimum = self::requireIntegerRange($control, 'minimumKelvin', 1000, 12000, 'colorTemperatureControl');
+            $maximum = self::requireIntegerRange($control, 'maximumKelvin', 1000, 12000, 'colorTemperatureControl');
+            $profile = self::requireString($control, 'profile');
+            if ($minimum >= $maximum || !preg_match('/^[A-Za-z][A-Za-z0-9_.-]{0,127}$/D', $profile)) {
+                throw new InvalidArgumentException('Kelvin control requires ordered bounds and a custom profile.');
+            }
+            $normalized['colorTemperatureControl'] = [
+                'minimumKelvin' => $minimum, 'maximumKelvin' => $maximum, 'profile' => $profile,
+            ];
+            $normalized['capabilities']['colorTemperature']['profile'] = $profile;
+        }
+
         return $normalized;
     }
 
@@ -821,6 +843,10 @@ final class ControlLightCore
     /** @param array<string, mixed> $configuration */
     private static function localTemperatureToTarget(int $value, array $configuration): int
     {
+        $control = $configuration['colorTemperatureControl'] ?? null;
+        if ($control !== null && ($value < $control['minimumKelvin'] || $value > $control['maximumKelvin'])) {
+            throw new InvalidArgumentException('Requested Kelvin value is outside the configured lamp range.');
+        }
         if ($configuration['tempInputIsKelvin'] === true && $configuration['tempTargetIsMired'] === true) {
             return self::kelvinToMired($value);
         }

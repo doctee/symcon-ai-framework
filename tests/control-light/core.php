@@ -66,6 +66,30 @@ function controlLightFixtureConfiguration(array $fixture): array
 
 $tests = [];
 
+$tests['optional Kelvin control validates bounds without changing defaults'] = static function (): void {
+    $base = ['preset' => 'Z2M', 'brightnessSemantics' => 'reported'];
+    $default = ControlLightCore::normalizeConfiguration($base);
+    assertControlLightSame(false, array_key_exists('colorTemperatureControl', $default), 'Default contract changed.');
+    $control = ['minimumKelvin' => 2650, 'maximumKelvin' => 4800, 'profile' => 'SAEF.Test.Kelvin'];
+    $configured = ControlLightCore::normalizeConfiguration($base + ['colorTemperatureControl' => $control]);
+    assertControlLightSame('SAEF.Test.Kelvin', $configured['capabilities']['colorTemperature']['profile'], 'Profile override lost.');
+    foreach ([2650, 3000, 4800] as $kelvin) {
+        assertControlLightSame($kelvin, ControlLightCore::localToTarget('colorTemperature', $kelvin, $configured), 'Valid Kelvin changed.');
+    }
+    foreach ([0, 2649, 4801, 12000] as $kelvin) {
+        assertControlLightThrows(InvalidArgumentException::class, fn() => ControlLightCore::localToTarget('colorTemperature', $kelvin, $configured), 'Out of bounds was clamped.');
+    }
+    foreach (
+        [null, [], $control + ['extra' => true], array_replace($control, ['profile' => '~TWColor']),
+        array_replace($control, ['minimumKelvin' => 4800]), array_replace($control, ['maximumKelvin' => '4800'])] as $bad
+    ) {
+        assertControlLightThrows(InvalidArgumentException::class, fn() => ControlLightCore::normalizeConfiguration($base + ['colorTemperatureControl' => $bad]), 'Invalid control accepted.');
+    }
+    assertControlLightThrows(InvalidArgumentException::class, fn() => ControlLightCore::normalizeConfiguration(
+        $base + ['identTemp' => '', 'colorTemperatureControl' => $control]
+    ), 'Disabled temperature accepted control.');
+};
+
 $tests['HS conversion accepts every achromatic byte including white and black'] = static function (): void {
     $configuration = ControlLightCore::normalizeConfiguration(['preset' => 'MATTER', 'brightnessSemantics' => 'reported']);
     for ($channel = 0; $channel <= 255; $channel++) {
