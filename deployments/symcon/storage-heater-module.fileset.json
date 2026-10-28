@@ -29,6 +29,10 @@
       "target": "libs/ChargeProfile.php"
     },
     {
+      "source": "case-studies/storage-heater/distribution/libs/ComparisonLifecycle.php",
+      "target": "libs/ComparisonLifecycle.php"
+    },
+    {
       "source": "case-studies/storage-heater/distribution/libs/Cooling.php",
       "target": "libs/Cooling.php"
     },

@@ -185,7 +185,7 @@ trait WarmingObservation
                 );
             }
             unset($saved);
-            // Outcomes remain eligible after clearing the preselection or model configuration.
+            // Keep measuring after cancellation; lifecycle metadata gates regular evaluation.
             $pending = array_keys(array_filter($j['records'], static fn(array $r): bool => $r['settledAt'] === null));
             usort($pending, static fn(int $a, int $b): int => ($j['records'][$a]['checkedAt'] ?? 0) <=> ($j['records'][$b]['checkedAt'] ?? 0));
             foreach (array_slice($pending, 0, 2) as $i) {
@@ -236,8 +236,9 @@ trait WarmingObservation
         }
     }
 
-    private function saveWarming(array $j): void
+    private function saveWarming(array &$j): void
     {
+        $j = $this->assessComparisons($j);
         $json = Forecast::encode($j);
         Warming::journal($json);
         if ($json !== $this->ReadAttributeString('WarmingJournal')) {

@@ -239,3 +239,11 @@ records. Existing warming/fan forecasts and heating controls remain unchanged.
 New issues wait for the complete first warming night to fit the 48-hour horizon.
 Results are measured on the same gallery/living-room points, with missing
 sensor data preserved as gaps. Retrospective phases are never backfilled.
+
+## Vorwahl abgebrochen oder ersetzt (0.9.1)
+
+Abgebrochene und ersetzte Vorwahlen werden unabhängig von einer neuen Vorhersage
+gekennzeichnet und von der regulären Modellbewertung ausgeschlossen. Ihre Kurven
+und Messwerte bleiben als Diagnose erhalten. Eine reguläre Ankunft ist kein
+Abbruch. Unvollständige Planhistorie wird nicht als gültiger Modelltest gewertet.
+Die Heizungsregelung, Schaltzeiten und unveränderlichen Vorhersagen bleiben erhalten.
