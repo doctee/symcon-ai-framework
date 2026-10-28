@@ -149,13 +149,13 @@ final class ChargeProfile
         return $j;
     }
 
-    public static function metrics(array $r): array
+    public static function metrics(array $r, bool $diagnostic = false): array
     {
         $candidate = $r;
         $candidate['forecast']['points'] = $r['forecast']['profileComparison']['points'];
         $metrics = [];
         foreach (['gallery', 'sofa'] as $room) {
-            $metrics[$room] = ['reference' => Warming::metrics($r, $room), 'profile' => Warming::metrics($candidate, $room)];
+            $metrics[$room] = ['reference' => Warming::metrics($r, $room, $diagnostic), 'profile' => Warming::metrics($candidate, $room, $diagnostic)];
         }
         return $metrics;
     }

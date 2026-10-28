@@ -63,6 +63,19 @@ final class Warming
             ) {
                 throw new RuntimeException('Invalid saved warming record.');
             }
+            if (isset($r['evaluation'])) {
+                $e = $r['evaluation'];
+                if (
+                    ($e['schema'] ?? null) !== 1 || !is_bool($e['eligible'] ?? null)
+                    || !in_array($e['state'] ?? '', ['active', 'completed', 'arrived', 'cancelled', 'replaced', 'unknown'], true)
+                    || !is_int($e['observedAt'] ?? null) || !is_int($e['checkedThrough'] ?? null)
+                    || !is_string($e['phaseKey'] ?? null) || !is_string($e['evidencePlanHash'] ?? null)
+                    || !is_string($e['reason'] ?? null)
+                    || ($e['eligible'] && in_array($e['state'], ['cancelled', 'replaced', 'unknown'], true))
+                ) {
+                    throw new RuntimeException('Invalid comparison evaluation metadata.');
+                }
+            }
             if (SAEF_CreateConfigurationHash($r['forecast']) !== $r['forecastHash']) {
                 throw new RuntimeException('Saved warming forecast hash mismatch.');
             }
@@ -310,9 +323,12 @@ final class Warming
         return $actual;
     }
 
-    public static function metrics(array $r, string $room): array
+    public static function metrics(array $r, string $room, bool $diagnostic = false): array
     {
         $errors = [];
+        if (!$diagnostic && isset($r['evaluation']) && !$r['evaluation']['eligible']) {
+            return ['n' => 0, 'expected' => count($r['forecast']['points']) - 1, 'mae' => null, 'bias' => null];
+        }
         foreach (array_slice($r['forecast']['points'], 1) as $p) {
             if (isset($r['actual'][$room][$p['time']])) {
                 $errors[] = $p[$room] - $r['actual'][$room][$p['time']]['value'];

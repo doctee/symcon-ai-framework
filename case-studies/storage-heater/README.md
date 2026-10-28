@@ -226,3 +226,11 @@ Die experimentelle, vorab gespeicherte Temperaturprognose mit Vorwahl ist in
 [Prospective warming](05-prospective-warming.md) beschrieben.
 
 Der optionale separate Ventilatorvergleich ist in [Prospective fan comparison](06-fan-comparison.md) beschrieben.
+
+## Vorwahl abgebrochen oder ersetzt (0.9.1)
+
+Abgebrochene und ersetzte Vorwahlen werden unabhängig von einer neuen Vorhersage
+gekennzeichnet und von der regulären Modellbewertung ausgeschlossen. Ihre Kurven
+und Messwerte bleiben als Diagnose erhalten. Eine reguläre Ankunft ist kein
+Abbruch. Unvollständige Planhistorie wird nicht als gültiger Modelltest gewertet.
+Die Heizungsregelung, Schaltzeiten und unveränderlichen Vorhersagen bleiben erhalten.

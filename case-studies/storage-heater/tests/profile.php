@@ -67,7 +67,8 @@ foreach ([16 => 14.0, 17 => 13.0] as $id => $v) {
 $m->RefreshPlan();
 $measured = $profileRecords()[0];
 check($measured['forecast'] === $f && $measured['settledAt'] === $now, 'Disabled selection/configuration still completes existing comparison');
-check($measured['profileMetrics']['gallery']['reference']['n'] > 0, 'Measured temperatures scored');
+check($measured['diagnosticProfileMetrics']['gallery']['reference']['n'] > 0, 'Replaced profile retains measured diagnostic scores');
+check($measured['profileMetrics']['gallery']['reference']['n'] === 0 && !$measured['evaluation']['eligible'], 'Replaced profile excluded from regular scores');
 check($measured['profileMetrics']['gallery']['reference']['n'] === $measured['profileMetrics']['gallery']['profile']['n'], 'Same actual points scored for both models');
 $bad = $measured;
 $bad['forecast']['profileComparison']['points'][1]['gallery'] += .1;

@@ -15,8 +15,8 @@
     "pullRequest": {
       "repository": "doctee/saef-storage-heater",
       "base": "main",
-      "title": "feat: add prospective charge-profile temperature comparison",
-      "body": "Add a separate immutable pre-phase comparison using a calibrated charging-time profile. Paired curves share all inputs and total planned energy. Existing forecasts, fan-energy comparison and heating controls remain unchanged.\n\nValidation: packaged lifecycle, deadline, DST, energy conservation, journal integrity and measurement tests.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "title": "fix: exclude cancelled and replaced heating selections from model scoring",
+      "body": "Classify cancelled and replaced selections independently of replacement forecast issuance. Preserve frozen forecasts and measured outcomes, expose diagnostic-only scores for excluded plans, and distinguish normal arrival and timer execution. Heating control and switching schedules remain unchanged.\n\nValidation: packaged lifecycle regression, historical journal replay, forecast hash preservation and existing module suite.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
       "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
     }
   },
@@ -48,6 +48,7 @@
     "library.json",
     "libs/ArchiveReader.php",
     "libs/ChargeProfile.php",
+    "libs/ComparisonLifecycle.php",
     "libs/Cooling.php",
     "libs/CoolingObservation.php",
     "libs/CoolingView.php",

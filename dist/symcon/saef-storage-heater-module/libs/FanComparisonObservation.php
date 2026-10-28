@@ -232,8 +232,9 @@ trait FanComparisonObservation
         return ['segments' => $measured, 'mismatchSeconds' => $mismatch, 'toleranceSeconds' => 60];
     }
 
-    private function saveFanComparison(array $j): void
+    private function saveFanComparison(array &$j): void
     {
+        $j = $this->assessComparisons($j);
         $json = Forecast::encode($j);
         FanComparison::journal($json);
         if ($json !== $this->ReadAttributeString('FanComparisonJournal')) {
@@ -243,6 +244,7 @@ trait FanComparisonObservation
 
     private function fanComparisonDisplay(array $j, string $status, array $context = []): void
     {
+        $status = ComparisonLifecycle::status($j, $status);
         $this->SetValue('FanComparisonStatus', $status);
         $this->SetValue('FanComparison', FanComparisonView::render($j, $status, $context));
     }

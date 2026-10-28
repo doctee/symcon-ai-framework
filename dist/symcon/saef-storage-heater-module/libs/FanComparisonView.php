@@ -22,7 +22,9 @@ final class FanComparisonView
             . 'Laufzeit aus der bisherigen Aufwärmsimulation, nicht aus späteren Messwerten. Keine Rückkopplung der Vergleichsladung in diese Laufzeitschätzung. Kein Fenster-Energiezuschlag.</p>';
         foreach (array_reverse(array_slice($j['records'] ?? [], -5)) as $r) {
             $f = $r['forecast'];
+            $excluded = ($r['evaluation']['eligible'] ?? false) !== true;
             $html .= '<h4>Ausgabe ' . $e(self::time($f['issuedAt'])) . ' · Ankunft ' . $e(self::time($f['projection']['arrival'])) . '</h4>';
+            $html .= '<p><strong>' . $e(ComparisonLifecycle::label($r)) . '</strong></p>';
             $window = FanComparison::issueWindow($f['phaseStart']);
             if (isset($f['fanComparison']['nights'][$window['cycle']['date']])) {
                 $html .= self::schedule($window, 'Vorab gespeichert am ' . self::time($f['issuedAt']) . ' (dieser Planstand)');
@@ -33,9 +35,12 @@ final class FanComparisonView
                 . '<table style="border-collapse:collapse;width:100%"><tr><th>Nacht ab</th><th>Referenz kWh</th><th>Mit Ventilator kWh</th><th>Gemessen kWh</th><th>Fehler Referenz / Ventilator kWh</th><th>Laufzeit Prognose / Messung h</th></tr>';
             foreach ($f['fanComparison']['nights'] as $date => $night) {
                 $a = $r['nightActual'][$date] ?? [];
+                if ($excluded) {
+                    $a['errors'] = $a['diagnosticErrors'] ?? $a['errors'] ?? [];
+                }
                 $html .= '<tr><td>' . $e($date) . '</td><td>' . $n($night['predictions']['reference']['kwh'])
                     . '</td><td>' . $n($night['predictions']['candidate']['kwh']) . '</td><td>' . $n($a['kwh'] ?? null)
-                    . '</td><td>' . $n($a['errors']['reference']['signedKwh'] ?? null) . ' / ' . $n($a['errors']['candidate']['signedKwh'] ?? null)
+                    . '</td><td>' . ($excluded ? 'Nur Diagnose: ' : '') . $n($a['errors']['reference']['signedKwh'] ?? null) . ' / ' . $n($a['errors']['candidate']['signedKwh'] ?? null)
                     . '</td><td>' . $n($night['features']['night_fan_hours']) . ' / ' . $n($a['states']['fan']['hours'] ?? null) . '</td></tr>';
                 if ($night['chargePlan']['mixed'] ?? false) {
                     $parts = [];

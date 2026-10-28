@@ -9,6 +9,7 @@ require_once __DIR__ . '/../libs/Cooling.php';
 require_once __DIR__ . '/../libs/CoolingView.php';
 require_once __DIR__ . '/../libs/CoolingObservation.php';
 require_once __DIR__ . '/../libs/HeatingPlan.php';
+require_once __DIR__ . '/../libs/ComparisonLifecycle.php';
 require_once __DIR__ . '/../libs/PlanObservation.php';
 require_once __DIR__ . '/../libs/PlanView.php';
 require_once __DIR__ . '/../libs/Warming.php';
