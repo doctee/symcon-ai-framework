@@ -148,8 +148,9 @@ trait ProfileComparisonObservation
     }
 
 
-    private function saveProfileComparison(array $j): void
+    private function saveProfileComparison(array &$j): void
     {
+        $j = $this->assessComparisons($j);
         $json = Forecast::encode($j);
         ChargeProfile::journal($json);
         if ($json !== $this->ReadAttributeString('ProfileComparisonJournal')) {
@@ -159,6 +160,7 @@ trait ProfileComparisonObservation
 
     private function profileComparisonDisplay(array $j, string $status, array $context = []): void
     {
+        $status = ComparisonLifecycle::status($j, $status);
         $this->SetValue('ProfileComparisonStatus', $status);
         $this->SetValue('ProfileComparison', ChargeProfile::render($j, $status));
     }

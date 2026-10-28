@@ -245,6 +245,30 @@ trait PlanObservation
         }
     }
 
+    /** Reconcile even settled records and selections that cannot issue a replacement forecast. */
+    private function assessComparisons(array $j): array
+    {
+        $plans = HeatingPlan::journal($this->ReadAttributeString('PlanJournal'))['plans'];
+        foreach ($j['records'] as &$r) {
+            $r['evaluation'] = ComparisonLifecycle::assess($r, $plans, $this->now());
+            $r['diagnosticMetrics'] = ['gallery' => Warming::metrics($r, 'gallery', true),
+                'sofa' => Warming::metrics($r, 'sofa', true)];
+            $r['metrics'] = ['gallery' => Warming::metrics($r, 'gallery'), 'sofa' => Warming::metrics($r, 'sofa')];
+            if (isset($r['forecast']['profileComparison'])) {
+                $r['diagnosticProfileMetrics'] = ChargeProfile::metrics($r, true);
+                $r['profileMetrics'] = ChargeProfile::metrics($r);
+            }
+            foreach ($r['nightActual'] ?? [] as $date => $night) {
+                $errors = $night['diagnosticErrors'] ?? $night['errors'] ?? [];
+                $r['nightActual'][$date]['diagnosticErrors'] = $errors;
+                $r['nightActual'][$date]['errors'] = $r['evaluation']['eligible'] ? $errors : [];
+                $r['nightActual'][$date]['evaluationEligible'] = $r['evaluation']['eligible'];
+            }
+        }
+        unset($r);
+        return $j;
+    }
+
     private function planPast(array $config, array $cycle, ArchiveReader $archive, int $now): array
     {
         if ($now <= $cycle['start']) {

@@ -72,8 +72,8 @@ foreach ([16 => 12.0, 17 => 11.0] as $id => $v) {
 $m->RefreshPlan();
 $j = Warming::journal($m->GetWarmingJournalJson());
 check($j['records'][0]['forecast'] === $frozen, 'Later actual temperatures cannot overwrite forecast');
-check($j['records'][0]['metrics']['gallery']['n'] === 3, 'Initial point excluded, three future hours scored');
-check($j['records'][0]['metrics']['gallery']['mae'] > 0, 'Real forecast error retained');
+check($j['records'][0]['diagnosticMetrics']['gallery']['n'] === 3, 'Initial point excluded, three future hours scored');
+check($j['records'][0]['diagnosticMetrics']['gallery']['mae'] > 0, 'Real forecast error retained');
 check($m->attributes['Journal'] === $originalEnergy && $commands === 0, 'No device action or energy journal mutation');
 $values[40] = 0;
 $m->RefreshPlan();

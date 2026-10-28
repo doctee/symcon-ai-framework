@@ -79,7 +79,8 @@ check(($actual['status'] ?? '') === 'complete', 'Complete post-night energy meas
 check($actual['from'] === $night['cycle']['start'] && $actual['until'] === $night['cycle']['end'], 'Exactly matching 22–07 measurement window');
 check($actual['states']['fan']['hours'] == 0 && $actual['fanHoursError'] > 0, 'Actual duty scores forecast duty but never replaces it');
 check($fj['records'][0]['forecast'] === $ff, 'Measurements and plan cancellation cannot modify the forecast');
-check(isset($actual['errors']['candidate']['absoluteKwh']), 'Signed and absolute errors retained');
+check(isset($actual['diagnosticErrors']['candidate']['absoluteKwh']), 'Replaced forecast retains diagnostic errors');
+check($actual['errors'] === [] && !$actual['evaluationEligible'], 'Replaced forecast excluded from regular errors');
 check($m->attributes['Journal'] === $oldEnergy && $commands === 0, 'No existing energy journal writes or actuator calls');
 $errors = FanComparison::errors($night, .01);
 check($errors['candidate']['percent'] === null, 'Standby-only night does not produce misleading percent error');

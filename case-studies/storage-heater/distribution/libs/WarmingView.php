@@ -30,9 +30,11 @@ final class WarmingView
         }
         foreach (array_reverse(array_slice($records, -6)) as $i => $r) {
             $f = $r['forecast'];
+            $excluded = ($r['evaluation']['eligible'] ?? false) !== true;
             $last = end($f['points']);
             $html .= '<details' . ($i === 0 ? ' open' : '') . '><summary>Planstand ' . self::time($f['issuedAt']) . ' · bis ' . self::time($f['end']) . '</summary>';
             $html .= '<p>' . ($f['beforePhase'] ? 'Vor Aufwärmbeginn gespeichert.' : 'Während der Aufwärmphase gespeichert; keine Vorhersage des bereits vergangenen Beginns.') . ' Ankunft laut diesem Plan: ' . self::time($f['plan']['inputs']['values']['arrival']) . '.</p>';
+            $html .= '<p><strong>' . self::e(ComparisonLifecycle::label($r)) . '</strong></p>';
             if (isset($r['supersededAt'])) {
                 $html .= '<p>Ein neuer beobachteter Plan-/Betriebsstand wurde am ' . self::time($r['supersededAt']) . ' gespeichert. Diese ältere Kurve wird unverändert weiter verglichen.</p>';
             }
@@ -62,9 +64,9 @@ final class WarmingView
                     . number_format($w['differentFromAssumptionHours'], 1, ',', '') . ' h anders als angenommen. Regler-Absenkung aus Kontaktverläufen: ' . number_format($w['setbackHours'], 1, ',', '') . ' h.</p>';
             }
             foreach (['gallery' => 'Galerie', 'sofa' => 'Wohnzimmer'] as $room => $label) {
-                $score = Warming::metrics($r, $room);
+                $score = Warming::metrics($r, $room, true);
                 $html .= '<h4>' . $label . '</h4>' . self::chart($r, $room, $label);
-                $html .= '<p>' . $score['n'] . '/' . $score['expected'] . ' Vergleichspunkte';
+                $html .= '<p>' . ($excluded ? 'Nur Diagnose: ' : '') . $score['n'] . '/' . $score['expected'] . ' Vergleichspunkte';
                 if ($score['n'] > 0) {
                     $html .= ' · mittlerer absoluter Fehler ' . number_format($score['mae'], 2, ',', '') . ' °C · Prognose minus Messung ' . number_format($score['bias'], 2, ',', '') . ' °C';
                 }
