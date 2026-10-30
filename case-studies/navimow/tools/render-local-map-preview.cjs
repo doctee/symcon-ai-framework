@@ -295,7 +295,7 @@ const viewports = [
             const matchedZones = measurement.zoneCenters.every(
                 (zone) => zone !== null
             );
-            const expectedButtonTop = viewport.touch ? 46 : 48;
+            const expectedButtonTop = 9;
             const activationX = measurement.followButton.left
                 + measurement.followButton.width / 2;
             const activationY = measurement.followButton.top + 0.5;
@@ -316,9 +316,10 @@ const viewports = [
             const checks = {
                 fourControls: measurement.buttonCount === 4,
                 zoneSelectorRemoved: measurement.hasZoneSelector === false,
-                frameAboveInteractionBoundary:
-                    measurement.navigation.top < expectedButtonTop,
-                buttonsAtInteractionBoundary: measurement.buttonTops.every(
+                toolbarInset:
+                    Math.abs(measurement.navigation.top - 6) <= 0.5
+                    && Math.abs(measurement.navigation.left - 16) <= 0.5,
+                buttonsAtToolbarTop: measurement.buttonTops.every(
                     (top) => Math.abs(top - expectedButtonTop) <= 0.5
                 ),
                 boundaryPointerActivation:
@@ -358,6 +359,18 @@ const viewports = [
                         row.zoneColor === measurement.zoneCenters[index].color
                     )),
             };
+            checks.noticeDoesNotCoverToolbar = await page.evaluate(() => {
+                const status = document.querySelector('[data-status]');
+                const previous = status.textContent;
+                status.textContent = 'Positionsdaten veraltet';
+                const a = status.getBoundingClientRect();
+                const b = document.querySelector('.nav-map__navigation').getBoundingClientRect();
+                status.textContent = previous;
+                return a.bottom <= b.top || a.top >= b.bottom
+                    || a.right <= b.left || a.left >= b.right;
+            });
+            await page.locator('[data-fit]').click();
+            await page.evaluate(() => new Promise(requestAnimationFrame));
             await page.screenshot({
                 path: path.join(outputRoot, viewport.name + '.png'),
                 fullPage: true,
