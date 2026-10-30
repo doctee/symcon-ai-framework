@@ -9,6 +9,10 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+- Render Navimow tracks with muted zone-matching paint, rounded 2.3 px strokes
+  and unchanged recorded geometry. Move the compact map controls up and right,
+  keeping status notices separate and preserving mobile statistics/details.
+
 - Add an opt-in ControlLight CWWW transport adapter and per-lamp Kelvin profile
   contract, reusing existing lifecycle and diagnostics helpers. Cover coherent
   feedback, command/receive separation, readiness, bounded confirmation and

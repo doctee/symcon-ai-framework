@@ -184,11 +184,46 @@ assertLocalMapSvg(
     str_contains($lightSvg, 'data-theme="light"')
         && str_contains($lightSvg, '.background{fill:#f8fafc}')
         && str_contains($lightSvg, '.path{fill:none;stroke-width:')
-        && str_contains($lightSvg, '.path-age-0{stroke:#111827}')
-        && str_contains($lightSvg, '.path-age-3{stroke:#cbd5e1}')
+        && str_contains($lightSvg, '.path-age-0{stroke-opacity:.35}')
+        && str_contains($lightSvg, '.path-age-3{stroke-opacity:.30}')
         && str_contains($lightSvg, '.legend-background{fill:#ffffff')
         && str_contains($lightSvg, 'fill:#1f2937'),
     'Explicit light theme differs.'
+);
+foreach ([$svg, $lightSvg] as $paintedSvg) {
+    $document = new DOMDocument();
+    assertLocalMapSvg($document->loadXML($paintedSvg), 'Invalid painted SVG.');
+    $xpath = new DOMXPath($document);
+    $xpath->registerNamespace('svg', 'http://www.w3.org/2000/svg');
+    $zones = $xpath->query('//svg:polygon[@data-zone-sequence]');
+    $paintZones = $xpath->query('//svg:pattern/svg:polygon');
+    assertLocalMapSvg(
+        $zones !== false && $paintZones !== false
+            && $zones->length === $paintZones->length,
+        'Track paint must cover exactly the rendered zones.'
+    );
+    foreach ($zones as $index => $zone) {
+        assertLocalMapSvg(
+            $zone instanceof DOMElement
+                && $paintZones->item($index) instanceof DOMElement
+                && $zone->getAttribute('points')
+                    === $paintZones->item($index)->getAttribute('points'),
+            'Track paint must use the unmodified projected zone boundary.'
+        );
+    }
+    assertLocalMapSvg(
+        str_contains($paintedSvg, '.path{fill:none;stroke-width:2.3;')
+            && str_contains($paintedSvg, 'stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke')
+            && str_contains($paintedSvg, '.path{stroke:url(#track-paint-'),
+        'Track width, rounded joins or zone paint differs.'
+    );
+}
+assertLocalMapSvg(
+    str_contains($svg, 'fill="#a38a9a"')
+        && str_contains($svg, 'fill="#a79b80"')
+        && str_contains($svg, 'fill="#839e90"')
+        && str_contains($svg, 'fill="#939a9d"'),
+    'Muted zone and outside track colors differ.'
 );
 assertLocalMapSvg(
     str_contains(
