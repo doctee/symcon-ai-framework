@@ -68,6 +68,7 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/libs/Navimow/MqttTransportConfiguration.php \
     case-studies/navimow/distribution/libs/Navimow/PayloadMapper.php \
     case-studies/navimow/distribution/libs/Navimow/RevisionBoundedTrackStore.php \
+    case-studies/navimow/distribution/libs/Navimow/RetainedMapPath.php \
     case-studies/navimow/distribution/libs/Navimow/ZoneStatisticsReducer.php \
     case-studies/navimow/candidate/MapGeometryReducer.php \
     case-studies/navimow/candidate/MowingAnalyticsReducer.php \
@@ -111,6 +112,7 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/distribution/libs/Navimow/MqttTaskObservationLedger.php \
     case-studies/navimow/distribution/libs/Navimow/MqttTransportConfiguration.php \
     case-studies/navimow/distribution/libs/Navimow/RevisionBoundedTrackStore.php \
+    case-studies/navimow/distribution/libs/Navimow/RetainedMapPath.php \
     case-studies/navimow/distribution/libs/Navimow/ZoneStatisticsReducer.php \
     case-studies/navimow/candidate/MapGeometryReducer.php \
     case-studies/navimow/candidate/MowingAnalyticsReducer.php \
@@ -121,5 +123,7 @@ php case-studies/navimow/tools/validate-distribution.php
     case-studies/navimow/tests/revision-bounded-track-store.php \
     case-studies/navimow/tests/mqtt-position-path-contract.php \
     case-studies/navimow/tests/mqtt-continuous-operation.php
+
+php case-studies/navimow/tests/retained-map-path.php
 
 printf '%s\n' "Navimow MQTT shadow offline checks passed."
