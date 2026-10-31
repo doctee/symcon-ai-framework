@@ -9,6 +9,12 @@ This project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+- Preserve the last drawable Navimow track independently of midnight, idle
+  points and rolling telemetry expiry. Keep display history revision-bound
+  and bounded, with dated/partial labels and an independent live marker.
+  Preserve stationary and fault telemetry for future diagnosis; no alarms
+  or mower commands are introduced.
+
 - Render Navimow tracks with muted zone-matching paint, rounded 2.3 px strokes
   and unchanged recorded geometry. Move the compact map controls up and right,
   keeping status notices separate and preserving mobile statistics/details.

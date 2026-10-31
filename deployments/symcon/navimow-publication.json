@@ -76,6 +76,7 @@
     "libs/Navimow/OAuthHelper.php",
     "libs/Navimow/PayloadMapper.php",
     "libs/Navimow/Profiles.php",
+    "libs/Navimow/RetainedMapPath.php",
     "libs/Navimow/RevisionBoundedTrackStore.php",
     "libs/Navimow/ZoneStatisticsReducer.php",
     "libs/SAEF/helpers/diagnostics/ConfigurationHash.php"

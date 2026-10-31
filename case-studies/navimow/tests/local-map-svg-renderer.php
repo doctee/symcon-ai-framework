@@ -29,6 +29,23 @@ function assertLocalMapSvgRejected(
 }
 
 $svg = LocalMapSvgRenderer::render($scene);
+$historyScene = $scene;
+$historyScene['positionPath'] = $scene['path'];
+$historyScene['path'] = [
+    'segments' => [],
+    'displayHistory' => ['observedAt' => 1700000000, 'truncated' => true],
+];
+$historySvg = LocalMapSvgRenderer::render($historyScene);
+preg_match('/<g class="mower mower-[^>]+>/', $svg, $originalMarker);
+preg_match('/<g class="mower mower-[^>]+>/', $historySvg, $historyMarker);
+assertLocalMapSvg(
+    $originalMarker !== [] && $originalMarker === $historyMarker,
+    'Historical track changed the live mower marker.'
+);
+assertLocalMapSvg(
+    str_contains($historySvg, 'Fahrspur ' . date('d.m.', 1700000000) . ' *'),
+    'Historical path date/partial marker missing.'
+);
 $configuredSvg = LocalMapSvgRenderer::render(
     $scene,
     [
