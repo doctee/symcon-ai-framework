@@ -83,7 +83,7 @@ final class WarmingView
         return $html . '<p>Letzte 6 Planstände · maximal 48 im Journal · ' . ($j['discarded'] ?? 0) . ' abgeschlossene Stände durch Aufbewahrungsgrenze entfernt. Die Heizungsregelung bleibt unverändert.</p></div>';
     }
 
-    private static function chart(array $r, string $room, string $label): string
+    public static function chart(array $r, string $room, string $label): string
     {
         $f = $r['forecast'];
         $values = array_column($f['points'], $room);

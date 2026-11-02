@@ -247,3 +247,23 @@ gekennzeichnet und von der regulären Modellbewertung ausgeschlossen. Ihre Kurve
 und Messwerte bleiben als Diagnose erhalten. Eine reguläre Ankunft ist kein
 Abbruch. Unvollständige Planhistorie wird nicht als gültiger Modelltest gewertet.
 Die Heizungsregelung, Schaltzeiten und unveränderlichen Vorhersagen bleiben erhalten.
+
+## Spontanbesuche (0.10.0)
+
+Ein beobachteter Wechsel von abwesend auf anwesend im Winter ohne aktive oder zuvor
+vorgewählte Aufwärmung startet eine eigene Temperaturkurve für zwölf Stunden.
+Die aktuelle Lüfterfreigabe und der Galerie-Thermostat bestimmen den simulierten
+Lauf. Die Abreisezeit ist bei Ankunft offen. Bei Abreise und bei einem Wechsel
+der wirksamen Lüfterfreigabe entsteht ein neuer Stand mit eigener Ausgabezeit.
+Ab Abreise gilt standardmäßig eine Nachlaufannahme von 240 Minuten
+(`visitRunOnMinutes` in `WarmingOptionsJSON`, 0–720). Danach simuliert das
+Modell gesperrten Lüfter, abgesenkten Speicher und zwei weitere Stunden.
+Der Nachlauf bezeichnet die Freigabe, die tatsächliche Relaislaufzeit kommt aus dem Archiv.
+
+`VisitComparison` zeigt Kurven und Messabdeckung beider Räume je Besuch und Stand.
+`SHF_GetVisitJournalJson` exportiert Vorhersagen, Modellannahmen, tatsächlichen Betrieb,
+Fehler je Szenario und Fehler bis zum nächsten beobachteten Zustandswechsel.
+Alle Stände eines Besuchs tragen denselben Ankunftszeitstempel. Nur Punkte nach der
+Speicherung zählen. Fehlende Messwerte bleiben offen. Die regulären Aufwärmserien
+werden separat geführt. Bei Erststart in Anwesenheit beginnt die Erfassung mit
+dem nächsten beobachteten Besuch. Das Journal hält bis zu 48 Stände und 3 MiB.

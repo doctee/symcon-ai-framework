@@ -15,8 +15,8 @@
     "pullRequest": {
       "repository": "doctee/saef-storage-heater",
       "base": "main",
-      "title": "fix: exclude cancelled and replaced heating selections from model scoring",
-      "body": "Classify cancelled and replaced selections independently of replacement forecast issuance. Preserve frozen forecasts and measured outcomes, expose diagnostic-only scores for excluded plans, and distinguish normal arrival and timer execution. Heating control and switching schedules remain unchanged.\n\nValidation: packaged lifecycle regression, historical journal replay, forecast hash preservation and existing module suite.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "title": "feat: forecast room temperatures during spontaneous visits",
+      "body": "Store separate arrival, departure and fan permission forecasts. Compare gallery and living-room temperatures and observed fan runtime per visit.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
       "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
     }
   },
@@ -61,6 +61,7 @@
     "libs/PlanObservation.php",
     "libs/PlanView.php",
     "libs/ProfileComparisonObservation.php",
+    "libs/VisitObservation.php",
     "libs/Warming.php",
     "libs/WarmingObservation.php",
     "libs/WarmingView.php",
