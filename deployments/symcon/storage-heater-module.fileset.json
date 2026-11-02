@@ -81,6 +81,10 @@
       "target": "libs/ProfileComparisonObservation.php"
     },
     {
+      "source": "case-studies/storage-heater/distribution/libs/VisitObservation.php",
+      "target": "libs/VisitObservation.php"
+    },
+    {
       "source": "case-studies/storage-heater/distribution/libs/Warming.php",
       "target": "libs/Warming.php"
     },

@@ -15,6 +15,7 @@ require_once __DIR__ . '/../libs/PlanView.php';
 require_once __DIR__ . '/../libs/Warming.php';
 require_once __DIR__ . '/../libs/WarmingWeather.php';
 require_once __DIR__ . '/../libs/WarmingObservation.php';
+require_once __DIR__ . '/../libs/VisitObservation.php';
 require_once __DIR__ . '/../libs/WarmingView.php';
 require_once __DIR__ . '/../libs/FanComparison.php';
 require_once __DIR__ . '/../libs/ChargeProfile.php';
@@ -44,6 +45,7 @@ class StorageHeaterForecast extends IPSModule
     use \SAEF\StorageHeater\CoolingObservation;
     use \SAEF\StorageHeater\PlanObservation;
     use \SAEF\StorageHeater\WarmingObservation;
+    use \SAEF\StorageHeater\VisitObservation;
     use \SAEF\StorageHeater\FanComparisonObservation;
     use \SAEF\StorageHeater\ProfileComparisonObservation;
 
@@ -53,6 +55,7 @@ class StorageHeaterForecast extends IPSModule
         $this->createCooling();
         $this->createPlan();
         $this->createWarming();
+        $this->createVisits();
         $this->createFanComparison();
         $this->createProfileComparison();
         $this->RegisterPropertyBoolean('Enabled', false);
@@ -207,6 +210,7 @@ class StorageHeaterForecast extends IPSModule
                 $this->observeWarming($config, $now);
                 $this->observeFanComparison($config, $now);
                 $this->observeProfileComparison($config, $now);
+                $this->observeVisits($config, $now);
             }
             IPS_SemaphoreLeave($lock);
         }

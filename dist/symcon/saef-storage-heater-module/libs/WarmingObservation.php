@@ -294,7 +294,7 @@ trait WarmingObservation
             'assumption' => 'Effective charge-memory initialized to zero seven days earlier; recent tail uses total kW.'];
     }
 
-    private function issueWarming(array $c, array $config, array $plan, int $now): array
+    private function issueWarming(array $c, array $config, array $plan, int $now, ?array $visit = null): array
     {
         $b = $c['bindings'];
         $window = $plan['inputs']['window'] ?? null;
@@ -314,18 +314,24 @@ trait WarmingObservation
         if (in_array(null, array_column($current, 'value'), true) || (isset($b['auxiliary']) && GetValue($b['auxiliary']))) {
             throw new RuntimeException('Frische Temperaturwerte erforderlich; Zusatzheizung muss aus sein.');
         }
-        $end = min($plan['inputs']['values']['arrival'], $now + 48 * 3600);
-        $projection = HeatingPlan::project($plan, ['start' => $now, 'end' => $end], $now);
-        $phase = [];
-        foreach (['storage', 'fan'] as $name) {
-            if ($plan['inputs']['values'][$name . 'Requested']) {
-                $phase[] = $plan['inputs']['changedAt'][$name . 'Requested'];
-            } elseif ($projection[$name . 'Start'] !== null) {
-                $phase[] = $projection[$name . 'Start'];
+        if ($visit === null) {
+            $end = min($plan['inputs']['values']['arrival'], $now + 48 * 3600);
+            $projection = HeatingPlan::project($plan, ['start' => $now, 'end' => $end], $now);
+            $phase = [];
+            foreach (['storage', 'fan'] as $name) {
+                if ($plan['inputs']['values'][$name . 'Requested']) {
+                    $phase[] = $plan['inputs']['changedAt'][$name . 'Requested'];
+                } elseif ($projection[$name . 'Start'] !== null) {
+                    $phase[] = $projection[$name . 'Start'];
+                }
             }
-        }
-        if ($phase === []) {
-            throw new RuntimeException('Vorwahl enthält keinen gültigen Aufwärmstart.');
+            if ($phase === []) {
+                throw new RuntimeException('Vorwahl enthält keinen gültigen Aufwärmstart.');
+            }
+        } else {
+            $end = $now + $visit['horizonSeconds'];
+            $projection = $this->visitProjection($plan, $now, $end, $visit);
+            $phase = [$visit['arrivalAt']];
         }
         $history = $this->warmingHistory($c, $now, $a);
         $weatherEnd = (int) (ceil(($end + 3600) / 3600) * 3600);
@@ -389,6 +395,9 @@ trait WarmingObservation
                 'charge_uniform_23_07_no_grid_interruptions', 'mass_initialized_equal_to_air', 'effective_store_not_SOC',
                 'solar_DNI_DHI_horizontal_approximation', 'floor_duty_last_24h_held', 'future_door_states_unknown',
                 'window_ventilation_heat_loss_not_calibrated', 'future_fan_charge_feedback_not_calibrated', 'living_fan_coefficient_not_identifiable', '48h_and_living_18C_not_validated']];
+        if ($visit !== null) {
+            $f['visit'] = $visit;
+        }
         $f['points'] = Warming::predict($f);
         return ['configurationHash' => $c['hash'], 'bindings' => $b, 'historyStart' => $c['historyStart'],
             'forecast' => $f, 'actual' => [], 'measurementErrors' => [], 'settledAt' => null, 'checkedAt' => 0];
