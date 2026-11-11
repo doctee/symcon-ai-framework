@@ -143,13 +143,18 @@ final class CwwwLightTargetRuntime
         }
     }
 
-    /** Only a raw update admits data; any online transition invalidates readiness. */
+    /** Only a raw update admits data; observed offline invalidates readiness. */
     public function receive(int $sourceVariableID): void
     {
         if (!in_array($sourceVariableID, [$this->ids['raw'], $this->ids['online']], true)) {
             throw new InvalidArgumentException('Unexpected CWWW receive source.');
         }
         $this->locked(function () use ($sourceVariableID): void {
+            // An online handler may run after a raw handler has already committed
+            // feedback. Online alone must neither admit data nor revoke that commit.
+            if ($sourceVariableID === $this->ids['online'] && \GetValue($this->ids['online']) === true) {
+                return;
+            }
             $this->write('ready', false);
             if ($sourceVariableID === $this->ids['online'] || \GetValue($this->ids['online']) !== true) {
                 return;
@@ -200,7 +205,12 @@ final class CwwwLightTargetRuntime
 
     private function requireReady(): void
     {
-        if (\GetValue($this->ids['online']) !== true || \GetValue($this->ids['ready']) !== true) {
+        if (\GetValue($this->ids['online']) !== true) {
+            // Remember offline even when a command observes it before its event.
+            $this->write('ready', false);
+            throw new RuntimeException('CWWW target offline or not initialized.');
+        }
+        if (\GetValue($this->ids['ready']) !== true) {
             throw new RuntimeException('CWWW target offline or not initialized.');
         }
         $raw = \GetValue($this->ids['raw']);

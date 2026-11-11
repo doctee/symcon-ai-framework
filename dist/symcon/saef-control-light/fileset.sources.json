@@ -59,7 +59,7 @@
         },
         {
             "path": "case-studies/control-light/candidate/CwwwLightTargetRuntime.php",
-            "sha256": "e1c88c0023290719289d0d23a8a439f9b3b281797a4182fa00558eac52e6bf01"
+            "sha256": "373b0a4173b7770ad827ee47d6b914afb60bc48bd59fa0959edd60c633ee629c"
         },
         {
             "path": "case-studies/control-light/candidate/HueWallSwitchCore.php",
@@ -91,7 +91,7 @@
         }
     ],
     "bootstrapSha256": "6566331029338904d9e0a04cae178b28b9b92c83e4e51de8ed0d4def3de21096",
-    "filesetSha256": "b3eeb611183d82b0b74616d708f62612edc00503f0981326d85ba995b484830e",
+    "filesetSha256": "236414a3d2c07c23e60cbca3df5efd452ff83a58068e399734ffcb7b54ff0606",
     "functionExports": [
         "SAEF_AppendErrorRingBufferEntry",
         "SAEF_ClearErrorRingBuffer",
