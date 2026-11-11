@@ -264,6 +264,35 @@ $runtime->receive(11003);
 $reject(fn() => $runtime->assertReady());
 $assert(!GetValue(11004), 'Reconnect alone cannot admit retained state');
 $runtime->receive(11001);
+CwwwTargetFake::$writes = [];
+$runtime->receive(11003);
+$assert(GetValue(11004), 'Late online handler must preserve committed raw feedback');
+$assert(CwwwTargetFake::$writes === [], 'Online notification neither admits nor invalidates data');
+$runtime->assertReady();
+$runtime->receive(11003);
+$runtime->assertReady();
+$assert(CwwwTargetFake::$writes === [], 'Duplicate online notification is write-free');
+// Both event execution orders after online=true and a fresh raw update.
+foreach ([[11003, 11001], [11001, 11003]] as $order) {
+    CwwwTargetFake::$values[11003] = false;
+    $runtime->receive(11003);
+    CwwwTargetFake::$values[11003] = true;
+    $actionsBefore = count(CwwwTargetFake::$actions);
+    foreach ($order as $source) {
+        $runtime->receive($source);
+    }
+    $runtime->assertReady();
+    $assert(GetValue(11004), 'Reconnect event order must not change readiness');
+    $assert(count(CwwwTargetFake::$actions) === $actionsBefore, 'Reception never sends a command');
+}
+// A raw handler running while still offline must not admit old data on online.
+CwwwTargetFake::$values[11003] = false;
+$runtime->receive(11001);
+CwwwTargetFake::$values[11003] = true;
+$runtime->receive(11003);
+$reject(fn() => $runtime->assertReady());
+$assert(!GetValue(11004), 'Raw received while offline needs another complete update');
+$runtime->receive(11001);
 CwwwTargetFake::$failWrite = 11007;
 $reject(fn() => $runtime->receive(11001));
 $assert(!GetValue(11004) && !CwwwTargetFake::$locked, 'Failed publish remains unavailable');

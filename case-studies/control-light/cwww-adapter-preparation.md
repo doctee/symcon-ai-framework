@@ -125,7 +125,16 @@ belong in the coupled migration gate, not ordinary action dispatch.
   Reconciliation never runs implicitly on commands or receive events.
 - `handle()` accepts only validated Action/Variable contexts. Receive reads the
   latest raw value under a per-target lock and publishes readiness last. An
-  online transition invalidates readiness until the next complete raw update.
+  observed offline state invalidates readiness until the next complete raw update.
+  An online notification alone neither admits data nor invalidates a completed
+  raw-feedback commit: its handler may execute after the raw handler. Both
+  handlers remain serialized by the existing target semaphore. A raw handler
+  that runs while offline still needs another complete raw update after online.
+  No timestamp comparison, replay, retry or device command is added. This is
+  not a session-generation guarantee: an offline interval never observed by a
+  handler cannot be reconstructed from the current Boolean alone.
+  Command-side readiness checks also invalidate readiness when they observe
+  offline before the receive callback runs.
 - `dispatch()` uses RequestAction on command output; it never writes target values.
   Lock is held only for bounded transport dispatch, not confirmation waiting.
 - `assertReady()` verifies online, readiness and that all targets match the latest
