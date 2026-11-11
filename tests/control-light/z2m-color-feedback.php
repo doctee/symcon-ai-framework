@@ -15,13 +15,19 @@ $check = static function (bool $ok, string $message) use (&$checks): void {
 $base = ['preset' => 'Z2M', 'identColor' => 'color', 'brightnessSemantics' => 'reported'];
 $ordinary = ControlLightCore::normalizeConfiguration($base);
 $configured = ControlLightCore::normalizeConfiguration($base + ['colorFeedbackQuantization' => 'z2m-v6-rgb']);
+// Pin the private provider-byte boundary without exposing a new public API.
+$byteRounder = new ReflectionMethod(ControlLightCore::class, 'z2mRgbByte');
+foreach ([[190.49999999999997, 190], [190.5, 191], [190.50000000000003, 191],
+    [0.49999999999999994, 0], [0.5, 1], [0.5000000000000001, 1], [0.0, 0], [255.0, 255]] as [$value, $expected]) {
+    $check($byteRounder->invoke(null, $value) === $expected, sprintf('Provider byte rounding changed for %.17g on PHP %s', $value, PHP_VERSION));
+}
 $vectors = json_decode(file_get_contents(__DIR__ . '/fixtures/z2m-color-feedback.json'), true, 16, JSON_THROW_ON_ERROR)['vectors'];
 foreach ($vectors as $vector) {
     $input = (int)hexdec($vector['input']);
     $valid = array_unique([$input, (int)hexdec($vector['xy']), (int)hexdec($vector['hs'])]);
     $check(ControlLightCore::localToTarget('color', $input, $configured) === $input, 'Original color command changed');
     foreach ($valid as $report) {
-        $check(ControlLightCore::targetValueMatches('color', $input, $report, $configured), 'Exact representation rejected');
+        $check(ControlLightCore::targetValueMatches('color', $input, $report, $configured), sprintf('Exact representation rejected: input=%06X report=%06X PHP=%s', $input, $report, PHP_VERSION));
         $check(ControlLightCore::targetValueMatches('color', $input, $report, $ordinary) === ($input === $report), 'Default RGB comparison changed');
         foreach ([$report ^ 1, $report ^ 0x100, $report ^ 0x10000] as $wrong) {
             if (!in_array($wrong, $valid, true)) {

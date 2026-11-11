@@ -1146,7 +1146,7 @@ final class ControlLightCore
         foreach ($channels as $channel) {
             $channel /= $scale;
             $encoded = $channel <= 0.0031308 ? 12.92 * $channel : 1.055 * $channel ** (1 / 2.4) - 0.055;
-            $bytes[] = self::limitInteger((int)round($encoded * 255), 0, 255);
+            $bytes[] = self::z2mRgbByte($encoded * 255);
         }
         return ($bytes[0] << 16) | ($bytes[1] << 8) | $bytes[2];
     }
@@ -1181,8 +1181,20 @@ final class ControlLightCore
             2 => [$low, $value, $rising], 3 => [$low, $falling, $value],
             4 => [$rising, $low, $value], default => [$value, $low, $falling],
         };
-        $bytes = array_map(static fn(float $v): int => self::limitInteger((int)round($v * 255), 0, 255), $channels);
+        $bytes = array_map(static fn(float $v): int => self::z2mRgbByte($v * 255), $channels);
         return ($bytes[0] << 16) | ($bytes[1] << 8) | $bytes[2];
+    }
+
+    /**
+     * Round finite provider RGB channels to the nearest byte, ties upward.
+     * PHP <8.4 round() pre-rounds values just below a half boundary upward.
+     * Compare the actual fractional part instead; do not add an epsilon or
+     * accept adjacent RGB values. This only affects the opt-in Z2M matcher.
+     */
+    private static function z2mRgbByte(float $value): int
+    {
+        $lower = floor($value);
+        return self::limitInteger((int)$lower + ($value - $lower >= 0.5 ? 1 : 0), 0, 255);
     }
 
     /** @return array{0: float, 1: float} */
