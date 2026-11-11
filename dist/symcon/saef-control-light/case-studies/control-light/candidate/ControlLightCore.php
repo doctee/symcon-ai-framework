@@ -301,14 +301,22 @@ final class ControlLightCore
         $normalized['colorFeedbackQuantization'] = self::requireEnum(
             $merged,
             'colorFeedbackQuantization',
-            ['none', 'ha-matter-hs-254-truncate']
+            ['none', 'ha-matter-hs-254-truncate', 'z2m-v6-rgb']
         );
         if (
-            $normalized['colorFeedbackQuantization'] !== 'none'
+            $normalized['colorFeedbackQuantization'] === 'ha-matter-hs-254-truncate'
             && ($normalized['colorTargetFormat'] !== 'HS_ARRAY_STRING'
                 || !$normalized['capabilities']['color']['enabled'])
         ) {
             throw new InvalidArgumentException('HS feedback quantization requires an enabled HS color capability.');
+        }
+        if (
+            $normalized['colorFeedbackQuantization'] === 'z2m-v6-rgb'
+            && ($preset !== 'Z2M' || $normalized['colorTargetFormat'] !== 'INT_HEX'
+                || !$normalized['capabilities']['color']['enabled']
+                || !$normalized['capabilities']['brightness']['enabled'])
+        ) {
+            throw new InvalidArgumentException('Z2M RGB feedback requires a Z2M RGB target with separate brightness.');
         }
 
         // Opt-in only: do not change existing normalized contracts or hashes.
@@ -333,6 +341,30 @@ final class ControlLightCore
             $normalized['capabilities']['colorTemperature']['profile'] = $profile;
         }
 
+        // A single normalized float LEVEL carries both power and brightness.
+        // Opt-in only: preserve all existing normalized configuration hashes.
+        if (array_key_exists('levelTarget', $configuration)) {
+            if (
+                $configuration['levelTarget'] !== true
+                || !$normalized['capabilities']['state']['enabled']
+                || !$normalized['capabilities']['brightness']['enabled']
+                || $normalized['capabilities']['state']['targetIdent'] !== $normalized['capabilities']['brightness']['targetIdent']
+                || $normalized['capabilities']['state']['targetType'] !== 2
+                || $normalized['capabilities']['brightness']['targetType'] !== 2
+                || $normalized['capabilities']['color']['enabled']
+                || $normalized['capabilities']['colorTemperature']['enabled']
+                || $normalized['groupFeedback']['enabled']
+                || $normalized['stateCommandMode'] !== self::STATE_COMMAND_BIDIRECTIONAL
+                || $normalized['brightnessSemantics'] !== self::BRIGHTNESS_EFFECTIVE
+                || $normalized['dimmerTargetMax'] !== 1
+                || isset($normalized['brightnessRange'])
+                || ($normalized['brightnessOffStateTransition']['mode'] ?? '') !== 'target-turns-on'
+            ) {
+                throw new InvalidArgumentException('levelTarget requires one float LEVEL, effective brightness and direct dim start.');
+            }
+            $normalized['levelTarget'] = true;
+        }
+
         return $normalized;
     }
 
@@ -350,6 +382,18 @@ final class ControlLightCore
     public static function localToTarget(string $capability, mixed $value, array $configuration): mixed
     {
         self::assertCapabilityEnabled($capability, $configuration);
+        if (
+            $capability === 'color' && $configuration['colorFeedbackQuantization'] === 'z2m-v6-rgb'
+            && (!is_int($value) || $value <= 0 || $value > 0xFFFFFF)
+        ) {
+            throw new InvalidArgumentException('Z2M color requires a non-black RGB value; use STATE for OFF.');
+        }
+
+        if (($configuration['levelTarget'] ?? false) === true) {
+            return $capability === 'state'
+                ? ((bool)$value ? 1.0 : 0.0)
+                : self::limitInteger((int)$value, 0, 100) / 100.0;
+        }
 
         return match ($capability) {
             'state' => (bool)$value,
@@ -373,6 +417,11 @@ final class ControlLightCore
     ): mixed {
         self::assertCapabilityEnabled($capability, $configuration);
 
+        if (($configuration['levelTarget'] ?? false) === true) {
+            $level = self::requireLevel($value);
+            return $capability === 'state' ? $level > 0.0 : (int)round($level * 100);
+        }
+
         return match ($capability) {
             'state' => (bool)$value,
             'brightness' => self::targetBrightnessToLocal((int)$value, $configuration, $targetState),
@@ -393,6 +442,15 @@ final class ControlLightCore
         mixed $actualTargetValue,
         array $configuration
     ): bool {
+        if (($configuration['levelTarget'] ?? false) === true) {
+            $expected = self::requireLevel($expectedTargetValue);
+            $actual = self::requireLevel($actualTargetValue);
+            // Never accept OFF as a small positive dim value, or vice versa.
+            if (($actual > 0.0) !== ($expected > 0.0)) {
+                return false;
+            }
+            return $capability === 'state' || abs($actual - $expected) <= 0.005 + PHP_FLOAT_EPSILON;
+        }
         return match ($capability) {
             'state' => (bool)$actualTargetValue === (bool)$expectedTargetValue,
             'brightness' => abs((int)$actualTargetValue - (int)$expectedTargetValue) <= 1,
@@ -408,6 +466,17 @@ final class ControlLightCore
             ),
             default => throw new InvalidArgumentException('Unsupported capability: ' . $capability),
         };
+    }
+
+    private static function requireLevel(mixed $value): float
+    {
+        if (
+            (!is_float($value) && !is_int($value)) || !is_finite((float)$value)
+            || $value < 0 || $value > 1
+        ) {
+            throw new InvalidArgumentException('LEVEL feedback must be finite numeric 0..1.');
+        }
+        return (float)$value;
     }
 
     /** @param array<string, mixed> $configuration Normalized configuration. */
@@ -627,8 +696,17 @@ final class ControlLightCore
             );
         }
 
-        return [
-            'enabled' => $targetIdent !== '',
+        $source = [];
+        if (array_key_exists('sourceVariableID', $availability)) {
+            $sourceID = $availability['sourceVariableID'];
+            if (!is_int($sourceID) || $sourceID <= 0 || $targetIdent !== '') {
+                throw new InvalidArgumentException('Explicit availability requires a positive variable ID and no targetIdent.');
+            }
+            $source['sourceVariableID'] = $sourceID;
+        }
+
+        return $source + [
+            'enabled' => $source !== [] || $targetIdent !== '',
             'targetIdent' => $targetIdent,
             'targetType' => $targetType,
             'availableValue' => $availableValue,
@@ -991,6 +1069,18 @@ final class ControlLightCore
         mixed $actualTargetValue,
         array $configuration
     ): bool {
+        if ($configuration['colorFeedbackQuantization'] === 'z2m-v6-rgb') {
+            if (
+                !is_int($expectedTargetValue) || !is_int($actualTargetValue)
+                || $expectedTargetValue <= 0 || $expectedTargetValue > 0xFFFFFF
+                || $actualTargetValue < 0 || $actualTargetValue > 0xFFFFFF
+            ) {
+                return false;
+            }
+            return $actualTargetValue === $expectedTargetValue
+                || $actualTargetValue === self::z2mXyRgbFeedback($expectedTargetValue)
+                || $actualTargetValue === self::z2mHsRgbFeedback($expectedTargetValue);
+        }
         if ($configuration['colorTargetFormat'] !== 'HS_ARRAY_STRING') {
             return self::targetToLocal('color', $actualTargetValue, $configuration)
                 === self::targetToLocal('color', $expectedTargetValue, $configuration);
@@ -1022,6 +1112,77 @@ final class ControlLightCore
         $circularHueDistance = min($linearHueDistance, 360.0 - $linearHueDistance);
 
         return $circularHueDistance <= $hueTolerance;
+    }
+
+    /**
+     * Z2M v6's color-only interface: 4-decimal xy, Wide-RGB D65, full-scale
+     * color feedback (254/255). Brightness remains an independent action.
+     * These are exact representation candidates, never an RGB tolerance.
+     */
+    private static function z2mXyRgbFeedback(int $rgb): int
+    {
+        $linear = [];
+        foreach ([16, 8, 0] as $shift) {
+            $channel = (($rgb >> $shift) & 0xFF) / 255;
+            $linear[] = $channel > 0.04045 ? (($channel + 0.055) / 1.055) ** 2.4 : $channel / 12.92;
+        }
+        [$red, $green, $blue] = $linear;
+        $xValue = $red * 0.664511 + $green * 0.154324 + $blue * 0.162028;
+        $yValue = $red * 0.283881 + $green * 0.668433 + $blue * 0.047685;
+        $zValue = $red * 0.000088 + $green * 0.072310 + $blue * 0.986039;
+        $sum = $xValue + $yValue + $zValue;
+        $x = round($xValue / $sum, 4);
+        $y = round($yValue / $sum, 4);
+        $luminance = 254 / 255;
+        $xx = $y === 0.0 ? 0.0 : ($luminance / $y) * $x;
+        $zz = $y === 0.0 ? 0.0 : ($luminance / $y) * (1 - $x - $y);
+        $channels = [
+            max(0.0, $xx * 1.656492 - $luminance * 0.354851 - $zz * 0.255038),
+            max(0.0, -$xx * 0.707196 + $luminance * 1.655397 + $zz * 0.036152),
+            max(0.0, $xx * 0.051713 - $luminance * 0.121364 + $zz * 1.011530),
+        ];
+        $scale = max(1.0, ...$channels);
+        $bytes = [];
+        foreach ($channels as $channel) {
+            $channel /= $scale;
+            $encoded = $channel <= 0.0031308 ? 12.92 * $channel : 1.055 * $channel ** (1 / 2.4) - 0.055;
+            $bytes[] = self::limitInteger((int)round($encoded * 255), 0, 255);
+        }
+        return ($bytes[0] << 16) | ($bytes[1] << 8) | $bytes[2];
+    }
+
+    /** Preserve full-precision HS and the v6 byte-254 decoder's rounding order. */
+    private static function z2mHsRgbFeedback(int $rgb): int
+    {
+        [$red, $green, $blue] = [
+            (($rgb >> 16) & 0xFF) / 255, (($rgb >> 8) & 0xFF) / 255, ($rgb & 0xFF) / 255,
+        ];
+        $maximum = max($red, $green, $blue);
+        $delta = $maximum - min($red, $green, $blue);
+        $saturation = ($delta / $maximum) * 100;
+        $degrees = $delta <= 0.0 ? 0.0 : match ($maximum) {
+            $red => 60 * (($green - $blue) / $delta),
+            $green => 60 * (($blue - $red) / $delta) + 120,
+            default => 60 * (($red - $green) / $delta) + 240,
+        };
+        if ($degrees < 0) {
+            $degrees += 360;
+        }
+        $hue = fmod($degrees, 360.0) / 360;
+        $saturation = max(0.0, min(100.0, $saturation)) / 100;
+        $value = 254 / 255;
+        $sector = floor($hue * 6);
+        $fraction = $hue * 6 - $sector;
+        $low = $value * (1 - $saturation);
+        $falling = $value * (1 - $fraction * $saturation);
+        $rising = $value * (1 - (1 - $fraction) * $saturation);
+        $channels = match ((int)$sector % 6) {
+            0 => [$value, $rising, $low], 1 => [$falling, $value, $low],
+            2 => [$low, $value, $rising], 3 => [$low, $falling, $value],
+            4 => [$rising, $low, $value], default => [$value, $low, $falling],
+        };
+        $bytes = array_map(static fn(float $v): int => self::limitInteger((int)round($v * 255), 0, 255), $channels);
+        return ($bytes[0] << 16) | ($bytes[1] << 8) | $bytes[2];
     }
 
     /** @return array{0: float, 1: float} */

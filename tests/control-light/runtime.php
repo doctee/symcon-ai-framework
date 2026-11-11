@@ -313,6 +313,160 @@ function controlLightRuntimeFixture(string $semantics = ControlLightCore::BRIGHT
 
 $tests = [];
 
+$tests['explicit sibling availability validates source and preserves legacy shape'] = static function (): void {
+    $normalize = static function (array $config): array {
+        if (isset($config['availability'])) {
+            $config['availability'] += ['targetIdent' => '', 'targetType' => 0, 'availableValue' => true];
+        }
+        return ControlLightCore::normalizeConfiguration($config + ['brightnessSemantics' => 'effective']);
+    };
+    $legacy = $normalize([])['availability'];
+    assertControlLightRuntimeSame(['enabled' => false, 'targetIdent' => '', 'targetType' => 0, 'availableValue' => true], $legacy, 'Legacy shape');
+    $resolve = new ReflectionMethod(ControlLightRuntime::class, 'resolveExplicitAvailability');
+    ControlLightFakeRuntime::reset();
+    ControlLightFakeRuntime::variable(77, 0, false);
+    $a = $normalize(['availability' => ['sourceVariableID' => 77, 'availableValue' => false]])['availability'];
+    assertControlLightRuntimeSame(77, $resolve->invoke(null, $a), 'Sibling source');
+    assertControlLightRuntimeSame(true, ControlLightCore::availabilityValueMatches(false, ['availability' => $a]), 'Inverse UNREACH');
+    assertControlLightRuntimeSame(null, $resolve->invoke(null, $legacy), 'No new source for legacy');
+    foreach ([0, -1, null, false, '77', 7.7] as $invalid) {
+        try {
+            $normalize(['availability' => ['sourceVariableID' => $invalid]]);
+        } catch (InvalidArgumentException) {
+            continue;
+        }
+        throw new RuntimeException('Invalid source accepted');
+    }
+    try {
+        $normalize(['availability' => ['sourceVariableID' => 77, 'targetIdent' => 'UNREACH']]);
+        throw new RuntimeException('Ambiguous sources accepted');
+    } catch (InvalidArgumentException) {
+    }
+    foreach ([78, 79] as $invalid) {
+        ControlLightFakeRuntime::variable(79, 1, 0);
+        try {
+            $resolve->invoke(null, ['sourceVariableID' => $invalid, 'targetType' => 0]);
+        } catch (InvalidArgumentException) {
+            continue;
+        }
+        throw new RuntimeException('Missing or wrong-type source accepted');
+    }
+};
+
+/** Synthetic LEVEL device; no connection to a real installation. */
+function controlLightLevelFixture(): array
+{
+    $fixture = controlLightRuntimeFixture('effective');
+    $fixture['configuration'] = ControlLightCore::normalizeConfiguration([
+        'brightnessSemantics' => 'effective', 'levelTarget' => true,
+        'identState' => 'LEVEL', 'identDim' => 'LEVEL', 'typeState' => 2, 'typeDim' => 2,
+        'dimmerTargetMax' => 1,
+        'brightnessOffStateTransition' => ['mode' => 'target-turns-on'],
+        'confirmation' => ['timeoutMilliseconds' => 100, 'pollIntervalMilliseconds' => 50],
+        'availability' => ['sourceVariableID' => 22, 'targetIdent' => '', 'targetType' => 0, 'availableValue' => false],
+    ]);
+    $fixture['resources']['targetVariableIDs'] = ['state' => 20, 'brightness' => 20];
+    ControlLightFakeRuntime::variable(20, 2, 0.0, true);
+    return $fixture;
+}
+
+$tests['LEVEL direct dim start, shared feedback, repeat and off'] = static function (): void {
+    $f = controlLightLevelFixture();
+    foreach ([1, 10, 30, 100] as $brightness) {
+        ControlLightRuntime::dispatchTargetAction(1000, 'brightness', $brightness, $f['resources'], $f['configuration'], $f['diagnostics']);
+        assertControlLightRuntimeSame($brightness / 100.0, GetValue(20), 'LEVEL scale/type');
+        assertControlLightRuntimeSame(true, GetValue(10), 'Derived state');
+        assertControlLightRuntimeSame($brightness, GetValue(11), 'Fractional feedback');
+    }
+    assertControlLightRuntimeSame(4, count(ControlLightFakeRuntime::$actions), 'Extra power-on command');
+    ControlLightRuntime::dispatchTargetAction(1000, 'brightness', 100, $f['resources'], $f['configuration'], $f['diagnostics']);
+    assertControlLightRuntimeSame(4, count(ControlLightFakeRuntime::$actions), 'Idempotence');
+    ControlLightRuntime::dispatchTargetAction(1000, 'state', false, $f['resources'], $f['configuration'], $f['diagnostics']);
+    assertControlLightRuntimeSame(0.0, GetValue(20), 'OFF must send float zero');
+    assertControlLightRuntimeSame(false, GetValue(10), 'OFF feedback');
+    assertControlLightRuntimeSame(0, GetValue(11), 'Effective brightness OFF');
+    ControlLightRuntime::dispatchTargetAction(1000, 'state', true, $f['resources'], $f['configuration'], $f['diagnostics']);
+    assertControlLightRuntimeSame(1.0, GetValue(20), 'Explicit ON uses full LEVEL');
+};
+
+$tests['LEVEL delayed feedback and offline failure are bounded without retries'] = static function (): void {
+    foreach (['delayed', 'none'] as $mode) {
+        $f = controlLightLevelFixture();
+        ControlLightFakeRuntime::$feedbackMode = $mode;
+        SetValue(22, true);
+        try {
+            ControlLightRuntime::dispatchTargetAction(1000, 'brightness', 30, $f['resources'], $f['configuration'], $f['diagnostics']);
+            if ($mode === 'none') {
+                throw new RuntimeException('Offline accepted');
+            }
+            assertControlLightRuntimeSame(30, GetValue(11), 'Delayed feedback');
+        } catch (ControlLightCommandException $e) {
+            if ($mode !== 'none') {
+                throw $e;
+            }
+            assertControlLightRuntimeSame(1, GetValue(31), 'Timeout counter');
+            assertControlLightRuntimeSame('device_offline', $e->failureClass(), 'Offline classification');
+            assertControlLightRuntimeSame(false, GetValue(10), 'No optimistic ON');
+        }
+        assertControlLightRuntimeSame(1, count(ControlLightFakeRuntime::$actions), 'No retries or availability pre-gate');
+        assertControlLightRuntimeSame(['SAEF_CONTROL_LIGHT_1000'], ControlLightFakeRuntime::$semaphoreLeaves, 'Lock released');
+    }
+};
+
+$tests['LEVEL rejects invalid feedback and distinguishes small nonzero from OFF'] = static function (): void {
+    $f = controlLightLevelFixture();
+    $c = $f['configuration'];
+    assertControlLightRuntimeSame(false, ControlLightCore::targetValueMatches('brightness', 0.01, 0.0, $c), 'Zero cannot confirm dim');
+    assertControlLightRuntimeSame(false, ControlLightCore::targetValueMatches('state', 0.0, 0.001, $c), 'Nonzero cannot confirm OFF');
+    assertControlLightRuntimeSame(true, ControlLightCore::targetValueMatches('state', 1.0, 0.3, $c), 'Any positive LEVEL is ON');
+    foreach ([NAN, INF, -0.1, 1.1, '0.3', null, true] as $value) {
+        try {
+            ControlLightCore::targetToLocal('brightness', $value, $c);
+        } catch (InvalidArgumentException) {
+            continue;
+        }
+        throw new RuntimeException('Invalid LEVEL accepted');
+    }
+};
+
+$tests['LEVEL rejects incompatible configuration contracts'] = static function (): void {
+    $base = [
+        'brightnessSemantics' => 'effective', 'levelTarget' => true,
+        'identState' => 'LEVEL', 'identDim' => 'LEVEL', 'typeState' => 2, 'typeDim' => 2,
+        'dimmerTargetMax' => 1, 'brightnessOffStateTransition' => ['mode' => 'target-turns-on'],
+    ];
+    foreach (
+        [['levelTarget' => false], ['typeDim' => 1], ['typeState' => 0],
+        ['identState' => 'STATE'], ['identDim' => ''], ['brightnessSemantics' => 'reported'],
+        ['dimmerTargetMax' => 100], ['identColor' => 'COLOR'], ['identTemp' => 'TEMP'],
+        ['stateCommandMode' => 'off-only'], ['brightnessOffStateTransition' => ['mode' => 'power-on-first']]
+        ] as $delta
+    ) {
+        try {
+            ControlLightCore::normalizeConfiguration(array_replace($base, $delta));
+        } catch (InvalidArgumentException) {
+            continue;
+        }
+        throw new RuntimeException('Incompatible LEVEL configuration accepted');
+    }
+};
+
+$tests['LEVEL explicit ON preserves existing dim value and failed lock sends nothing'] = static function (): void {
+    $f = controlLightLevelFixture();
+    SetValue(20, 0.3);
+    ControlLightRuntime::dispatchTargetAction(1000, 'state', true, $f['resources'], $f['configuration'], $f['diagnostics']);
+    assertControlLightRuntimeSame(0.3, GetValue(20), 'ON must not brighten an already lit target');
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Redundant ON');
+    ControlLightFakeRuntime::$semaphoreAvailable = false;
+    try {
+        ControlLightRuntime::dispatchTargetAction(1000, 'state', false, $f['resources'], $f['configuration'], $f['diagnostics']);
+        throw new LogicException('Lock failure ignored');
+    } catch (RuntimeException $e) {
+        assertControlLightRuntimeSame('ControlLight semaphore timed out.', $e->getMessage(), 'Wrong failure');
+    }
+    assertControlLightRuntimeSame([], ControlLightFakeRuntime::$actions, 'Command escaped lock');
+};
+
 $tests['direct dim start preserves calibrated minimum and quantized zero feedback'] = static function (): void {
     foreach ([1, 10] as $requested) {
         $fixture = controlLightRuntimeFixture();

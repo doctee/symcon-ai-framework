@@ -476,4 +476,39 @@ assertTopologySame($firstKelvin, $secondKelvin, 'Kelvin profile changed stable r
 assertTopologySame('SAEF.Test.Kelvin', IPS_GetVariable($firstKelvin['localVariableIDs']['colorTemperature'])['VariableCustomProfile'], 'Kelvin profile reset.');
 assertTopologySame($expectedProfile, ControlLightTopologyFake::$profileDefinitions['SAEF.Test.Kelvin'], 'Runtime mutated profile.');
 
-fwrite(STDOUT, 'PASS: ControlLight topology ownership, presentation, Kelvin profile and idempotency contract.' . PHP_EOL);
+ControlLightTopologyFake::reset();
+ControlLightTopologyFake::variable(205, 200, 'LEVEL', 'Native Level', 2, '~Intensity.1', 500);
+ControlLightTopologyFake::variable(206, 100, 'UNREACH', 'Sibling availability', 0, '', 0);
+ControlLightTopologyFake::variable(162, 100, 'DIMMER', 'User Brightness', 1, '~Intensity.100', 101, 81);
+$levelConfiguration = ControlLightCore::normalizeConfiguration([
+    'brightnessSemantics' => 'effective', 'levelTarget' => true,
+    'identState' => 'LEVEL', 'identDim' => 'LEVEL', 'typeState' => 2, 'typeDim' => 2,
+    'dimmerTargetMax' => 1, 'brightnessOffStateTransition' => ['mode' => 'target-turns-on'],
+    'availability' => ['sourceVariableID' => 206, 'targetIdent' => '', 'targetType' => 0, 'availableValue' => false],
+]);
+$firstLevel = ControlLightRuntime::reconcileResources(101, $levelConfiguration);
+$invalidAvailability = $levelConfiguration;
+$invalidAvailability['availability']['sourceVariableID'] = 999999;
+$beforeInvalidAvailability = ControlLightTopologyFake::$objects;
+try {
+    ControlLightRuntime::reconcileResources(101, $invalidAvailability);
+    throw new RuntimeException('Missing explicit availability accepted');
+} catch (InvalidArgumentException) {
+    assertTopologySame($beforeInvalidAvailability, ControlLightTopologyFake::$objects, 'Invalid availability caused topology writes');
+}
+$levelObjects = ControlLightTopologyFake::$objects;
+$secondLevel = ControlLightRuntime::reconcileResources(101, $levelConfiguration);
+assertTopologySame($firstLevel, $secondLevel, 'LEVEL resources not idempotent');
+assertTopologySame(206, $firstLevel['availabilityVariableID'], 'Explicit sibling source not wired');
+assertTopologySame($levelObjects, ControlLightTopologyFake::$objects, 'LEVEL objects changed on repeat');
+assertTopologySame(['state' => 205, 'brightness' => 205], $firstLevel['targetVariableIDs'], 'Shared LEVEL resolution');
+assertTopologySame(['state' => 160, 'brightness' => 162], $firstLevel['localVariableIDs'], 'Existing facades not reused');
+assertTopologySame('User Brightness', ControlLightTopologyFake::$objects[162]['ObjectName'], 'Brightness name overwritten');
+assertTopologySame(81, ControlLightTopologyFake::$objects[162]['ObjectPosition'], 'Brightness position overwritten');
+foreach (['EV_TARGET_STATE' => 0, 'EV_TARGET_DIM' => 1] as $ident => $trigger) {
+    $eventID = IPS_GetObjectIDByIdent($ident, 101);
+    assertTopologySame(205, ControlLightTopologyFake::$events[$eventID]['TriggerVariableID'], 'Wrong LEVEL event source');
+    assertTopologySame($trigger, ControlLightTopologyFake::$events[$eventID]['TriggerType'], 'Wrong LEVEL event trigger');
+}
+
+fwrite(STDOUT, 'PASS: ControlLight topology ownership, presentation, Kelvin/LEVEL and idempotency contract.' . PHP_EOL);

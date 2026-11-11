@@ -175,6 +175,7 @@ final class ControlLightRuntime
     public static function reconcileResources(int $ownerScriptID, array $configuration): array
     {
         self::validateOwnerScript($ownerScriptID);
+        $explicitAvailabilityID = self::resolveExplicitAvailability($configuration['availability']);
         // Profile provisioning is an explicit installation operation, not runtime repair.
         $temperatureControl = $configuration['colorTemperatureControl'] ?? null;
         if ($temperatureControl !== null) {
@@ -284,7 +285,9 @@ final class ControlLightRuntime
 
         self::deactivateObsoleteExternalEvents($ownerScriptID, count($configuration['externalTriggers']));
 
-        if ($targetRootID !== null && $configuration['availability']['enabled'] === true) {
+        if ($explicitAvailabilityID !== null) {
+            $resources['availabilityVariableID'] = $explicitAvailabilityID;
+        } elseif ($targetRootID !== null && $configuration['availability']['enabled'] === true) {
             $availabilityVariableID = self::resolveTargetVariable(
                 $targetRootID,
                 $configuration['availability']['targetIdent'],
@@ -1168,6 +1171,22 @@ final class ControlLightRuntime
         if ($variable['VariableCustomAction'] <= 0 && $variable['VariableAction'] <= 0) {
             throw new RuntimeException('Target variable has no action: ' . $capability);
         }
+    }
+
+    /** @param array<string, mixed> $availability */
+    private static function resolveExplicitAvailability(array $availability): ?int
+    {
+        if (!array_key_exists('sourceVariableID', $availability)) {
+            return null;
+        }
+        $id = $availability['sourceVariableID'];
+        if (
+            !is_int($id) || $id <= 0 || !\IPS_VariableExists($id)
+            || \IPS_GetVariable($id)['VariableType'] !== $availability['targetType']
+        ) {
+            throw new InvalidArgumentException('Explicit availability variable is missing or has the wrong type.');
+        }
+        return $id;
     }
 
     /** @param array<string, mixed> $resources @param array<string, mixed> $configuration */
