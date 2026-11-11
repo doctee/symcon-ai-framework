@@ -17,8 +17,11 @@ $ordinary = ControlLightCore::normalizeConfiguration($base);
 $configured = ControlLightCore::normalizeConfiguration($base + ['colorFeedbackQuantization' => 'z2m-v6-rgb']);
 // Pin the private provider-byte boundary without exposing a new public API.
 $byteRounder = new ReflectionMethod(ControlLightCore::class, 'z2mRgbByte');
-foreach ([[190.49999999999997, 190], [190.5, 191], [190.50000000000003, 191],
-    [0.49999999999999994, 0], [0.5, 1], [0.5000000000000001, 1], [0.0, 0], [255.0, 255]] as [$value, $expected]) {
+$roundingBoundaries = [
+    [190.49999999999997, 190], [190.5, 191], [190.50000000000003, 191],
+    [0.49999999999999994, 0], [0.5, 1], [0.5000000000000001, 1], [0.0, 0], [255.0, 255],
+];
+foreach ($roundingBoundaries as [$value, $expected]) {
     $check($byteRounder->invoke(null, $value) === $expected, sprintf('Provider byte rounding changed for %.17g on PHP %s', $value, PHP_VERSION));
 }
 $vectors = json_decode(file_get_contents(__DIR__ . '/fixtures/z2m-color-feedback.json'), true, 16, JSON_THROW_ON_ERROR)['vectors'];
