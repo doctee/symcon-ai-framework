@@ -137,7 +137,8 @@
             "@php tests/control-light/cwww-integration.php"
         ],
         "test:control-light-color-analysis": [
-            "@php tests/control-light/color-conversion-analysis.php"
+            "@php tests/control-light/color-conversion-analysis.php",
+            "@php tests/control-light/z2m-color-feedback.php"
         ],
         "test:control-light-runtime": [
             "@php tests/control-light/runtime.php"

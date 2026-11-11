@@ -1,0 +1,81 @@
+{
+    "contract": "z2m-v6-rgb",
+    "derivation": "Independent golden reports from verified v6 ColorHelper; RGB values only, no installation data.",
+    "vectors": [
+        {
+            "input": "C59F5A",
+            "xy": "FFCF77",
+            "hs": "FECD74"
+        },
+        {
+            "input": "907442",
+            "xy": "FFCF7A",
+            "hs": "FECD74"
+        },
+        {
+            "input": "FFCE76",
+            "xy": "FFCE76",
+            "hs": "FECD76"
+        },
+        {
+            "input": "FF0000",
+            "xy": "FF0000",
+            "hs": "FE0000"
+        },
+        {
+            "input": "00FF00",
+            "xy": "00FF00",
+            "hs": "00FE00"
+        },
+        {
+            "input": "0000FF",
+            "xy": "0000FF",
+            "hs": "0000FE"
+        },
+        {
+            "input": "FFFFFF",
+            "xy": "FFFFFF",
+            "hs": "FEFEFE"
+        },
+        {
+            "input": "010101",
+            "xy": "FFFFFF",
+            "hs": "FEFEFE"
+        },
+        {
+            "input": "123456",
+            "xy": "48A4FF",
+            "hs": "359AFE"
+        },
+        {
+            "input": "010203",
+            "xy": "9CD5FF",
+            "hs": "55A9FE"
+        },
+        {
+            "input": "5D96C8",
+            "xy": "78C0FF",
+            "hs": "76BEFE"
+        },
+        {
+            "input": "2AC493",
+            "xy": "3AFFC0",
+            "hs": "36FEBE"
+        },
+        {
+            "input": "AC032B",
+            "xy": "FF0744",
+            "hs": "FE043F"
+        },
+        {
+            "input": "394C12",
+            "xy": "C6FF52",
+            "hs": "BEFE3C"
+        },
+        {
+            "input": "D034D0",
+            "xy": "FF42FF",
+            "hs": "FE3FFE"
+        }
+    ]
+}

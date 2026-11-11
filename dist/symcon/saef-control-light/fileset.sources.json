@@ -11,7 +11,7 @@
         },
         {
             "path": "case-studies/control-light/candidate/ControlLightCore.php",
-            "sha256": "235a761b7627431c75a04d59374bd83cac3375056f34ef9f797d41e0066a5032"
+            "sha256": "29b449e3ec811afa302b066121bfbf885d4ca91753510299b6993aa87dba41e8"
         },
         {
             "path": "helpers/diagnostics/ConfigurationHash.php",
@@ -51,7 +51,7 @@
         },
         {
             "path": "case-studies/control-light/candidate/ControlLightRuntime.php",
-            "sha256": "5d00f0f051f0690f779e58ce2c51c70174c94372a233a46762259d39ecda43d1"
+            "sha256": "2c845479d417b793b853ed3f75bed4442daa71db2bbc35089722c1d105a607c5"
         },
         {
             "path": "case-studies/control-light/candidate/CwwwLightAdapter.php",
@@ -91,7 +91,7 @@
         }
     ],
     "bootstrapSha256": "6566331029338904d9e0a04cae178b28b9b92c83e4e51de8ed0d4def3de21096",
-    "filesetSha256": "236414a3d2c07c23e60cbca3df5efd452ff83a58068e399734ffcb7b54ff0606",
+    "filesetSha256": "73d5077d53d0fe033a7dae562792b02ffc2182efdaa5266a65f80071d4859576",
     "functionExports": [
         "SAEF_AppendErrorRingBufferEntry",
         "SAEF_ClearErrorRingBuffer",
