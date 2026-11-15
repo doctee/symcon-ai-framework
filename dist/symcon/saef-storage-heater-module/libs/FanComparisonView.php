@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SAEF\StorageHeater;
 
-/** Static comparison only; never offers an action or hides missing evidence. */
+/** Preferred warming energy and retained control forecast; presentation only. */
 final class FanComparisonView
 {
     private static function time(int $t): string
@@ -16,9 +16,9 @@ final class FanComparisonView
     {
         $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $n = static fn(?float $v): string => $v === null ? '–' : number_format($v, 2, ',', '.');
-        $html = '<div style="font:14px system-ui;padding:12px"><h3>Ventilator – zusätzliche Vergleichsprognose</h3>'
-            . self::selection($j, $context) . '<p>' . $e($status) . '</p>'
-            . '<p>Vergleich zweier gemeinsam kalibrierter Lademodelle; die reguläre Nachtprognose bleibt unverändert. '
+        $html = '<div style="font:14px system-ui;padding:12px"><h3>Aufwärmen – Energieprognose</h3>'
+            . self::preferred($j, $context) . self::selection($j, $context) . '<p>' . $e($status) . '</p>'
+            . '<p>Für gültige geplante Aufwärmphasen ist der Ventilatoransatz die bevorzugte Energieprognose. Die Referenz bleibt als Kontrollprognose erhalten. Die tägliche 21:45-Prognose und das Temperaturmodell bleiben unverändert. '
             . 'Laufzeit aus der bisherigen Aufwärmsimulation, nicht aus späteren Messwerten. Keine Rückkopplung der Vergleichsladung in diese Laufzeitschätzung. Kein Fenster-Energiezuschlag.</p>';
         foreach (array_reverse(array_slice($j['records'] ?? [], -5)) as $r) {
             $f = $r['forecast'];
@@ -32,15 +32,15 @@ final class FanComparisonView
                 $html .= '<p>Dieser ältere Planstand enthält keine vollständige erste Aufwärmnacht.</p>';
             }
             $html .= '<p>' . (isset($r['supersededAt']) ? 'Früherer Planstand – nicht überschrieben' : 'Gespeicherter Planstand') . '</p>'
-                . '<table style="border-collapse:collapse;width:100%"><tr><th>Nacht ab</th><th>Referenz kWh</th><th>Mit Ventilator kWh</th><th>Gemessen kWh</th><th>Fehler Referenz / Ventilator kWh</th><th>Laufzeit Prognose / Messung h</th></tr>';
+                . '<table style="border-collapse:collapse;width:100%"><tr><th>Nacht ab</th><th>Ventilator kWh</th><th>Kontrolle: Referenz kWh</th><th>Gemessen kWh</th><th>Fehler Ventilator / Referenz kWh</th><th>Laufzeit Prognose / Messung h</th></tr>';
             foreach ($f['fanComparison']['nights'] as $date => $night) {
                 $a = $r['nightActual'][$date] ?? [];
                 if ($excluded) {
                     $a['errors'] = $a['diagnosticErrors'] ?? $a['errors'] ?? [];
                 }
-                $html .= '<tr><td>' . $e($date) . '</td><td>' . $n($night['predictions']['reference']['kwh'])
-                    . '</td><td>' . $n($night['predictions']['candidate']['kwh']) . '</td><td>' . $n($a['kwh'] ?? null)
-                    . '</td><td>' . ($excluded ? 'Nur Diagnose: ' : '') . $n($a['errors']['reference']['signedKwh'] ?? null) . ' / ' . $n($a['errors']['candidate']['signedKwh'] ?? null)
+                $html .= '<tr><td>' . $e($date) . '</td><td>' . $n($night['predictions']['candidate']['kwh'])
+                    . '</td><td>' . $n($night['predictions']['reference']['kwh']) . '</td><td>' . $n($a['kwh'] ?? null)
+                    . '</td><td>' . ($excluded ? 'Nur Diagnose: ' : '') . $n($a['errors']['candidate']['signedKwh'] ?? null) . ' / ' . $n($a['errors']['reference']['signedKwh'] ?? null)
                     . '</td><td>' . $n($night['features']['night_fan_hours']) . ' / ' . $n($a['states']['fan']['hours'] ?? null) . '</td></tr>';
                 if ($night['chargePlan']['mixed'] ?? false) {
                     $parts = [];
@@ -65,7 +65,49 @@ final class FanComparisonView
         return $html . '<p>Fehler = Prognose minus Messung; negatives Vorzeichen bedeutet Unterschätzung. '
             . 'Frühe Abendtemperaturen und vorherige Ladung werden bis zum Horizont festgehalten. '
             . 'Planrevisionen und mehrere Nächte derselben Aufwärmphase sind keine unabhängigen Testphasen. '
-            . 'Eine Verbesserung ist erst mit neuen vollständigen Vorabvergleichen belegt.</p></div>';
+            . 'Die bisherige Prüfung umfasst wenige Aufwärmphasen; weitere Vorabvergleiche prüfen die Übertragbarkeit. Abgebrochene, ersetzte und ungeklärte Vorwahlen bleiben ausgeschlossen.</p></div>';
+    }
+
+    /** Select frozen values only; never substitute measured runtime or daily forecasts. */
+    private static function preferred(array $j, array $context): string
+    {
+        $heading = '<section><h4>Bevorzugte Energieprognose – aktuelle Aufwärmphase</h4>';
+        if ($context === []) {
+            return $heading . '<p>Kein verifizierter aktueller Planstand verfügbar.</p></section>';
+        }
+        $plan = $context['plan'];
+        $now = $context['now'];
+        $v = $plan['inputs']['values'];
+        if (!$v['winter'] || $v['presence'] || $v['arrival'] <= $now) {
+            return $heading . '<p>Keine aktive zukünftige Aufwärmvorwahl.</p></section>';
+        }
+        foreach (array_reverse($j['records'] ?? []) as $r) {
+            $f = $r['forecast'];
+            $first = $f['fanComparison']['firstWarmingNight'] ?? null;
+            if (
+                ($r['evaluation']['eligible'] ?? false) !== true || $first === null
+                || $r['configurationHash'] !== $context['configurationHash']
+                || $f['projection']['arrival'] !== $v['arrival'] || $f['end'] <= $now
+                || $f['issuedAt'] >= min($f['phaseStart'], $first['start'])
+                || $f['start'] > $first['start'] || $f['end'] < $first['end']
+                || ($f['fanComparison']['nights'][$first['date']]['cycle'] ?? null) !== $first
+                || ($now < $f['phaseStart'] && $f['plan']['hash'] !== $plan['hash'])
+            ) {
+                continue;
+            }
+            $html = $heading . '<p>Vorab gespeichert am ' . self::time($f['issuedAt']) . '</p><dl>';
+            foreach ($f['fanComparison']['nights'] as $night) {
+                $format = static fn(float $n): string => number_format($n, 2, ',', '.');
+                $html .= '<dt>' . self::time($night['cycle']['start']) . ' – ' . self::time($night['cycle']['end'])
+                    . '</dt><dd><strong>Bevorzugt: ' . $format($night['predictions']['candidate']['kwh'])
+                    . ' kWh</strong> · Kontrolle: ' . $format($night['predictions']['reference']['kwh']) . ' kWh</dd>';
+                if ($night['chargePlan']['mixed'] ?? false) {
+                    $html .= '<dd>Absenkungswechsel: vorläufige zeitgewichtete Näherung.</dd>';
+                }
+            }
+            return $html . '</dl><p>Ganznacht-Prognose 22–07 Uhr; keine Restenergieprognose. Einschränkungen und Messvergleich siehe Planstand unten.</p></section>';
+        }
+        return $heading . '<p>Noch keine gültige Vorabprognose für diese Vorwahl verfügbar. Speicherstatus siehe unten.</p></section>';
     }
 
     /** Presentation only: derive current eligibility without issuing or changing a forecast. */

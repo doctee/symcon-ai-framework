@@ -49,4 +49,44 @@ $html = FanComparisonView::render($empty, 'Bereit', $context);
 check(str_contains($html, 'Keine aktive zukünftige Aufwärmvorwahl') && !str_contains($html, 'Vorab gespeichert am'), 'No selection never implies successful storage');
 file_put_contents($argv[1] . '/comparison-idle-preview.html', $html);
 check($j['records'][0] === $saved && $commands === 0, 'Presentation preserves frozen evidence and never actuates');
+// Preferred presentation must use eligible frozen values and fail closed on stale plans.
+$preferredJournal = ['schema' => 1, 'discarded' => 0, 'records' => [$saved]];
+$preferredJournal['records'][0]['evaluation'] = ['eligible' => true, 'state' => 'active', 'observedAt' => $saved['forecast']['issuedAt']];
+$preferredContext = ['plan' => $saved['forecast']['plan'], 'configurationHash' => $saved['configurationHash'], 'now' => $saved['forecast']['issuedAt']];
+$preferredHtml = FanComparisonView::render($preferredJournal, '', $preferredContext);
+$night = reset($saved['forecast']['fanComparison']['nights']);
+check(str_contains($preferredHtml, 'Bevorzugt: ' . number_format($night['predictions']['candidate']['kwh'], 2, ',', '.') . ' kWh'), 'Preferred energy is the frozen fan candidate');
+check(str_contains($preferredHtml, 'Kontrolle: ' . number_format($night['predictions']['reference']['kwh'], 2, ',', '.') . ' kWh'), 'Paired reference stays visible as control');
+foreach (['cancelled', 'replaced', 'unknown'] as $state) {
+    $excludedJournal = $preferredJournal;
+    $excludedJournal['records'][0]['evaluation'] = ['eligible' => false, 'state' => $state, 'observedAt' => $saved['forecast']['issuedAt']];
+    check(!str_contains(FanComparisonView::render($excludedJournal, '', $preferredContext), '<strong>Bevorzugt:'), 'Excluded phase cannot be preferred: ' . $state);
+}
+foreach (['configuration', 'arrival', 'plan'] as $change) {
+    $staleContext = $preferredContext;
+    if ($change === 'configuration') {
+        $staleContext['configurationHash'] = 'changed';
+    } elseif ($change === 'arrival') {
+        $staleContext['plan']['inputs']['values']['arrival'] += 3600;
+    } else {
+        $staleContext['plan']['hash'] = 'changed';
+    }
+    check(!str_contains(FanComparisonView::render($preferredJournal, '', $staleContext), '<strong>Bevorzugt:'), 'Stale preferred forecast rejected: ' . $change);
+}
+foreach (['late', 'incomplete'] as $change) {
+    $invalidJournal = $preferredJournal;
+    if ($change === 'late') {
+        $invalidJournal['records'][0]['forecast']['issuedAt'] = $saved['forecast']['phaseStart'];
+    } else {
+        $invalidJournal['records'][0]['forecast']['start'] = $saved['forecast']['fanComparison']['firstWarmingNight']['start'] + 1;
+    }
+    check(!str_contains(FanComparisonView::render($invalidJournal, '', $preferredContext), '<strong>Bevorzugt:'), 'Invalid first night cannot be preferred: ' . $change);
+}
+$activeContext = $preferredContext;
+$activeContext['now'] = $saved['forecast']['phaseStart'];
+$activeContext['plan']['hash'] = 'timer-consumed';
+check(str_contains(FanComparisonView::render($preferredJournal, '', $activeContext), '<strong>Bevorzugt:'), 'Eligible started phase retains frozen energy after timer consumption');
+$activeContext['now'] = $saved['forecast']['projection']['arrival'];
+check(!str_contains(FanComparisonView::render($preferredJournal, '', $activeContext), '<strong>Bevorzugt:'), 'Past arrival cannot be the current preferred phase');
+check($j['records'][0] === $saved && $commands === 0, 'Preferred presentation preserves frozen evidence and never actuates');
 echo $checks . " assertions including comparison display passed\n";

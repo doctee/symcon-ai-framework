@@ -65,7 +65,7 @@ final class PlanView
             $rows['Vergleichsbasis ohne zukünftigen Ventilatoreffekt'] = number_format($e['baselineKwh'], 2, ',', '') . ' kWh · erstellt ' . self::time($e['baselineIssuedAt']);
         }
         if (($e['kwh'] ?? null) !== null) {
-            $rows['Abschätzung für die ganze Nacht'] = number_format($e['kwh'], 2, ',', '') . ' kWh';
+            $rows['Separate Ganznacht-Abschätzung aus der Tagesprognose'] = number_format($e['kwh'], 2, ',', '') . ' kWh';
         }
         if (isset($r['past']['kwh'])) {
             $rows['Davon tatsächlich gemessen bis ' . self::time($r['past']['until'])] = number_format($r['past']['kwh'], 2, ',', '') . ' kWh';
@@ -75,8 +75,8 @@ final class PlanView
             $html .= '<dt style="opacity:.7;margin-top:7px">' . self::escape($label) . '</dt><dd style="margin:0">' . self::escape($value) . '</dd>';
         }
         $html .= '</dl><p>Zunächst wird die Speicher-Absenkung aufgehoben, später die Ventilatorregelung freigegeben. Die Fenster-Absenkung des Raumreglers ist davon unabhängig. Freigabe bedeutet keine Dauerlaufzeit: Der Galerieregler schaltet nach Temperatur. '
-            . 'Die separate Aufwärmansicht kann ein experimentell kalibriertes Temperaturmodell anzeigen. Für die Energieänderung durch künftigen Ventilatorbetrieb fehlt weiterhin eine belastbare Kalibrierung. '
-            . 'Die ursprüngliche Nachtprognose bleibt als Vergleich erhalten.</p>';
+            . 'Die separate Aufwärmansicht kann ein experimentell kalibriertes Temperaturmodell anzeigen. Die bevorzugte Energieprognose für geplante Aufwärmphasen steht in der Ansicht „Aufwärmen – Energieprognose“: Ventilatoransatz mit separater Referenz als Kontrolle. '
+            . 'Die hier gezeigte Tagesprognose bleibt separat erhalten und ersetzt die bevorzugte Aufwärmprognose nicht.</p>';
         $labels = [
             'arrival_not_observed' => 'Die vorgewählte Ankunft wurde noch nicht als Anwesenheit gemeldet; der weitere Betrieb ist bedingt.',
             'reset_conditional_on_no_arrival' => 'Rücksetzung ist hier unter der Annahme dargestellt, dass bis dahin keine Anwesenheit gemeldet wird.',
