@@ -15,8 +15,8 @@
     "pullRequest": {
       "repository": "doctee/saef-storage-heater",
       "base": "main",
-      "title": "feat: forecast room temperatures during spontaneous visits",
-      "body": "Store separate arrival, departure and fan permission forecasts. Compare gallery and living-room temperatures and observed fan runtime per visit.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "title": "feat: prefer fan energy forecasts for planned warming",
+      "body": "Show frozen fan-model energy as the preferred forecast for a valid planned warming phase; retain the paired reference as control. Daily 21:45 forecasts, thermal simulations, journals and heating control are unchanged.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
       "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
     }
   },

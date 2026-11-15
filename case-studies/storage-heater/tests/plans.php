@@ -190,6 +190,6 @@ $j = HeatingPlan::retain($j);
 check(count($j['plans']) === 256 && count($j['revisions']) === 256 && $j['discarded'] === 8, 'Bounded retention counts removed evidence');
 $html = PlanView::render($j, '<script>bad</script>');
 check(!str_contains($html, '<script>') && str_contains($html, '&lt;script&gt;'), 'Plan view escapes untrusted text');
-check(str_contains($html, 'keine Dauerlaufzeit') && str_contains($html, 'Kalibrierung'), 'View explains runtime and model limits');
+check(str_contains($html, 'keine Dauerlaufzeit') && str_contains($html, 'Referenz als Kontrolle'), 'View explains runtime and model limits');
 check($commands === 0 && $m->attributes['Journal'] === $original, 'All revisions are observational; original forecasts unchanged');
 echo $checks . " total assertions including preselection passed; no external writes or device actions\n";

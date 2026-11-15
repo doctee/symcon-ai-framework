@@ -267,3 +267,20 @@ Alle Stände eines Besuchs tragen denselben Ankunftszeitstempel. Nur Punkte nach
 Speicherung zählen. Fehlende Messwerte bleiben offen. Die regulären Aufwärmserien
 werden separat geführt. Bei Erststart in Anwesenheit beginnt die Erfassung mit
 dem nächsten beobachteten Besuch. Das Journal hält bis zu 48 Stände und 3 MiB.
+
+## Preferred warming energy (0.10.1)
+
+The warming energy view promotes the already frozen fan-model estimate for the
+current eligible planned warming phase and keeps the paired reference as a
+control. The summary requires matching configuration and arrival, a complete
+first warming night, and issuance before both phase start and charging. Before
+the phase starts it additionally requires the exact current plan hash. Cancelled,
+replaced, unknown, late and expired forecasts cannot become the preferred summary.
+Historical comparisons remain visible as such. Mixed reduction nights retain
+their provisional time-weighted label.
+
+This is a selection and presentation change only: no coefficient, forecast,
+journal, daily 21:45 calculation, thermal simulation, controller or schedule is
+rewritten. Existing `candidate` and `reference` JSON keys keep their meaning.
+The five-minute observer refreshes the view without an extra model run.
+The limited warming-phase validation does not establish general daily accuracy.
