@@ -16,6 +16,8 @@ trait FanComparisonObservation
     {
         $this->RegisterPropertyString('FanComparisonModelJSON', '{}');
         $this->RegisterAttributeString('FanComparisonJournal', '{"schema":1,"discarded":0,"records":[]}');
+        $this->RegisterAttributeString('SecondNightJournal', '{"schema":1,"discarded":0,"records":[]}');
+        $this->RegisterAttributeString('SecondNightStatus', '');
         $this->RegisterVariableString('FanComparisonStatus', 'Ventilator-Vergleich – Status', '', 250);
         $this->RegisterVariableString('FanComparison', 'Nachtladung – Ventilator-Vergleich', '~HTMLBox', 260);
     }
@@ -23,6 +25,12 @@ trait FanComparisonObservation
     public function GetFanComparisonJournalJson(): string
     {
         return Forecast::encode(FanComparison::journal($this->ReadAttributeString('FanComparisonJournal')));
+    }
+
+    public function GetSecondNightComparisonJson(): string
+    {
+        $journal = FanComparison::journal($this->ReadAttributeString('SecondNightJournal'));
+        return Forecast::encode($journal + ['status' => $this->ReadAttributeString('SecondNightStatus')]);
     }
 
     private function configureFanComparison(array $config): void
@@ -56,40 +64,59 @@ trait FanComparisonObservation
         return $c;
     }
 
-    private function observeFanComparison(array $config, int $now): void
+    private function observeFanComparison(array $config, int $now, bool $secondNight = false): void
     {
+        $attribute = $secondNight ? 'SecondNightJournal' : 'FanComparisonJournal';
+        $display = function (array $j, string $status, array $context) use ($secondNight): void {
+            if ($secondNight) {
+                if ($status !== $this->ReadAttributeString('SecondNightStatus')) {
+                    $this->WriteAttributeString('SecondNightStatus', $status);
+                }
+            } else {
+                $this->fanComparisonDisplay($j, $status, $context);
+            }
+        };
         $j = [];
         $context = [];
         try {
-            $j = FanComparison::journal($this->ReadAttributeString('FanComparisonJournal'));
+            $j = FanComparison::journal($this->ReadAttributeString($attribute));
             $pending = array_keys(array_filter($j['records'], static fn(array $r): bool => $r['settledAt'] === null));
             usort($pending, static fn(int $a, int $b): int => ($j['records'][$a]['checkedAt'] ?? 0) <=> ($j['records'][$b]['checkedAt'] ?? 0));
             foreach (array_slice($pending, 0, 2) as $i) {
                 $j['records'][$i] = $this->measureFanComparison($j['records'][$i], $now);
             }
-            $this->saveFanComparison($j);
+            $this->saveFanComparison($j, $attribute);
             $c = $this->fanComparisonConfiguration($config);
             $b = $this->planConfiguration($config);
             if ($c === null || $b === null) {
-                $this->fanComparisonDisplay($j, 'Nicht konfiguriert; gespeicherte Vergleiche bleiben erhalten', $context);
+                $display($j, 'Nicht konfiguriert; gespeicherte Vergleiche bleiben erhalten', $context);
                 return;
             }
             $plan = $this->readPlan($b, $config, $now);
             $context = ['plan' => $plan, 'now' => $now, 'configurationHash' => $c['hash']];
             $v = $plan['inputs']['values'];
             if ($v['arrival'] <= $now || !$v['winter'] || $v['presence']) {
-                $this->fanComparisonDisplay($j, 'Bereit – wartet auf zukünftige Aufwärmvorwahl', $context);
+                $display($j, 'Bereit – wartet auf zukünftige Aufwärmvorwahl', $context);
                 return;
             }
             // Never claim a fresh pre-phase forecast after either warming stage started.
             $projection = HeatingPlan::project($plan, ['start' => $now, 'end' => min($v['arrival'], $now + 48 * 3600)], $now);
             if ($v['storageRequested'] || $v['fanRequested'] || $projection['storageStart'] === null) {
-                $this->fanComparisonDisplay($j, FanComparisonView::phaseStatus($j, $v), $context);
+                $display($j, FanComparisonView::phaseStatus($j, $v), $context);
                 return;
             }
             $phaseStart = min(array_filter([$projection['storageStart'], $projection['fanStart']], static fn(?int $t): bool => $t !== null));
             $window = FanComparison::issueWindow($phaseStart);
             $first = $window['cycle'];
+            if ($secondNight) {
+                $next = (new DateTimeImmutable('@' . $first['end']))->setTimezone(new DateTimeZone('Europe/Berlin'));
+                $second = Forecast::cycle($next->format('Y-m-d'), 'Europe/Berlin');
+                if ($v['arrival'] < $second['end']) {
+                    $display($j, 'Vorwahl umfasst keine vollständige zweite Aufwärmnacht', $context);
+                    return;
+                }
+                $window['earliest'] = $second['end'] - 48 * 3600;
+            }
             $last = $j['records'] === [] ? null : end($j['records']);
             if (
                 $last !== null && $last['configurationHash'] === $c['hash']
@@ -98,20 +125,20 @@ trait FanComparisonObservation
                 && $last['forecast']['issuedAt'] < $window['deadline']
                 && ($last['forecast']['fanComparison']['nights'][$first['date']]['cycle'] ?? null) === $first
             ) {
-                $this->fanComparisonDisplay($j, 'Vorabvergleich gespeichert; Nachtmessungen werden automatisch ergänzt', $context);
+                $display($j, 'Vorabvergleich gespeichert; Nachtmessungen werden automatisch ergänzt', $context);
                 return;
             }
             if ($now >= $window['deadline']) {
-                $this->fanComparisonDisplay($j, 'Vorabfrist der ersten Aufwärmnacht verpasst; keine rückwirkende Vergleichsprognose', $context);
+                $display($j, 'Vorabfrist der ersten Aufwärmnacht verpasst; keine rückwirkende Vergleichsprognose', $context);
                 return;
             }
             if ($v['arrival'] < $first['end']) {
-                $this->fanComparisonDisplay($j, 'Erste Aufwärmnacht reicht über die Ankunft hinaus; kein vollständiger Nachtvergleich', $context);
+                $display($j, 'Erste Aufwärmnacht reicht über die Ankunft hinaus; kein vollständiger Nachtvergleich', $context);
                 return;
             }
             if ($now < $window['earliest']) {
                 $when = (new DateTimeImmutable('@' . $window['earliest']))->setTimezone(new DateTimeZone('Europe/Berlin'))->format('d.m.Y H:i');
-                $this->fanComparisonDisplay($j, 'Vorwahl erkannt – wartet bis ' . $when . ' auf vollständige erste Aufwärmnacht ' . $first['date'], $context);
+                $display($j, 'Vorwahl erkannt – wartet bis ' . $when . ($secondNight ? ' auf die zweite Nacht' : ' auf vollständige erste Aufwärmnacht ' . $first['date']), $context);
                 return;
             }
             // Fresh inputs at this issue, not an old warming curve re-labelled as new.
@@ -137,18 +164,79 @@ trait FanComparisonObservation
             $r['forecastHash'] = SAEF_CreateConfigurationHash($r['forecast']);
             $r['key'] = $r['forecastHash'];
             $r['nightActual'] = [];
+            if ($secondNight) {
+                $this->captureSecondNight($r, 'beforePhase');
+                if (!isset($r['secondNightSnapshots']['beforePhase'])) {
+                    throw new RuntimeException($r['secondNightIssues']['beforePhase'] ?? 'Zweite Nacht nicht vollständig freigegeben.');
+                }
+                if (
+                    $plan['hash'] !== $this->readPlan($b, $config, $now)['hash']
+                    || $this->now() >= $window['deadline']
+                ) {
+                    throw new RuntimeException('Plan geändert oder Vorabfrist verstrichen; erneute Prüfung erforderlich.');
+                }
+            }
             if ($j['records'] !== []) {
                 $j['records'][array_key_last($j['records'])]['supersededAt'] = $issuedAt;
             }
             $j['records'][] = $r;
             $j = Warming::retain($j);
-            $this->saveFanComparison($j);
-            $this->fanComparisonDisplay($j, 'Neue Vergleichsprognose vor Aufwärmbeginn fest gespeichert', $context);
+            $this->saveFanComparison($j, $attribute);
+            $display($j, 'Neue Vergleichsprognose vor Aufwärmbeginn fest gespeichert', $context);
         } catch (Throwable $e) {
-            $this->fanComparisonDisplay($j, 'Ventilator-Vergleich: ' . substr($e->getMessage(), 0, 220), $context);
+            $display($j, 'Ventilator-Vergleich: ' . substr($e->getMessage(), 0, 220), $context);
         }
     }
 
+
+    /** Supplement only. Failure or insufficient horizon must not suppress the preferred forecast. */
+    private function captureSecondNight(array &$r, string $stage): void
+    {
+        $f = $r['forecast'];
+        $nights = array_values($f['fanComparison']['nights']);
+        if (count($nights) !== 2 || isset($r['secondNightSnapshots'][$stage])) {
+            return;
+        }
+        [$first, $second] = $nights;
+        $now = $this->now();
+        $cutoff = $second['cycle']['cutoff'];
+        $start = $cutoff - 86400;
+        $deadline = $second['cycle']['start'];
+        if ($stage === 'beforePhase') {
+            $deadline = min($first['cycle']['start'], $f['phaseStart']);
+            $kwh = $first['predictions']['candidate']['kwh'];
+            $split = max($start, $f['start']);
+        } else {
+            $actual = $r['nightActual'][$first['cycle']['date']] ?? [];
+            if (
+                !isset($r['secondNightSnapshots']['beforePhase']) || ($actual['status'] ?? null) !== 'complete'
+                || $now < $first['cycle']['end'] || $now >= $deadline
+            ) {
+                return;
+            }
+            $kwh = $actual['kwh'];
+            $split = min($cutoff, intdiv($now, 3600) * 3600);
+        }
+        try {
+            $fanHours = 0.0;
+            if ($split > $start) {
+                $archive = new ArchiveReader($r['bindings']['archive'], $r['historyStart']);
+                $fanHours = $archive->duty($r['bindings']['fan'], $start, $split)['hours'];
+            }
+            $snapshot = FanComparison::secondNight($f, $kwh, $split, $fanHours, $now);
+            $finished = $this->now();
+            if ($finished >= $deadline) {
+                throw new RuntimeException('Ausgabefrist für den Zweitnachtvergleich verstrichen.');
+            }
+            $snapshot['issuedAt'] = $finished;
+            $snapshot['parentHash'] = $r['forecastHash'];
+            $snapshot['stage'] = $stage;
+            $r['secondNightSnapshots'][$stage] = ['snapshot' => $snapshot, 'hash' => SAEF_CreateConfigurationHash($snapshot)];
+            unset($r['secondNightIssues'][$stage]);
+        } catch (Throwable $e) {
+            $r['secondNightIssues'][$stage] = substr($e->getMessage(), 0, 200);
+        }
+    }
 
     private function measureFanComparison(array $r, int $now): array
     {
@@ -207,6 +295,13 @@ trait FanComparisonObservation
                 $allSettled = false;
             }
         }
+        if (isset($r['secondNightSnapshots']['beforePhase']) && !isset($r['secondNightSnapshots']['afterFirstNight'])) {
+            $plans = HeatingPlan::journal($this->ReadAttributeString('PlanJournal'))['plans'];
+            $evaluation = ComparisonLifecycle::assess($r, $plans, $now);
+            if ($evaluation['eligible'] && $evaluation['state'] === 'active' && !isset($r['supersededAt'])) {
+                $this->captureSecondNight($r, 'afterFirstNight');
+            }
+        }
         if ($allSettled) {
             $r['settledAt'] = $now;
         }
@@ -232,13 +327,13 @@ trait FanComparisonObservation
         return ['segments' => $measured, 'mismatchSeconds' => $mismatch, 'toleranceSeconds' => 60];
     }
 
-    private function saveFanComparison(array &$j): void
+    private function saveFanComparison(array &$j, string $attribute): void
     {
         $j = $this->assessComparisons($j);
         $json = Forecast::encode($j);
         FanComparison::journal($json);
-        if ($json !== $this->ReadAttributeString('FanComparisonJournal')) {
-            $this->WriteAttributeString('FanComparisonJournal', $json);
+        if ($json !== $this->ReadAttributeString($attribute)) {
+            $this->WriteAttributeString($attribute, $json);
         }
     }
 

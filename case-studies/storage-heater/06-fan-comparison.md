@@ -33,3 +33,26 @@ Issue becomes eligible 48 elapsed hours before the first night's 07:00 end, and 
 Deduplication requires the current plan, model, phase start and the complete first affected cycle in the saved record. An unrelated old snapshot cannot block it. Plan changes recalculate eligibility and append a new revision when eligible, retaining prior predictions; moving the plan farther away returns to waiting. The comparison configuration version changes, while the calibrated regression and mixed-night approximation stay unchanged. Legacy records remain readable and immutable.
 
 Version 0.8.3 adds a first-night overview to the existing comparison HTML: full measurement window, earliest issue time, strict pre-issue deadline and actual saved timestamp. The current selection is confirmed only by a matching plan/model snapshot covering that first night. Older records keep their own labeled timing overview after plan changes, cancellation or phase start. Waiting, eligible-but-unsaved, missed deadlines and absent selections remain explicit. Times use Europe/Berlin. This is derived presentation, with no new persisted state, forecast calculation, control or schedule changes.
+
+## Second-night history comparison
+
+A separate journal is available through `SHF_GetSecondNightComparisonJson`.
+The existing observer can issue once the second complete 22–07 window fits
+within the 48 elapsed hours and still precedes both the phase and the first
+night. A one-night selection has no second-night comparison. An early
+selection can therefore produce the preferred first-night forecast before
+the independent two-night journal becomes due.
+
+The paired baseline and both history variants use the same frozen weather,
+model coefficients, reduction plan and thermal simulation. Before the phase,
+the new variant substitutes predicted first-night charge and preceding relay
+runtime over the 24 hours ending at 21:00 on the second evening. After the
+first night settles, the observer stores one further forecast before 22:00,
+using counter energy checked against the power integral and relay duty up to
+the latest full hour (at most 21:00). Remaining future hours come from the
+original simulated curve. Each snapshot identifies its parent forecast and
+has its own issue time and content hash. Settlement uses the second night's
+counter window and the existing lifecycle eligibility. Compare the latest
+valid plan revision per phase and apply installation-specific fault
+exclusions before normal-operation scoring. These history inputs are proxies
+for heat retained and removed. No physical core temperature is measured.
