@@ -139,6 +139,43 @@ final class FanComparison
                 'no_future_actual_inputs', 'no_window_energy_surcharge']];
     }
 
+    /** Advance only the two history features. All other inputs belong to the original paired issue. */
+    public static function secondNight(array $f, float $firstKwh, int $split, float $measuredFanHours, int $issuedAt): array
+    {
+        [$first, $second] = array_values($f['fanComparison']['nights']);
+        $cutoff = $second['cycle']['cutoff'];
+        $start = $cutoff - 86400;
+        $fan = array_column($f['points'], 'fanHours', 'time');
+        if (
+            $first['cycle'] !== $f['fanComparison']['firstWarmingNight']
+            || $cutoff - $first['cycle']['end'] !== 14 * 3600
+            || $issuedAt < $f['start'] || $issuedAt >= $second['cycle']['start']
+            || $split < $start || $split > $cutoff || ($split !== $start && $split > $issuedAt)
+            || $measuredFanHours < 0 || $measuredFanHours > ($split - $start) / 3600 + 1e-8
+            || !isset($fan[$split], $fan[$cutoff]) || $firstKwh < 0
+        ) {
+            throw new RuntimeException('Unvollständiges Eingangsfenster für die zweite Aufwärmnacht.');
+        }
+        $plannedHours = $fan[$cutoff] - $fan[$split];
+        if ($plannedHours < -1e-8 || $plannedHours > ($cutoff - $split) / 3600 + 1e-8) {
+            throw new RuntimeException('Unplausible geplante Ventilatorlaufzeit.');
+        }
+        $features = $second['features'];
+        $features['fan_hours'] = $measuredFanHours + $plannedHours;
+        $features['previous_charge'] = $firstKwh;
+        $p = self::predict($f['fanComparison']['models']['candidate'], $features, $issuedAt);
+        $cap = $second['chargePlan']['chargeHours'] * $f['maxPowerKw'];
+        if ($p['kwh'] > $cap) {
+            $p['kwh'] = $cap;
+            $p['warnings'][] = 'physical_charge_cap';
+        }
+        return ['method' => 'second_night_history_v1', 'issuedAt' => $issuedAt, 'date' => $second['cycle']['date'],
+            'firstNight' => $first['cycle']['date'], 'features' => $features, 'fanHistoryStart' => $start,
+            'fanSplit' => $split, 'measuredFanHours' => $measuredFanHours, 'projectedFanHours' => $plannedHours,
+            'fanHistoryEnd' => $cutoff, 'baselineKwh' => $second['predictions']['candidate']['kwh'],
+            'chargePlan' => $second['chargePlan'], 'prediction' => $p];
+    }
+
     /** Interpolate whole-night regressions by available charging time, not measured future energy. */
     private static function nightPlan(array $segments, array $cycle): array
     {
@@ -188,6 +225,17 @@ final class FanComparison
                 || !is_array($f['fanComparison']['nights'] ?? null) || $f['fanComparison']['nights'] === []
             ) {
                 throw new RuntimeException('Invalid prospective fan comparison journal.');
+            }
+            foreach ($r['secondNightSnapshots'] ?? [] as $stage => $entry) {
+                $snapshot = $entry['snapshot'];
+                if (
+                    !in_array($stage, ['beforePhase', 'afterFirstNight'], true)
+                    || $snapshot['parentHash'] !== $r['forecastHash']
+                    || SAEF_CreateConfigurationHash($snapshot) !== $entry['hash']
+                    || $snapshot['stage'] !== $stage
+                ) {
+                    throw new RuntimeException('Ungültiger gespeicherter Zweitnachtvergleich.');
+                }
             }
             self::models($f['fanComparison']['models']);
             foreach ($f['fanComparison']['nights'] as $n) {

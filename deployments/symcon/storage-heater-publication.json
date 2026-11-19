@@ -15,8 +15,8 @@
     "pullRequest": {
       "repository": "doctee/saef-storage-heater",
       "base": "main",
-      "title": "feat: prefer fan energy forecasts for planned warming",
-      "body": "Show frozen fan-model energy as the preferred forecast for a valid planned warming phase; retain the paired reference as control. Daily 21:45 forecasts, thermal simulations, journals and heating control are unchanged.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
+      "title": "feat: compare second-night charge history",
+      "body": "Store a pre-phase and a measured-history second-night comparison alongside the preferred fan estimate. Daily 21:45 forecasts, thermal simulations and heating control are unchanged.\n\nFileset SHA-256: `{filesetSha256}`\nPublication SHA-256: `{publicationSha256}`",
       "integrationConfirmation": "merge-doctee-saef-storage-heater-pr"
     }
   },

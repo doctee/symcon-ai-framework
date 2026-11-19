@@ -128,6 +128,7 @@ trait PlanObservation
             $this->observeFanComparison($config, $now);
             $this->observeProfileComparison($config, $now);
             $this->observeVisits($config, $now);
+            $this->observeFanComparison($config, $this->now(), true);
         } catch (Throwable $e) {
             $this->planError($e);
         } finally {
@@ -261,6 +262,12 @@ trait PlanObservation
             }
             foreach ($r['nightActual'] ?? [] as $date => $night) {
                 $errors = $night['diagnosticErrors'] ?? $night['errors'] ?? [];
+                foreach ($r['secondNightSnapshots'] ?? [] as $stage => $entry) {
+                    $s = $entry['snapshot'];
+                    if ($s['date'] === $date && ($night['status'] ?? null) === 'complete') {
+                        $errors += FanComparison::errors(['predictions' => [$stage => $s['prediction']]], $night['kwh']);
+                    }
+                }
                 $r['nightActual'][$date]['diagnosticErrors'] = $errors;
                 $r['nightActual'][$date]['errors'] = $r['evaluation']['eligible'] ? $errors : [];
                 $r['nightActual'][$date]['evaluationEligible'] = $r['evaluation']['eligible'];

@@ -25,7 +25,7 @@
         {
             "source": "case-studies/storage-heater/distribution/library.json",
             "target": "library.json",
-            "sha256": "d31b4883687eee73a8ea1307fa1211aec4817ba3781c7f44c0448dd994a429fc",
+            "sha256": "65509ecd03ea507bee5152a0d0c645180b17135338e6650ab2717f9327be69fe",
             "bytes": 370
         },
         {
@@ -67,14 +67,14 @@
         {
             "source": "case-studies/storage-heater/distribution/libs/FanComparison.php",
             "target": "libs/FanComparison.php",
-            "sha256": "7981839c59504d8720051b9a2dbd80633988b16789637101b7f5b14beccf9065",
-            "bytes": 10668
+            "sha256": "395082108c87c0ea8eea81feac2841cdf0b5f27adefaccf22d703b1b29f4794e",
+            "bytes": 13518
         },
         {
             "source": "case-studies/storage-heater/distribution/libs/FanComparisonObservation.php",
             "target": "libs/FanComparisonObservation.php",
-            "sha256": "956c3b426659c0dc89d90267af54e92fc02a8fe94c6f39ee6c9fb303e1c08b80",
-            "bytes": 12808
+            "sha256": "6f83c6145f1c1f233caa28a8b183725ee529e37f26ccac72bc1defe2ccf56480",
+            "bytes": 17594
         },
         {
             "source": "case-studies/storage-heater/distribution/libs/FanComparisonView.php",
@@ -103,8 +103,8 @@
         {
             "source": "case-studies/storage-heater/distribution/libs/PlanObservation.php",
             "target": "libs/PlanObservation.php",
-            "sha256": "82d18a6384f85dafcc6552fd268efc16bcd50b50eb4a2b465c00c46eb2053a10",
-            "bytes": 14656
+            "sha256": "81bca0fb03980c78f63c53b455ab7360e170e957c00fa3159948922d80ee229d",
+            "bytes": 15107
         },
         {
             "source": "case-studies/storage-heater/distribution/libs/PlanView.php",
@@ -185,7 +185,7 @@
             "bytes": 4358
         }
     ],
-    "filesetSha256": "65c9fcd13b29b86998ffcd4ae6005262f3b436923ca439cbe9eb38abe964e6ed",
+    "filesetSha256": "404e8f25cce6f5f9d89cdeb65bd3de9907e4a52527c1c1c8d71f306e1a212c17",
     "builderVersion": "1.0.0",
     "license": {
         "identifier": "PolyForm-Noncommercial-1.0.0",
