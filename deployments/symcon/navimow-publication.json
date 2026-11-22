@@ -78,6 +78,7 @@
     "libs/Navimow/Profiles.php",
     "libs/Navimow/RetainedMapPath.php",
     "libs/Navimow/RevisionBoundedTrackStore.php",
+    "libs/Navimow/SeasonState.php",
     "libs/Navimow/ZoneStatisticsReducer.php",
     "libs/SAEF/helpers/diagnostics/ConfigurationHash.php"
   ],

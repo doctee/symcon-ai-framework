@@ -12,6 +12,8 @@ vendor_dir=$(
 cd "$repository_dir"
 
 php case-studies/navimow/tests/mqtt-fixtures.php
+php case-studies/navimow/tests/winter-mode.php
+php case-studies/navimow/tests/season-controller.php
 php case-studies/navimow/tests/rest-client-auth.php
 php case-studies/navimow/tests/mqtt-envelope.php
 php case-studies/navimow/tests/mqtt-parser.php
