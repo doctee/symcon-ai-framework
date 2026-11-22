@@ -5,6 +5,15 @@ declare(strict_types=1);
 $reconcileInstances = [];
 $reconcileProperties = [];
 $reconcileConfigurations = [];
+$reconcileLogs = [];
+
+function IPS_LogMessage(string $sender, string $message): bool
+{
+    global $reconcileLogs;
+
+    $reconcileLogs[] = [$sender, $message];
+    return true;
+}
 
 function IPS_InstanceExists(int $instanceId): bool
 {
@@ -65,6 +74,19 @@ final class MqttReconciliationAccount extends NavimowAccount
             'https://navimow.invalid',
             $this->transport
         );
+    }
+}
+
+final class MqttReconciliationDevice extends NavimowDevice
+{
+    public function __construct(int $instanceId, private NavimowTestFakeClock $clock)
+    {
+        parent::__construct($instanceId);
+    }
+
+    protected function currentTimestamp(): int
+    {
+        return $this->clock->now();
     }
 }
 
@@ -305,7 +327,8 @@ assertReconciliation(
     'Processed reconciliation remained queued.'
 );
 
-$target = new NavimowDevice(3001);
+$deviceClock = new NavimowTestFakeClock(1700000130);
+$target = new MqttReconciliationDevice(3001, $deviceClock);
 $target->Create();
 $target->testSetProperty('DeviceId', 'DEVICE_001');
 $target->ApplyChanges();
@@ -329,6 +352,37 @@ assertReconciliation(
     'Non-target Device performed a REST read or variable write.'
 );
 
+$wrongSchema = array_replace($targetedMessage, ['SchemaVersion' => 2]);
+$wrongSchemaJson = json_encode($wrongSchema, JSON_THROW_ON_ERROR);
+$other->ReceiveData($wrongSchemaJson);
+$target->ReceiveData(json_encode(
+    array_replace($wrongSchema, ['Function' => 'OtherFunction']),
+    JSON_THROW_ON_ERROR
+));
+assertReconciliation(
+    $otherBefore === $other->testSnapshotPersistentState()['variables']
+        && $target->testReadVariable('StatusRefreshError') === ''
+        && $reconcileLogs === [],
+    'A protocol error was reported for an unrelated message.'
+);
+$targetBefore = $target->testSnapshotPersistentState()['variables'];
+$target->ReceiveData($wrongSchemaJson);
+$withoutVersion = $wrongSchema;
+unset($withoutVersion['SchemaVersion']);
+$target->ReceiveData(json_encode($withoutVersion, JSON_THROW_ON_ERROR));
+$targetAfter = $target->testSnapshotPersistentState()['variables'];
+assertReconciliation(
+    $targetAfter['StatusRefreshError'] === 'Incompatible PollStatus schema; status refresh skipped.'
+        && $transportCalls === []
+        && count($reconcileLogs) === 1,
+    'Rejected poll did not report a bounded protocol error.'
+);
+unset($targetBefore['StatusRefreshError'], $targetAfter['StatusRefreshError']);
+assertReconciliation($targetBefore === $targetAfter, 'Rejected poll changed device status or command state.');
+$deviceClock->advance(300);
+$target->ReceiveData($wrongSchemaJson);
+assertReconciliation(count($reconcileLogs) === 2, 'Persistent protocol error was not logged again after the interval.');
+
 $target->ReceiveData(json_encode(
     $targetedMessage,
     JSON_THROW_ON_ERROR
@@ -338,7 +392,8 @@ assertReconciliation(
         && $target->testReadVariable('VehicleState') === 1
         && $target->testReadVariable('BatteryLevel') === 43
         && $target->testReadVariable('LastStatusUpdate')
-            === 1700000130,
+            === 1700000130
+        && $target->testReadVariable('StatusRefreshError') === '',
     'Target Device did not apply the authoritative REST result.'
 );
 $statistics = decodeReconciliation(

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../libs/Navimow/Profiles.php';
+require_once __DIR__ . '/../libs/Navimow/SeasonState.php';
 $configurationHashHelper = __DIR__
     . '/../libs/SAEF/helpers/diagnostics/ConfigurationHash.php';
 if (
@@ -31,6 +32,7 @@ class NavimowDevice extends IPSModule
     private const VEHICLE_STATE_DOCKING = 5;
     private const VEHICLE_STATE_OFFLINE = 11;
     private const MAX_DEBUG_JSON_BYTES = 16384;
+    private const POLL_PROTOCOL_LOG_INTERVAL_SECONDS = 300;
     private const COMMAND_DOCK = 6;
     private const COMMAND_PAUSE = 4;
     private const COMMAND_RESUME = 5;
@@ -67,6 +69,7 @@ class NavimowDevice extends IPSModule
         parent::Create();
 
         $this->RegisterPropertyString('DeviceId', '');
+        $this->RegisterPropertyString('SeasonStateVariable', '');
         $this->RegisterPropertyString('DisplayName', '');
         $this->RegisterPropertyBoolean('DebugPayloads', false);
         $this->RegisterPropertyBoolean('EnableLocalMap', false);
@@ -94,6 +97,7 @@ class NavimowDevice extends IPSModule
         $this->RegisterAttributeInteger('CommandDeadline', 0);
         $this->RegisterAttributeInteger('CommandVerificationState', self::COMMAND_STATE_IDLE);
         $this->RegisterAttributeInteger('CommandKind', 0);
+        $this->RegisterAttributeInteger('PollProtocolLastLog', 0);
         $this->RegisterAttributeString('LocalMapRevisionRegistry', '{}');
         $this->RegisterAttributeString('LocalMapTrackState', '{}');
         $this->RegisterAttributeString('LocalMapDisplayTrackState', '{}');
@@ -134,6 +138,7 @@ class NavimowDevice extends IPSModule
         $this->RegisterVariableBoolean('Online', 'Online', '', 20);
         $this->RegisterVariableInteger('BatteryLevel', 'Battery Level', '~Intensity.100', 30);
         $this->RegisterVariableInteger('LastStatusUpdate', 'Last Status Update', '~UnixTimestamp', 40);
+        $this->RegisterVariableString('StatusRefreshError', 'Status Refresh Error', '', 45);
         $this->RegisterVariableInteger('LastCommand', 'Last Command', 'NAVIMOW.Command', 50);
         $this->RegisterVariableInteger('LastCommandAt', 'Last Command At', '~UnixTimestamp', 60);
         $this->RegisterVariableInteger('LastCommandResult', 'Last Command Result', 'NAVIMOW.CommandResult', 70);
@@ -156,7 +161,11 @@ class NavimowDevice extends IPSModule
             $this->RegisterVariableString('RawStatusJson', 'Raw Status JSON', '', 90);
         }
 
-        if ($this->ReadAttributeBoolean('CommandActive')) {
+        if (
+            $this->ReadAttributeBoolean('CommandActive') && Navimow\SeasonState::allowsCommands(
+                Navimow\SeasonState::read($this->ReadPropertyString('SeasonStateVariable'))
+            )
+        ) {
             $this->scheduleNextCommandVerification();
         } else {
             $this->SetTimerInterval('CommandVerification', 0);
@@ -191,6 +200,20 @@ class NavimowDevice extends IPSModule
 
     public function RefreshLocalMap(): string
     {
+        $season = Navimow\SeasonState::read($this->ReadPropertyString('SeasonStateVariable'));
+        if (!Navimow\SeasonState::allowsCommands($season)) {
+            $this->SetTimerInterval('LocalMapRefresh', 0);
+            $snapshot = json_decode($this->ReadAttributeString('LocalMapVisualizationState'), true);
+            if (is_array($snapshot) && ($snapshot['action'] ?? null) === 'render') {
+                $snapshot['season'] = $season;
+                $snapshot['seasonLabel'] = Navimow\SeasonState::label($season);
+                $encoded = json_encode($snapshot, JSON_THROW_ON_ERROR);
+                $this->UpdateVisualizationValue($encoded);
+                $label = htmlspecialchars(Navimow\SeasonState::label($season), ENT_QUOTES, 'UTF-8');
+                $this->SetValue('LocalMap', '<p>' . $label . '</p>' . ($snapshot['svg'] ?? ''));
+            }
+            return Navimow\SeasonState::label($season);
+        }
         if (!$this->ReadPropertyBoolean('EnableLocalMap')) {
             $this->SetTimerInterval('LocalMapRefresh', 0);
             return 'Local map is disabled.';
@@ -484,6 +507,18 @@ class NavimowDevice extends IPSModule
             $html
         );
         $message = $this->ReadAttributeString('LocalMapVisualizationState');
+        $season = Navimow\SeasonState::read($this->ReadPropertyString('SeasonStateVariable'));
+        if (!Navimow\SeasonState::allowsCommands($season)) {
+            $snapshot = json_decode($message, true);
+            if (is_array($snapshot) && ($snapshot['action'] ?? null) === 'render') {
+                $snapshot['season'] = $season;
+                $snapshot['seasonLabel'] = Navimow\SeasonState::label($season);
+                $message = json_encode($snapshot, JSON_THROW_ON_ERROR);
+            } else {
+                $message = json_encode(['action' => 'configurationError',
+                    'message' => Navimow\SeasonState::label($season)], JSON_THROW_ON_ERROR);
+            }
+        }
         if ($message === '' || $message === '{}') {
             $message = json_encode([
                 'action' => 'configurationError',
@@ -506,6 +541,10 @@ class NavimowDevice extends IPSModule
 
     private function refreshStatusInternal(): array
     {
+        $season = Navimow\SeasonState::read($this->ReadPropertyString('SeasonStateVariable'));
+        if (!Navimow\SeasonState::allowsRead($season)) {
+            return ['success' => false, 'message' => Navimow\SeasonState::label($season)];
+        }
         $deviceId = trim($this->ReadPropertyString('DeviceId'));
         if ($deviceId === '') {
             return [
@@ -575,7 +614,6 @@ class NavimowDevice extends IPSModule
             if (
                 is_array($message)
                 && ($message['DataID'] ?? null) === self::DATA_INTERFACE
-                && ($message['SchemaVersion'] ?? null) === self::MESSAGE_SCHEMA_VERSION
                 && ($message['Function'] ?? null) === 'PollStatus'
             ) {
                 $targetDeviceId = $message['DeviceId'] ?? null;
@@ -591,6 +629,10 @@ class NavimowDevice extends IPSModule
                 ) {
                     return;
                 }
+                if (($message['SchemaVersion'] ?? null) !== self::MESSAGE_SCHEMA_VERSION) {
+                    $this->rejectPollStatusSchema();
+                    return;
+                }
                 $this->RefreshStatus();
             }
         } catch (Throwable $exception) {
@@ -599,6 +641,28 @@ class NavimowDevice extends IPSModule
                 $this->limitMessage($exception->getMessage()),
                 0
             );
+        }
+    }
+
+    private function rejectPollStatusSchema(): void
+    {
+        $lock = 'NAVIMOW_POLL_PROTOCOL_' . $this->InstanceID;
+        if (!IPS_SemaphoreEnter($lock, 0)) {
+            return;
+        }
+        try {
+            $message = 'Incompatible PollStatus schema; status refresh skipped.';
+            if ($this->GetValue('StatusRefreshError') !== $message) {
+                $this->SetValue('StatusRefreshError', $message);
+            }
+            $now = $this->currentTimestamp();
+            $lastLog = $this->ReadAttributeInteger('PollProtocolLastLog');
+            if ($lastLog <= 0 || $now < $lastLog || $now - $lastLog >= self::POLL_PROTOCOL_LOG_INTERVAL_SECONDS) {
+                $this->WriteAttributeInteger('PollProtocolLastLog', $now);
+                IPS_LogMessage('Navimow Device ' . $this->InstanceID, $message);
+            }
+        } finally {
+            IPS_SemaphoreLeave($lock);
         }
     }
 
@@ -697,6 +761,10 @@ class NavimowDevice extends IPSModule
         int $timeoutSeconds,
         bool $allowAlreadyInState = true
     ): string {
+        $season = Navimow\SeasonState::read($this->ReadPropertyString('SeasonStateVariable'));
+        if (!Navimow\SeasonState::allowsCommands($season)) {
+            return Navimow\SeasonState::label($season);
+        }
         if ($this->ReadAttributeBoolean('CommandActive')) {
             return 'Another mower command is still being verified.';
         }
@@ -808,6 +876,13 @@ class NavimowDevice extends IPSModule
     public function VerifyCommand(): void
     {
         $this->SetTimerInterval('CommandVerification', 0);
+        if (
+            !Navimow\SeasonState::allowsCommands(
+                Navimow\SeasonState::read($this->ReadPropertyString('SeasonStateVariable'))
+            )
+        ) {
+            return;
+        }
         if (!$this->ReadAttributeBoolean('CommandActive')) {
             return;
         }
@@ -942,6 +1017,9 @@ class NavimowDevice extends IPSModule
 
         $this->SetValue('Online', $online);
         $this->SetValue('LastStatusUpdate', $receivedAt);
+        if ($this->GetValue('StatusRefreshError') !== '') {
+            $this->SetValue('StatusRefreshError', '');
+        }
 
         if (
             $this->ReadPropertyBoolean('DebugPayloads')
@@ -1985,6 +2063,14 @@ class NavimowDevice extends IPSModule
 
     private function scheduleLocalMapRefresh(): void
     {
+        if (
+            !Navimow\SeasonState::allowsCommands(
+                Navimow\SeasonState::read($this->ReadPropertyString('SeasonStateVariable'))
+            )
+        ) {
+            $this->SetTimerInterval('LocalMapRefresh', 0);
+            return;
+        }
         if (!$this->localMapConfigurationIsValid()) {
             $this->SetTimerInterval('LocalMapRefresh', 0);
             return;

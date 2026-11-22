@@ -10,6 +10,7 @@ declare(strict_types=1);
 $_IPS = ['SELF' => 0];
 
 define('KR_READY', 10103);
+define('VARIABLETYPE_STRING', 3);
 define('IPS_KERNELSTARTED', 10001);
 define('IS_ACTIVE', 102);
 define('IS_INACTIVE', 104);
@@ -210,6 +211,7 @@ function OMSOLAR_GetPowerForecastJson(int $instanceId, int $from, int $to, strin
 function OMSOLAR_GetDailyEnergyForecastJson(int $instanceId, int $from, int $to, string $scope): string {}
 
 function GetValue(int $id): mixed {}
+function GetValueString(int $VariableID): string {}
 // Kernel SetValue returns bool; official API verified 2026-10-27 (not the module method).
 function SetValue(int $id, mixed $value): bool { return true; }
 function RequestAction(int $variableID, mixed $value): bool {}
