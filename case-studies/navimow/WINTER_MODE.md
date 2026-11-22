@@ -32,6 +32,11 @@ the semaphore `NavimowSeason:<state ID>`. Replace only the mower's central
 supply-warning trigger source with the derived input. A disabled event alone
 is insufficient where the aggregator still reads its source variable.
 
+Optional legacy action bindings disable the existing variable action and hide
+its visualization link during winter and commissioning. Preserve both original
+settings in the seasonal state and restore them only on verified season entry.
+This is required when a separate integration still exposes a mower start button.
+
 Season re-entry requires an explicit commissioning step, then fresh docked,
 online and power telemetry since commissioning and no older than five minutes.
 It never sends Start/Resume/Dock or changes the manufacturer's schedule. The

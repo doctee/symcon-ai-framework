@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 define('VARIABLETYPE_STRING', 3);
+define('VARIABLE_ACTION_DISABLED', 1);
 require_once __DIR__ . '/../distribution/libs/Navimow/SeasonState.php';
 require_once __DIR__ . '/../tools/season-controller.php';
 
@@ -9,16 +10,37 @@ $config = ['state' => 1, 'mode' => 2, 'info' => 3, 'supply' => 4, 'rawSupply' =>
     'power' => 6, 'online' => 7, 'vehicle' => 8, 'lastStatus' => 9,
     'account' => 10, 'device' => 11, 'batteryMonitor' => 12, 'powerScript' => 13, 'batterySource' => 14];
 $values = [1 => json_encode(['version' => 1, 'mode' => 'winter', 'since' => '2026-11-22',
-    'applied' => false, 'batteryExcludedBefore' => false]), 2 => 1, 3 => '', 4 => false,
+    'applied' => false, 'batteryExcludedBefore' => false,
+    'legacyActionBefore' => 0, 'legacyLinkHiddenBefore' => false]), 2 => 1, 3 => '', 4 => false,
     5 => false, 6 => 0.0, 7 => false, 8 => 0, 9 => 0];
 $settings = [['Instance' => 14, 'Excluded' => false], ['Instance' => 15, 'Excluded' => false, 'Alias' => 'Camera']];
 $properties = [10 => ['SeasonStateVariable' => '1'], 11 => ['SeasonStateVariable' => '1'],
     12 => ['DeviceSettings' => json_encode($settings)]];
 $timers = [];
 $calls = [];
+$config['legacyAction'] = 16;
+$config['legacyActionLink'] = 17;
+$legacyAction = 0;
+$legacyHidden = false;
+function IPS_LinkExists(int $id): bool
+{
+    return $id === 17;
+}
+function IPS_GetLink(int $id): array
+{
+    return ['TargetID' => 16];
+}
+function IPS_SetVariableCustomAction(int $id, int $action): void
+{
+    $GLOBALS['legacyAction'] = $action;
+}
+function IPS_SetHidden(int $id, bool $hidden): void
+{
+    $GLOBALS['legacyHidden'] = $hidden;
+}
 function IPS_VariableExists(int $id): bool
 {
-    return $id > 0 && $id < 10;
+    return ($id > 0 && $id < 10) || $id === 16;
 }
 function IPS_InstanceExists(int $id): bool
 {
@@ -101,6 +123,7 @@ function changeSeason(int $value): void
     navimowSeasonController($GLOBALS['config'], ['SENDER' => 'WebFront', 'VARIABLE' => 2, 'VALUE' => $value]);
 }
 changeSeason(1);
+checkSeason($legacyAction === VARIABLE_ACTION_DISABLED && $legacyHidden, 'Legacy action not blocked.');
 $actual = json_decode($properties[12]['DeviceSettings'], true);
 checkSeason($actual[0]['Excluded'] && $actual[1] === $settings[1], 'Winter changed camera or failed exclusion.');
 checkSeason($values[4] && $timers[13] === 0, 'Winter power warning or timer not suppressed.');
@@ -129,5 +152,6 @@ $values[9] = time();
 changeSeason(0);
 checkSeason(!json_decode($properties[12]['DeviceSettings'], true)[0]['Excluded'], 'Battery baseline not restored.');
 checkSeason(json_decode($values[1], true)['mode'] === 'season', 'Season not restored.');
+checkSeason($legacyAction === 0 && !$legacyHidden, 'Legacy action baseline not restored.');
 checkSeason(json_decode($properties[12]['DeviceSettings'], true)[1] === $settings[1], 'Camera changed.');
 echo "season-controller: PASS\n";

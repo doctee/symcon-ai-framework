@@ -75,6 +75,22 @@ function navimowSeasonController(array $config, array $request): void
         }
         // Only explicit actions reconcile configuration; periodic checks never silently repair it.
         if ($requested !== null) {
+            if (isset($config['legacyAction'])) {
+                $action = $config['legacyAction'];
+                $link = $config['legacyActionLink'] ?? null;
+                if (
+                    !is_int($action) || $action <= 0 || !IPS_VariableExists($action)
+                    || !is_int($link) || $link <= 0 || !IPS_LinkExists($link)
+                    || IPS_GetLink($link)['TargetID'] !== $action
+                    || !is_int($state['legacyActionBefore'] ?? null)
+                    || !is_bool($state['legacyLinkHiddenBefore'] ?? null)
+                ) {
+                    throw new RuntimeException('Legacy action binding or baseline missing.');
+                }
+                IPS_SetVariableCustomAction($action, $mode === 'season'
+                    ? $state['legacyActionBefore'] : VARIABLE_ACTION_DISABLED);
+                IPS_SetHidden($link, $mode === 'season' ? $state['legacyLinkHiddenBefore'] : true);
+            }
             $settings = json_decode(IPS_GetProperty($config['batteryMonitor'], 'DeviceSettings'), true, 64, JSON_THROW_ON_ERROR);
             $matches = array_keys(array_filter($settings, static fn (array $row): bool =>
                 ($row['Instance'] ?? null) === $config['batterySource']));
